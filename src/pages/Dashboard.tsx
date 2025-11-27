@@ -230,7 +230,7 @@ const Dashboard = () => {
               />
               <div className="hidden flex-col text-right text-xs sm:flex">
                 <span className="text-sm font-semibold text-white">
-                  Usuário NP Saúde Pró
+                  Jurandy Pessoa
                 </span>
                 <span className="text-[11px] text-slate-400">
                   usuario@saudepro.com
