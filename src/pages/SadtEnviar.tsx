@@ -201,18 +201,18 @@ const SadtEnviar = () => {
   }, [arquivos, temArquivos]);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-[#101622] text-gray-100">
+    <div className="relative flex min-h-screen w-full flex-col bg-background text-foreground transition-colors">
       {/* Gradiente de fundo suave */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-[#135bec]/20 blur-3xl" />
-        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-purple-500/20 blur-3xl" />
+        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-[#135bec]/18 blur-3xl" />
+        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-purple-500/18 blur-3xl" />
       </div>
 
       {/* Layout principal */}
       <div className="flex min-h-screen flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-white/5 px-4 py-3 sm:px-10">
-          <div className="flex items-center gap-3 text-white">
+        <header className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-10">
+          <div className="flex items-center gap-3">
             <img
               src="/logo.jpeg"
               alt="Logo NP Saúde Pró"
@@ -223,23 +223,27 @@ const SadtEnviar = () => {
             </h2>
           </div>
 
-          <div className="hidden items-center gap-9 text-sm font-medium text-slate-300 md:flex">
-            <button className="transition-colors hover:text-white">
+          <div className="hidden items-center gap-9 text-sm font-medium text-muted-foreground md:flex">
+            <button className="transition-colors hover:text-foreground">
               Dashboard
             </button>
-            <button className="transition-colors hover:text-white">
+            <button className="transition-colors hover:text-foreground">
               Minhas Solicitações
             </button>
-            <button className="text-[#135bec]">Nova Solicitação</button>
-            <button className="transition-colors hover:text-white">Ajuda</button>
+            <button className="text-[#135bec] hover:text-[#1850c9]">
+              Nova Solicitação
+            </button>
+            <button className="transition-colors hover:text-foreground">
+              Ajuda
+            </button>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            <button className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-slate-300 transition-colors hover:bg-white/10">
+            <button className="flex h-10 w-10 items-center justify-center rounded-lg bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
               <span className="sr-only">Notificações</span>
               <span>🔔</span>
             </button>
-            <button className="hidden h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-slate-300 transition-colors hover:bg-white/10 md:flex">
+            <button className="hidden h-10 w-10 items-center justify-center rounded-lg bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 md:flex">
               <span className="sr-only">Configurações</span>
               <span>⚙️</span>
             </button>
@@ -255,19 +259,19 @@ const SadtEnviar = () => {
         <main className="flex flex-1 justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
           <div className="flex w-full max-w-2xl flex-col">
             <div className="px-1 pb-2">
-              <h1 className="text-3xl font-black leading-tight tracking-[-0.03em] text-white sm:text-4xl">
+              <h1 className="text-3xl font-black leading-tight tracking-[-0.03em] sm:text-4xl">
                 Envio de SADT
               </h1>
             </div>
 
             <div className="mt-4 flex flex-col gap-8">
-              <div className="rounded-xl border border-white/10 bg-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+              <div className="rounded-xl border border-border bg-card/95 shadow-[0_4px_24px_rgba(0,0,0,0.16)]">
                 {/* Cabeçalho do card */}
                 <div className="flex flex-col gap-1 px-6 py-6 sm:px-8 sm:py-8">
-                  <h3 className="text-lg font-bold leading-tight tracking-[-0.015em] text-white">
+                  <h3 className="text-lg font-bold leading-tight tracking-[-0.015em]">
                     Solicitação de Envio de SADT
                   </h3>
-                  <p className="text-base font-normal leading-normal text-slate-300">
+                  <p className="text-base font-normal leading-normal text-muted-foreground">
                     Preencha o campo abaixo e anexe o comprovante para enviar
                     sua solicitação.
                   </p>
@@ -276,7 +280,7 @@ const SadtEnviar = () => {
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(handleSubmit)}
-                    className="border-t border-white/10 px-6 py-6 sm:px-8 sm:py-8"
+                    className="border-t border-border/80 px-6 py-6 sm:px-8 sm:py-8"
                   >
                     <div className="flex flex-col gap-6">
                       {/* Telefone */}
@@ -285,7 +289,7 @@ const SadtEnviar = () => {
                         name="telefone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="pb-2 text-base font-medium text-slate-200">
+                            <FormLabel className="pb-2 text-base font-medium">
                               Telefone *
                             </FormLabel>
                             <FormControl>
@@ -293,7 +297,7 @@ const SadtEnviar = () => {
                                 {...field}
                                 inputMode="tel"
                                 placeholder="(XX) XXXXX-XXXX"
-                                className="h-14 rounded-lg border border-white/20 bg-black/40 text-base text-white placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-[#135bec]/60"
+                                className="h-14 rounded-lg border border-input bg-background text-base placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[#135bec]/60"
                                 onChange={(e) =>
                                   field.onChange(
                                     formatarTelefone(e.target.value),
@@ -308,12 +312,12 @@ const SadtEnviar = () => {
 
                       {/* Área de anexos */}
                       <div className="flex flex-col gap-3">
-                        <p className="text-base font-normal leading-normal text-slate-200">
+                        <p className="text-base font-normal leading-normal">
                           Anexe o comprovante em formato de imagem ou PDF.
                         </p>
                         <div className="grid grid-cols-1 gap-4 pt-1 sm:grid-cols-2">
                           {/* Tirar foto */}
-                          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-white/5 px-4 text-sm font-semibold text-slate-100 transition-colors hover:bg-white/10">
+                          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-muted px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/80">
                             <input
                               type="file"
                               accept="image/*"
@@ -326,7 +330,7 @@ const SadtEnviar = () => {
                           </label>
 
                           {/* Anexar arquivo */}
-                          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-white/5 px-4 text-sm font-semibold text-slate-100 transition-colors hover:bg-white/10">
+                          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-muted px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/80">
                             <input
                               type="file"
                               multiple
@@ -340,7 +344,7 @@ const SadtEnviar = () => {
                         </div>
 
                         {arquivoErro && (
-                          <p className="pt-1 text-sm font-medium text-red-400">
+                          <p className="pt-1 text-sm font-medium text-red-500">
                             {arquivoErro}
                           </p>
                         )}
@@ -363,7 +367,7 @@ const SadtEnviar = () => {
                               return (
                                 <div
                                   key={item.id}
-                                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-3"
+                                  className="flex items-center justify-between rounded-lg border border-border bg-background/80 px-3 py-3"
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#135bec]/10 text-[#135bec]">
@@ -374,17 +378,17 @@ const SadtEnviar = () => {
                                       )}
                                     </div>
                                     <div className="flex flex-col">
-                                      <p className="max-w-[220px] truncate text-sm font-medium text-slate-100 sm:max-w-xs">
+                                      <p className="max-w-[220px] truncate text-sm font-medium sm:max-w-xs">
                                         {item.file.name}
                                       </p>
-                                      <p className="text-xs text-slate-400">
+                                      <p className="text-xs text-muted-foreground">
                                         {tamanho}
                                       </p>
                                     </div>
                                   </div>
                                   <button
                                     type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-100"
+                                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                     onClick={() => removerArquivo(item.id)}
                                   >
                                     <X className="h-4 w-4" />
@@ -395,7 +399,7 @@ const SadtEnviar = () => {
                             })}
 
                             {arquivos.length > 1 && (
-                              <p className="pl-[52px] text-xs text-slate-400">
+                              <p className="pl-[52px] text-xs text-muted-foreground">
                                 {arquivos.length} arquivos anexados · Total{" "}
                                 {tamanhoTotalFormatado}
                               </p>
@@ -406,11 +410,11 @@ const SadtEnviar = () => {
                     </div>
 
                     {/* Rodapé com botões */}
-                    <div className="mt-8 flex flex-col justify-end gap-3 border-t border-white/10 pt-6 sm:flex-row sm:gap-4">
+                    <div className="mt-8 flex flex-col justify-end gap-3 border-t border-border pt-6 sm:flex-row sm:gap-4">
                       <Button
                         type="button"
                         variant="ghost"
-                        className="h-11 rounded-lg bg-transparent text-sm font-semibold text-slate-200 hover:bg-white/5"
+                        className="h-11 rounded-lg bg-transparent text-sm font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                         disabled={isPending}
                         onClick={() => {
                           form.reset();

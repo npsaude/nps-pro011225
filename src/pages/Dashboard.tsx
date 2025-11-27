@@ -22,25 +22,25 @@ const topMetrics = [
     title: "Total de SADTs",
     value: "1.204",
     change: "+2,5% vs mês anterior",
-    changeColor: "text-emerald-400",
+    changeColor: "text-emerald-500",
   },
   {
     title: "Aguardando Aprovação",
     value: "82",
     change: "+5,1% vs mês anterior",
-    changeColor: "text-emerald-400",
+    changeColor: "text-emerald-500",
   },
   {
     title: "Enviadas",
     value: "978",
     change: "+1,8% vs mês anterior",
-    changeColor: "text-emerald-400",
+    changeColor: "text-emerald-500",
   },
   {
     title: "Pagas",
     value: "834",
     change: "-0,5% vs mês anterior",
-    changeColor: "text-red-400",
+    changeColor: "text-red-500",
   },
 ];
 
@@ -49,19 +49,19 @@ const bottomMetrics = [
     title: "Em Glosa",
     value: "144",
     change: "+1,2% vs mês anterior",
-    changeColor: "text-red-400",
+    changeColor: "text-red-500",
   },
   {
     title: "Valor recuperado de Glosa",
     value: "R$ 12.345,67",
     change: "+3,4% vs mês anterior",
-    changeColor: "text-emerald-400",
+    changeColor: "text-emerald-500",
   },
   {
     title: "% de Glosa em relação ao Faturamento",
     value: "5,7%",
     change: "-0,8% vs mês anterior",
-    changeColor: "text-emerald-400",
+    changeColor: "text-emerald-500",
   },
 ];
 
@@ -154,15 +154,15 @@ const monthlyData = [
 
 const Dashboard = () => {
   return (
-    <div className="relative flex min-h-screen w-full bg-[#101622] text-gray-100">
+    <div className="relative flex min-h-screen w-full bg-background text-foreground transition-colors">
       {/* Fundo sutil em degradê */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-[#135bec]/20 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-[#135bec]/18 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-blue-500/14 blur-3xl" />
       </div>
 
       {/* Sidebar */}
-      <aside className="hidden h-screen min-h-[700px] w-64 flex-col justify-between border-r border-white/10 bg-black/30 p-4 backdrop-blur-xl md:flex">
+      <aside className="hidden h-screen min-h-[700px] w-64 flex-col justify-between border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground backdrop-blur-xl md:flex">
         <div className="flex flex-col gap-8">
           <div className="flex items-center gap-3 px-2">
             <img
@@ -170,23 +170,23 @@ const Dashboard = () => {
               alt="Logo NP Saúde Pró"
               className="h-9 w-9 rounded-full object-cover"
             />
-            <h1 className="text-lg font-bold text-white">NP Saúde Pró</h1>
+            <h1 className="text-lg font-bold">NP Saúde Pró</h1>
           </div>
 
           <nav className="flex flex-col gap-1">
-            <button className="flex items-center gap-3 rounded-lg bg-[#135bec]/20 px-3 py-2.5 text-sm font-semibold text-[#dbe7ff]">
+            <button className="flex items-center gap-3 rounded-lg bg-sidebar-primary/15 px-3 py-2.5 text-sm font-semibold text-sidebar-primary">
               <LayoutDashboard className="h-5 w-5" />
               <span>Dashboard</span>
             </button>
-            <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100">
+            <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <FileText className="h-5 w-5" />
               <span>Solicitações</span>
             </button>
-            <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100">
+            <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <BarChart3 className="h-5 w-5" />
               <span>Relatórios</span>
             </button>
-            <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100">
+            <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <Settings className="h-5 w-5" />
               <span>Configurações</span>
             </button>
@@ -194,7 +194,7 @@ const Dashboard = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100">
+          <button className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <HelpCircle className="h-5 w-5" />
             <span>Ajuda</span>
           </button>
@@ -204,21 +204,21 @@ const Dashboard = () => {
       {/* Área principal */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-white/10 bg-[#101622]/90 px-4 backdrop-blur-xl sm:px-8 lg:px-10">
-          <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+        <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl sm:px-8 lg:px-10">
+          <h2 className="text-2xl font-bold">Dashboard</h2>
 
           <div className="flex items-center gap-4">
             {/* Campo de busca */}
-            <div className="hidden items-center rounded-lg bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 backdrop-blur sm:flex">
-              <Search className="mr-2 h-4 w-4 text-slate-400" />
+            <div className="hidden items-center rounded-lg bg-muted px-3 py-2 text-sm text-foreground ring-1 ring-border backdrop-blur sm:flex">
+              <Search className="mr-2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Buscar"
-                className="h-6 w-40 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none sm:w-56"
+                className="h-6 w-40 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:w-56"
               />
             </div>
 
-            <button className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-slate-300 ring-1 ring-white/10 transition-colors hover:bg-white/10">
+            <button className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border transition-colors hover:bg-muted/80">
               <Bell className="h-5 w-5" />
             </button>
 
@@ -229,10 +229,8 @@ const Dashboard = () => {
                 className="h-10 w-10 rounded-full object-cover"
               />
               <div className="hidden flex-col text-right text-xs sm:flex">
-                <span className="text-sm font-semibold text-white">
-                  Jurandy Pessoa
-                </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-sm font-semibold">Jurandy Pessoa</span>
+                <span className="text-[11px] text-muted-foreground">
                   usuario@saudepro.com
                 </span>
               </div>
@@ -247,12 +245,12 @@ const Dashboard = () => {
             {topMetrics.map((metric) => (
               <div
                 key={metric.title}
-                className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm"
+                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-5 shadow-sm"
               >
-                <p className="text-sm font-medium text-slate-300">
+                <p className="text-sm font-medium text-muted-foreground">
                   {metric.title}
                 </p>
-                <p className="text-3xl font-bold tracking-tight text-white">
+                <p className="text-3xl font-bold tracking-tight">
                   {metric.value}
                 </p>
                 <p className={`text-sm font-medium ${metric.changeColor}`}>
@@ -267,12 +265,12 @@ const Dashboard = () => {
             {bottomMetrics.map((metric) => (
               <div
                 key={metric.title}
-                className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm"
+                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-5 shadow-sm"
               >
-                <p className="text-sm font-medium text-slate-300">
+                <p className="text-sm font-medium text-muted-foreground">
                   {metric.title}
                 </p>
-                <p className="text-3xl font-bold tracking-tight text-white">
+                <p className="text-3xl font-bold tracking-tight">
                   {metric.value}
                 </p>
                 <p className={`text-sm font-medium ${metric.changeColor}`}>
@@ -283,27 +281,29 @@ const Dashboard = () => {
           </section>
 
           {/* Gráfico de linha */}
-          <section className="mt-10 rounded-xl border border-white/10 bg.white/5 p-5 shadow-sm">
+          <section className="mt-10 rounded-xl border border-border bg-card p-5 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-lg font-bold text-white">
-                Análise Mensal de SADTs
-              </h3>
+              <h3 className="text-lg font-bold">Análise Mensal de SADTs</h3>
               <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-blue-500" />
-                  <span className="text-slate-300">Quantidade de SADTs</span>
+                  <span className="text-muted-foreground">
+                    Quantidade de SADTs
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-slate-300">Enviadas</span>
+                  <span className="text-muted-foreground">Enviadas</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-purple-500" />
-                  <span className="text-slate-300">Pagas</span>
+                  <span className="text-muted-foreground">Pagas</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-amber-400" />
-                  <span className="text-slate-300">Aguardando Pagamento</span>
+                  <span className="text-muted-foreground">
+                    Aguardando Pagamento
+                  </span>
                 </div>
               </div>
             </div>

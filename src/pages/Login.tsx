@@ -9,12 +9,12 @@ const Login = () => {
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#101622] px-4 text-slate-100">
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-black/40 p-8 text-center shadow-2xl shadow-black/60 backdrop-blur-2xl">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card/95 p-8 text-center shadow-2xl shadow-black/20 backdrop-blur-2xl">
+        <h1 className="text-2xl font-bold tracking-tight">
           Área Administrativa - NP Saúde Pró
         </h1>
-        <p className="mt-3 text-sm text-slate-300">
+        <p className="mt-3 text-sm text-muted-foreground">
           Redirecionando para o painel administrativo...
         </p>
       </div>
