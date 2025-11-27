@@ -165,20 +165,12 @@ const Dashboard = () => {
       <aside className="hidden h-screen min-h-[700px] w-64 flex-col justify-between border-r border-white/10 bg-black/30 p-4 backdrop-blur-xl md:flex">
         <div className="flex flex-col gap-8">
           <div className="flex items-center gap-3 px-2">
-            <div className="h-8 w-8 text-[#135bec]">
-              <svg
-                fill="currentColor"
-                viewBox="0 0 48 48"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  clipRule="evenodd"
-                  fillRule="evenodd"
-                  d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z"
-                />
-              </svg>
-            </div>
-            <h1 className="text-lg font-bold text-white">SADT Admin</h1>
+            <img
+              src="/logo.jpeg"
+              alt="Logo NP Saúde Pró"
+              className="h-9 w-9 rounded-full object-cover"
+            />
+            <h1 className="text-lg font-bold text-white">NP Saúde Pró</h1>
           </div>
 
           <nav className="flex flex-col gap-1">
@@ -221,7 +213,7 @@ const Dashboard = () => {
               <Search className="mr-2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search"
+                placeholder="Buscar"
                 className="h-6 w-40 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none sm:w-56"
               />
             </div>
@@ -231,13 +223,17 @@ const Dashboard = () => {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-300 to-rose-400" />
+              <img
+                src="/perfil.jpeg"
+                alt="Foto do usuário"
+                className="h-10 w-10 rounded-full object-cover"
+              />
               <div className="hidden flex-col text-right text-xs sm:flex">
                 <span className="text-sm font-semibold text-white">
-                  Admin User
+                  Usuário NP Saúde Pró
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  admin.user@email.com
+                  usuario@saudepro.com
                 </span>
               </div>
             </div>
@@ -287,7 +283,7 @@ const Dashboard = () => {
           </section>
 
           {/* Gráfico de linha */}
-          <section className="mt-10 rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm">
+          <section className="mt-10 rounded-xl border border-white/10 bg.white/5 p-5 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-bold text-white">
                 Análise Mensal de SADTs

@@ -170,7 +170,7 @@ const SadtEnviar = () => {
 
     const telefoneNormalizado = values.telefone.replace(/\D/g, "");
 
-    const payload = {
+    const payload: EnviarSadtPayload = {
       telefone: telefoneNormalizado,
       arquivos: arquivos.map((a) => a.file),
     };
@@ -213,17 +213,13 @@ const SadtEnviar = () => {
         {/* Header */}
         <header className="flex items-center justify-between border-b border-white/5 px-4 py-3 sm:px-10">
           <div className="flex items-center gap-3 text-white">
-            <div className="h-7 w-7 text-[#135bec]">
-              <svg
-                viewBox="0 0 48 48"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" />
-              </svg>
-            </div>
+            <img
+              src="/logo.jpeg"
+              alt="Logo NP Saúde Pró"
+              className="h-8 w-8 rounded-full object-cover"
+            />
             <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
-              NPS-Pro SADT
+              NP Saúde Pró
             </h2>
           </div>
 
@@ -247,7 +243,11 @@ const SadtEnviar = () => {
               <span className="sr-only">Configurações</span>
               <span>⚙️</span>
             </button>
-            <div className="hidden h-10 w-10 rounded-full bg-gradient-to-br from-amber-300 to-rose-400 md:block" />
+            <img
+              src="/perfil.jpeg"
+              alt="Foto do usuário"
+              className="hidden h-10 w-10 rounded-full object-cover md:block"
+            />
           </div>
         </header>
 

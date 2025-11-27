@@ -19,17 +19,13 @@ const Index = () => {
         {/* Header */}
         <header className="flex w-full items-center justify-between py-4">
           <div className="flex items-center gap-3 text-white">
-            <div className="h-6 w-6 text-[#135bec]">
-              <svg
-                viewBox="0 0 48 48"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" />
-              </svg>
-            </div>
+            <img
+              src="/logo.jpeg"
+              alt="Logo NP Saúde Pró"
+              className="h-8 w-8 rounded-full object-cover"
+            />
             <h2 className="text-lg font-bold tracking-[-0.015em]">
-              NPS-Pro SADT
+              NP Saúde Pró
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -49,7 +45,7 @@ const Index = () => {
           <div className="flex w-full max-w-xl flex-col items-center gap-8 rounded-xl bg-black/40 p-6 text-center shadow-xl shadow-black/60 ring-1 ring-white/10 backdrop-blur-2xl sm:p-10">
             <div className="flex flex-col gap-3">
               <p className="text-3xl font-black tracking-[-0.03em] text-white sm:text-4xl">
-                NPS-Pro SADT
+                NP Saúde Pró
               </p>
               <p className="text-base font-normal leading-normal text-slate-300">
                 Inicie uma nova solicitação de SADT ou acesse a área
@@ -86,7 +82,10 @@ const Index = () => {
               Termos de Uso
             </button>
           </div>
-          <p>© {new Date().getFullYear()} NPS-Pro SADT. Todos os direitos reservados.</p>
+          <p>
+            © {new Date().getFullYear()} NP Saúde Pró. Todos os direitos
+            reservados.
+          </p>
         </footer>
       </div>
     </div>
