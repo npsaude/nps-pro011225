@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import SadtEnviar from "./pages/SadtEnviar";
 import SadtSucesso from "./pages/SadtSucesso";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
           <Route path="/sadt/sucesso" element={<SadtSucesso />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/admin/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
