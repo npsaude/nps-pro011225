@@ -201,241 +201,241 @@ const SadtEnviar = () => {
   }, [arquivos, temArquivos]);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background text-foreground transition-colors">
-      {/* Gradiente de fundo suave */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-[#135bec]/18 blur-3xl" />
-        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-purple-500/18 blur-3xl" />
-      </div>
+    <div className="relative flex min-h-screen w-full bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+      {/* Fundo gradiente */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[#e5f0ff] via-[#f8fbff] to-[#e3eeff] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
 
-      {/* Layout principal */}
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-10">
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-10">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo.jpeg"
-              alt="Logo NP Saúde Pró"
-              className="h-8 w-8 rounded-full object-cover"
-            />
-            <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
-              NP Saúde Pró
-            </h2>
-          </div>
+        <header className="mb-5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            className="flex items-center gap-3 rounded-2xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-slate-100/80 backdrop-blur dark:bg-slate-900/80 dark:ring-slate-800"
+            onClick={() => navigate("/")}
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#135bec] shadow-md shadow-blue-500/40">
+              <img
+                src="/logo.jpeg"
+                alt="Logo NP Saúde Pró"
+                className="h-7 w-7 rounded-lg object-cover"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                NP Saúde Pró
+              </span>
+              <span className="text-[11px] text-slate-400">
+                Envio de SADT · passo único
+              </span>
+            </div>
+          </button>
 
-          <div className="hidden items-center gap-9 text-sm font-medium text-muted-foreground md:flex">
-            <button className="transition-colors hover:text-foreground">
-              Dashboard
-            </button>
-            <button className="transition-colors hover:text-foreground">
-              Minhas Solicitações
-            </button>
-            <button className="text-[#135bec] hover:text-[#1850c9]">
-              Nova Solicitação
-            </button>
-            <button className="transition-colors hover:text-foreground">
-              Ajuda
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 md:gap-3">
-            <button className="flex h-10 w-10 items-center justify-center rounded-lg bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
-              <span className="sr-only">Notificações</span>
-              <span>🔔</span>
-            </button>
-            <button className="hidden h-10 w-10 items-center justify-center rounded-lg bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 md:flex">
-              <span className="sr-only">Configurações</span>
-              <span>⚙️</span>
-            </button>
-            <img
-              src="/perfil.jpeg"
-              alt="Foto do usuário"
-              className="hidden h-10 w-10 rounded-full object-cover md:block"
-            />
+          <div className="flex items-center gap-2 text-xs text-slate-400 sm:text-sm">
+            <span className="hidden sm:inline">Atendimento</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" />
+            <span>(00) 0000-0000</span>
           </div>
         </header>
 
         {/* Conteúdo */}
-        <main className="flex flex-1 justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-          <div className="flex w-full max-w-2xl flex-col">
-            <div className="px-1 pb-2">
-              <h1 className="text-3xl font-black leading-tight tracking-[-0.03em] sm:text-4xl">
-                Envio de SADT
-              </h1>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-8">
-              <div className="rounded-xl border border-border bg-card/95 shadow-[0_4px_24px_rgba(0,0,0,0.16)]">
-                {/* Cabeçalho do card */}
-                <div className="flex flex-col gap-1 px-6 py-6 sm:px-8 sm:py-8">
-                  <h3 className="text-lg font-bold leading-tight tracking-[-0.015em]">
-                    Solicitação de Envio de SADT
-                  </h3>
-                  <p className="text-base font-normal leading-normal text-muted-foreground">
-                    Preencha o campo abaixo e anexe o comprovante para enviar
-                    sua solicitação.
-                  </p>
-                </div>
-
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(handleSubmit)}
-                    className="border-t border-border/80 px-6 py-6 sm:px-8 sm:py-8"
-                  >
-                    <div className="flex flex-col gap-6">
-                      {/* Telefone */}
-                      <FormField
-                        control={form.control}
-                        name="telefone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="pb-2 text-base font-medium">
-                              Telefone *
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                inputMode="tel"
-                                placeholder="(XX) XXXXX-XXXX"
-                                className="h-14 rounded-lg border border-input bg-background text-base placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[#135bec]/60"
-                                onChange={(e) =>
-                                  field.onChange(
-                                    formatarTelefone(e.target.value),
-                                  )
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Área de anexos */}
-                      <div className="flex flex-col gap-3">
-                        <p className="text-base font-normal leading-normal">
-                          Anexe o comprovante em formato de imagem ou PDF.
-                        </p>
-                        <div className="grid grid-cols-1 gap-4 pt-1 sm:grid-cols-2">
-                          {/* Tirar foto */}
-                          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-muted px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/80">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              className="hidden"
-                              onChange={(e) => aceitarArquivos(e.target.files)}
-                            />
-                            <Camera className="h-4 w-4" />
-                            <span>Tirar foto</span>
-                          </label>
-
-                          {/* Anexar arquivo */}
-                          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-muted px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted/80">
-                            <input
-                              type="file"
-                              multiple
-                              accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                              className="hidden"
-                              onChange={(e) => aceitarArquivos(e.target.files)}
-                            />
-                            <Paperclip className="h-4 w-4" />
-                            <span>Anexar arquivo</span>
-                          </label>
-                        </div>
-
-                        {arquivoErro && (
-                          <p className="pt-1 text-sm font-medium text-red-500">
-                            {arquivoErro}
-                          </p>
-                        )}
-
-                        {/* Lista de arquivos */}
-                        {temArquivos && (
-                          <div className="mt-2 flex flex-col gap-2">
-                            {arquivos.map((item) => {
-                              const isImagem = item.file.type.startsWith(
-                                "image/",
-                              );
-                              const tamanho =
-                                item.file.size < 1024 * 1024
-                                  ? `${(item.file.size / 1024).toFixed(1)} KB`
-                                  : `${(
-                                      item.file.size /
-                                      (1024 * 1024)
-                                    ).toFixed(1)} MB`;
-
-                              return (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-between rounded-lg border border-border bg-background/80 px-3 py-3"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#135bec]/10 text-[#135bec]">
-                                      {isImagem ? (
-                                        <ImageIcon className="h-5 w-5" />
-                                      ) : (
-                                        <FileText className="h-5 w-5" />
-                                      )}
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <p className="max-w-[220px] truncate text-sm font-medium sm:max-w-xs">
-                                        {item.file.name}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {tamanho}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                    onClick={() => removerArquivo(item.id)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                    <span className="sr-only">Remover</span>
-                                  </button>
-                                </div>
-                              );
-                            })}
-
-                            {arquivos.length > 1 && (
-                              <p className="pl-[52px] text-xs text-muted-foreground">
-                                {arquivos.length} arquivos anexados · Total{" "}
-                                {tamanhoTotalFormatado}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Rodapé com botões */}
-                    <div className="mt-8 flex flex-col justify-end gap-3 border-t border-border pt-6 sm:flex-row sm:gap-4">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-11 rounded-lg bg-transparent text-sm font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                        disabled={isPending}
-                        onClick={() => {
-                          form.reset();
-                          limparArquivos();
-                          setArquivoErro(null);
-                        }}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="h-11 rounded-lg bg-[#135bec] px-6 text-sm font-semibold text-white hover:bg-[#135bec]/90"
-                        disabled={isPending}
-                      >
-                        {isPending ? "Enviando..." : "Enviar"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+        <main className="flex flex-1 items-start justify-center">
+          <div className="grid w-full max-w-4xl gap-5 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.1fr)]">
+            {/* Card de formulário */}
+            <div className="rounded-3xl bg-white/90 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.12)] ring-1 ring-slate-100/80 backdrop-blur-xl dark:bg-slate-900/90 dark:ring-slate-800 sm:p-7">
+              <div className="flex flex-col gap-1 pb-4">
+                <h1 className="text-xl font-semibold leading-tight text-slate-900 dark:text-slate-50 sm:text-2xl">
+                  Envio de SADT
+                </h1>
+                <p className="text-xs text-slate-400 sm:text-sm">
+                  Preencha o telefone de contato e anexe os arquivos
+                  necessários para enviar sua solicitação.
+                </p>
               </div>
+
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(handleSubmit)}
+                  className="border-t border-slate-100/80 pt-5 dark:border-slate-800"
+                >
+                  <div className="flex flex-col gap-6">
+                    {/* Telefone */}
+                    <FormField
+                      control={form.control}
+                      name="telefone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="pb-2 text-sm font-medium text-slate-800 dark:text-slate-100">
+                            Telefone para contato *
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              inputMode="tel"
+                              placeholder="(XX) XXXXX-XXXX"
+                              className="h-12 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#135bec]/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500"
+                              onChange={(e) =>
+                                field.onChange(formatarTelefone(e.target.value))
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Área de anexos */}
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm text-slate-700 dark:text-slate-100">
+                        Anexe o comprovante em formato de imagem ou PDF.
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                        {/* Tirar foto */}
+                        <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={(e) => aceitarArquivos(e.target.files)}
+                          />
+                          <Camera className="h-4 w-4" />
+                          <span>Tirar foto</span>
+                        </label>
+
+                        {/* Anexar arquivo */}
+                        <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800">
+                          <input
+                            type="file"
+                            multiple
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            className="hidden"
+                            onChange={(e) => aceitarArquivos(e.target.files)}
+                          />
+                          <Paperclip className="h-4 w-4" />
+                          <span>Anexar arquivo</span>
+                        </label>
+                      </div>
+
+                      {arquivoErro && (
+                        <p className="pt-1 text-xs font-medium text-rose-500">
+                          {arquivoErro}
+                        </p>
+                      )}
+
+                      {/* Lista de arquivos */}
+                      {temArquivos && (
+                        <div className="mt-2 flex flex-col gap-2">
+                          {arquivos.map((item) => {
+                            const isImagem = item.file.type.startsWith(
+                              "image/",
+                            );
+                            const tamanho =
+                              item.file.size < 1024 * 1024
+                                ? `${(item.file.size / 1024).toFixed(1)} KB`
+                                : `${(
+                                    item.file.size /
+                                    (1024 * 1024)
+                                  ).toFixed(1)} MB`;
+
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between rounded-xl bg-slate-50/80 px-3 py-3 text-xs ring-1 ring-slate-100/80 dark:bg-slate-900/80 dark:ring-slate-800"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dbeafe] text-[#135bec] dark:bg-slate-800 dark:text-slate-100">
+                                    {isImagem ? (
+                                      <ImageIcon className="h-4 w-4" />
+                                    ) : (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <p className="max-w-[220px] truncate text-xs font-medium text-slate-900 dark:text-slate-50 sm:max-w-xs">
+                                      {item.file.name}
+                                    </p>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-400">
+                                      {tamanho}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                  onClick={() => removerArquivo(item.id)}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  <span className="sr-only">Remover</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+
+                          {arquivos.length > 1 && (
+                            <p className="pl-[52px] text-[11px] text-slate-400 dark:text-slate-400">
+                              {arquivos.length} arquivos anexados · Total{" "}
+                              {tamanhoTotalFormatado}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rodapé com botões */}
+                  <div className="mt-7 flex flex-col justify-end gap-3 border-t border-slate-100/80 pt-4 sm:flex-row sm:gap-4 dark:border-slate-800">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-10 rounded-full bg-transparent text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50 sm:text-sm"
+                      disabled={isPending}
+                      onClick={() => {
+                        form.reset();
+                        limparArquivos();
+                        setArquivoErro(null);
+                      }}
+                    >
+                      Limpar formulário
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="h-10 rounded-full bg-[#135bec] px-6 text-xs font-semibold text-white shadow-md shadow-blue-500/40 hover:bg-[#135bec]/90 sm:text-sm"
+                      disabled={isPending}
+                    >
+                      {isPending ? "Enviando..." : "Enviar SADT"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </div>
+
+            {/* Coluna lateral com informações/ajuda */}
+            <aside className="flex flex-col gap-4">
+              <div className="rounded-3xl bg-[#135bec] px-5 py-5 text-white shadow-[0_18px_60px_rgba(37,99,235,0.55)]">
+                <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold">
+                  <span className="h-1.5 w-1.5 rounded-full bg-lime-300" />
+                  Dica de envio
+                </p>
+                <h2 className="mt-3 text-base font-semibold">
+                  Envie fotos legíveis dos documentos
+                </h2>
+                <p className="mt-1 text-xs text-sky-100">
+                  Certifique-se de que todos os dados importantes estejam
+                  visíveis antes de enviar as imagens.
+                </p>
+              </div>
+
+              <div className="rounded-3xl bg-white/90 p-4 text-xs shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800 sm:text-sm">
+                <p className="font-semibold text-slate-800 dark:text-slate-100">
+                  Como funciona?
+                </p>
+                <p className="mt-1 text-slate-500 dark:text-slate-300">
+                  Após o envio, você receberá um protocolo de acompanhamento.
+                  Nossa equipe irá analisar a solicitação e o status poderá ser
+                  consultado na área administrativa.
+                </p>
+              </div>
+            </aside>
           </div>
         </main>
       </div>
