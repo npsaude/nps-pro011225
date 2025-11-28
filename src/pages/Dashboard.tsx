@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -428,13 +429,13 @@ const Dashboard = () => {
                       <div className="flex items-center gap-1.5">
                         <span className="h-2 w-2 rounded-full bg-blue-500" />
                         <span className="text-slate-500 dark:text-slate-400">
-                          Número de SADTs enviados
+                          Número de SADTs enviadas
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="h-2 w-2 rounded-full bg-emerald-500" />
                         <span className="text-slate-500 dark:text-slate-400">
-                          SADTs pagos
+                          SADTs pagas
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -453,66 +454,10 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="h-64 sm:h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
+                    <ComposedChart
                       data={yearlySadtData}
                       margin={{ top: 8, right: 16, left: -20, bottom: 4 }}
                     >
-                      <defs>
-                        <linearGradient
-                          id="enviadosGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#3b82f6"
-                            stopOpacity={0.25}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#3b82f6"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="pagosGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#22c55e"
-                            stopOpacity={0.25}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#22c55e"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="glosaGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#8b5cf6"
-                            stopOpacity={0.25}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#8b5cf6"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
                       <CartesianGrid
                         vertical={false}
                         stroke="rgba(148, 163, 184, 0.35)"
@@ -558,33 +503,19 @@ const Dashboard = () => {
                         }}
                         labelFormatter={(label) => `Mês: ${label}`}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="enviados"
-                        name="Número de SADTs enviados"
-                        stroke="#3b82f6"
-                        strokeWidth={2.4}
-                        dot={false}
-                        activeDot={{
-                          r: 5,
-                          strokeWidth: 0,
-                          fill: "#3b82f6",
-                        }}
-                        fill="url(#enviadosGradient)"
+                        name="Número de SADTs enviadas"
+                        barSize={18}
+                        radius={[6, 6, 0, 0]}
+                        fill="#3b82f6"
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="pagos"
-                        name="SADTs pagos"
-                        stroke="#22c55e"
-                        strokeWidth={2.4}
-                        dot={false}
-                        activeDot={{
-                          r: 5,
-                          strokeWidth: 0,
-                          fill: "#22c55e",
-                        }}
-                        fill="url(#pagosGradient)"
+                        name="SADTs pagas"
+                        barSize={18}
+                        radius={[6, 6, 0, 0]}
+                        fill="#22c55e"
                       />
                       <Line
                         type="monotone"
@@ -592,15 +523,10 @@ const Dashboard = () => {
                         name="Retorno por glosa (R$ mil)"
                         stroke="#8b5cf6"
                         strokeWidth={2.4}
-                        dot={false}
-                        activeDot={{
-                          r: 5,
-                          strokeWidth: 0,
-                          fill: "#8b5cf6",
-                        }}
-                        fill="url(#glosaGradient)"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
                       />
-                    </LineChart>
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
