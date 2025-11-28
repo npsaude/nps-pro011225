@@ -17,7 +17,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  Legend,
 } from "recharts";
 import {
   Card,
@@ -105,15 +104,20 @@ const topMetrics = [
   },
 ];
 
+// Dados mensais inspirados no exemplo fornecido (12 meses)
 const yearlySadtData = [
-  { mes: "Jan", enviados: 120, pagos: 108, retornoGlosa: 14 },
-  { mes: "Fev", enviados: 135, pagos: 122, retornoGlosa: 18 },
-  { mes: "Mar", enviados: 150, pagos: 137, retornoGlosa: 21 },
-  { mes: "Abr", enviados: 142, pagos: 130, retornoGlosa: 19 },
-  { mes: "Mai", enviados: 158, pagos: 144, retornoGlosa: 24 },
-  { mes: "Jun", enviados: 169, pagos: 155, retornoGlosa: 26 },
-  { mes: "Jul", enviados: 162, pagos: 149, retornoGlosa: 22 },
-  { mes: "Ago", enviados: 171, pagos: 159, retornoGlosa: 27 },
+  { mes: "Jan", enviados: 65, pagos: 48, retornoGlosa: 12 },
+  { mes: "Fev", enviados: 59, pagos: 42, retornoGlosa: 10 },
+  { mes: "Mar", enviados: 80, pagos: 60, retornoGlosa: 15 },
+  { mes: "Abr", enviados: 81, pagos: 55, retornoGlosa: 13 },
+  { mes: "Mai", enviados: 56, pagos: 40, retornoGlosa: 11 },
+  { mes: "Jun", enviados: 55, pagos: 38, retornoGlosa: 10 },
+  { mes: "Jul", enviados: 70, pagos: 52, retornoGlosa: 16 },
+  { mes: "Ago", enviados: 75, pagos: 58, retornoGlosa: 17 },
+  { mes: "Set", enviados: 88, pagos: 68, retornoGlosa: 18 },
+  { mes: "Out", enviados: 92, pagos: 72, retornoGlosa: 19 },
+  { mes: "Nov", enviados: 101, pagos: 78, retornoGlosa: 21 },
+  { mes: "Dez", enviados: 110, pagos: 85, retornoGlosa: 23 },
 ];
 
 const activities = [
@@ -353,7 +357,7 @@ const Dashboard = () => {
           <main className="flex flex-1 flex-col gap-4">
             {/* Linha de cards + CTA lateral */}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
-              {/* Cards de métricas - novo layout em gradiente */}
+              {/* Cards de métricas - layout em gradiente */}
               <div className="grid gap-3 rounded-3xl bg-transparent sm:grid-cols-2 xl:grid-cols-5">
                 {topMetrics.map((metric) => {
                   const Icon = metric.icon;
@@ -406,54 +410,146 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Gráfico de receita mensal (agora gráfico de linhas de SADTs) */}
+            {/* Gráfico de linha inspirado no exemplo */}
             <section className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
               <Card className="rounded-3xl border-none bg-white/80 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div>
-                    <CardDescription className="text-xs text-slate-400">
-                      Evolução de SADTs e retorno por glosa
-                    </CardDescription>
-                    <CardTitle className="text-xl text-slate-900 dark:text-slate-50">
-                      Ano de 2024
-                    </CardTitle>
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <CardTitle className="text-lg text-slate-900 dark:text-slate-50">
+                        Análise Mensal de SADTs
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-400">
+                        Número de SADTs enviados, pagos e retorno por glosa ao
+                        longo do ano.
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] sm:text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span className="text-slate-500 dark:text-slate-400">
+                          Número de SADTs enviados
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="text-slate-500 dark:text-slate-400">
+                          SADTs pagos
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-violet-500" />
+                        <span className="text-slate-500 dark:text-slate-400">
+                          Retorno por glosa (R$ mil)
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <Badge className="rounded-full bg-slate-900/90 px-3 py-1 text-[11px] font-medium text-white shadow-md dark:bg-slate-100 dark:text-slate-900">
-                    Dados mensais
-                  </Badge>
+                  <div className="mt-2">
+                    <Badge className="rounded-full bg-slate-900/90 px-3 py-1 text-[11px] font-medium text-white shadow-md dark:bg-slate-100 dark:text-slate-900">
+                      Ano de 2024 · Dados mensais
+                    </Badge>
+                  </div>
                 </CardHeader>
-                <CardContent className="h-60">
+                <CardContent className="h-64 sm:h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={yearlySadtData}
-                      margin={{ top: 12, right: 16, left: -20, bottom: 0 }}
+                      margin={{ top: 8, right: 16, left: -20, bottom: 4 }}
                     >
+                      <defs>
+                        <linearGradient
+                          id="enviadosGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0.25}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="pagosGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#22c55e"
+                            stopOpacity={0.25}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#22c55e"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="glosaGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#8b5cf6"
+                            stopOpacity={0.25}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#8b5cf6"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid
                         vertical={false}
-                        stroke="rgba(148, 163, 184, 0.3)"
+                        stroke="rgba(148, 163, 184, 0.35)"
                       />
                       <XAxis
                         dataKey="mes"
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tick={{ fill: "#94a3b8", fontSize: 11 }}
+                        tickMargin={8}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tick={{ fill: "#94a3b8", fontSize: 11 }}
+                        tickMargin={8}
                       />
                       <RechartsTooltip
-                        cursor={{ stroke: "rgba(15, 23, 42, 0.15)" }}
+                        cursor={{
+                          stroke: "rgba(148, 163, 184, 0.45)",
+                          strokeWidth: 1,
+                        }}
                         contentStyle={{
-                          backgroundColor: "white",
+                          backgroundColor: "rgba(15,23,42,0.98)",
                           borderRadius: 12,
-                          border: "1px solid rgba(148,163,184,0.3)",
+                          border: "1px solid rgba(100,116,139,0.5)",
                           padding: "8px 10px",
                           fontSize: 12,
+                          color: "#e2e8f0",
+                        }}
+                        labelStyle={{
+                          color: "#f9fafb",
+                          fontWeight: 600,
+                          marginBottom: 4,
                         }}
                         formatter={(value: unknown, name: unknown) => {
-                          if (name === "Retorno por glosa") {
+                          if (name === "Retorno por glosa (R$ mil)") {
                             return `R$ ${(value as number).toLocaleString(
                               "pt-BR",
                             )} mil`;
@@ -462,38 +558,47 @@ const Dashboard = () => {
                         }}
                         labelFormatter={(label) => `Mês: ${label}`}
                       />
-                      <Legend
-                        verticalAlign="top"
-                        height={24}
-                        iconType="circle"
-                        wrapperStyle={{ paddingTop: 4, fontSize: 12 }}
-                      />
                       <Line
                         type="monotone"
                         dataKey="enviados"
-                        name="SADTs enviados"
+                        name="Número de SADTs enviados"
                         stroke="#3b82f6"
-                        strokeWidth={2.2}
-                        dot={{ r: 3.5 }}
-                        activeDot={{ r: 5 }}
+                        strokeWidth={2.4}
+                        dot={false}
+                        activeDot={{
+                          r: 5,
+                          strokeWidth: 0,
+                          fill: "#3b82f6",
+                        }}
+                        fill="url(#enviadosGradient)"
                       />
                       <Line
                         type="monotone"
                         dataKey="pagos"
                         name="SADTs pagos"
                         stroke="#22c55e"
-                        strokeWidth={2.2}
-                        dot={{ r: 3.5 }}
-                        activeDot={{ r: 5 }}
+                        strokeWidth={2.4}
+                        dot={false}
+                        activeDot={{
+                          r: 5,
+                          strokeWidth: 0,
+                          fill: "#22c55e",
+                        }}
+                        fill="url(#pagosGradient)"
                       />
                       <Line
                         type="monotone"
                         dataKey="retornoGlosa"
-                        name="Retorno por glosa"
-                        stroke="#f97316"
-                        strokeWidth={2.2}
-                        dot={{ r: 3.5 }}
-                        activeDot={{ r: 5 }}
+                        name="Retorno por glosa (R$ mil)"
+                        stroke="#8b5cf6"
+                        strokeWidth={2.4}
+                        dot={false}
+                        activeDot={{
+                          r: 5,
+                          strokeWidth: 0,
+                          fill: "#8b5cf6",
+                        }}
+                        fill="url(#glosaGradient)"
                       />
                     </LineChart>
                   </ResponsiveContainer>
