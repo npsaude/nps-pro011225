@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+
 import NotFound from "./pages/NotFound";
 import SadtEnviar from "./pages/SadtEnviar";
 import SadtSucesso from "./pages/SadtSucesso";
@@ -19,9 +19,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          {/* Tela inicial agora é o Login */}
+          <Route path="/" element={<Login />} />
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
           <Route path="/sadt/sucesso" element={<SadtSucesso />} />
+          {/* Mantém /login como atalho para a mesma tela */}
           <Route path="/login" element={<Login />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
