@@ -462,10 +462,7 @@ const Dashboard = () => {
                         stroke="rgba(148, 163, 184, 0.25)"
                         vertical
                         horizontal
-                        verticalFill={[
-                          "rgba(148,163,184,0.06)",
-                          "rgba(148,163,184,0)",
-                        ]}
+                        verticalFill={["#f3f4f6", "#ffffff"]}
                         fillOpacity={1}
                       />
                       <XAxis
