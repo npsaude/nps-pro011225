@@ -376,11 +376,6 @@ const Dashboard = () => {
                       <p className="text-lg font-semibold sm:text-xl text-center">
                         {metric.value}
                       </p>
-                      {metric.helper && (
-                        <p className="mt-1 text-[11px] font-semibold text-emerald-100 text-center">
-                          {metric.helper}
-                        </p>
-                      )}
                     </div>
                   );
                 })}
@@ -399,9 +394,6 @@ const Dashboard = () => {
                   <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">
                     128
                   </h2>
-                  <p className="text-xs text-sky-100 sm:text-sm">
-                    SADTs aguardando análise e aprovação dos convênios.
-                  </p>
                 </div>
                 <button className="flex h-9 w-full items-center justify-center rounded-full bg-white text-xs font-semibold text-[#135bec] shadow-lg transition-transform hover:translate-y-0.5 sm:text-sm">
                   Acompanhar SADTs
