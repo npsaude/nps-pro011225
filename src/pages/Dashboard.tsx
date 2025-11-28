@@ -115,7 +115,7 @@ const activities = [
   {
     id: 1,
     tipo: "Nova SADT",
-    descricao: "SADT criada para o paciente Maria Silva",
+    descricao: "SADT criada para o médico Maria Silva",
     tempo: "Há 5 minutos",
     color: "bg-emerald-500/15 text-emerald-700",
   },
@@ -139,7 +139,7 @@ const recentSadt = [
   {
     protocolo: "SADT-2024-13451",
     data: "03 Jul, 2024",
-    paciente: "Carlos Pereira",
+    medico: "Carlos Pereira",
     valor: "R$ 2.450,00",
     status: "PAGA",
     statusColor: "bg-emerald-100 text-emerald-700",
@@ -147,7 +147,7 @@ const recentSadt = [
   {
     protocolo: "SADT-2024-13398",
     data: "28 Jun, 2024",
-    paciente: "Ana Costa",
+    medico: "Ana Costa",
     valor: "R$ 1.280,00",
     status: "EM ANÁLISE",
     statusColor: "bg-amber-100 text-amber-700",
@@ -155,7 +155,7 @@ const recentSadt = [
   {
     protocolo: "SADT-2024-13340",
     data: "25 Jun, 2024",
-    paciente: "João Almeida",
+    medico: "João Almeida",
     valor: "R$ 980,00",
     status: "GLOSA",
     statusColor: "bg-rose-100 text-rose-700",
@@ -163,7 +163,7 @@ const recentSadt = [
   {
     protocolo: "SADT-2024-13290",
     data: "20 Jun, 2024",
-    paciente: "Luciana Lima",
+    medico: "Luciana Lima",
     valor: "R$ 3.120,00",
     status: "PAGA",
     statusColor: "bg-emerald-100 text-emerald-700",
@@ -618,7 +618,7 @@ const Dashboard = () => {
                     <TableRow className="border-b border-slate-100 text-xs text-slate-400 dark:border-slate-800">
                       <TableHead className="px-4 py-3">Protocolo</TableHead>
                       <TableHead className="px-4 py-3">Data</TableHead>
-                      <TableHead className="px-4 py-3">Paciente</TableHead>
+                      <TableHead className="px-4 py-3">Médico</TableHead>
                       <TableHead className="px-4 py-3 text-right">
                         Valor
                       </TableHead>
@@ -640,7 +640,7 @@ const Dashboard = () => {
                           {item.data}
                         </TableCell>
                         <TableCell className="px-4 py-3 text-slate-500 dark:text-slate-300">
-                          {item.paciente}
+                          {item.medico}
                         </TableCell>
                         <TableCell className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-50">
                           {item.valor}

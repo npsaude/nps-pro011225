@@ -54,7 +54,7 @@ const Index = () => {
                   Envie suas SADTs de forma simples e organizada.
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Informe os dados do paciente, anexe os documentos necessários
+                  Informe os dados do médico, anexe os documentos necessários
                   e acompanhe o status em tempo real na área administrativa.
                 </p>
               </div>

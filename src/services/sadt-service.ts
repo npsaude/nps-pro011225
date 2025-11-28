@@ -34,7 +34,7 @@ export async function processarOcr(
     sucesso: true,
     camposExtraidos: {
       sadtId: payload.sadtId,
-      paciente: "Paciente Exemplo",
+      medico: "Médico Exemplo",
       procedimento: "Exame de imagem",
     },
   };
