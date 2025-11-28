@@ -382,15 +382,12 @@ const Dashboard = () => {
               </div>
 
               {/* Card promocional à direita */}
-              <div className="flex h-32 flex-col items-center justify-center gap-3 rounded-3xl bg-[#135bec] px-5 py-3 text-white shadow-[0_18px_60px_rgba(37,99,235,0.55)]">
+              <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-3xl bg-[#135bec] px-5 py-3 text-white shadow-[0_18px_60px_rgba(37,99,235,0.55)]">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
                   <span className="h-1.5 w-1.5 rounded-full bg-lime-300" />
                   SADTs pendentes
                 </div>
-                <div className="space-y-1 text-center">
-                  <p className="text-[11px] uppercase tracking-wide text-sky-100/80">
-                    Aguardando aprovação
-                  </p>
+                <div className="text-center">
                   <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">
                     128
                   </h2>
