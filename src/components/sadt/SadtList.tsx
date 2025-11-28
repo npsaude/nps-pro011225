@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SadtResumo } from "@/components/sadt/types";
+import { Search, Filter } from "lucide-react";
 
 const statusLabel: Record<SadtResumo["status"], string> = {
   ATIVO: "Ativo",
@@ -42,31 +44,51 @@ const SadtList: React.FC<SadtListProps> = ({ items, onNewClick }) => {
     <Card className="h-full rounded-3xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <CardHeader className="border-b border-slate-100 bg-slate-50/80 pb-3 dark:border-slate-800 dark:bg-slate-900/80">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
+          <div className="space-y-1">
             <CardTitle className="text-sm font-semibold sm:text-base">
               SADTs cadastradas
             </CardTitle>
-            <CardDescription className="mt-1 text-xs sm:text-sm">
+            <CardDescription className="text-xs sm:text-sm">
               Lista de guias de SADT com status e estágio.
             </CardDescription>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              Total:{" "}
+              <span className="font-medium text-slate-600 dark:text-slate-300">
+                {items.length}
+              </span>{" "}
+              guia(s)
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-full border-slate-200 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              Filtros
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="rounded-full bg-indigo-600 px-4 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
-              onClick={onNewClick}
-            >
-              Nova SADT
-            </Button>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="w-full min-w-[200px] sm:w-52">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <Input
+                  placeholder="Pesquisar por nº da guia ou profissional"
+                  className="h-9 rounded-full border-slate-200 bg-white pl-8 pr-3 text-xs shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full border-slate-200 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Filter className="mr-1.5 h-3.5 w-3.5" />
+                Filtros
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="rounded-full bg-indigo-600 px-4 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
+                onClick={onNewClick}
+              >
+                Nova SADT
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
