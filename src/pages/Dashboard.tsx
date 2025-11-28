@@ -11,11 +11,13 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
+  YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
+  Legend,
 } from "recharts";
 import {
   Card,
@@ -33,6 +35,14 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState } from "react";
 
 const sidebarItems = [
   { label: "Home", icon: Home, active: true },
@@ -44,42 +54,66 @@ const sidebarItems = [
   { label: "Ajuda", icon: HelpCircle, active: false },
 ];
 
+const clinicOptions = [
+  { id: "todas", name: "Todas as clínicas" },
+  { id: "clinica-centro", name: "Clínica Centro" },
+  { id: "clinica-zona-sul", name: "Clínica Zona Sul" },
+];
+
+const doctorOptions = [
+  { id: "todos", name: "Todos os médicos" },
+  { id: "dra-maria-silva", name: "Dra. Maria Silva" },
+  { id: "dr-carlos-pereira", name: "Dr. Carlos Pereira" },
+  { id: "dra-ana-costa", name: "Dra. Ana Costa" },
+];
+
 const topMetrics = [
   {
-    title: "Receita Total",
-    value: "R$ 216k",
-    tag: "+3,4%",
-    tagColor: "bg-emerald-100 text-emerald-700",
+    title: "Quantidade de médicos",
+    value: "32",
+    helper: "↑ 4 neste mês",
+    gradient: "from-sky-400 to-blue-500",
+    icon: Users,
   },
   {
-    title: "SADTs enviadas",
-    value: "2.221",
-    tag: "+4,1%",
-    tagColor: "bg-emerald-100 text-emerald-700",
+    title: "SADTs atendidos",
+    value: "2,8 mil",
+    helper: "↑ 320 vs. mês anterior",
+    gradient: "from-fuchsia-400 to-violet-500",
+    icon: Stethoscope,
   },
   {
-    title: "Pacientes",
-    value: "1.423",
-    tag: "+2,3%",
-    tagColor: "bg-emerald-100 text-emerald-700",
+    title: "Receita no ano",
+    value: "R$ 1,2 mi",
+    helper: "↑ R$ 120 mil no ano",
+    gradient: "from-indigo-500 to-slate-700",
+    icon: FileText,
   },
   {
-    title: "Índice de Glosa",
-    value: "5,7%",
-    tag: "-0,8%",
-    tagColor: "bg-rose-100 text-rose-700",
+    title: "Índice de glosa",
+    value: "5,3%",
+    helper: "↓ 0,7 p.p.",
+    gradient: "from-amber-400 to-orange-500",
+    icon: HelpCircle,
+  },
+  {
+    title: "Valor de glosa recuperado",
+    value: "R$ 180 mil",
+    helper: "↑ R$ 25 mil no mês",
+    gradient: "from-emerald-400 to-teal-500",
+    icon: MessageCircle,
   },
 ];
 
-const monthlyRevenueData = [
-  { mes: "Jan", valor: 8000 },
-  { mes: "Fev", valor: 9500 },
-  { mes: "Mar", valor: 12000 },
-  { mes: "Abr", valor: 11000 },
-  { mes: "Mai", valor: 13000 },
-  { mes: "Jun", valor: 15000 },
-  { mes: "Jul", valor: 14000 },
-  { mes: "Ago", valor: 14500 },
+const yearlySadtData = [
+  { mes: "Jan", enviados: 120, pagos: 108, retornoGlosa: 14 },
+  { mes: "Fev", enviados: 135, pagos: 122, retornoGlosa: 18 },
+  { mes: "Mar", enviados: 150, pagos: 137, retornoGlosa: 21 },
+  { mes: "Abr", enviados: 142, pagos: 130, retornoGlosa: 19 },
+  { mes: "Mai", enviados: 158, pagos: 144, retornoGlosa: 24 },
+  { mes: "Jun", enviados: 169, pagos: 155, retornoGlosa: 26 },
+  { mes: "Jul", enviados: 162, pagos: 149, retornoGlosa: 22 },
+  { mes: "Ago", enviados: 171, pagos: 159, retornoGlosa: 27 },
 ];
 
 const activities = [
@@ -142,6 +176,9 @@ const recentSadt = [
 ];
 
 const Dashboard = () => {
+  const [selectedClinic, setSelectedClinic] = useState<string>("todas");
+  const [selectedDoctor, setSelectedDoctor] = useState<string>("todos");
+
   return (
     <div className="relative flex min-h-screen w-full bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       {/* Fundo em gradiente suave */}
@@ -264,34 +301,88 @@ const Dashboard = () => {
             </div>
           </header>
 
+          {/* Filtros por clínica e médico */}
+          <div className="mt-1 flex flex-col gap-3 rounded-3xl bg-white/80 p-3 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-xs">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                Filtro por clínicas e médicos
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Ajuste os indicadores de acordo com a unidade e o profissional.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="w-full sm:w-56">
+                <Select
+                  value={selectedClinic}
+                  onValueChange={setSelectedClinic}
+                >
+                  <SelectTrigger className="h-9 rounded-2xl border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                    <SelectValue placeholder="Selecione a clínica" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clinicOptions.map((clinic) => (
+                      <SelectItem key={clinic.id} value={clinic.id}>
+                        {clinic.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:w-56">
+                <Select
+                  value={selectedDoctor}
+                  onValueChange={setSelectedDoctor}
+                >
+                  <SelectTrigger className="h-9 rounded-2xl border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                    <SelectValue placeholder="Selecione o médico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {doctorOptions.map((doctor) => (
+                      <SelectItem key={doctor.id} value={doctor.id}>
+                        {doctor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           {/* Conteúdo principal */}
           <main className="flex flex-1 flex-col gap-4">
             {/* Linha de cards + CTA lateral */}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
-              {/* Cards de métricas */}
-              <div className="grid gap-3 rounded-3xl bg-white/80 p-4 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800 sm:grid-cols-2 xl:grid-cols-4">
-                {topMetrics.map((metric) => (
-                  <Card
-                    key={metric.title}
-                    className="border-none bg-transparent shadow-none"
-                  >
-                    <CardHeader className="space-y-1 p-0">
-                      <CardDescription className="text-xs text-slate-400">
-                        {metric.title}
-                      </CardDescription>
-                      <div className="flex items-baseline gap-2">
-                        <CardTitle className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-                          {metric.value}
-                        </CardTitle>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${metric.tagColor}`}
-                        >
-                          {metric.tag}
-                        </span>
+              {/* Cards de métricas - novo layout em gradiente */}
+              <div className="grid gap-3 rounded-3xl bg-transparent sm:grid-cols-2 xl:grid-cols-5">
+                {topMetrics.map((metric) => {
+                  const Icon = metric.icon;
+                  return (
+                    <div
+                      key={metric.title}
+                      className={`flex flex-col justify-between rounded-3xl bg-gradient-to-r ${metric.gradient} px-4 py-3 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-[11px] font-medium opacity-90">
+                            {metric.title}
+                          </p>
+                          <p className="mt-1 text-lg font-semibold sm:text-xl">
+                            {metric.value}
+                          </p>
+                        </div>
+                        <div className="flex h-7 w-7 items-center justify-center rounded-2xl bg-white/20">
+                          <Icon className="h-4 w-4" />
+                        </div>
                       </div>
-                    </CardHeader>
-                  </Card>
-                ))}
+                      {metric.helper && (
+                        <p className="mt-2 text-[11px] font-semibold text-emerald-100">
+                          {metric.helper}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Card promocional à direita */}
@@ -315,25 +406,28 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Gráfico de receita mensal */}
+            {/* Gráfico de receita mensal (agora gráfico de linhas de SADTs) */}
             <section className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
               <Card className="rounded-3xl border-none bg-white/80 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div>
                     <CardDescription className="text-xs text-slate-400">
-                      Receita mensal
+                      Evolução de SADTs e retorno por glosa
                     </CardDescription>
                     <CardTitle className="text-xl text-slate-900 dark:text-slate-50">
-                      R$ 15.000,00
+                      Ano de 2024
                     </CardTitle>
                   </div>
                   <Badge className="rounded-full bg-slate-900/90 px-3 py-1 text-[11px] font-medium text-white shadow-md dark:bg-slate-100 dark:text-slate-900">
-                    Junho
+                    Dados mensais
                   </Badge>
                 </CardHeader>
                 <CardContent className="h-60">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyRevenueData} barSize={26}>
+                    <LineChart
+                      data={yearlySadtData}
+                      margin={{ top: 12, right: 16, left: -20, bottom: 0 }}
+                    >
                       <CartesianGrid
                         vertical={false}
                         stroke="rgba(148, 163, 184, 0.3)"
@@ -344,8 +438,13 @@ const Dashboard = () => {
                         axisLine={false}
                         tick={{ fill: "#94a3b8", fontSize: 12 }}
                       />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      />
                       <RechartsTooltip
-                        cursor={{ fill: "rgba(15, 23, 42, 0.04)" }}
+                        cursor={{ stroke: "rgba(15, 23, 42, 0.15)" }}
                         contentStyle={{
                           backgroundColor: "white",
                           borderRadius: 12,
@@ -353,25 +452,50 @@ const Dashboard = () => {
                           padding: "8px 10px",
                           fontSize: 12,
                         }}
-                        formatter={(value: unknown) =>
-                          `R$ ${(value as number).toLocaleString("pt-BR")}`
-                        }
+                        formatter={(value: unknown, name: unknown) => {
+                          if (name === "Retorno por glosa") {
+                            return `R$ ${(value as number).toLocaleString(
+                              "pt-BR",
+                            )} mil`;
+                          }
+                          return (value as number).toLocaleString("pt-BR");
+                        }}
+                        labelFormatter={(label) => `Mês: ${label}`}
                       />
-                      <Bar
-                        dataKey="valor"
-                        radius={[10, 10, 10, 10]}
-                        fill="#dbeafe"
-                        activeBar={
-                          <rect
-                            rx={10}
-                            ry={10}
-                            stroke="#1d4ed8"
-                            strokeWidth={0}
-                            fill="#2563eb"
-                          />
-                        }
+                      <Legend
+                        verticalAlign="top"
+                        height={24}
+                        iconType="circle"
+                        wrapperStyle={{ paddingTop: 4, fontSize: 12 }}
                       />
-                    </BarChart>
+                      <Line
+                        type="monotone"
+                        dataKey="enviados"
+                        name="SADTs enviados"
+                        stroke="#3b82f6"
+                        strokeWidth={2.2}
+                        dot={{ r: 3.5 }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="pagos"
+                        name="SADTs pagos"
+                        stroke="#22c55e"
+                        strokeWidth={2.2}
+                        dot={{ r: 3.5 }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="retornoGlosa"
+                        name="Retorno por glosa"
+                        stroke="#f97316"
+                        strokeWidth={2.2}
+                        dot={{ r: 3.5 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
