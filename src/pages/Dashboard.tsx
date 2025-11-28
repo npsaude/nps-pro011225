@@ -439,7 +439,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-violet-500" />
+                        <span className="h-2 w-2 rounded-full bg-orange-500" />
                         <span className="text-slate-500 dark:text-slate-400">
                           Retorno por glosa (R$ mil)
                         </span>
@@ -521,7 +521,7 @@ const Dashboard = () => {
                         type="monotone"
                         dataKey="retornoGlosa"
                         name="Retorno por glosa (R$ mil)"
-                        stroke="#8b5cf6"
+                        stroke="#f97316"
                         strokeWidth={2.4}
                         dot={{ r: 3 }}
                         activeDot={{ r: 5 }}
