@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import SadtCadastro from "./pages/SadtCadastro";
 import SadtNova from "./pages/SadtNova";
+import SadtEditar from "./pages/SadtEditar";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/sadt/sucesso" element={<SadtSucesso />} />
           <Route path="/sadt/cadastro" element={<SadtCadastro />} />
           <Route path="/sadt/nova" element={<SadtNova />} />
+          <Route path="/sadt/editar/:id" element={<SadtEditar />} />
           {/* Mantém /login como atalho para a mesma tela */}
           <Route path="/login" element={<Login />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />

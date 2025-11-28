@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Home,
   FileText,
@@ -9,102 +9,100 @@ import {
   HelpCircle,
   Bell,
   Search,
+  ArrowLeft,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import SadtList from "@/components/sadt/SadtList";
-import { SadtResumo } from "@/components/sadt/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useNavigate, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { SadtResumo, SadtCadastroStatus, SadtEstagio } from "@/components/sadt/types";
 import { showSuccess } from "@/utils/toast";
 
-const initialSadtList: SadtResumo[] = [
-  {
-    id: "1",
-    numeroGuiaPrincipal: "2024-000123",
-    dataAutorizacao: "2024-07-01",
-    nomeProfissionalSolicitante: "Dra. Maria Silva",
-    identificacaoOperadora: "Vida Mais Saúde",
-    status: "ATIVO",
-    estagio: "AGUARDANDO",
-  },
-  {
-    id: "2",
-    numeroGuiaPrincipal: "2024-000124",
-    dataAutorizacao: "2024-07-02",
-    nomeProfissionalSolicitante: "Dr. Carlos Pereira",
-    identificacaoOperadora: "Bem Estar Saúde",
-    status: "ATIVO",
-    estagio: "EM_FATURAMENTO",
-  },
-  {
-    id: "3",
-    numeroGuiaPrincipal: "2024-000125",
-    dataAutorizacao: "2024-06-28",
-    nomeProfissionalSolicitante: "Dra. Ana Costa",
-    identificacaoOperadora: "Plano Total",
-    status: "INATIVO",
-    estagio: "PAGO",
-  },
-];
-
-const SadtCadastro: React.FC = () => {
-  const [sadtList, setSadtList] = useState<SadtResumo[]>(initialSadtList);
-  const [selectedSadt, setSelectedSadt] = useState<SadtResumo | null>(null);
-  const [isViewOpen, setIsViewOpen] = useState(false);
+const SadtEditar: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [sadt, setSadt] = useState<SadtResumo | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Carrega SADTs do localStorage (criadas via GPT ou cadastro) e junta com as mocks,
-  // além de garantir que tudo fique salvo em localStorage.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const stored = window.localStorage.getItem("sadt-list");
-
-    if (!stored) {
-      window.localStorage.setItem("sadt-list", JSON.stringify(initialSadtList));
+    if (!id) {
+      setLoading(false);
       return;
     }
 
-    const listaLocal = JSON.parse(stored) as SadtResumo[];
+    const stored = window.localStorage.getItem("sadt-list");
+    if (!stored) {
+      setLoading(false);
+      return;
+    }
 
-    setSadtList((prev) => {
-      const idsExistentes = new Set(prev.map((s) => s.id));
-      const novasNaoDuplicadas = listaLocal.filter(
-        (s) => !idsExistentes.has(s.id),
-      );
-      const merged = [...novasNaoDuplicadas, ...prev];
-      window.localStorage.setItem("sadt-list", JSON.stringify(merged));
-      return merged;
-    });
-  }, []);
+    const lista = JSON.parse(stored) as SadtResumo[];
+    const encontrada = lista.find((item) => item.id === id) || null;
+    setSadt(encontrada);
+    setLoading(false);
+  }, [id]);
 
-  const handleNovaSadt = () => {
-    navigate("/sadt/nova");
+  const handleBack = () => {
+    navigate("/sadt/cadastro");
   };
 
-  const handleViewSadt = (sadt: SadtResumo) => {
-    setSelectedSadt(sadt);
-    setIsViewOpen(true);
-  };
-
-  const handleEditSadt = (sadt: SadtResumo) => {
-    navigate(`/sadt/editar/${sadt.id}`);
-  };
-
-  const handleDeleteSadt = (sadt: SadtResumo) => {
-    if (typeof window === "undefined") return;
-
-    const confirmar = window.confirm(
-      `Deseja realmente excluir a SADT ${sadt.numeroGuiaPrincipal || ""}?`,
+  const handleChangeCampo = (campo: keyof SadtResumo, valor: string) => {
+    setSadt((prev) =>
+      prev
+        ? {
+            ...prev,
+            [campo]: valor,
+          }
+        : prev,
     );
-    if (!confirmar) return;
+  };
 
-    setSadtList((prev) => {
-      const novaLista = prev.filter((item) => item.id !== sadt.id);
-      window.localStorage.setItem("sadt-list", JSON.stringify(novaLista));
-      return novaLista;
-    });
+  const handleChangeStatus = (valor: SadtCadastroStatus) => {
+    setSadt((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: valor,
+          }
+        : prev,
+    );
+  };
 
-    showSuccess("SADT excluída com sucesso.");
+  const handleChangeEstagio = (valor: SadtEstagio) => {
+    setSadt((prev) =>
+      prev
+        ? {
+            ...prev,
+            estagio: valor,
+          }
+        : prev,
+    );
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!sadt || typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem("sadt-list");
+    const lista = stored ? (JSON.parse(stored) as SadtResumo[]) : [];
+
+    const novaLista = lista.map((item) =>
+      item.id === sadt.id ? sadt : item,
+    );
+
+    window.localStorage.setItem("sadt-list", JSON.stringify(novaLista));
+
+    showSuccess("SADT atualizada com sucesso.");
+    navigate("/sadt/cadastro");
   };
 
   return (
@@ -247,10 +245,10 @@ const SadtCadastro: React.FC = () => {
           <header className="flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
-                SADT&apos;s
+                Editar SADT
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Gerencie as guias de SADT da sua clínica.
+                Atualize os dados principais da guia de SADT.
               </p>
             </div>
 
@@ -287,111 +285,208 @@ const SadtCadastro: React.FC = () => {
             </div>
           </header>
 
-          {/* Conteúdo principal: texto + lista */}
+          {/* Conteúdo principal */}
           <main className="flex-1 overflow-y-auto pb-2">
             <div className="mt-2 flex flex-col gap-4">
-              <section className="rounded-3xl bg-white/80 p-4 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800">
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
-                  Lista de guias SADT
-                </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Ao entrar, você vê a lista de SADTs já cadastradas e pode criar novas.
-                </p>
+              <section className="flex flex-col gap-3 rounded-3xl bg-white/80 p-4 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Guia SADT</span>
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50 sm:text-lg">
+                      Editar SADT
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                      Ajuste o número da guia, datas, profissional, operadora, status e estágio.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                    onClick={handleBack}
+                  >
+                    <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                    Voltar para lista
+                  </Button>
+                </div>
               </section>
 
-              <SadtList
-                items={sadtList}
-                onNewClick={handleNovaSadt}
-                onView={handleViewSadt}
-                onEdit={handleEditSadt}
-                onDelete={handleDeleteSadt}
-              />
+              <section className="rounded-3xl bg-white/90 p-4 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800">
+                {loading ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Carregando dados da SADT...
+                  </p>
+                ) : !sadt ? (
+                  <div className="space-y-3 text-sm">
+                    <p className="font-medium text-slate-900 dark:text-slate-50">
+                      SADT não encontrada.
+                    </p>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      Verifique se a guia ainda existe na lista ou tente novamente.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={handleBack}
+                    >
+                      Voltar para lista
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="numeroGuiaPrincipal">
+                          Nº Guia Principal
+                        </Label>
+                        <Input
+                          id="numeroGuiaPrincipal"
+                          value={sadt.numeroGuiaPrincipal}
+                          onChange={(e) =>
+                            handleChangeCampo(
+                              "numeroGuiaPrincipal",
+                              e.target.value,
+                            )
+                          }
+                          className="h-9 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dataAutorizacao">
+                          Data da Autorização
+                        </Label>
+                        <Input
+                          id="dataAutorizacao"
+                          type="date"
+                          value={sadt.dataAutorizacao}
+                          onChange={(e) =>
+                            handleChangeCampo("dataAutorizacao", e.target.value)
+                          }
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="nomeProfissionalSolicitante">
+                        Profissional Solicitante
+                      </Label>
+                      <Input
+                        id="nomeProfissionalSolicitante"
+                        value={sadt.nomeProfissionalSolicitante}
+                        onChange={(e) =>
+                          handleChangeCampo(
+                            "nomeProfissionalSolicitante",
+                            e.target.value,
+                          )
+                        }
+                        className="h-9 text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="identificacaoOperadora">
+                        Identificação da Operadora
+                      </Label>
+                      <Input
+                        id="identificacaoOperadora"
+                        value={sadt.identificacaoOperadora}
+                        onChange={(e) =>
+                          handleChangeCampo(
+                            "identificacaoOperadora",
+                            e.target.value,
+                          )
+                        }
+                        className="h-9 text-xs"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label>Status</Label>
+                        <Select
+                          value={sadt.status}
+                          onValueChange={(value) =>
+                            handleChangeStatus(value as SadtCadastroStatus)
+                          }
+                        >
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Selecione o status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ATIVO">Ativo</SelectItem>
+                            <SelectItem value="INATIVO">Inativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label>Estágio</Label>
+                        <Select
+                          value={sadt.estagio}
+                          onValueChange={(value) =>
+                            handleChangeEstagio(value as SadtEstagio)
+                          }
+                        >
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Selecione o estágio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AGUARDANDO">
+                              Aguardando
+                            </SelectItem>
+                            <SelectItem value="RECEBIDO">Recebido</SelectItem>
+                            <SelectItem value="EM_FATURAMENTO">
+                              Em faturamento
+                            </SelectItem>
+                            <SelectItem value="PAGO">Pago</SelectItem>
+                            <SelectItem value="RETORNO_POR_GLOSA">
+                              Retorno por Glosa
+                            </SelectItem>
+                            <SelectItem value="DEFESA_POR_GLOSA">
+                              Defesa por Glosa
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-full text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                        onClick={handleBack}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        className="rounded-full bg-indigo-600 px-5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
+                      >
+                        Salvar alterações
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </section>
             </div>
           </main>
         </div>
       </div>
-
-      {/* Modal de visualização */}
-      <Dialog
-        open={isViewOpen}
-        onOpenChange={(open) => {
-          setIsViewOpen(open);
-          if (!open) {
-            setSelectedSadt(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Detalhes da SADT</DialogTitle>
-            <DialogDescription>
-              Visualize os principais dados da guia SADT selecionada.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedSadt && (
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[11px] uppercase text-slate-400">
-                    Nº Guia Principal
-                  </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-50">
-                    {selectedSadt.numeroGuiaPrincipal || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase text-slate-400">
-                    Data Autorização
-                  </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-50">
-                    {selectedSadt.dataAutorizacao || "-"}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[11px] uppercase text-slate-400">
-                  Profissional Solicitante
-                </p>
-                <p className="font-medium text-slate-900 dark:text-slate-50">
-                  {selectedSadt.nomeProfissionalSolicitante || "-"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[11px] uppercase text-slate-400">
-                  Operadora
-                </p>
-                <p className="font-medium text-slate-900 dark:text-slate-50">
-                  {selectedSadt.identificacaoOperadora || "-"}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[11px] uppercase text-slate-400">
-                    Status
-                  </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-50">
-                    {selectedSadt.status}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase text-slate-400">
-                    Estágio
-                  </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-50">
-                    {selectedSadt.estagio}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
 
-export default SadtCadastro;
+export default SadtEditar;

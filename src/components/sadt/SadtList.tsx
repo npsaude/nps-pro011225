@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SadtResumo } from "@/components/sadt/types";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Eye, Pencil, Trash2 } from "lucide-react";
 
 const statusLabel: Record<SadtResumo["status"], string> = {
   ATIVO: "Ativo",
@@ -37,9 +37,18 @@ const estagioLabel: Record<SadtResumo["estagio"], string> = {
 interface SadtListProps {
   items: SadtResumo[];
   onNewClick: () => void;
+  onView: (item: SadtResumo) => void;
+  onEdit: (item: SadtResumo) => void;
+  onDelete: (item: SadtResumo) => void;
 }
 
-const SadtList: React.FC<SadtListProps> = ({ items, onNewClick }) => {
+const SadtList: React.FC<SadtListProps> = ({
+  items,
+  onNewClick,
+  onView,
+  onEdit,
+  onDelete,
+}) => {
   return (
     <Card className="h-full rounded-3xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <CardHeader className="border-b border-slate-100 bg-slate-50/80 pb-3 dark:border-slate-800 dark:bg-slate-900/80">
@@ -115,13 +124,16 @@ const SadtList: React.FC<SadtListProps> = ({ items, onNewClick }) => {
                 <TableHead className="whitespace-nowrap px-4 py-3">
                   Estágio
                 </TableHead>
+                <TableHead className="whitespace-nowrap px-4 py-3 text-right">
+                  Ações
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-6 text-center text-xs text-slate-400"
                   >
                     Nenhuma SADT cadastrada até o momento.
@@ -160,6 +172,37 @@ const SadtList: React.FC<SadtListProps> = ({ items, onNewClick }) => {
                       <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                         {estagioLabel[item.estagio]}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                          onClick={() => onView(item)}
+                          title="Visualizar"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+                          onClick={() => onEdit(item)}
+                          title="Editar"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full text-slate-500 hover:bg-rose-50 hover:text-rose-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-rose-300"
+                          onClick={() => onDelete(item)}
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
