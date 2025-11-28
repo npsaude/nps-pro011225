@@ -44,16 +44,6 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 
-const sidebarItems = [
-  { label: "Home", icon: Home, active: true },
-  { label: "SADTs", icon: FileText, active: false },
-  { label: "Pacientes", icon: Users, active: false },
-  { label: "Procedimentos", icon: Stethoscope, active: false },
-  { label: "Mensagens", icon: MessageCircle, active: false, badge: 2 },
-  { label: "Configurações", icon: Settings, active: false },
-  { label: "Ajuda", icon: HelpCircle, active: false },
-];
-
 const clinicOptions = [
   { id: "todas", name: "Todas as clínicas" },
   { id: "clinica-centro", name: "Clínica Centro" },
@@ -215,39 +205,91 @@ const Dashboard = () => {
 
             {/* Menu */}
             <nav className="flex flex-col gap-1">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.active;
+              {/* Home */}
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all bg-[#135bec] text-white shadow-md shadow-blue-500/40">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white">
+                    <Home className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Home</span>
+                </span>
+              </button>
 
-                return (
-                  <button
-                    key={item.label}
-                    className={`flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all ${
-                      isActive
-                        ? "bg-[#135bec] text-white shadow-md shadow-blue-500/40"
-                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
-                    }`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <span
-                        className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                          isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="font-medium">{item.label}</span>
-                    </span>
-                    {item.badge && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 text-[11px] font-semibold text-white">
-                        {item.badge}
-                      </span>
-                    )}
+              {/* SADT's */}
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <FileText className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">SADT&apos;s</span>
+                </span>
+              </button>
+
+              {/* Recursos */}
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <Stethoscope className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Recursos</span>
+                </span>
+              </button>
+
+              {/* Cadastro com subitens */}
+              <div className="mt-1 rounded-2xl bg-slate-50/80 p-2 text-xs text-slate-500 ring-1 ring-slate-100/80 dark:bg-slate-900/70 dark:text-slate-300 dark:ring-slate-800">
+                <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <Users className="h-4 w-4" />
+                  </span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                    Cadastro
+                  </span>
+                </div>
+                <div className="mt-1 space-y-1">
+                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                    <span className="ml-7">Clínicas</span>
                   </button>
-                );
-              })}
+                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                    <span className="ml-7">Médicos</span>
+                  </button>
+                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                    <span className="ml-7">Planos de Saúde</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mensagens */}
+              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <MessageCircle className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Mensagens</span>
+                </span>
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 text-[11px] font-semibold text-white">
+                  2
+                </span>
+              </button>
+
+              {/* Configurações */}
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <Settings className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Configurações</span>
+                </span>
+              </button>
+
+              {/* Ajuda */}
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <HelpCircle className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Ajuda</span>
+                </span>
+              </button>
             </nav>
           </div>
 
