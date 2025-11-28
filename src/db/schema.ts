@@ -22,6 +22,17 @@ export interface DbSadt {
   updatedAt: string; // ISO datetime
 }
 
+export type DbUserRole = "MEDICO" | "ADMIN";
+
+export interface DbAppUser {
+  id: string;
+  nome: string;
+  email: string;
+  role: DbUserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Tabela de configurações gerais (app_settings).
  * Inclui o campo "Token OpenAI".
