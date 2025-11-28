@@ -394,19 +394,21 @@ const Dashboard = () => {
               <div className="flex flex-col justify-between rounded-3xl bg-[#135bec] px-5 py-5 text-white shadow-[0_18px_60px_rgba(37,99,235,0.55)]">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
                   <span className="h-1.5 w-1.5 rounded-full bg-lime-300" />
-                  NOVO
+                  SADTs pendentes
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-lg font-semibold leading-tight">
-                    Novos recursos para gestão de SADT
+                <div className="space-y-1">
+                  <p className="text-[11px] uppercase tracking-wide text-sky-100/80">
+                    Aguardando aprovação
+                  </p>
+                  <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">
+                    128
                   </h2>
                   <p className="text-xs text-sky-100 sm:text-sm">
-                    Acompanhe glosas, autorizações e faturamento em tempo real
-                    com o painel NP Saúde Pró.
+                    SADTs aguardando análise e aprovação dos convênios.
                   </p>
                 </div>
                 <button className="mt-5 flex h-10 w-full items-center justify-center rounded-full bg-white text-xs font-semibold text-[#135bec] shadow-lg transition-transform hover:translate-y-0.5 sm:text-sm">
-                  Conhecer agora
+                  Acompanhar SADTs
                 </button>
               </div>
             </div>
@@ -439,7 +441,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
                         <span className="text-slate-500 dark:text-slate-400">
                           Retorno por glosa (R$ mil)
                         </span>
@@ -524,7 +526,7 @@ const Dashboard = () => {
                         type="monotone"
                         dataKey="retornoGlosa"
                         name="Retorno por glosa (R$ mil)"
-                        stroke="#eab308"
+                        stroke="#ef4444"
                         strokeWidth={2.4}
                         dot={{ r: 3 }}
                         activeDot={{ r: 5 }}
