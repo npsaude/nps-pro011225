@@ -439,7 +439,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-orange-500" />
+                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
                         <span className="text-slate-500 dark:text-slate-400">
                           Retorno por glosa (R$ mil)
                         </span>
@@ -459,8 +459,14 @@ const Dashboard = () => {
                       margin={{ top: 8, right: 16, left: -20, bottom: 4 }}
                     >
                       <CartesianGrid
-                        vertical={false}
-                        stroke="rgba(148, 163, 184, 0.35)"
+                        stroke="rgba(148, 163, 184, 0.25)"
+                        vertical
+                        horizontal
+                        verticalFill={[
+                          "rgba(148,163,184,0.06)",
+                          "rgba(148,163,184,0)",
+                        ]}
+                        fillOpacity={1}
                       />
                       <XAxis
                         dataKey="mes"
@@ -521,7 +527,7 @@ const Dashboard = () => {
                         type="monotone"
                         dataKey="retornoGlosa"
                         name="Retorno por glosa (R$ mil)"
-                        stroke="#f97316"
+                        stroke="#eab308"
                         strokeWidth={2.4}
                         dot={{ r: 3 }}
                         activeDot={{ r: 5 }}
