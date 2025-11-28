@@ -39,27 +39,39 @@ interface SadtListProps {
 
 const SadtList: React.FC<SadtListProps> = ({ items, onNewClick }) => {
   return (
-    <Card className="h-full rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <div>
-          <CardTitle className="text-base sm:text-lg">
-            SADTs cadastradas
-          </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            Visualize rapidamente as SADTs e seus estágios.
-          </CardDescription>
+    <Card className="h-full rounded-3xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/80 pb-3 dark:border-slate-800 dark:bg-slate-900/80">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle className="text-sm font-semibold sm:text-base">
+              SADTs cadastradas
+            </CardTitle>
+            <CardDescription className="mt-1 text-xs sm:text-sm">
+              Lista de guias de SADT com status e estágio.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full border-slate-200 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Filtros
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="rounded-full bg-indigo-600 px-4 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
+              onClick={onNewClick}
+            >
+              Nova SADT
+            </Button>
+          </div>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          className="rounded-full text-xs sm:text-sm"
-          onClick={onNewClick}
-        >
-          Nova SADT
-        </Button>
       </CardHeader>
-      <CardContent className="mt-1 overflow-hidden rounded-2xl border border-slate-100 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-        <div className="max-h-[360px] overflow-auto">
+      <CardContent className="mt-1 overflow-hidden rounded-b-2xl bg-white/80 dark:bg-slate-900/70">
+        <div className="max-h-[520px] overflow-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-b border-slate-100 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">

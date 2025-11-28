@@ -1,8 +1,7 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SadtList from "@/components/sadt/SadtList";
-import SadtForm, { SadtFormValues } from "@/components/sadt/SadtForm";
 import { SadtResumo } from "@/components/sadt/types";
-import { showSuccess } from "@/utils/toast";
 
 const initialSadtList: SadtResumo[] = [
   {
@@ -35,33 +34,11 @@ const initialSadtList: SadtResumo[] = [
 ];
 
 const SadtCadastro: React.FC = () => {
-  const [sadtList, setSadtList] = useState<SadtResumo[]>(initialSadtList);
+  const [sadtList] = useState<SadtResumo[]>(initialSadtList);
+  const navigate = useNavigate();
 
-  const handleNewSadt = (values: SadtFormValues) => {
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-    const novoRegistro: SadtResumo = {
-      id,
-      numeroGuiaPrincipal: values.numeroGuiaPrincipal,
-      dataAutorizacao: values.dataAutorizacao,
-      nomeProfissionalSolicitante: values.nomeProfissionalSolicitante,
-      identificacaoOperadora: values.identificacaoOperadora,
-      status: values.status,
-      estagio: values.estagio,
-    };
-
-    setSadtList((prev) => [novoRegistro, ...prev]);
-    showSuccess("SADT cadastrada com sucesso.");
-  };
-
-  const scrollToForm = () => {
-    const formSection = document.getElementById("sadt-form-section");
-    if (formSection) {
-      formSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+  const handleNovaSadt = () => {
+    navigate("/sadt/nova");
   };
 
   return (
@@ -70,20 +47,16 @@ const SadtCadastro: React.FC = () => {
         <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold sm:text-2xl">
-              Cadastro de SADT
+              SADT&apos;s
             </h1>
             <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-              Gerencie as guias de SADT da sua clínica. Ao entrar, você vê a
-              lista de SADTs já cadastradas.
+              Gerencie as guias de SADT da sua clínica. Você vê a lista de SADTs já cadastradas e pode criar novas.
             </p>
           </div>
         </header>
 
-        <main className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)]">
-          <SadtList items={sadtList} onNewClick={scrollToForm} />
-          <section id="sadt-form-section" className="scroll-mt-4">
-            <SadtForm onSubmit={handleNewSadt} />
-          </section>
+        <main>
+          <SadtList items={sadtList} onNewClick={handleNovaSadt} />
         </main>
       </div>
     </div>
