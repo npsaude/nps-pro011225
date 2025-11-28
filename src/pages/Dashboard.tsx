@@ -365,23 +365,19 @@ const Dashboard = () => {
                   return (
                     <div
                       key={metric.title}
-                      className={`flex flex-col justify-between rounded-3xl bg-gradient-to-r ${metric.gradient} px-4 py-3 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]`}
+                      className={`flex flex-col items-center justify-center gap-2 rounded-3xl bg-gradient-to-r ${metric.gradient} px-4 py-4 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-[11px] font-medium opacity-90">
-                            {metric.title}
-                          </p>
-                          <p className="mt-1 text-lg font-semibold sm:text-xl">
-                            {metric.value}
-                          </p>
-                        </div>
-                        <div className="flex h-7 w-7 items-center justify-center rounded-2xl bg-white/20">
-                          <Icon className="h-4 w-4" />
-                        </div>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/20">
+                        <Icon className="h-4 w-4" />
                       </div>
+                      <p className="text-[11px] font-medium opacity-90 text-center">
+                        {metric.title}
+                      </p>
+                      <p className="text-lg font-semibold sm:text-xl text-center">
+                        {metric.value}
+                      </p>
                       {metric.helper && (
-                        <p className="mt-2 text-[11px] font-semibold text-emerald-100">
+                        <p className="mt-1 text-[11px] font-semibold text-emerald-100 text-center">
                           {metric.helper}
                         </p>
                       )}
@@ -391,12 +387,12 @@ const Dashboard = () => {
               </div>
 
               {/* Card promocional à direita */}
-              <div className="flex flex-col justify-between rounded-3xl bg-[#135bec] px-5 py-5 text-white shadow-[0_18px_60px_rgba(37,99,235,0.55)]">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+              <div className="flex flex-col items-center justify-center gap-4 rounded-3xl bg-[#135bec] px-5 py-4 text-white shadow-[0_18px_60px_rgba(37,99,235,0.55)]">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
                   <span className="h-1.5 w-1.5 rounded-full bg-lime-300" />
                   SADTs pendentes
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 text-center">
                   <p className="text-[11px] uppercase tracking-wide text-sky-100/80">
                     Aguardando aprovação
                   </p>
@@ -407,7 +403,7 @@ const Dashboard = () => {
                     SADTs aguardando análise e aprovação dos convênios.
                   </p>
                 </div>
-                <button className="mt-5 flex h-10 w-full items-center justify-center rounded-full bg-white text-xs font-semibold text-[#135bec] shadow-lg transition-transform hover:translate-y-0.5 sm:text-sm">
+                <button className="mt-3 flex h-10 w-full items-center justify-center rounded-full bg-white text-xs font-semibold text-[#135bec] shadow-lg transition-transform hover:translate-y-0.5 sm:text-sm">
                   Acompanhar SADTs
                 </button>
               </div>
