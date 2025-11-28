@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Home,
   FileText,
@@ -45,8 +45,26 @@ const initialSadtList: SadtResumo[] = [
 ];
 
 const SadtCadastro: React.FC = () => {
-  const [sadtList] = useState<SadtResumo[]>(initialSadtList);
+  const [sadtList, setSadtList] = useState<SadtResumo[]>(initialSadtList);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem("sadt-list");
+    if (!stored) return;
+
+    const listaLocal = JSON.parse(stored) as SadtResumo[];
+
+    // Junta as SADTs vindas do GPT com as mocks, sem duplicar por id
+    setSadtList((prev) => {
+      const idsExistentes = new Set(prev.map((s) => s.id));
+      const novasNaoDuplicadas = listaLocal.filter(
+        (s) => !idsExistentes.has(s.id),
+      );
+      return [...novasNaoDuplicadas, ...prev];
+    });
+  }, []);
 
   const handleNovaSadt = () => {
     navigate("/sadt/nova");
