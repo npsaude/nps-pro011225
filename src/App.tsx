@@ -17,6 +17,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ClinicasCadastro from "./pages/ClinicasCadastro";
 import MedicosCadastro from "./pages/MedicosCadastro";
 import DashboardMedico from "./pages/DashboardMedico";
+import AdminConfiguracoes from "./pages/AdminConfiguracoes";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,9 @@ const App = () => (
           {/* Cadastros administrativos */}
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
+
+          {/* Configurações administrativas */}
+          <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
