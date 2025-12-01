@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Home,
   FileText,
@@ -30,11 +30,38 @@ import { showError, showSuccess } from "@/utils/toast";
 import {
   criarDescricaoCirurgica,
   type DescricaoCirurgicaFormData,
+  listarDescricoesCirurgicasDoMedicoLogado,
+  type DescricaoCirurgicaResumoMedico,
 } from "@/services/descricao-cirurgica-service";
+import AdminDescricaoCirurgicaList from "@/components/descricao-cirurgica/AdminDescricaoCirurgicaList";
 
 const DescricaoCirurgicaPage: React.FC = () => {
   const navigate = useNavigate();
   const [salvando, setSalvando] = useState(false);
+  const [listaDescricoes, setListaDescricoes] = useState<
+    DescricaoCirurgicaResumoMedico[]
+  >([]);
+  const [carregandoLista, setCarregandoLista] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setCarregandoLista(true);
+      try {
+        const data = await listarDescricoesCirurgicasDoMedicoLogado();
+        setListaDescricoes(data);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Não foi possível carregar as descrições cirúrgicas.";
+        showError(message);
+      } finally {
+        setCarregandoLista(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   const form = useForm<DescricaoCirurgicaFormData>({
     defaultValues: {
@@ -359,8 +386,14 @@ const DescricaoCirurgicaPage: React.FC = () => {
             </div>
           </header>
 
-          {/* Formulário */}
+          {/* Lista + Formulário */}
           <main className="flex-1 overflow-y-auto pb-2">
+            <div className="mb-4">
+              <AdminDescricaoCirurgicaList
+                items={listaDescricoes}
+                isLoading={carregandoLista}
+              />
+            </div>
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="flex flex-col gap-4"
