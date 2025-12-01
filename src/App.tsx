@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import SadtEnviar from "./pages/SadtEnviar";
 import SadtSucesso from "./pages/SadtSucesso";
 import Login from "./pages/Login";
+import LoginMedico from "./pages/LoginMedico";
 import Dashboard from "./pages/Dashboard";
 import SadtCadastro from "./pages/SadtCadastro";
 import SadtNova from "./pages/SadtNova";
@@ -22,16 +23,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Tela inicial agora é o Login */}
+          {/* Tela inicial agora é o Login administrativo */}
           <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/login-medico" element={<LoginMedico />} />
+
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
           <Route path="/sadt/sucesso" element={<SadtSucesso />} />
           <Route path="/sadt/cadastro" element={<SadtCadastro />} />
           <Route path="/sadt/nova" element={<SadtNova />} />
           <Route path="/sadt/editar/:id" element={<SadtEditar />} />
-          {/* Mantém /login como atalho para a mesma tela */}
-          <Route path="/login" element={<Login />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
