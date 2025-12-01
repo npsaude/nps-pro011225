@@ -113,8 +113,45 @@ export type DbDescricaoCirurgicaStatus =
   | "EM_GLOSA";
 
 /**
+ * Item de procedimento dentro da descrição cirúrgica.
+ * Armazenado como JSON em descricoes_cirurgicas.procedimentos.
+ */
+export interface DbDescricaoCirurgicaProcedimento {
+  procedimento_id: string | null;
+  descricao_procedimento: string | null;
+  codigo_procedimento: string | null;
+  tipo_procedimento: string | null; // principal / secundário
+  quantidade: number | null;
+}
+
+/**
+ * Item de equipe dentro da descrição cirúrgica.
+ * Armazenado como JSON em descricoes_cirurgicas.equipe.
+ */
+export interface DbDescricaoCirurgicaEquipe {
+  nome_profissional: string | null;
+  funcao: string | null;
+  conselho: string | null;
+  numero_conselho: string | null;
+  uf_conselho: string | null;
+}
+
+/**
+ * Item de material dentro da descrição cirúrgica.
+ * Armazenado como JSON em descricoes_cirurgicas.materiais.
+ */
+export interface DbDescricaoCirurgicaMaterial {
+  material_id: string | null;
+  nome_material: string | null;
+  descricao_material: string | null;
+  quantidade: number | null;
+  lote: string | null;
+  fabricante: string | null;
+}
+
+/**
  * Descrição cirúrgica (tabela: descricoes_cirurgicas)
- * Campos agrupam todas as seções da ficha.
+ * Todos os dados (incluindo procedimentos, equipe e materiais) estão nesta tabela.
  */
 export interface DbDescricaoCirurgica {
   id: string;
@@ -149,6 +186,12 @@ export interface DbDescricaoCirurgica {
   diagnostico_pre_operatorio: string | null;
   diagnostico_pos_operatorio: string | null;
 
+  // 4. Procedimentos realizados (JSON)
+  procedimentos: DbDescricaoCirurgicaProcedimento[] | null;
+
+  // 5. Equipe cirúrgica (JSON)
+  equipe: DbDescricaoCirurgicaEquipe[] | null;
+
   // 6. Texto da Descrição Cirúrgica
   descricao_cirurgica: string | null;
 
@@ -158,6 +201,9 @@ export interface DbDescricaoCirurgica {
   data_hora_afere: string | null;
   usuario_impressao: string | null;
   data_hora_impressao: string | null;
+
+  // 8. Materiais utilizados (OPME) (JSON)
+  materiais: DbDescricaoCirurgicaMaterial[] | null;
 
   // 9. Informações Adicionais
   diagnostico_pre_igual_pos: boolean | null;
@@ -179,41 +225,4 @@ export interface DbDescricaoCirurgica {
 
   created_at: string;
   updated_at: string;
-}
-
-export interface DbDescricaoCirurgicaProcedimento {
-  id: string;
-  descricao_cirurgica_id: string;
-  user_id: string;
-  procedimento_id: string | null;
-  descricao_procedimento: string | null;
-  codigo_procedimento: string | null;
-  tipo_procedimento: string | null; // principal / secundário
-  quantidade: number | null;
-  created_at: string;
-}
-
-export interface DbDescricaoCirurgicaEquipe {
-  id: string;
-  descricao_cirurgica_id: string;
-  user_id: string;
-  nome_profissional: string | null;
-  funcao: string | null;
-  conselho: string | null;
-  numero_conselho: string | null;
-  uf_conselho: string | null;
-  created_at: string;
-}
-
-export interface DbDescricaoCirurgicaMaterial {
-  id: string;
-  descricao_cirurgica_id: string;
-  user_id: string;
-  material_id: string | null;
-  nome_material: string | null;
-  descricao_material: string | null;
-  quantidade: number | null;
-  lote: string | null;
-  fabricante: string | null;
-  created_at: string;
 }

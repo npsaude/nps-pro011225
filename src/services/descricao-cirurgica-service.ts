@@ -1,10 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type {
-  DbDescricaoCirurgica,
-  DbDescricaoCirurgicaEquipe,
-  DbDescricaoCirurgicaMaterial,
-  DbDescricaoCirurgicaProcedimento,
-} from "@/db/schema";
+import type { DbDescricaoCirurgica } from "@/db/schema";
 
 export type SimNao = "" | "sim" | "nao";
 
@@ -61,6 +56,12 @@ export interface DescricaoCirurgicaFormData {
   diagnostico_pre_operatorio: string;
   diagnostico_pos_operatorio: string;
 
+  // 4. Procedimentos (JSON)
+  procedimentos: DescricaoCirurgicaProcedimentoInput[];
+
+  // 5. Equipe (JSON)
+  equipe: DescricaoCirurgicaEquipeInput[];
+
   // 6. Texto da descrição
   descricao_cirurgica: string;
 
@@ -70,6 +71,9 @@ export interface DescricaoCirurgicaFormData {
   data_hora_afere: string; // datetime-local
   usuario_impressao: string;
   data_hora_impressao: string; // datetime-local
+
+  // 8. Materiais (JSON)
+  materiais: DescricaoCirurgicaMaterialInput[];
 
   // 9. Informações adicionais
   diagnostico_pre_igual_pos: SimNao;
@@ -88,11 +92,6 @@ export interface DescricaoCirurgicaFormData {
   previsao_alta: string;
   acompanhamento_pela_instituicao: SimNao;
   outras_orientacoes: string;
-
-  // Tabelas relacionadas
-  procedimentos: DescricaoCirurgicaProcedimentoInput[];
-  equipe: DescricaoCirurgicaEquipeInput[];
-  materiais: DescricaoCirurgicaMaterialInput[];
 }
 
 function mapSimNao(value: SimNao): boolean | null {
@@ -109,8 +108,8 @@ function toIntOrNull(value: string): number | null {
 }
 
 /**
- * Cria uma descrição cirúrgica completa (principal + procedimentos + equipe + materiais).
- * Retorna o registro principal criado.
+ * Cria uma descrição cirúrgica completa em uma única tabela (descricoes_cirurgicas),
+ * incluindo procedimentos, equipe e materiais como JSON.
  */
 export async function criarDescricaoCirurgica(
   form: DescricaoCirurgicaFormData,
@@ -121,6 +120,47 @@ export async function criarDescricaoCirurgica(
   }
 
   const userId = userData.user.id;
+
+  const procedimentosJson =
+    form.procedimentos
+      ?.filter(
+        (p) =>
+          p.descricao_procedimento.trim() ||
+          p.codigo_procedimento.trim() ||
+          p.procedimento_id.trim(),
+      )
+      .map((p) => ({
+        procedimento_id: p.procedimento_id || null,
+        descricao_procedimento: p.descricao_procedimento || null,
+        codigo_procedimento: p.codigo_procedimento || null,
+        tipo_procedimento: p.tipo_procedimento || null,
+        quantidade: toIntOrNull(p.quantidade),
+      })) ?? [];
+
+  const equipeJson =
+    form.equipe
+      ?.filter((e) => e.nome_profissional.trim())
+      .map((e) => ({
+        nome_profissional: e.nome_profissional || null,
+        funcao: e.funcao || null,
+        conselho: e.conselho || null,
+        numero_conselho: e.numero_conselho || null,
+        uf_conselho: e.uf_conselho || null,
+      })) ?? [];
+
+  const materiaisJson =
+    form.materiais
+      ?.filter(
+        (m) => m.nome_material.trim() || m.material_id.trim() || m.lote.trim(),
+      )
+      .map((m) => ({
+        material_id: m.material_id || null,
+        nome_material: m.nome_material || null,
+        descricao_material: m.descricao_material || null,
+        quantidade: toIntOrNull(m.quantidade),
+        lote: m.lote || null,
+        fabricante: m.fabricante || null,
+      })) ?? [];
 
   const { data: inserted, error } = await supabase
     .from("descricoes_cirurgicas")
@@ -156,6 +196,13 @@ export async function criarDescricaoCirurgica(
       diagnostico_pre_operatorio: form.diagnostico_pre_operatorio || null,
       diagnostico_pos_operatorio: form.diagnostico_pos_operatorio || null,
 
+      // 4. Procedimentos (JSON)
+      procedimentos:
+        procedimentosJson.length > 0 ? procedimentosJson : null,
+
+      // 5. Equipe (JSON)
+      equipe: equipeJson.length > 0 ? equipeJson : null,
+
       // 6. Texto descrição
       descricao_cirurgica: form.descricao_cirurgica || null,
 
@@ -165,6 +212,9 @@ export async function criarDescricaoCirurgica(
       data_hora_afere: form.data_hora_afere || null,
       usuario_impressao: form.usuario_impressao || null,
       data_hora_impressao: form.data_hora_impressao || null,
+
+      // 8. Materiais (JSON)
+      materiais: materiaisJson.length > 0 ? materiaisJson : null,
 
       // 9. Adicionais
       diagnostico_pre_igual_pos: mapSimNao(form.diagnostico_pre_igual_pos),
@@ -193,88 +243,6 @@ export async function criarDescricaoCirurgica(
     throw new Error(
       error?.message || "Não foi possível salvar a descrição cirúrgica.",
     );
-  }
-
-  const descricaoId = (inserted as DbDescricaoCirurgica).id;
-
-  const procedimentosLimpos = form.procedimentos
-    ?.filter(
-      (p) =>
-        p.descricao_procedimento.trim() ||
-        p.codigo_procedimento.trim() ||
-        p.procedimento_id.trim(),
-    )
-    .map<Partial<DbDescricaoCirurgicaProcedimento>>((p) => ({
-      descricao_cirurgica_id: descricaoId,
-      user_id: userId,
-      procedimento_id: p.procedimento_id || null,
-      descricao_procedimento: p.descricao_procedimento || null,
-      codigo_procedimento: p.codigo_procedimento || null,
-      tipo_procedimento: p.tipo_procedimento || null,
-      quantidade: toIntOrNull(p.quantidade),
-    }));
-
-  if (procedimentosLimpos && procedimentosLimpos.length > 0) {
-    const { error: procError } = await supabase
-      .from("descricoes_cirurgicas_procedimentos")
-      .insert(procedimentosLimpos);
-    if (procError) {
-      throw new Error(
-        procError.message ||
-          "Descrição principal salva, mas houve erro ao salvar os procedimentos.",
-      );
-    }
-  }
-
-  const equipeLimpa = form.equipe
-    ?.filter((e) => e.nome_profissional.trim())
-    .map<Partial<DbDescricaoCirurgicaEquipe>>((e) => ({
-      descricao_cirurgica_id: descricaoId,
-      user_id: userId,
-      nome_profissional: e.nome_profissional || null,
-      funcao: e.funcao || null,
-      conselho: e.conselho || null,
-      numero_conselho: e.numero_conselho || null,
-      uf_conselho: e.uf_conselho || null,
-    }));
-
-  if (equipeLimpa && equipeLimpa.length > 0) {
-    const { error: equipeError } = await supabase
-      .from("descricoes_cirurgicas_equipe")
-      .insert(equipeLimpa);
-    if (equipeError) {
-      throw new Error(
-        equipeError.message ||
-          "Descrição principal salva, mas houve erro ao salvar a equipe cirúrgica.",
-      );
-    }
-  }
-
-  const materiaisLimpos = form.materiais
-    ?.filter(
-      (m) => m.nome_material.trim() || m.material_id.trim() || m.lote.trim(),
-    )
-    .map<Partial<DbDescricaoCirurgicaMaterial>>((m) => ({
-      descricao_cirurgica_id: descricaoId,
-      user_id: userId,
-      material_id: m.material_id || null,
-      nome_material: m.nome_material || null,
-      descricao_material: m.descricao_material || null,
-      quantidade: toIntOrNull(m.quantidade),
-      lote: m.lote || null,
-      fabricante: m.fabricante || null,
-    }));
-
-  if (materiaisLimpos && materiaisLimpos.length > 0) {
-    const { error: matError } = await supabase
-      .from("descricoes_cirurgicas_materiais")
-      .insert(materiaisLimpos);
-    if (matError) {
-      throw new Error(
-        matError.message ||
-          "Descrição principal salva, mas houve erro ao salvar os materiais.",
-      );
-    }
   }
 
   return inserted as DbDescricaoCirurgica;
