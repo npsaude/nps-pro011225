@@ -92,6 +92,7 @@ const ClinicasCadastro = () => {
                   </span>
                 </div>
                 <div className="mt-1 space-y-1">
+                  {/* Clínicas / Hospitais - ativo nesta tela */}
                   <button
                     className="flex w-full items-center justify-between rounded-xl bg-slate-900 text-xs text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
                   >
@@ -100,9 +101,14 @@ const ClinicasCadastro = () => {
                       <span>Clínicas / Hospitais</span>
                     </span>
                   </button>
-                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                  {/* Médicos */}
+                  <button
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                    onClick={() => navigate("/cadastro/medicos")}
+                  >
                     <span className="ml-7">Médicos</span>
                   </button>
+                  {/* Planos de Saúde - placeholder */}
                   <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
                     <span className="ml-7">Planos de Saúde</span>
                   </button>
