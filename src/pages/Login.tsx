@@ -16,15 +16,13 @@ const Login = () => {
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      {/* Fundo geral */}
-      <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
-        <div className="h-[88vh] w-[94vw] max-w-4xl rounded-[2.5rem] bg-gradient-to-br from-[#e8f1ff] via-[#f8fbff] to-[#e3eeff] shadow-[0_20px_70px_rgba(15,23,42,0.25)] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-      </div>
+      {/* Fundo com gradiente suave, mais clean */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[#e5f0ff] via-[#f8fbff] to-[#e3eeff] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
 
-      <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4">
+      <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
         {/* Logo / título */}
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#135bec] shadow-md shadow-blue-500/40">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#135bec] shadow-sm shadow-blue-500/30">
             <img
               src="/logo.jpeg"
               alt="Logo NP Saúde Pró"
@@ -35,21 +33,21 @@ const Login = () => {
             <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
               NP Saúde Pró
             </span>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-slate-500">
               Acesso à área administrativa
             </span>
           </div>
         </div>
 
-        {/* Card de login */}
-        <div className="w-full rounded-[1.75rem] bg-white/95 px-6 py-6 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.18)] dark:bg-slate-900/95 sm:px-7 sm:py-7">
+        {/* Card de login mais clean */}
+        <div className="w-full rounded-2xl bg-white/90 px-6 py-6 text-slate-900 shadow-sm ring-1 ring-slate-100/80 backdrop-blur-sm dark:bg-slate-900/95 dark:ring-slate-800 sm:px-7 sm:py-7">
           <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">
             ADMINISTRADOR
           </p>
           <h1 className="mb-1 text-lg font-semibold text-slate-900 dark:text-slate-50 sm:text-xl">
             Faça login para continuar
           </h1>
-          <p className="mb-5 text-xs text-slate-400 sm:text-sm">
+          <p className="mb-5 text-xs text-slate-500 sm:text-sm">
             Use seu e-mail e senha cadastrados para acessar o painel
             administrativo da clínica.
           </p>
@@ -57,7 +55,7 @@ const Login = () => {
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Campo usuário/e-mail */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-500">
+              <label className="block text-xs font-semibold text-slate-600">
                 Usuário ou e-mail
               </label>
               <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
@@ -75,7 +73,7 @@ const Login = () => {
 
             {/* Campo senha */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-500">
+              <label className="block text-xs font-semibold text-slate-600">
                 Senha
               </label>
               <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
@@ -109,7 +107,7 @@ const Login = () => {
             <div className="pt-2">
               <Button
                 type="submit"
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#135bec] text-sm font-semibold text-white shadow-md shadow-blue-500/40 transition-transform hover:translate-y-0.5 hover:bg-[#135bec]/90"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#135bec] text-sm font-semibold text-white shadow-sm shadow-blue-500/40 transition-transform hover:translate-y-0.5 hover:bg-[#135bec]/90"
               >
                 <ArrowRightCircle className="h-4 w-4" />
                 <span>Entrar como administrador</span>
@@ -123,7 +121,7 @@ const Login = () => {
             <Button
               type="button"
               variant="outline"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border-[#0f766e]/30 bg-teal-50/70 px-4 text-xs font-semibold text-[#0f766e] shadow-sm hover:bg-teal-100 dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border-[#0f766e]/25 bg-teal-50/80 px-4 text-xs font-semibold text-[#0f766e] shadow-sm hover:bg-teal-100 dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
               onClick={() => navigate("/login-medico")}
             >
               <Stethoscope className="h-4 w-4" />
@@ -132,7 +130,7 @@ const Login = () => {
           </div>
         </div>
 
-        <p className="mt-4 text-[11px] text-slate-400">
+        <p className="mt-4 text-[11px] text-slate-500">
           Acesso exclusivo para administradores autorizados da NP Saúde Pró.
         </p>
       </div>
