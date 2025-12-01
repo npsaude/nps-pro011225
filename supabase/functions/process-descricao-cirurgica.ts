@@ -150,13 +150,36 @@ serve(async (req) => {
     );
   }
 
-  console.log("URLs assinadas enviadas para a OpenAI:", signedUrls);
+  console.log("URLs assinadas para todos os arquivos:", signedUrls);
+
+  // Filtrar apenas as imagens em formatos suportados pela OpenAI (png, jpeg, gif, webp)
+  const imageUrls = signedUrls.filter((url) =>
+    /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
+  );
+
+  if (imageUrls.length === 0) {
+    console.error(
+      "Nenhuma imagem em formato suportado encontrada (apenas PDFs ou outros formatos).",
+    );
+    return new Response(
+      JSON.stringify({
+        error:
+          "Nenhuma imagem em formato suportado encontrada. A OpenAI aceita apenas png, jpeg, gif ou webp. PDFs ainda não são suportados automaticamente.",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  console.log("URLs de imagens enviadas para a OpenAI:", imageUrls);
 
   // 3) Instruções de extração e formato JSON esperado
   const jsonFormatInstructions = `
 Você é um assistente especializado em faturamento médico e descrições cirúrgicas.
 
-A partir das IMAGENS/PDFs anexados nesta conversa (fotos de prontuário, laudos, relatórios, etc.),
+A partir das IMAGENS anexadas nesta conversa (fotos de prontuário, laudos, relatórios, etc.),
 extraia todos os dados relevantes para preencher uma ficha de descrição cirúrgica.
 
 Regra importante:
@@ -173,20 +196,20 @@ Retorne APENAS um JSON com o seguinte formato (sem comentários):
   "registro_civil": string | null,
   "cpf": string | null,
   "matricula": string | null,
-  "data_nascimento": string | null,  // formato YYYY-MM-DD, se possível
+  "data_nascimento": string | null,
   "idade": number | null,
   "sexo": string | null,
 
   "convenio_plano": string | null,
   "setor": string | null,
   "leito": string | null,
-  "dthr_admissao": string | null,    // ISO datetime se possível
+  "dthr_admissao": string | null,
 
   "tipo_cirurgia": string | null,
-  "data_inicio_procedimento": string | null, // YYYY-MM-DD
-  "hora_inicio_procedimento": string | null, // HH:MM:SS
-  "data_fim_procedimento": string | null,    // YYYY-MM-DD
-  "hora_fim_procedimento": string | null,    // HH:MM:SS
+  "data_inicio_procedimento": string | null,
+  "hora_inicio_procedimento": string | null,
+  "data_fim_procedimento": string | null,
+  "hora_fim_procedimento": string | null,
   "diagnostico_pre_operatorio": string | null,
   "diagnostico_pos_operatorio": string | null,
 
@@ -245,8 +268,6 @@ Retorne APENAS um JSON com o seguinte formato (sem comentários):
   "acompanhamento_pela_instituicao": boolean | null,
   "outras_orientacoes": string | null
 }
-
-Não inclua explicações nem comentários fora do JSON.
 `;
 
   // 4) Chamar OpenAI Chat Completions em modo multimodal (texto + imagens)
@@ -266,7 +287,7 @@ Não inclua explicações nem comentários fora do JSON.
           {
             role: "system",
             content:
-              "Você é um assistente de IA especializado em leitura de documentos médicos (imagens/PDFs) e faturamento. Sempre que solicitado, responda com JSON válido.",
+              "Você é um assistente de IA especializado em leitura de documentos médicos (imagens) e faturamento. Sempre que solicitado, responda com JSON válido.",
           },
           {
             role: "user",
@@ -275,7 +296,7 @@ Não inclua explicações nem comentários fora do JSON.
                 type: "text",
                 text: jsonFormatInstructions,
               },
-              ...signedUrls.map((url) => ({
+              ...imageUrls.map((url) => ({
                 type: "image_url",
                 image_url: {
                   url,
