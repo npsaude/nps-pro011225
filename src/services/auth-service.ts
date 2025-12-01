@@ -1,13 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import type { DbSystemUser } from "@/db/schema";
-
-// Mesmo client usado globalmente; aqui criamos um client leve só para tipagem.
-// Em runtime, o código real é o do arquivo de integração.
-const supabaseUrl = "https://pokyribuibmbeorrcsgk.supabase.co";
-const supabaseAnonKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBva3lyaWJ1aWJtYmVvcnJjc2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzc3OTAsImV4cCI6MjA3OTg1Mzc5MH0.YRSDKlnIdJPkQCXjo9FEci_YvRXgO717PqbkZpm3h2k";
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "@/integrations/supabase/client";
 
 export type AllowedRole = "ADMIN" | "MEDICO";
 
@@ -88,9 +80,6 @@ export async function loginWithRole(params: {
 /**
  * Cria um usuário no Supabase Auth e vincula na tabela usuarios_sistema
  * com a regra especificada (ADMIN ou MEDICO).
- *
- * Observação: Em ambiente real, normalmente apenas ADMIN pode criar outros usuários;
- * aqui é responsabilidade de quem chama essa função controlar isso.
  */
 export async function registerUser(params: {
   nome: string;
@@ -149,7 +138,6 @@ export async function registerUser(params: {
 
 /**
  * Inicia fluxo de recuperação de senha via Supabase.
- * É necessário ter configurado o Redirect URL de reset no painel do Supabase.
  */
 export async function sendPasswordReset(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -166,7 +154,6 @@ export async function sendPasswordReset(email: string): Promise<void> {
 
 /**
  * Atualiza senha do usuário logado (parte final do fluxo de reset).
- * Essa função pressupõe que o usuário chegou a esta tela via link de reset.
  */
 export async function updatePassword(newPassword: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({
