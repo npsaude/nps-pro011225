@@ -81,3 +81,26 @@ export interface DbSadtAnalysis {
   createdAt: string;
   finishedAt: string | null;
 }
+
+/**
+ * Usuário do sistema (tabela: usuarios_sistema)
+ * Campos pedidos:
+ * - id_user
+ * - nome
+ * - email
+ * - celular
+ * - regra (admin, médico)
+ * - ativo
+ * - criado_em
+ *
+ * Observação: regra aqui reaproveita o DbUserRole definido acima.
+ */
+export interface DbSystemUser {
+  id_user: string; // uuid
+  nome: string;
+  email: string;
+  celular: string | null;
+  regra: DbUserRole; // 'ADMIN' | 'MEDICO'
+  ativo: boolean;
+  criado_em: string; // ISO datetime (timestamptz)
+}
