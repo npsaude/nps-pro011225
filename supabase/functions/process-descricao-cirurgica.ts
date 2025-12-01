@@ -32,9 +32,6 @@ serve(async (req) => {
     });
   }
 
-  // Não vamos bloquear por Authorization aqui
-  // const authHeader = req.headers.get("Authorization");
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -100,8 +97,8 @@ serve(async (req) => {
     );
   }
 
-  const openaiToken = (settings as any)?.openai_api_token ??
-    (settings as any)?.openaiApiToken;
+  const openaiToken =
+    (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
 
   if (!openaiToken) {
     return new Response(
@@ -153,16 +150,21 @@ serve(async (req) => {
     );
   }
 
-  // 3) Montar prompt para o ChatGPT
-  const prompt = `
+  console.log("URLs assinadas enviadas para a OpenAI:", signedUrls);
+
+  // 3) Instruções de extração e formato JSON esperado
+  const jsonFormatInstructions = `
 Você é um assistente especializado em faturamento médico e descrições cirúrgicas.
-A partir dos documentos de cirurgia (imagens/PDFs) acessíveis pelos links abaixo,
+
+A partir das IMAGENS/PDFs anexados nesta conversa (fotos de prontuário, laudos, relatórios, etc.),
 extraia todos os dados relevantes para preencher uma ficha de descrição cirúrgica.
 
-Links dos documentos:
-${signedUrls.map((u, i) => `Documento ${i + 1}: ${u}`).join("\n")}
+Regra importante:
+- Use APENAS informações que aparecem claramente nos documentos.
+- Se um campo não estiver presente ou não for possível inferir com segurança, use null nesse campo.
+- Não invente dados.
 
-Retorne APENAS um JSON com o seguinte formato (campos podem ser nulos se não constarem nos documentos):
+Retorne APENAS um JSON com o seguinte formato (sem comentários):
 
 {
   "prontuario": string | null,
@@ -244,10 +246,10 @@ Retorne APENAS um JSON com o seguinte formato (campos podem ser nulos se não co
   "outras_orientacoes": string | null
 }
 
-Não inclua comentários no JSON, apenas o objeto.
+Não inclua explicações nem comentários fora do JSON.
 `;
 
-  // 4) Chamar OpenAI Chat Completions
+  // 4) Chamar OpenAI Chat Completions em modo multimodal (texto + imagens)
   const openaiResponse = await fetch(
     "https://api.openai.com/v1/chat/completions",
     {
@@ -264,11 +266,23 @@ Não inclua comentários no JSON, apenas o objeto.
           {
             role: "system",
             content:
-              "Você é um assistente de IA especializado em leitura de documentos médicos e faturamento.",
+              "Você é um assistente de IA especializado em leitura de documentos médicos (imagens/PDFs) e faturamento. Sempre que solicitado, responda com JSON válido.",
           },
           {
             role: "user",
-            content: prompt,
+            content: [
+              {
+                type: "text",
+                text: jsonFormatInstructions,
+              },
+              ...signedUrls.map((url) => ({
+                type: "image_url",
+                image_url: {
+                  url,
+                  detail: "high",
+                },
+              })),
+            ],
           },
         ],
       }),
@@ -322,9 +336,25 @@ Não inclua comentários no JSON, apenas o objeto.
     );
   }
 
-  // IMPORTANTE: usamos o objeto inteiro retornado pela OpenAI,
-  // e não o campo descricao_cirurgica isolado (que é apenas uma string).
-  const desc = parsed;
+  console.log(
+    "Resposta da OpenAI parseada (primeiros 2000 caracteres):",
+    JSON.stringify(parsed).slice(0, 2000),
+  );
+
+  // IMPORTANTE: usamos o objeto inteiro retornado pela OpenAI.
+  // Se, por algum motivo, ela aninhar tudo dentro de "descricao_cirurgica",
+  // fazemos um fallback para esse objeto interno.
+  let desc: any = parsed;
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    parsed.descricao_cirurgica &&
+    typeof parsed.descricao_cirurgica === "object" &&
+    !Array.isArray(parsed.descricao_cirurgica)
+  ) {
+    desc = parsed.descricao_cirurgica;
+  }
 
   // 5) Montar objeto para inserir em descricoes_cirurgicas
   const insertData: Record<string, unknown> = {
