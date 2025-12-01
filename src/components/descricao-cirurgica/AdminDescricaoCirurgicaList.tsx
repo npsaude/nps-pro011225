@@ -1,4 +1,6 @@
 import React from "react";
+import { Eye, Pencil, Trash2, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardHeader,
@@ -20,6 +22,10 @@ import type { DescricaoCirurgicaResumoMedico } from "@/services/descricao-cirurg
 type Props = {
   items: DescricaoCirurgicaResumoMedico[];
   isLoading: boolean;
+  onNovaDescricao: () => void;
+  onVisualizar: (item: DescricaoCirurgicaResumoMedico) => void;
+  onEditar: (item: DescricaoCirurgicaResumoMedico) => void;
+  onExcluir: (item: DescricaoCirurgicaResumoMedico) => void;
 };
 
 const statusLabel: Record<string, string> = {
@@ -46,11 +52,15 @@ const statusBadgeClass: Record<string, string> = {
 const AdminDescricaoCirurgicaList: React.FC<Props> = ({
   items,
   isLoading,
+  onNovaDescricao,
+  onVisualizar,
+  onEditar,
+  onExcluir,
 }) => {
   return (
     <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
       <CardHeader className="pb-3">
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-0.5">
             <CardTitle className="text-sm font-semibold sm:text-base">
               Descrições cirúrgicas cadastradas
@@ -66,6 +76,15 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
               registro(s)
             </p>
           </div>
+          <Button
+            type="button"
+            size="sm"
+            className="inline-flex items-center gap-2 rounded-full bg-[#135bec] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0f4ac0]"
+            onClick={onNovaDescricao}
+          >
+            <Plus className="h-4 w-4" />
+            Nova descrição
+          </Button>
         </div>
       </CardHeader>
 
@@ -89,13 +108,16 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                 <TableHead className="whitespace-nowrap px-3 py-2">
                   Status
                 </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-right">
+                  Ações
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="px-3 py-5 text-center text-xs text-slate-500 dark:text-slate-300"
                   >
                     Carregando descrições cirúrgicas...
@@ -104,7 +126,7 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
               ) : items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="px-3 py-5 text-center text-xs text-slate-500 dark:text-slate-300"
                   >
                     Nenhuma descrição cirúrgica encontrada.
@@ -137,6 +159,40 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <Badge className={badgeClass}>{label}</Badge>
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            onClick={() => onVisualizar(item)}
+                            aria-label="Visualizar descrição cirúrgica"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            onClick={() => onEditar(item)}
+                            aria-label="Editar status da descrição cirúrgica"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                            onClick={() => onExcluir(item)}
+                            aria-label="Excluir descrição cirúrgica"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

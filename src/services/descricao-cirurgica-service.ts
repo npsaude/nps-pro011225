@@ -297,3 +297,39 @@ export async function listarDescricoesCirurgicasDoMedicoLogado(): Promise<
     status: (item.status as DbDescricaoCirurgicaStatus | null) ?? null,
   }));
 }
+
+/**
+ * Exclui definitivamente uma descrição cirúrgica pelo ID.
+ */
+export async function excluirDescricaoCirurgica(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("descricoes_cirurgicas")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(
+      error.message || "Não foi possível excluir a descrição cirúrgica.",
+    );
+  }
+}
+
+/**
+ * Atualiza apenas o status de uma descrição cirúrgica.
+ */
+export async function atualizarStatusDescricaoCirurgica(
+  id: string,
+  status: DbDescricaoCirurgicaStatus,
+): Promise<void> {
+  const { error } = await supabase
+    .from("descricoes_cirurgicas")
+    .update({ status })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível atualizar o status da descrição cirúrgica.",
+    );
+  }
+}
