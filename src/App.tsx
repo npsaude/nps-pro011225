@@ -18,6 +18,7 @@ import ClinicasCadastro from "./pages/ClinicasCadastro";
 import MedicosCadastro from "./pages/MedicosCadastro";
 import DashboardMedico from "./pages/DashboardMedico";
 import AdminConfiguracoes from "./pages/AdminConfiguracoes";
+import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,9 @@ const App = () => (
           <Route path="/sadt/nova" element={<SadtNova />} />
           <Route path="/sadt/editar/:id" element={<SadtEditar />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
+
+          {/* Nova tela de Descrição Cirúrgica (admin) */}
+          <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
 
           {/* Dashboard específico para médico */}
           <Route path="/medico/dashboard" element={<DashboardMedico />} />

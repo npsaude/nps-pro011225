@@ -104,3 +104,106 @@ export interface DbSystemUser {
   ativo: boolean;
   criado_em: string; // ISO datetime (timestamptz)
 }
+
+/**
+ * Descrição cirúrgica (tabela: descricoes_cirurgicas)
+ * Campos agrupam todas as seções da ficha.
+ */
+export interface DbDescricaoCirurgica {
+  id: string;
+  user_id: string;
+
+  // 1. Identificação do Paciente
+  prontuario: string | null;
+  registro: string | null;
+  nome_social: string | null;
+  registro_civil: string | null;
+  cpf: string | null;
+  matricula: string | null;
+  data_nascimento: string | null; // ISO date
+  idade: number | null;
+  sexo: string | null;
+
+  // 2. Informações de Internação
+  convenio_plano: string | null;
+  setor: string | null;
+  leito: string | null;
+  dthr_admissao: string | null; // ISO datetime
+
+  // 3. Informações Iniciais da Cirurgia
+  tipo_cirurgia: string | null;
+  data_inicio_procedimento: string | null; // ISO date
+  hora_inicio_procedimento: string | null; // HH:MM:SS
+  data_fim_procedimento: string | null; // ISO date
+  hora_fim_procedimento: string | null; // HH:MM:SS
+  diagnostico_pre_operatorio: string | null;
+  diagnostico_pos_operatorio: string | null;
+
+  // 6. Texto da Descrição Cirúrgica
+  descricao_cirurgica: string | null;
+
+  // 7. Informações de Auditoria
+  cirurgiao_responsavel: string | null;
+  cirurgiao_responsavel_crm: string | null;
+  data_hora_afere: string | null;
+  usuario_impressao: string | null;
+  data_hora_impressao: string | null;
+
+  // 9. Informações Adicionais
+  diagnostico_pre_igual_pos: boolean | null;
+  houve_complicacoes: boolean | null;
+  descricao_complicacoes: string | null;
+  possui_peca_anatomo: boolean | null;
+  sangramento_estimado: string | null;
+  observacoes_adicionais: string | null;
+
+  // 10. Plano Terapêutico Pós-operatório
+  uso_antibioticos: string | null;
+  profilaxia_tev_tvp: string | null;
+  troca_curativo: string | null;
+  dieta: string | null;
+  deambulacao: string | null;
+  previsao_alta: string | null;
+  acompanhamento_pela_instituicao: boolean | null;
+  outras_orientacoes: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbDescricaoCirurgicaProcedimento {
+  id: string;
+  descricao_cirurgica_id: string;
+  user_id: string;
+  procedimento_id: string | null;
+  descricao_procedimento: string | null;
+  codigo_procedimento: string | null;
+  tipo_procedimento: string | null; // principal / secundário
+  quantidade: number | null;
+  created_at: string;
+}
+
+export interface DbDescricaoCirurgicaEquipe {
+  id: string;
+  descricao_cirurgica_id: string;
+  user_id: string;
+  nome_profissional: string | null;
+  funcao: string | null;
+  conselho: string | null;
+  numero_conselho: string | null;
+  uf_conselho: string | null;
+  created_at: string;
+}
+
+export interface DbDescricaoCirurgicaMaterial {
+  id: string;
+  descricao_cirurgica_id: string;
+  user_id: string;
+  material_id: string | null;
+  nome_material: string | null;
+  descricao_material: string | null;
+  quantidade: number | null;
+  lote: string | null;
+  fabricante: string | null;
+  created_at: string;
+}

@@ -9,6 +9,7 @@ import {
   HelpCircle,
   Bell,
   Search,
+  FileSignature,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SadtList from "@/components/sadt/SadtList";
@@ -161,6 +162,19 @@ const SadtCadastro: React.FC = () => {
                     <FileText className="h-4 w-4" />
                   </span>
                   <span className="font-medium">SADT&apos;s</span>
+                </span>
+              </button>
+
+              {/* Descrição Cirúrgica */}
+              <button
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                onClick={() => navigate("/descricao-cirurgica")}
+              >
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <FileSignature className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Descrição Cirúrgica</span>
                 </span>
               </button>
 
