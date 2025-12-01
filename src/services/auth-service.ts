@@ -16,7 +16,7 @@ export interface LoginResult {
 export async function loginWithRole(params: {
   email: string;
   password: string;
-  allowedRole: AllowedRole; // ignorado para regras em desenvolvimento
+  allowedRole: AllowedRole;
 }): Promise<LoginResult> {
   const { email, password } = params;
 
@@ -41,7 +41,6 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  // Tentativa de carregar o cadastro em usuarios_sistema
   const { data: systemUser, error: systemUserError } = await supabase
     .from("usuarios_sistema")
     .select("*")
@@ -65,8 +64,6 @@ export async function loginWithRole(params: {
  * Cadastro:
  * 1) Cria usuário no Supabase Auth.
  * 2) Cria registro correspondente em usuarios_sistema com regra e ativo=true.
- *
- * IMPORTANTE: se o passo 2 falhar, lançamos erro com mensagem detalhada.
  */
 export async function registerUser(params: {
   nome: string;
@@ -90,9 +87,15 @@ export async function registerUser(params: {
   });
 
   if (signUpError) {
+    // eslint-disable-next-line no-console
+    console.error("Erro no signUp do Supabase Auth:", {
+      email,
+      signUpError,
+    });
+
     throw new Error(
       signUpError.message ||
-        "Não foi possível criar o usuário. Verifique os dados informados.",
+        "Não foi possível criar o usuário na autenticação. Verifique os dados informados.",
     );
   }
 
@@ -107,14 +110,13 @@ export async function registerUser(params: {
     metadata: signUpData.user.user_metadata,
   });
 
-  // 2) Insere na tabela usuarios_sistema
+  // 2) Insere na tabela usuarios_sistema.
   const insertPayload = {
     nome,
     email,
     celular: null as string | null,
     regra: role,
     ativo: true,
-    // id_user e criado_em são preenchidos pelo banco (DEFAULT)
   };
 
   const { data: inserted, error: insertError } = await supabase
@@ -124,7 +126,6 @@ export async function registerUser(params: {
     .single();
 
   if (insertError) {
-    // Log detalhado no console para facilitar o debug
     // eslint-disable-next-line no-console
     console.error("Erro ao inserir em usuarios_sistema:", {
       insertPayload,
