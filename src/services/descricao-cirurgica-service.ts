@@ -262,25 +262,18 @@ export async function criarDescricaoCirurgica(
 }
 
 /**
- * Lista descrições cirúrgicas pertencentes ao médico logado (user_id do Auth),
- * trazendo apenas os campos necessários para o acompanhamento.
+ * Lista descrições cirúrgicas para exibição no painel do médico.
+ * Neste momento, a listagem traz todos os registros disponíveis,
+ * respeitando as políticas de segurança do Supabase.
  */
 export async function listarDescricoesCirurgicasDoMedicoLogado(): Promise<
   DescricaoCirurgicaResumoMedico[]
 > {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData?.user) {
-    throw new Error("Usuário não autenticado. Faça login novamente.");
-  }
-
-  const userId = userData.user.id;
-
   const { data, error } = await supabase
     .from("descricoes_cirurgicas")
     .select(
       "id, prontuario, nome_social, registro_civil, data_fim_procedimento, status, cirurgiao_responsavel",
     )
-    .eq("user_id", userId)
     .order("data_fim_procedimento", { ascending: false });
 
   if (error) {
