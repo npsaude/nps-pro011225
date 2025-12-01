@@ -12,6 +12,7 @@ interface MockAuthUser {
   email: string;
   password: string; // para ambiente real, use hash; aqui é só DEV
   role: AllowedRole;
+  confirmed: boolean;
 }
 
 const MOCK_AUTH_KEY = "mock-auth-users";
@@ -33,6 +34,20 @@ function saveMockUsers(users: MockAuthUser[]) {
 }
 
 /**
+ * Marca usuário como confirmado (simula clique no link de confirmação enviado por e-mail).
+ */
+export async function confirmUser(email: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  const users = loadMockUsers();
+  const idx = users.findIndex((u) => u.email === email);
+  if (idx === -1) {
+    throw new Error("Usuário não encontrado para confirmação.");
+  }
+  users[idx] = { ...users[idx], confirmed: true };
+  saveMockUsers(users);
+}
+
+/**
  * Login local: confere email/senha em localStorage e valida regra
  * contra a tabela usuarios_sistema.
  */
@@ -48,6 +63,12 @@ export async function loginWithRole(params: {
 
   if (!authUser || authUser.password !== password) {
     throw new Error("Credenciais inválidas. Verifique e-mail e senha.");
+  }
+
+  if (!authUser.confirmed) {
+    throw new Error(
+      "Seu cadastro ainda não foi confirmado. Acesse o link de confirmação enviado por e-mail (ou use a opção de confirmar cadastro nos testes).",
+    );
   }
 
   // Valida contra usuarios_sistema, respeitando regra e ativo
@@ -136,7 +157,7 @@ export async function registerUser(params: {
   const users = loadMockUsers();
   const exists = users.find((u) => u.email === email);
   if (!exists) {
-    users.push({ email, password, role });
+    users.push({ email, password, role, confirmed: false });
     saveMockUsers(users);
   }
 
@@ -144,8 +165,7 @@ export async function registerUser(params: {
 }
 
 /**
- * "Envia" um reset de senha: aqui é apenas simulado,
- * pois o login é todo local. Em ambiente real, seria por e-mail.
+ * "Envia" um reset de senha: aqui é apenas simulado.
  */
 export async function sendPasswordReset(email: string): Promise<void> {
   const users = loadMockUsers();

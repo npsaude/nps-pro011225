@@ -7,11 +7,12 @@ import {
   Stethoscope,
   HeartPulse,
   UserPlus,
+  CheckCircle2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset, confirmUser } from "@/services/auth-service";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const LoginMedico = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
 
   const [resetLoading, setResetLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -88,13 +90,7 @@ const LoginMedico = () => {
         role: "MEDICO",
       });
 
-      showSuccess("Usuário médico criado com sucesso.");
-      setShowRegister(false);
-      setRegisterNome("");
-      setRegisterEmail("");
-      setRegisterSenha("");
-      setRegisterSenhaConfirm("");
-
+      showSuccess("Usuário médico criado. Confirme o cadastro antes do primeiro acesso.");
       setEmail(registerEmail.trim());
       setSenha(registerSenha);
     } catch (err) {
@@ -105,6 +101,28 @@ const LoginMedico = () => {
       showError(message);
     } finally {
       setRegisterLoading(false);
+    }
+  };
+
+  const handleConfirmRegister = async () => {
+    const targetEmail = registerEmail.trim() || email.trim();
+    if (!targetEmail) {
+      showError("Informe o e-mail do usuário a ser confirmado.");
+      return;
+    }
+    setConfirmLoading(true);
+    try {
+      await confirmUser(targetEmail);
+      showSuccess("Cadastro confirmado (teste). Agora você pode fazer login normalmente.");
+      setShowRegister(false);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível confirmar o cadastro.";
+      showError(message);
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -324,7 +342,7 @@ const LoginMedico = () => {
                     </div>
                   </div>
 
-                  <div className="pt-1">
+                  <div className="flex flex-col gap-2 pt-1">
                     <Button
                       type="submit"
                       disabled={registerLoading}
@@ -332,6 +350,20 @@ const LoginMedico = () => {
                     >
                       {registerLoading ? "Criando..." : "Criar médico"}
                     </Button>
+
+                    <button
+                      type="button"
+                      onClick={handleConfirmRegister}
+                      disabled={confirmLoading}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-50/10 px-3 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-50/20"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>
+                        {confirmLoading
+                          ? "Confirmando..."
+                          : "Confirmar cadastro (teste)"}
+                      </span>
+                    </button>
                   </div>
                 </form>
               </div>
@@ -352,7 +384,7 @@ const LoginMedico = () => {
             </button>
           </section>
 
-          {/* Coluna lateral (exibida melhor em telas maiores) */}
+          {/* Coluna lateral */}
           <section className="mt-6 flex flex-1 flex-col items-center justify-center gap-5 text-center lg:mt-0 lg:items-end lg:text-right">
             <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/20 ring-2 ring-emerald-400/40">
               <HeartPulse className="h-9 w-9 text-emerald-300" />
