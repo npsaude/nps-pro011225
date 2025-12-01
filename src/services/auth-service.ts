@@ -4,28 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 export type AllowedRole = "ADMIN" | "MEDICO";
 
 export interface LoginResult {
-  user: DbSystemUser;
-  role: AllowedRole;
+  user: DbSystemUser | null;
+  role: AllowedRole | null;
 }
 
 /**
- * Login real via Supabase Auth (email/senha) + validação de regra na tabela usuarios_sistema.
+ * Login via Supabase Auth (email/senha) SEM validação em usuarios_sistema.
+ * Durante o desenvolvimento, não checamos regra nem ativo.
  */
 export async function loginWithRole(params: {
   email: string;
   password: string;
-  allowedRole: AllowedRole;
+  allowedRole: AllowedRole; // mantido apenas para compatibilidade, mas ignorado
 }): Promise<LoginResult> {
-  const { email, password, allowedRole } = params;
+  const { email, password } = params;
 
-  // 1) Login no Supabase Auth
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
-    // Mensagens mais amigáveis
     if (error.message.toLowerCase().includes("email not confirmed")) {
       throw new Error(
         "Seu cadastro ainda não foi confirmado. Verifique seu e-mail e clique no link de confirmação.",
@@ -37,54 +36,12 @@ export async function loginWithRole(params: {
     );
   }
 
-  const authUserEmail = data.user?.email;
-  if (!authUserEmail) {
-    throw new Error(
-      "Usuário autenticado sem e-mail. Verifique a configuração de autenticação.",
-    );
+  if (!data.user) {
+    throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  // 2) Buscar usuário na tabela de sistema
-  const { data: usuarios, error: usuarioError } = await supabase
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("email", authUserEmail)
-    .limit(1);
-
-  if (usuarioError) {
-    throw new Error(
-      usuarioError.message ||
-        "Erro ao carregar dados do usuário do sistema (usuarios_sistema).",
-    );
-  }
-
-  if (!usuarios || usuarios.length === 0) {
-    throw new Error(
-      "Usuário autenticado, mas não encontrado na tabela usuarios_sistema.",
-    );
-  }
-
-  const usuario = usuarios[0] as DbSystemUser;
-
-  if (!usuario.ativo) {
-    throw new Error("Usuário inativo. Entre em contato com o administrador.");
-  }
-
-  if (usuario.regra !== allowedRole) {
-    if (allowedRole === "ADMIN") {
-      throw new Error(
-        "Este acesso é exclusivo para administradores. Utilize o login de administrador.",
-      );
-    }
-    if (allowedRole === "MEDICO") {
-      throw new Error(
-        "Este acesso é exclusivo para médicos. Utilize o login de médico.",
-      );
-    }
-    throw new Error("Você não tem permissão para acessar esta área.");
-  }
-
-  return { user: usuario, role: usuario.regra };
+  // Em desenvolvimento, não carregamos nem validamos usuarios_sistema.
+  return { user: null, role: null };
 }
 
 /**
@@ -100,7 +57,6 @@ export async function registerUser(params: {
 }): Promise<DbSystemUser> {
   const { nome, email, password, role } = params;
 
-  // 1) Cria usuário no Auth, disparando e-mail de confirmação
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -124,7 +80,8 @@ export async function registerUser(params: {
     throw new Error("Usuário não foi retornado pelo provedor de autenticação.");
   }
 
-  // 2) Cria registro em usuarios_sistema
+  // Mantemos a criação em usuarios_sistema para já ir preparando o ambiente,
+  // mas sem usar isso para bloquear login durante o desenvolvimento.
   const { data: inserted, error: insertError } = await supabase
     .from("usuarios_sistema")
     .insert({
