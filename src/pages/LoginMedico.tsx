@@ -11,7 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
+import {
+  loginWithRole,
+  registerUser,
+  sendPasswordReset,
+} from "@/services/auth-service";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
@@ -44,8 +48,7 @@ const LoginMedico = () => {
       });
 
       showSuccess("Login realizado com sucesso.");
-      // Por enquanto, direciona para o mesmo dashboard existente.
-      navigate("/admin/dashboard");
+      navigate("/medico/dashboard");
     } catch (err) {
       const message =
         err instanceof Error
