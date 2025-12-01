@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
+import { registerUser, sendPasswordReset, requestLoginLinkWithRole } from "@/services/auth-service";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,21 +25,24 @@ const Login = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!email.trim()) {
+      showError("Informe o e-mail para acessar.");
+      return;
+    }
     setIsLoading(true);
     try {
-      await loginWithRole({
-        email,
-        password: senha,
+      await requestLoginLinkWithRole({
+        email: email.trim(),
         allowedRole: "ADMIN",
       });
-
-      showSuccess("Login realizado com sucesso.");
-      navigate("/admin/dashboard");
+      showSuccess(
+        "Enviamos um link de acesso para seu e-mail. Clique no link para entrar no painel.",
+      );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível fazer login. Verifique seus dados.";
+          : "Não foi possível iniciar o acesso. Verifique seus dados.";
       showError(message);
     } finally {
       setIsLoading(false);
@@ -78,33 +81,15 @@ const Login = () => {
       });
 
       showSuccess("Usuário administrador criado com sucesso.");
-
-      // Preenche o formulário principal com os dados recém-criados
-      setEmail(registerEmail.trim());
-      setSenha(registerSenha);
-
       setShowRegister(false);
       setRegisterNome("");
       setRegisterEmail("");
       setRegisterSenha("");
       setRegisterSenhaConfirm("");
 
-      // Opcional: tenta login automático para validar o Auth
-      try {
-        await loginWithRole({
-          email: email || registerEmail.trim(),
-          password: senha || registerSenha,
-          allowedRole: "ADMIN",
-        });
-        showSuccess("Login automático realizado. Redirecionando...");
-        navigate("/admin/dashboard");
-      } catch (loginErr) {
-        const loginMsg =
-          loginErr instanceof Error
-            ? loginErr.message
-            : "Usuário criado, mas não foi possível fazer login automático. Verifique seu e-mail e senha.";
-        showError(loginMsg);
-      }
+      // Preenche o campo de e-mail principal com o novo usuário
+      setEmail(registerEmail.trim());
+      setSenha("");
     } catch (err) {
       const message =
         err instanceof Error
@@ -171,15 +156,15 @@ const Login = () => {
             Faça login para continuar
           </h1>
           <p className="mb-5 text-xs text-slate-500 sm:text-sm">
-            Use seu e-mail e senha cadastrados para acessar o painel
-            administrativo da clínica.
+            Informe seu e-mail cadastrado. Vamos enviar um link de acesso seguro
+            para o painel administrativo.
           </p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Campo usuário/e-mail */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">
-                Usuário ou e-mail
+                E-mail
               </label>
               <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
                 <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-300">
@@ -187,7 +172,7 @@ const Login = () => {
                 </span>
                 <Input
                   type="email"
-                  placeholder="Insira seu usuário ou e-mail"
+                  placeholder="email@exemplo.com"
                   className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
                   required
                   value={email}
@@ -196,10 +181,10 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Campo senha */}
+            {/* Campo senha (mantido apenas para consistência visual) */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">
-                Senha
+                Senha (usada para redefinição, não para login direto)
               </label>
               <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
                 <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-300">
@@ -207,9 +192,8 @@ const Login = () => {
                 </span>
                 <Input
                   type="password"
-                  placeholder="Insira sua senha"
+                  placeholder="Use para redefinição, se necessário"
                   className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
-                  required
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                 />
@@ -241,7 +225,7 @@ const Login = () => {
               >
                 <ArrowRightCircle className="h-4 w-4" />
                 <span>
-                  {isLoading ? "Entrando..." : "Entrar como administrador"}
+                  {isLoading ? "Enviando link..." : "Enviar link de acesso"}
                 </span>
               </Button>
 

@@ -9,37 +9,24 @@ export interface LoginResult {
 }
 
 /**
- * Faz login via Supabase Auth com email/senha e valida a regra do usuário
- * na tabela usuarios_sistema.
+ * Envia um link mágico (OTP) para o e-mail informado,
+ * depois de validar se existe um usuário em usuarios_sistema com a regra correta.
+ *
+ * Fluxo:
+ * 1) Busca na tabela usuarios_sistema pelo e-mail e valida regra/ativo.
+ * 2) Chama supabase.auth.signInWithOtp para enviar o link de login.
  */
-export async function loginWithRole(params: {
+export async function requestLoginLinkWithRole(params: {
   email: string;
-  password: string;
   allowedRole: AllowedRole;
 }): Promise<LoginResult> {
-  const { email, password, allowedRole } = params;
+  const { email, allowedRole } = params;
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    throw new Error(
-      error.message || "Não foi possível autenticar. Verifique seus dados.",
-    );
-  }
-
-  const authUserEmail = data.user?.email;
-  if (!authUserEmail) {
-    throw new Error("Usuário autenticado sem e-mail. Verifique a configuração.");
-  }
-
-  // Busca usuário de sistema com o mesmo email
+  // 1) Valida usuário na tabela de sistema
   const { data: usuarios, error: usuarioError } = await supabase
     .from("usuarios_sistema")
     .select("*")
-    .eq("email", authUserEmail)
+    .eq("email", email)
     .limit(1);
 
   if (usuarioError) {
@@ -72,6 +59,23 @@ export async function loginWithRole(params: {
       );
     }
     throw new Error("Você não tem permissão para acessar esta área.");
+  }
+
+  // 2) Envia link mágico de login para o e-mail
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin + "/admin/dashboard",
+      // Podemos reaproveitar metadados se quiser,
+      // mas aqui basta o e-mail para autenticar.
+    },
+  });
+
+  if (otpError) {
+    throw new Error(
+      otpError.message ||
+        "Não foi possível enviar o link de acesso. Tente novamente.",
+    );
   }
 
   return { user: usuario, role: usuario.regra };
