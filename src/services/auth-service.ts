@@ -61,9 +61,11 @@ export async function loginWithRole(params: {
 }
 
 /**
- * Cadastro:
- * 1) Cria usuário no Supabase Auth.
- * 2) Cria registro correspondente em usuarios_sistema com regra e ativo=true.
+ * Cadastro / sincronização:
+ * - Se o usuário ainda não existir no Auth, faz signUp.
+ * - Se já existir ("User already registered"), apenas valida a senha.
+ * - Em ambos os casos, garante que exista um registro em usuarios_sistema
+ *   (criando ou atualizando pela coluna email).
  */
 export async function registerUser(params: {
   nome: string;
@@ -73,7 +75,7 @@ export async function registerUser(params: {
 }): Promise<DbSystemUser> {
   const { nome, email, password, role } = params;
 
-  // 1) Cria usuário no Auth
+  // 1) Tenta criar no Auth
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -87,30 +89,54 @@ export async function registerUser(params: {
   });
 
   if (signUpError) {
+    const msg = signUpError.message?.toLowerCase() ?? "";
+
+    // Se já existir no Auth, validamos a senha com signIn e seguimos.
+    if (msg.includes("user already registered")) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        throw new Error(
+          signInError.message ||
+            "Este e-mail já está cadastrado e a senha informada não confere.",
+        );
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(
+        "Usuário já existia no Auth; senha validada e prosseguindo para sincronizar usuarios_sistema.",
+      );
+    } else {
+      // eslint-disable-next-line no-console
+      console.error("Erro no signUp do Supabase Auth:", {
+        email,
+        signUpError,
+      });
+
+      throw new Error(
+        signUpError.message ||
+          "Não foi possível criar o usuário na autenticação. Verifique os dados informados.",
+      );
+    }
+  } else {
+    if (!signUpData.user) {
+      throw new Error(
+        "Usuário não foi retornado pelo provedor de autenticação.",
+      );
+    }
+
     // eslint-disable-next-line no-console
-    console.error("Erro no signUp do Supabase Auth:", {
-      email,
-      signUpError,
+    console.log("Usuário criado no Auth com sucesso:", {
+      authUserId: signUpData.user.id,
+      email: signUpData.user.email,
+      metadata: signUpData.user.user_metadata,
     });
-
-    throw new Error(
-      signUpError.message ||
-        "Não foi possível criar o usuário na autenticação. Verifique os dados informados.",
-    );
   }
 
-  if (!signUpData.user) {
-    throw new Error("Usuário não foi retornado pelo provedor de autenticação.");
-  }
-
-  // eslint-disable-next-line no-console
-  console.log("Usuário criado no Auth com sucesso:", {
-    authUserId: signUpData.user.id,
-    email: signUpData.user.email,
-    metadata: signUpData.user.user_metadata,
-  });
-
-  // 2) Insere na tabela usuarios_sistema.
+  // 2) Garante cadastro em usuarios_sistema (create/update por e-mail)
   const insertPayload = {
     nome,
     email,
@@ -119,29 +145,82 @@ export async function registerUser(params: {
     ativo: true,
   };
 
-  const { data: inserted, error: insertError } = await supabase
+  // Primeiro, verifica se já existe
+  const { data: existing, error: selectError } = await supabase
     .from("usuarios_sistema")
-    .insert(insertPayload)
     .select("*")
-    .single();
+    .eq("email", email)
+    .maybeSingle();
 
-  if (insertError) {
+  if (selectError) {
     // eslint-disable-next-line no-console
-    console.error("Erro ao inserir em usuarios_sistema:", {
-      insertPayload,
-      insertError,
+    console.error("Erro ao verificar usuarios_sistema:", {
+      email,
+      selectError,
     });
+  }
 
+  let upsertResult: DbSystemUser | null = null;
+
+  if (existing) {
+    // Atualiza registro existente
+    const { data: updated, error: updateError } = await supabase
+      .from("usuarios_sistema")
+      .update(insertPayload)
+      .eq("email", email)
+      .select("*")
+      .maybeSingle();
+
+    if (updateError) {
+      // eslint-disable-next-line no-console
+      console.error("Erro ao atualizar usuarios_sistema:", {
+        email,
+        insertPayload,
+        updateError,
+      });
+
+      throw new Error(
+        updateError.message ||
+          "Não foi possível atualizar o cadastro do usuário no sistema.",
+      );
+    }
+
+    upsertResult = updated as DbSystemUser | null;
+    // eslint-disable-next-line no-console
+    console.log("Registro atualizado em usuarios_sistema:", upsertResult);
+  } else {
+    // Cria novo registro
+    const { data: inserted, error: insertError } = await supabase
+      .from("usuarios_sistema")
+      .insert(insertPayload)
+      .select("*")
+      .single();
+
+    if (insertError) {
+      // eslint-disable-next-line no-console
+      console.error("Erro ao inserir em usuarios_sistema:", {
+        insertPayload,
+        insertError,
+      });
+
+      throw new Error(
+        insertError.message ||
+          "Usuário criado/validado na autenticação, mas não foi possível salvar no cadastro de usuários do sistema.",
+      );
+    }
+
+    upsertResult = inserted as DbSystemUser;
+    // eslint-disable-next-line no-console
+    console.log("Registro criado em usuarios_sistema com sucesso:", upsertResult);
+  }
+
+  if (!upsertResult) {
     throw new Error(
-      insertError.message ||
-        "Usuário criado na autenticação, mas não foi possível salvar no cadastro de usuários do sistema.",
+      "Não foi possível obter o cadastro do usuário após salvar em usuarios_sistema.",
     );
   }
 
-  // eslint-disable-next-line no-console
-  console.log("Registro criado em usuarios_sistema com sucesso:", inserted);
-
-  return inserted as DbSystemUser;
+  return upsertResult;
 }
 
 /**
