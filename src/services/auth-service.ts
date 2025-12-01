@@ -8,48 +8,8 @@ export interface LoginResult {
   role: AllowedRole;
 }
 
-interface MockAuthUser {
-  email: string;
-  password: string; // para ambiente real, use hash; aqui é só DEV
-  role: AllowedRole;
-  confirmed: boolean;
-}
-
-const MOCK_AUTH_KEY = "mock-auth-users";
-
-function loadMockUsers(): MockAuthUser[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(MOCK_AUTH_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as MockAuthUser[];
-  } catch {
-    return [];
-  }
-}
-
-function saveMockUsers(users: MockAuthUser[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(MOCK_AUTH_KEY, JSON.stringify(users));
-}
-
 /**
- * Marca usuário como confirmado (simula clique no link de confirmação enviado por e-mail).
- */
-export async function confirmUser(email: string): Promise<void> {
-  if (typeof window === "undefined") return;
-  const users = loadMockUsers();
-  const idx = users.findIndex((u) => u.email === email);
-  if (idx === -1) {
-    throw new Error("Usuário não encontrado para confirmação.");
-  }
-  users[idx] = { ...users[idx], confirmed: true };
-  saveMockUsers(users);
-}
-
-/**
- * Login local: confere email/senha em localStorage e valida regra
- * contra a tabela usuarios_sistema.
+ * Login real via Supabase Auth (email/senha) + validação de regra na tabela usuarios_sistema.
  */
 export async function loginWithRole(params: {
   email: string;
@@ -58,35 +18,49 @@ export async function loginWithRole(params: {
 }): Promise<LoginResult> {
   const { email, password, allowedRole } = params;
 
-  const users = loadMockUsers();
-  const authUser = users.find((u) => u.email === email);
+  // 1) Login no Supabase Auth
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-  if (!authUser || authUser.password !== password) {
-    throw new Error("Credenciais inválidas. Verifique e-mail e senha.");
-  }
+  if (error) {
+    // Mensagens mais amigáveis
+    if (error.message.toLowerCase().includes("email not confirmed")) {
+      throw new Error(
+        "Seu cadastro ainda não foi confirmado. Verifique seu e-mail e clique no link de confirmação.",
+      );
+    }
 
-  if (!authUser.confirmed) {
     throw new Error(
-      "Seu cadastro ainda não foi confirmado. Acesse o link de confirmação enviado por e-mail (ou use a opção de confirmar cadastro nos testes).",
+      error.message || "Não foi possível autenticar. Verifique e-mail e senha.",
     );
   }
 
-  // Valida contra usuarios_sistema, respeitando regra e ativo
+  const authUserEmail = data.user?.email;
+  if (!authUserEmail) {
+    throw new Error(
+      "Usuário autenticado sem e-mail. Verifique a configuração de autenticação.",
+    );
+  }
+
+  // 2) Buscar usuário na tabela de sistema
   const { data: usuarios, error: usuarioError } = await supabase
     .from("usuarios_sistema")
     .select("*")
-    .eq("email", email)
+    .eq("email", authUserEmail)
     .limit(1);
 
   if (usuarioError) {
     throw new Error(
-      usuarioError.message || "Erro ao carregar dados do usuário do sistema.",
+      usuarioError.message ||
+        "Erro ao carregar dados do usuário do sistema (usuarios_sistema).",
     );
   }
 
   if (!usuarios || usuarios.length === 0) {
     throw new Error(
-      "Usuário não encontrado na tabela de usuários do sistema (usuarios_sistema).",
+      "Usuário autenticado, mas não encontrado na tabela usuarios_sistema.",
     );
   }
 
@@ -110,20 +84,13 @@ export async function loginWithRole(params: {
     throw new Error("Você não tem permissão para acessar esta área.");
   }
 
-  // Marca "sessão" simples em localStorage
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(
-      "mock-auth-session",
-      JSON.stringify({ email, role: usuario.regra }),
-    );
-  }
-
   return { user: usuario, role: usuario.regra };
 }
 
 /**
- * Cria um usuário na tabela usuarios_sistema e também em localStorage
- * como usuário "autenticável" neste ambiente de testes.
+ * Cadastro real:
+ * 1) Cria usuário no Supabase Auth (envia e-mail de confirmação automaticamente).
+ * 2) Cria registro correspondente na tabela usuarios_sistema com regra e ativo=true.
  */
 export async function registerUser(params: {
   nome: string;
@@ -133,7 +100,31 @@ export async function registerUser(params: {
 }): Promise<DbSystemUser> {
   const { nome, email, password, role } = params;
 
-  // 1) Cria registro em usuarios_sistema no Supabase
+  // 1) Cria usuário no Auth, disparando e-mail de confirmação
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        role,
+        nome,
+      },
+      emailRedirectTo: window.location.origin + "/login",
+    },
+  });
+
+  if (signUpError) {
+    throw new Error(
+      signUpError.message ||
+        "Não foi possível criar o usuário. Verifique os dados informados.",
+    );
+  }
+
+  if (!signUpData.user) {
+    throw new Error("Usuário não foi retornado pelo provedor de autenticação.");
+  }
+
+  // 2) Cria registro em usuarios_sistema
   const { data: inserted, error: insertError } = await supabase
     .from("usuarios_sistema")
     .insert({
@@ -149,62 +140,50 @@ export async function registerUser(params: {
   if (insertError) {
     throw new Error(
       insertError.message ||
-        "Não foi possível salvar o usuário na tabela de usuários do sistema.",
+        "Usuário criado na autenticação, mas não foi possível salvar no cadastro de usuários do sistema.",
     );
-  }
-
-  // 2) Armazena credenciais localmente (somente para ambiente de testes)
-  const users = loadMockUsers();
-  const exists = users.find((u) => u.email === email);
-  if (!exists) {
-    users.push({ email, password, role, confirmed: false });
-    saveMockUsers(users);
   }
 
   return inserted as DbSystemUser;
 }
 
 /**
- * "Envia" um reset de senha: aqui é apenas simulado.
+ * Inicia fluxo de recuperação de senha via e-mail do Supabase.
  */
 export async function sendPasswordReset(email: string): Promise<void> {
-  const users = loadMockUsers();
-  const exists = users.find((u) => u.email === email);
-  if (!exists) {
-    throw new Error("Usuário não encontrado para recuperação de senha.");
-  }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + "/reset-password",
+  });
 
-  // Em ambiente real: enviar e-mail; aqui só sinalizamos que "foi enviado".
-  return;
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível enviar o e-mail de recuperação de senha.",
+    );
+  }
 }
 
 /**
- * Atualiza senha do usuário logado no mock local.
+ * Atualiza senha do usuário logado (parte final do fluxo de reset).
  */
 export async function updatePassword(newPassword: string): Promise<void> {
-  if (typeof window === "undefined") return;
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
 
-  const sessionRaw = window.localStorage.getItem("mock-auth-session");
-  if (!sessionRaw) {
-    throw new Error("Nenhum usuário autenticado para atualizar a senha.");
+  if (error) {
+    throw new Error(
+      error.message || "Não foi possível atualizar a senha. Tente novamente.",
+    );
   }
-
-  const session = JSON.parse(sessionRaw) as { email: string; role: AllowedRole };
-
-  const users = loadMockUsers();
-  const idx = users.findIndex((u) => u.email === session.email);
-  if (idx === -1) {
-    throw new Error("Usuário não encontrado no armazenamento local.");
-  }
-
-  users[idx] = { ...users[idx], password: newPassword };
-  saveMockUsers(users);
 }
 
 /**
- * Encerra sessão atual (mock).
+ * Encerra sessão atual.
  */
 export async function logout() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem("mock-auth-session");
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    throw new Error(error.message || "Erro ao encerrar sessão.");
+  }
 }

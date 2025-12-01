@@ -7,12 +7,11 @@ import {
   Stethoscope,
   HeartPulse,
   UserPlus,
-  CheckCircle2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole, registerUser, sendPasswordReset, confirmUser } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
@@ -28,7 +27,6 @@ const LoginMedico = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
 
   const [resetLoading, setResetLoading] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -90,7 +88,9 @@ const LoginMedico = () => {
         role: "MEDICO",
       });
 
-      showSuccess("Usuário médico criado. Confirme o cadastro antes do primeiro acesso.");
+      showSuccess(
+        "Usuário médico criado. Verifique seu e-mail e confirme o cadastro antes do primeiro acesso.",
+      );
       setEmail(registerEmail.trim());
       setSenha(registerSenha);
     } catch (err) {
@@ -104,28 +104,6 @@ const LoginMedico = () => {
     }
   };
 
-  const handleConfirmRegister = async () => {
-    const targetEmail = registerEmail.trim() || email.trim();
-    if (!targetEmail) {
-      showError("Informe o e-mail do usuário a ser confirmado.");
-      return;
-    }
-    setConfirmLoading(true);
-    try {
-      await confirmUser(targetEmail);
-      showSuccess("Cadastro confirmado (teste). Agora você pode fazer login normalmente.");
-      setShowRegister(false);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível confirmar o cadastro.";
-      showError(message);
-    } finally {
-      setConfirmLoading(false);
-    }
-  };
-
   const handleForgotPassword = async () => {
     if (!email.trim()) {
       showError("Informe o e-mail no campo de login para recuperar a senha.");
@@ -136,13 +114,13 @@ const LoginMedico = () => {
     try {
       await sendPasswordReset(email.trim());
       showSuccess(
-        "Simulamos o envio de instruções de redefinição de senha. Use a tela de redefinição após autenticar.",
+        "Enviamos um e-mail com instruções para redefinir sua senha.",
       );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível simular o envio de recuperação.";
+          : "Não foi possível enviar o e-mail de recuperação.";
       showError(message);
     } finally {
       setResetLoading(false);
@@ -342,7 +320,7 @@ const LoginMedico = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 pt-1">
+                  <div className="pt-1">
                     <Button
                       type="submit"
                       disabled={registerLoading}
@@ -350,20 +328,6 @@ const LoginMedico = () => {
                     >
                       {registerLoading ? "Criando..." : "Criar médico"}
                     </Button>
-
-                    <button
-                      type="button"
-                      onClick={handleConfirmRegister}
-                      disabled={confirmLoading}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-50/10 px-3 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-50/20"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>
-                        {confirmLoading
-                          ? "Confirmando..."
-                          : "Confirmar cadastro (teste)"}
-                      </span>
-                    </button>
                   </div>
                 </form>
               </div>
@@ -400,12 +364,13 @@ const LoginMedico = () => {
               </p>
             </div>
             <ul className="mt-1 space-y-1.5 text-left text-xs text-emerald-100/90 sm:text-sm lg:text-right">
-              <li>• Acesso seguro (mock), vinculado ao seu cadastro.</li>
+              <li>• Acesso seguro, vinculado ao seu cadastro de usuário.</li>
               <li>
                 • Visualização rápida de SADTs em análise, pagas ou com glosa.
               </li>
               <li>
-                • Ambiente preparado para futura integração com Auth real.
+                • Ambiente preparado para integração com prontuário e
+                faturamento.
               </li>
             </ul>
           </section>

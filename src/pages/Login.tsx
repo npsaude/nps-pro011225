@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRightCircle, Stethoscope, UserPlus, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, ArrowRightCircle, Stethoscope, UserPlus } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole, registerUser, sendPasswordReset, confirmUser } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,7 +22,6 @@ const Login = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
 
   const [resetLoading, setResetLoading] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,7 +81,9 @@ const Login = () => {
         role: "ADMIN",
       });
 
-      showSuccess("Usuário administrador criado. Confirme o cadastro antes do primeiro acesso.");
+      showSuccess(
+        "Usuário administrador criado. Verifique seu e-mail e confirme o cadastro antes do primeiro acesso.",
+      );
       setEmail(registerEmail.trim());
       setSenha(registerSenha);
     } catch (err) {
@@ -96,28 +97,6 @@ const Login = () => {
     }
   };
 
-  const handleConfirmRegister = async () => {
-    const targetEmail = registerEmail.trim() || email.trim();
-    if (!targetEmail) {
-      showError("Informe o e-mail do usuário a ser confirmado.");
-      return;
-    }
-    setConfirmLoading(true);
-    try {
-      await confirmUser(targetEmail);
-      showSuccess("Cadastro confirmado (teste). Agora você pode fazer login normalmente.");
-      setShowRegister(false);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível confirmar o cadastro.";
-      showError(message);
-    } finally {
-      setConfirmLoading(false);
-    }
-  };
-
   const handleForgotPassword = async () => {
     if (!email.trim()) {
       showError("Informe o e-mail no campo de login para recuperar a senha.");
@@ -128,13 +107,13 @@ const Login = () => {
     try {
       await sendPasswordReset(email.trim());
       showSuccess(
-        "Simulamos o envio de instruções de redefinição de senha. Use a tela de redefinição após autenticar.",
+        "Enviamos um e-mail com instruções para redefinir sua senha.",
       );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível simular o envio de recuperação.";
+          : "Não foi possível enviar o e-mail de recuperação.";
       showError(message);
     } finally {
       setResetLoading(false);
@@ -322,7 +301,7 @@ const Login = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 pt-1">
+                <div className="pt-1">
                   <Button
                     type="submit"
                     disabled={registerLoading}
@@ -330,20 +309,6 @@ const Login = () => {
                   >
                     {registerLoading ? "Criando..." : "Criar administrador"}
                   </Button>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmRegister}
-                    disabled={confirmLoading}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>
-                      {confirmLoading
-                        ? "Confirmando..."
-                        : "Confirmar cadastro (teste)"}
-                    </span>
-                  </button>
                 </div>
               </form>
             </div>
