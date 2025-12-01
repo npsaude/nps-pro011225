@@ -322,7 +322,9 @@ Não inclua comentários no JSON, apenas o objeto.
     );
   }
 
-  const desc = parsed?.descricao_cirurgica ?? parsed;
+  // IMPORTANTE: usamos o objeto inteiro retornado pela OpenAI,
+  // e não o campo descricao_cirurgica isolado (que é apenas uma string).
+  const desc = parsed;
 
   // 5) Montar objeto para inserir em descricoes_cirurgicas
   const insertData: Record<string, unknown> = {
