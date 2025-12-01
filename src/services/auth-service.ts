@@ -10,14 +10,13 @@ export interface LoginResult {
 
 /**
  * Login via Supabase Auth (email/senha).
- * Após autenticar, busca o registro correspondente em usuarios_sistema
- * usando o e-mail informado no login. Não bloqueia por regra/ativo
- * durante o desenvolvimento, apenas retorna os dados se existirem.
+ * Depois de autenticar, tenta carregar o registro em usuarios_sistema
+ * usando o e-mail. Não bloqueia o login se não existir/der erro.
  */
 export async function loginWithRole(params: {
   email: string;
   password: string;
-  allowedRole: AllowedRole; // mantido para compatibilidade, mas não bloqueia por isso em dev
+  allowedRole: AllowedRole; // ignorado para regras em desenvolvimento
 }): Promise<LoginResult> {
   const { email, password } = params;
 
@@ -42,7 +41,7 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  // Busca correspondente em usuarios_sistema (sem bloquear login em dev)
+  // Tentativa de carregar o cadastro em usuarios_sistema
   const { data: systemUser, error: systemUserError } = await supabase
     .from("usuarios_sistema")
     .select("*")
@@ -66,6 +65,8 @@ export async function loginWithRole(params: {
  * Cadastro:
  * 1) Cria usuário no Supabase Auth.
  * 2) Cria registro correspondente em usuarios_sistema com regra e ativo=true.
+ *
+ * IMPORTANTE: se o passo 2 falhar, lançamos erro com mensagem detalhada.
  */
 export async function registerUser(params: {
   nome: string;
@@ -75,6 +76,7 @@ export async function registerUser(params: {
 }): Promise<DbSystemUser> {
   const { nome, email, password, role } = params;
 
+  // 1) Cria usuário no Auth
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -98,13 +100,21 @@ export async function registerUser(params: {
     throw new Error("Usuário não foi retornado pelo provedor de autenticação.");
   }
 
-  // Cria o registro em usuarios_sistema.
+  // eslint-disable-next-line no-console
+  console.log("Usuário criado no Auth com sucesso:", {
+    authUserId: signUpData.user.id,
+    email: signUpData.user.email,
+    metadata: signUpData.user.user_metadata,
+  });
+
+  // 2) Insere na tabela usuarios_sistema
   const insertPayload = {
     nome,
     email,
-    celular: null,
+    celular: null as string | null,
     regra: role,
     ativo: true,
+    // id_user e criado_em são preenchidos pelo banco (DEFAULT)
   };
 
   const { data: inserted, error: insertError } = await supabase
@@ -114,7 +124,7 @@ export async function registerUser(params: {
     .single();
 
   if (insertError) {
-    // Log detalhado no console para facilitar o debug em desenvolvimento
+    // Log detalhado no console para facilitar o debug
     // eslint-disable-next-line no-console
     console.error("Erro ao inserir em usuarios_sistema:", {
       insertPayload,
@@ -126,6 +136,9 @@ export async function registerUser(params: {
         "Usuário criado na autenticação, mas não foi possível salvar no cadastro de usuários do sistema.",
     );
   }
+
+  // eslint-disable-next-line no-console
+  console.log("Registro criado em usuarios_sistema com sucesso:", inserted);
 
   return inserted as DbSystemUser;
 }
