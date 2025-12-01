@@ -63,13 +63,11 @@ const DashboardMedico = () => {
         {/* Conteúdo principal */}
         <main className="flex-1">
           {/* CTA principal */}
-          <section className="mb-5">
+          <section className="mb-4">
             <button
               type="button"
               className="flex w-full items-center justify-between rounded-2xl bg-emerald-500 px-4 py-3 text-left text-sm font-semibold text-white shadow-lg shadow-emerald-500/40 transition-transform hover:translate-y-0.5"
-              onClick={() =>
-                navigate("/medico/descricao-cirurgica/enviar")
-              }
+              onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600/70">
@@ -82,8 +80,30 @@ const DashboardMedico = () => {
                   </span>
                 </div>
               </div>
-              <span className="text-[11px] font-medium text-emerald-100">
-                Em breve
+            </button>
+          </section>
+
+          {/* Acompanhamento / menu simples */}
+          <section className="mb-5">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-2xl bg-slate-950/80 px-4 py-3 text-left text-xs font-medium text-emerald-100 ring-1 ring-emerald-500/30 transition-colors hover:bg-emerald-950/70"
+              onClick={() => navigate("/medico/descricao-cirurgica")}
+            >
+              <div className="flex flex-col">
+                <span className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90">
+                  Acompanhamento
+                </span>
+                <span className="mt-1 text-sm font-semibold">
+                  Minhas descrições cirúrgicas
+                </span>
+                <span className="text-[11px] text-emerald-100/80">
+                  Veja os registros estruturados gerados a partir dos documentos
+                  enviados.
+                </span>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-300">
+                Abrir
               </span>
             </button>
           </section>

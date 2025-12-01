@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { DbDescricaoCirurgica } from "@/db/schema";
+import type {
+  DbDescricaoCirurgica,
+  DbDescricaoCirurgicaStatus,
+} from "@/db/schema";
 
 export type SimNao = "" | "sim" | "nao";
 
@@ -92,6 +95,16 @@ export interface DescricaoCirurgicaFormData {
   previsao_alta: string;
   acompanhamento_pela_instituicao: SimNao;
   outras_orientacoes: string;
+}
+
+// Resumo para listagem do médico
+export interface DescricaoCirurgicaResumoMedico {
+  id: string;
+  nomeMedico: string | null;
+  nomePaciente: string | null;
+  dataFimProcedimento: string | null;
+  prontuario: string | null;
+  status: DbDescricaoCirurgicaStatus | null;
 }
 
 function mapSimNao(value: SimNao): boolean | null {
@@ -246,4 +259,48 @@ export async function criarDescricaoCirurgica(
   }
 
   return inserted as DbDescricaoCirurgica;
+}
+
+/**
+ * Lista descrições cirúrgicas pertencentes ao médico logado (user_id do Auth),
+ * trazendo apenas os campos necessários para o acompanhamento.
+ */
+export async function listarDescricoesCirurgicasDoMedicoLogado(): Promise<
+  DescricaoCirurgicaResumoMedico[]
+> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    throw new Error("Usuário não autenticado. Faça login novamente.");
+  }
+
+  const userId = userData.user.id;
+
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select(
+      "id, prontuario, nome_social, registro_civil, data_fim_procedimento, status, cirurgiao_responsavel",
+    )
+    .eq("user_id", userId)
+    .order("data_fim_procedimento", { ascending: false });
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível carregar as descrições cirúrgicas do médico.",
+    );
+  }
+
+  const rows = (data ?? []) as Partial<DbDescricaoCirurgica>[];
+
+  return rows.map((item) => ({
+    id: item.id as string,
+    nomeMedico: (item.cirurgiao_responsavel as string | null) ?? null,
+    nomePaciente:
+      ((item.nome_social as string | null) ||
+        (item.registro_civil as string | null)) ?? null,
+    dataFimProcedimento:
+      (item.data_fim_procedimento as string | null) ?? null,
+    prontuario: (item.prontuario as string | null) ?? null,
+    status: (item.status as DbDescricaoCirurgicaStatus | null) ?? null,
+  }));
 }
