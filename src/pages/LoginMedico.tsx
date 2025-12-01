@@ -6,17 +6,27 @@ import {
   ArrowRightCircle,
   Stethoscope,
   HeartPulse,
+  UserPlus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerNome, setRegisterNome] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerSenha, setRegisterSenha] = useState("");
+  const [registerSenhaConfirm, setRegisterSenhaConfirm] = useState("");
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -40,6 +50,75 @@ const LoginMedico = () => {
       showError(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!registerNome.trim()) {
+      showError("Informe o nome completo.");
+      return;
+    }
+    if (!registerEmail.trim()) {
+      showError("Informe o e-mail.");
+      return;
+    }
+    if (registerSenha.length < 6) {
+      showError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (registerSenha !== registerSenhaConfirm) {
+      showError("As senhas não conferem.");
+      return;
+    }
+
+    setRegisterLoading(true);
+    try {
+      await registerUser({
+        nome: registerNome.trim(),
+        email: registerEmail.trim(),
+        password: registerSenha,
+        role: "MEDICO",
+      });
+
+      showSuccess("Usuário médico criado com sucesso.");
+      setShowRegister(false);
+      setRegisterNome("");
+      setRegisterEmail("");
+      setRegisterSenha("");
+      setRegisterSenhaConfirm("");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível criar o usuário. Verifique os dados.";
+      showError(message);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      showError("Informe o e-mail no campo de login para recuperar a senha.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await sendPasswordReset(email.trim());
+      showSuccess("Enviamos um e-mail com instruções para redefinir sua senha.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível enviar o e-mail de recuperação.";
+      showError(message);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -143,13 +222,15 @@ const LoginMedico = () => {
                 <button
                   type="button"
                   className="font-semibold text-emerald-300 underline-offset-2 hover:underline"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
                 >
-                  Esqueci a senha
+                  {resetLoading ? "Enviando..." : "Esqueci a senha"}
                 </button>
               </div>
 
               {/* Botão login médico */}
-              <div className="pt-2">
+              <div className="pt-2 flex flex-col gap-2">
                 <Button
                   type="submit"
                   disabled={isLoading}
@@ -160,8 +241,92 @@ const LoginMedico = () => {
                     {isLoading ? "Entrando..." : "Entrar como médico"}
                   </span>
                 </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRegister((prev) => !prev)}
+                  className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium text-emerald-200 underline-offset-2 hover:text-emerald-100 hover:underline"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>
+                    {showRegister
+                      ? "Fechar criação de usuário"
+                      : "Criar novo usuário médico"}
+                  </span>
+                </button>
               </div>
             </form>
+
+            {/* Bloco de criação de usuário médico */}
+            {showRegister && (
+              <div className="mt-4 rounded-xl bg-slate-950/70 px-3 py-3 text-xs ring-1 ring-emerald-500/40">
+                <p className="mb-2 text-[11px] font-semibold text-emerald-100">
+                  Criar novo usuário médico
+                </p>
+                <form className="space-y-2.5" onSubmit={handleCreateAccount}>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] text-emerald-100/90">
+                      Nome completo
+                    </label>
+                    <Input
+                      type="text"
+                      value={registerNome}
+                      onChange={(e) => setRegisterNome(e.target.value)}
+                      className="h-8 border-emerald-500/30 bg-slate-950/80 text-xs text-slate-50"
+                      placeholder="Digite o nome"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] text-emerald-100/90">
+                      E-mail
+                    </label>
+                    <Input
+                      type="email"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
+                      className="h-8 border-emerald-500/30 bg-slate-950/80 text-xs text-slate-50"
+                      placeholder="email@exemplo.com"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="block text-[11px] text-emerald-100/90">
+                        Senha
+                      </label>
+                      <Input
+                        type="password"
+                        value={registerSenha}
+                        onChange={(e) => setRegisterSenha(e.target.value)}
+                        className="h-8 border-emerald-500/30 bg-slate-950/80 text-xs text-slate-50"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[11px] text-emerald-100/90">
+                        Confirmar senha
+                      </label>
+                      <Input
+                        type="password"
+                        value={registerSenhaConfirm}
+                        onChange={(e) =>
+                          setRegisterSenhaConfirm(e.target.value)
+                        }
+                        className="h-8 border-emerald-500/30 bg-slate-950/80 text-xs text-slate-50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <Button
+                      type="submit"
+                      disabled={registerLoading}
+                      className="h-8 w-full rounded-full bg-emerald-500 text-[11px] font-semibold text-white hover:bg-emerald-400"
+                    >
+                      {registerLoading ? "Criando..." : "Criar médico"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {/* Rodapé pequeno */}
             <p className="mt-4 text-[11px] text-emerald-100/80">

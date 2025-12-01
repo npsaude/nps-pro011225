@@ -1,18 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRightCircle, Stethoscope } from "lucide-react";
+import { Mail, Lock, ArrowRightCircle, Stethoscope, UserPlus } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
 
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerNome, setRegisterNome] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerSenha, setRegisterSenha] = useState("");
+  const [registerSenhaConfirm, setRegisterSenhaConfirm] = useState("");
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,6 +43,75 @@ const Login = () => {
       showError(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!registerNome.trim()) {
+      showError("Informe o nome completo.");
+      return;
+    }
+    if (!registerEmail.trim()) {
+      showError("Informe o e-mail.");
+      return;
+    }
+    if (registerSenha.length < 6) {
+      showError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (registerSenha !== registerSenhaConfirm) {
+      showError("As senhas não conferem.");
+      return;
+    }
+
+    setRegisterLoading(true);
+    try {
+      await registerUser({
+        nome: registerNome.trim(),
+        email: registerEmail.trim(),
+        password: registerSenha,
+        role: "ADMIN",
+      });
+
+      showSuccess("Usuário administrador criado com sucesso.");
+      setShowRegister(false);
+      setRegisterNome("");
+      setRegisterEmail("");
+      setRegisterSenha("");
+      setRegisterSenhaConfirm("");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível criar o usuário. Verifique os dados.";
+      showError(message);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      showError("Informe o e-mail no campo de login para recuperar a senha.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await sendPasswordReset(email.trim());
+      showSuccess("Enviamos um e-mail com instruções para redefinir sua senha.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível enviar o e-mail de recuperação.";
+      showError(message);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -125,13 +203,15 @@ const Login = () => {
               <button
                 type="button"
                 className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-[#135bec] hover:underline"
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
               >
-                Esqueceu a senha?
+                {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
               </button>
             </div>
 
             {/* Botão de login admin */}
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col gap-2">
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -142,8 +222,92 @@ const Login = () => {
                   {isLoading ? "Entrando..." : "Entrar como administrador"}
                 </span>
               </Button>
+
+              <button
+                type="button"
+                onClick={() => setShowRegister((prev) => !prev)}
+                className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 underline-offset-2 hover:text-[#135bec] hover:underline"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>
+                  {showRegister
+                    ? "Fechar criação de usuário"
+                    : "Criar novo usuário administrador"}
+                </span>
+              </button>
             </div>
           </form>
+
+          {/* Bloco de criação de usuário admin */}
+          {showRegister && (
+            <div className="mt-4 rounded-xl bg-slate-50 px-3 py-3 text-xs ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+              <p className="mb-2 text-[11px] font-semibold text-slate-600 dark:text-slate-200">
+                Criar novo usuário administrador
+              </p>
+              <form className="space-y-2.5" onSubmit={handleCreateAccount}>
+                <div className="space-y-1">
+                  <label className="block text-[11px] text-slate-600 dark:text-slate-300">
+                    Nome completo
+                  </label>
+                  <Input
+                    type="text"
+                    value={registerNome}
+                    onChange={(e) => setRegisterNome(e.target.value)}
+                    className="h-8 text-xs"
+                    placeholder="Digite o nome"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[11px] text-slate-600 dark:text-slate-300">
+                    E-mail
+                  </label>
+                  <Input
+                    type="email"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    className="h-8 text-xs"
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] text-slate-600 dark:text-slate-300">
+                      Senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={registerSenha}
+                      onChange={(e) => setRegisterSenha(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] text-slate-600 dark:text-slate-300">
+                      Confirmar senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={registerSenhaConfirm}
+                      onChange={(e) =>
+                        setRegisterSenhaConfirm(e.target.value)
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <Button
+                    type="submit"
+                    disabled={registerLoading}
+                    className="h-8 w-full rounded-full bg-slate-900 text-[11px] font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                  >
+                    {registerLoading ? "Criando..." : "Criar administrador"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Separador e link para médico */}
           <div className="mt-5 border-t border-slate-100 pt-4 text-center text-xs text-slate-400 dark:border-slate-800">

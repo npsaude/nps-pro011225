@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import SadtCadastro from "./pages/SadtCadastro";
 import SadtNova from "./pages/SadtNova";
 import SadtEditar from "./pages/SadtEditar";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/login-medico" element={<LoginMedico />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
           <Route path="/sadt/sucesso" element={<SadtSucesso />} />

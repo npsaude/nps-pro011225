@@ -86,6 +86,101 @@ export async function loginWithRole(params: {
 }
 
 /**
+ * Cria um usuário no Supabase Auth e vincula na tabela usuarios_sistema
+ * com a regra especificada (ADMIN ou MEDICO).
+ *
+ * Observação: Em ambiente real, normalmente apenas ADMIN pode criar outros usuários;
+ * aqui é responsabilidade de quem chama essa função controlar isso.
+ */
+export async function registerUser(params: {
+  nome: string;
+  email: string;
+  password: string;
+  role: AllowedRole;
+}): Promise<DbSystemUser> {
+  const { nome, email, password, role } = params;
+
+  // 1) Cria usuário no Auth
+  const { data: signUpData, error: signUpError } =
+    await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          role,
+          nome,
+        },
+      },
+    });
+
+  if (signUpError) {
+    throw new Error(
+      signUpError.message ||
+        "Não foi possível criar o usuário. Verifique os dados informados.",
+    );
+  }
+
+  if (!signUpData.user) {
+    throw new Error("Usuário não foi retornado pelo provedor de autenticação.");
+  }
+
+  // 2) Cria registro em usuarios_sistema
+  const { data: inserted, error: insertError } = await supabase
+    .from("usuarios_sistema")
+    .insert({
+      nome,
+      email,
+      celular: null,
+      regra: role,
+      ativo: true,
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    throw new Error(
+      insertError.message ||
+        "Usuário criado na autenticação, mas não foi possível salvar no cadastro de usuários do sistema.",
+    );
+  }
+
+  return inserted as DbSystemUser;
+}
+
+/**
+ * Inicia fluxo de recuperação de senha via Supabase.
+ * É necessário ter configurado o Redirect URL de reset no painel do Supabase.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + "/reset-password",
+  });
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível enviar o e-mail de recuperação de senha.",
+    );
+  }
+}
+
+/**
+ * Atualiza senha do usuário logado (parte final do fluxo de reset).
+ * Essa função pressupõe que o usuário chegou a esta tela via link de reset.
+ */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    throw new Error(
+      error.message || "Não foi possível atualizar a senha. Tente novamente.",
+    );
+  }
+}
+
+/**
  * Encerra sessão atual.
  */
 export async function logout() {
