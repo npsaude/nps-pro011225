@@ -1,17 +1,46 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRightCircle, Stethoscope, HeartPulse } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  ArrowRightCircle,
+  Stethoscope,
+  HeartPulse,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { showError, showSuccess } from "@/utils/toast";
+import { loginWithRole } from "@/services/auth-service";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsLoading(true);
 
-    // Aqui no futuro você pode autenticar o médico e marcar role = MEDICO.
-    // Por enquanto, direciona para o dashboard existente.
-    navigate("/admin/dashboard");
+    try {
+      await loginWithRole({
+        email,
+        password: senha,
+        allowedRole: "MEDICO",
+      });
+
+      showSuccess("Login realizado com sucesso.");
+      // Por enquanto, direciona para o mesmo dashboard existente.
+      navigate("/admin/dashboard");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível fazer login. Verifique seus dados.";
+      showError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -63,26 +92,28 @@ const LoginMedico = () => {
                 Entre para acompanhar suas SADTs.
               </h1>
               <p className="text-xs text-emerald-100/80 sm:text-sm">
-                Acesse com seu e-mail ou CRM cadastrado e acompanhe o status de
+                Acesse com seu e-mail e senha cadastrados e acompanhe o status de
                 envio, faturamento e glosas dos seus atendimentos.
               </p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* E-mail ou CRM */}
+              {/* E-mail */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-emerald-100/90">
-                  E-mail ou CRM
+                  E-mail
                 </label>
                 <div className="flex items-center rounded-xl bg-slate-900/70 ring-1 ring-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-400">
                   <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-emerald-500/30 text-emerald-300">
                     <Mail className="h-4 w-4" />
                   </span>
                   <Input
-                    type="text"
-                    placeholder="seuemail@exemplo.com ou CRM"
+                    type="email"
+                    placeholder="seuemail@exemplo.com"
                     className="h-11 border-none bg-transparent text-sm text-slate-50 placeholder:text-emerald-300/60 focus-visible:ring-0"
                     required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
@@ -101,6 +132,8 @@ const LoginMedico = () => {
                     placeholder="Digite sua senha"
                     className="h-11 border-none bg-transparent text-sm text-slate-50 placeholder:text-emerald-300/60 focus-visible:ring-0"
                     required
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
                   />
                 </div>
               </div>
@@ -119,10 +152,13 @@ const LoginMedico = () => {
               <div className="pt-2">
                 <Button
                   type="submit"
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 text-sm font-semibold text-white shadow-lg shadow-emerald-500/40 transition-transform hover:translate-y-0.5 hover:bg-emerald-400"
+                  disabled={isLoading}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 text-sm font-semibold text-white shadow-lg shadow-emerald-500/40 transition-transform hover:translate-y-0.5 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <ArrowRightCircle className="h-4 w-4" />
-                  <span>Entrar como médico</span>
+                  <span>
+                    {isLoading ? "Entrando..." : "Entrar como médico"}
+                  </span>
                 </Button>
               </div>
             </form>
@@ -159,8 +195,13 @@ const LoginMedico = () => {
             </div>
             <ul className="mt-1 space-y-1.5 text-left text-xs text-emerald-100/90 sm:text-sm lg:text-right">
               <li>• Acesso seguro, vinculado ao seu cadastro de usuário.</li>
-              <li>• Visualização rápida de SADTs em análise, pagas ou com glosa.</li>
-              <li>• Ambiente preparado para integração com prontuário e faturamento.</li>
+              <li>
+                • Visualização rápida de SADTs em análise, pagas ou com glosa.
+              </li>
+              <li>
+                • Ambiente preparado para integração com prontuário e
+                faturamento.
+              </li>
             </ul>
           </section>
         </main>

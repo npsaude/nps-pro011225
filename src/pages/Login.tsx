@@ -1,17 +1,40 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowRightCircle, Stethoscope } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { showError, showSuccess } from "@/utils/toast";
+import { loginWithRole } from "@/services/auth-service";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Aqui poderíamos validar credenciais; por enquanto apenas navega para o painel administrativo.
-    navigate("/admin/dashboard");
+    setIsLoading(true);
+    try {
+      await loginWithRole({
+        email,
+        password: senha,
+        allowedRole: "ADMIN",
+      });
+
+      showSuccess("Login realizado com sucesso.");
+      navigate("/admin/dashboard");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível fazer login. Verifique seus dados.";
+      showError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,6 +90,8 @@ const Login = () => {
                   placeholder="Insira seu usuário ou e-mail"
                   className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -85,6 +110,8 @@ const Login = () => {
                   placeholder="Insira sua senha"
                   className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
                   required
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                 />
               </div>
             </div>
@@ -107,10 +134,13 @@ const Login = () => {
             <div className="pt-2">
               <Button
                 type="submit"
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#135bec] text-sm font-semibold text-white shadow-sm shadow-blue-500/40 transition-transform hover:translate-y-0.5 hover:bg-[#135bec]/90"
+                disabled={isLoading}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#135bec] text-sm font-semibold text-white shadow-sm shadow-blue-500/40 transition-transform hover:translate-y-0.5 hover:bg-[#135bec]/90 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <ArrowRightCircle className="h-4 w-4" />
-                <span>Entrar como administrador</span>
+                <span>
+                  {isLoading ? "Entrando..." : "Entrar como administrador"}
+                </span>
               </Button>
             </div>
           </form>
