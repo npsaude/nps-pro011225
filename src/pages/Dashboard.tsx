@@ -97,7 +97,6 @@ const topMetrics = [
   },
 ];
 
-// Dados mensais inspirados no exemplo fornecido (12 meses)
 const yearlySadtData = [
   { mes: "Jan", enviados: 65, pagos: 48, retornoGlosa: 12 },
   { mes: "Fev", enviados: 59, pagos: 42, retornoGlosa: 10 },
@@ -119,21 +118,21 @@ const activities = [
     tipo: "Nova SADT",
     descricao: "SADT criada para o médico Maria Silva",
     tempo: "Há 5 minutos",
-    color: "bg-emerald-500/15 text-emerald-700",
+    color: "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
   },
   {
     id: 2,
     tipo: "Lembrete",
     descricao: "Cobrança enviada ao convênio Vida Mais",
     tempo: "Hoje, 10:23",
-    color: "bg-amber-500/15 text-amber-700",
+    color: "bg-amber-500/15 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
   },
   {
     id: 3,
     tipo: "Glosa",
     descricao: "Nova glosa recebida do convênio Bem Estar",
     tempo: "Ontem, 18:04",
-    color: "bg-rose-500/15 text-rose-700",
+    color: "bg-rose-500/15 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
   },
 ];
 
@@ -144,7 +143,7 @@ const recentSadt = [
     medico: "Carlos Pereira",
     valor: "R$ 2.450,00",
     status: "PAGA",
-    statusColor: "bg-emerald-100 text-emerald-700",
+    statusColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   },
   {
     protocolo: "SADT-2024-13398",
@@ -152,7 +151,7 @@ const recentSadt = [
     medico: "Ana Costa",
     valor: "R$ 1.280,00",
     status: "EM ANÁLISE",
-    statusColor: "bg-amber-100 text-amber-700",
+    statusColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   },
   {
     protocolo: "SADT-2024-13340",
@@ -160,7 +159,7 @@ const recentSadt = [
     medico: "João Almeida",
     valor: "R$ 980,00",
     status: "GLOSA",
-    statusColor: "bg-rose-100 text-rose-700",
+    statusColor: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
   },
   {
     protocolo: "SADT-2024-13290",
@@ -168,7 +167,7 @@ const recentSadt = [
     medico: "Luciana Lima",
     valor: "R$ 3.120,00",
     status: "PAGA",
-    statusColor: "bg-emerald-100 text-emerald-700",
+    statusColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   },
 ];
 
@@ -209,7 +208,7 @@ const Dashboard = () => {
             {/* Menu */}
             <nav className="flex flex-col gap-1">
               {/* Home */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all bg-[#135bec] text-white shadow-md shadow-blue-500/40">
+              <button className="flex items-center justify-between rounded-2xl bg-[#135bec] px-3 py-2.5 text-sm text-white shadow-md shadow-blue-500/40 transition-all">
                 <span className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white">
                     <Home className="h-4 w-4" />
@@ -220,7 +219,7 @@ const Dashboard = () => {
 
               {/* SADT's */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                 onClick={() => navigate("/sadt/cadastro")}
               >
                 <span className="flex items-center gap-3">
@@ -233,7 +232,7 @@ const Dashboard = () => {
 
               {/* Descrição Cirúrgica */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                 onClick={() => navigate("/descricao-cirurgica")}
               >
                 <span className="flex items-center gap-3">
@@ -245,7 +244,7 @@ const Dashboard = () => {
               </button>
 
               {/* Recursos */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
                 <span className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                     <Stethoscope className="h-4 w-4" />
@@ -284,7 +283,7 @@ const Dashboard = () => {
               </div>
 
               {/* Mensagens */}
-              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
                 <span className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                     <MessageCircle className="h-4 w-4" />
@@ -296,9 +295,9 @@ const Dashboard = () => {
                 </span>
               </button>
 
-              {/* Configurações -> agora navega para /admin/configuracoes */}
+              {/* Configurações */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                 onClick={() => navigate("/admin/configuracoes")}
               >
                 <span className="flex items-center gap-3">
@@ -310,7 +309,7 @@ const Dashboard = () => {
               </button>
 
               {/* Ajuda */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
                 <span className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                     <HelpCircle className="h-4 w-4" />
@@ -339,7 +338,7 @@ const Dashboard = () => {
                 Dashboard
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Visão geral das SADTs e faturamento da sua clínica.
+                Visão geral das SADTs, descrições cirúrgicas e faturamento.
               </p>
             </div>
 
@@ -377,13 +376,238 @@ const Dashboard = () => {
           </header>
 
           {/* Filtros por clínica e médico */}
-          {/* ...restante do componente permanece igual... */}
-          {/* (Todo o conteúdo abaixo foi mantido sem alterações) */}
+          <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+            <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                  Clínica
+                </CardTitle>
+                <CardDescription className="text-[11px] text-slate-400">
+                  Filtrar indicadores por unidade
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Select
+                  value={selectedClinic}
+                  onValueChange={setSelectedClinic}
+                >
+                  <SelectTrigger className="h-8 w-full text-xs">
+                    <SelectValue placeholder="Selecione a clínica" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clinicOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                  Médico
+                </CardTitle>
+                <CardDescription className="text-[11px] text-slate-400">
+                  Filtrar SADTs por médico
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Select
+                  value={selectedDoctor}
+                  onValueChange={setSelectedDoctor}
+                >
+                  <SelectTrigger className="h-8 w-full text-xs">
+                    <SelectValue placeholder="Selecione o médico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {doctorOptions.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          </section>
 
           {/* Conteúdo principal */}
           <main className="flex flex-1 flex-col gap-4">
-            {/* Linha de cards + CTA lateral */}
-            {/* ...restante do JSX original não alterado... */}
+            {/* Linha de cards de métricas */}
+            <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {topMetrics.map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <Card
+                    key={metric.title}
+                    className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90"
+                  >
+                    <CardContent className="flex items-center justify-between gap-3 p-3 sm:p-4">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          {metric.title}
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                          {metric.value}
+                        </p>
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-300">
+                          {metric.helper}
+                        </p>
+                      </div>
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${metric.gradient} text-white shadow-md shadow-slate-900/20`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+
+            {/* Gráfico + atividades */}
+            <section className="grid gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2 border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    SADTs enviadas x pagas x retorno de glosa
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400">
+                    Visão consolidada dos últimos 12 meses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-64 px-1 pb-4 pt-0 sm:h-72 sm:px-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={yearlySadtData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#e2e8f0"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="mes"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: "#64748b" }}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: "#64748b" }}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          borderRadius: 12,
+                          borderColor: "#e2e8f0",
+                          fontSize: 11,
+                        }}
+                      />
+                      <Bar
+                        dataKey="enviados"
+                        name="Enviados"
+                        barSize={16}
+                        radius={[4, 4, 0, 0]}
+                        fill="#38bdf8"
+                      />
+                      <Bar
+                        dataKey="pagos"
+                        name="Pagos"
+                        barSize={16}
+                        radius={[4, 4, 0, 0]}
+                        fill="#22c55e"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="retornoGlosa"
+                        name="Retorno de glosa"
+                        stroke="#f97316"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    Atividades recentes
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400">
+                    Últimos eventos registrados no sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-1">
+                  {activities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className={`rounded-2xl px-3 py-2 text-xs ${activity.color}`}
+                    >
+                      <p className="font-semibold">{activity.tipo}</p>
+                      <p className="mt-0.5 text-[11px] opacity-90">
+                        {activity.descricao}
+                      </p>
+                      <p className="mt-1 text-[11px] opacity-70">
+                        {activity.tempo}
+                      </p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Tabela de SADTs recentes */}
+            <section>
+              <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    SADTs recentes
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400">
+                    Últimas SADTs lançadas no sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="overflow-x-auto pt-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b border-slate-100 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        <TableHead>Protocolo</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Médico</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentSadt.map((row) => (
+                        <TableRow
+                          key={row.protocolo}
+                          className="border-b border-slate-50 text-xs hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/60"
+                        >
+                          <TableCell className="font-medium text-slate-900 dark:text-slate-50">
+                            {row.protocolo}
+                          </TableCell>
+                          <TableCell>{row.data}</TableCell>
+                          <TableCell>{row.medico}</TableCell>
+                          <TableCell>{row.valor}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={`${row.statusColor} border-0 px-2 py-0.5 text-[11px] font-semibold`}
+                            >
+                              {row.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </section>
           </main>
         </div>
       </div>

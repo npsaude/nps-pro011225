@@ -97,9 +97,7 @@ const MedicosCadastro = () => {
                   >
                     <span className="ml-7">Clínicas / Hospitais</span>
                   </button>
-                  <button
-                    className="flex w-full items-center justify-between rounded-xl bg-slate-900 text-xs text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
-                  >
+                  <button className="flex w-full items-center justify-between rounded-xl bg-slate-900 px-3 py-1.5 text-xs text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900">
                     <span className="ml-7">Médicos</span>
                   </button>
                   <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
@@ -121,7 +119,7 @@ const MedicosCadastro = () => {
                 </span>
               </button>
 
-              {/* Configurações -> agora navega */}
+              {/* Configurações */}
               <button
                 className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                 onClick={() => navigate("/admin/configuracoes")}
@@ -156,7 +154,36 @@ const MedicosCadastro = () => {
         </aside>
 
         {/* Área principal */}
-        {/* ...restante permanece igual... */}
+        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-transparent lg:bg-white/80 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl dark:lg:bg-slate-900/90">
+          {/* Header */}
+          <header className="flex items-center justify-between gap-3">
+            <div className="flex flex-col">
+              <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
+                Cadastro de médicos
+              </h1>
+              <p className="text-xs text-slate-400 sm:text-sm">
+                Gerencie os médicos vinculados às SADTs e às descrições cirúrgicas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200/80 focus-within:ring-[#135bec] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
+                <Search className="mr-2 h-4 w-4 text-slate-400" />
+                <span className="h-7 w-40 bg-transparent text-xs text-slate-800 dark:text-slate-50 sm:w-52 sm:text-sm">
+                  Médicos cadastrados
+                </span>
+              </div>
+
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-sm ring-1 ring-slate-200/70 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                <Bell className="h-4 w-4" />
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1">
+            <MedicosList />
+          </main>
+        </div>
       </div>
     </div>
   );
