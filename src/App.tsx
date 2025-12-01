@@ -19,6 +19,7 @@ import MedicosCadastro from "./pages/MedicosCadastro";
 import DashboardMedico from "./pages/DashboardMedico";
 import AdminConfiguracoes from "./pages/AdminConfiguracoes";
 import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
+import MedicoUploadDescricaoCirurgica from "./pages/MedicoUploadDescricaoCirurgica";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,12 @@ const App = () => (
 
           {/* Dashboard específico para médico */}
           <Route path="/medico/dashboard" element={<DashboardMedico />} />
+
+          {/* Envio de arquivos da descrição cirúrgica pelo médico */}
+          <Route
+            path="/medico/descricao-cirurgica/enviar"
+            element={<MedicoUploadDescricaoCirurgica />}
+          />
 
           {/* Cadastros administrativos */}
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />

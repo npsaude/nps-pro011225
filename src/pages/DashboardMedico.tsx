@@ -1,5 +1,13 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, Wallet, Activity, FileHeart, AlertCircle, TrendingUp } from "lucide-react";
+import {
+  ArrowLeft,
+  Upload,
+  Wallet,
+  Activity,
+  FileHeart,
+  AlertCircle,
+  TrendingUp,
+} from "lucide-react";
 
 const DashboardMedico = () => {
   const navigate = useNavigate();
@@ -59,15 +67,18 @@ const DashboardMedico = () => {
             <button
               type="button"
               className="flex w-full items-center justify-between rounded-2xl bg-emerald-500 px-4 py-3 text-left text-sm font-semibold text-white shadow-lg shadow-emerald-500/40 transition-transform hover:translate-y-0.5"
+              onClick={() =>
+                navigate("/medico/descricao-cirurgica/enviar")
+              }
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600/70">
                   <Upload className="h-4 w-4" />
                 </span>
                 <div className="flex flex-col">
-                  <span>Enviar documento de cirurgia</span>
+                  <span>Enviar Descrição Cirurgica</span>
                   <span className="text-[11px] font-normal text-emerald-100/90">
-                    Anexe guias, laudos e comprovantes para faturamento.
+                    Envie fotos e arquivos da descrição cirúrgica para análise.
                   </span>
                 </div>
               </div>
@@ -103,9 +114,9 @@ const DashboardMedico = () => {
                   <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                     Cirurgias no ano
                   </span>
-                <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
-                  {numeroCirurgiasAno}
-                </span>
+                  <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
+                    {numeroCirurgiasAno}
+                  </span>
                   <span className="mt-1 text-[11px] text-emerald-100/70">
                     Número de cirurgias com documentação enviada.
                   </span>
@@ -175,8 +186,9 @@ const DashboardMedico = () => {
           {/* Rodapé explicativo */}
           <section className="mt-4 border-t border-emerald-500/20 pt-3 text-[11px] text-emerald-100/80">
             <p>
-              Os valores exibidos são um resumo financeiro das suas cirurgias no ano.
-              Em breve, você poderá filtrar por período, convênio e tipo de procedimento.
+              Os valores exibidos são um resumo financeiro das suas cirurgias
+              no ano. Em breve, você poderá filtrar por período, convênio e tipo
+              de procedimento.
             </p>
           </section>
         </main>
