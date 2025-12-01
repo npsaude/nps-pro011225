@@ -41,7 +41,8 @@ export async function salvarTokenOpenAI(
     const { data, error } = await supabase
       .from("app_settings")
       .update({
-        openaiApiToken: token,
+        // usar nome da coluna exatamente como está no banco
+        openai_api_token: token,
         updated_at: new Date().toISOString(),
       })
       .eq("id", existente.id)
@@ -76,7 +77,8 @@ export async function salvarTokenOpenAI(
   const { data, error } = await supabase
     .from("app_settings")
     .insert({
-      openaiApiToken: token,
+      // idem aqui: usar o nome da coluna do banco
+      openai_api_token: token,
     })
     .select("*")
     .single();
