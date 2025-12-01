@@ -53,6 +53,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
       leito: "",
       dthr_admissao: "",
 
+      status: "AGUARDANDO",
       tipo_cirurgia: "",
       data_inicio_procedimento: "",
       hora_inicio_procedimento: "",
@@ -144,7 +145,10 @@ const DescricaoCirurgicaPage: React.FC = () => {
     try {
       await criarDescricaoCirurgica(data);
       showSuccess("Descrição cirúrgica salva com sucesso.");
-      reset();
+      reset({
+        ...data,
+        status: "AGUARDANDO",
+      });
     } catch (err) {
       const message =
         err instanceof Error
@@ -530,7 +534,22 @@ const DescricaoCirurgicaPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-xs sm:text-sm">
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium">
+                        Status
+                      </label>
+                      <select
+                        {...register("status")}
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm"
+                      >
+                        <option value="AGUARDANDO">Aguardando</option>
+                        <option value="CONFIRMADO">Confirmado</option>
+                        <option value="EM_FATURAMENTO">Em faturamento</option>
+                        <option value="PAGO">Pago</option>
+                        <option value="EM_GLOSA">Em glosa</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="mb-1 block text-[11px] font-medium">
                         Tipo de cirurgia

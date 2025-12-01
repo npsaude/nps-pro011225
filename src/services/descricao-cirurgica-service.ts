@@ -52,6 +52,7 @@ export interface DescricaoCirurgicaFormData {
   dthr_admissao: string; // datetime-local
 
   // 3. Info iniciais
+  status: string;
   tipo_cirurgia: string;
   data_inicio_procedimento: string;
   hora_inicio_procedimento: string;
@@ -126,6 +127,10 @@ export async function criarDescricaoCirurgica(
     .insert({
       user_id: userId,
 
+      // Status geral
+      status: form.status || "AGUARDANDO",
+
+      // 1. Identificação
       prontuario: form.prontuario || null,
       registro: form.registro || null,
       nome_social: form.nome_social || null,
@@ -136,11 +141,13 @@ export async function criarDescricaoCirurgica(
       idade: toIntOrNull(form.idade),
       sexo: form.sexo || null,
 
+      // 2. Internação
       convenio_plano: form.convenio_plano || null,
       setor: form.setor || null,
       leito: form.leito || null,
       dthr_admissao: form.dthr_admissao || null,
 
+      // 3. Iniciais
       tipo_cirurgia: form.tipo_cirurgia || null,
       data_inicio_procedimento: form.data_inicio_procedimento || null,
       hora_inicio_procedimento: form.hora_inicio_procedimento || null,
@@ -149,14 +156,17 @@ export async function criarDescricaoCirurgica(
       diagnostico_pre_operatorio: form.diagnostico_pre_operatorio || null,
       diagnostico_pos_operatorio: form.diagnostico_pos_operatorio || null,
 
+      // 6. Texto descrição
       descricao_cirurgica: form.descricao_cirurgica || null,
 
+      // 7. Auditoria
       cirurgiao_responsavel: form.cirurgiao_responsavel || null,
       cirurgiao_responsavel_crm: form.cirurgiao_responsavel_crm || null,
       data_hora_afere: form.data_hora_afere || null,
       usuario_impressao: form.usuario_impressao || null,
       data_hora_impressao: form.data_hora_impressao || null,
 
+      // 9. Adicionais
       diagnostico_pre_igual_pos: mapSimNao(form.diagnostico_pre_igual_pos),
       houve_complicacoes: mapSimNao(form.houve_complicacoes),
       descricao_complicacoes: form.descricao_complicacoes || null,
@@ -164,6 +174,7 @@ export async function criarDescricaoCirurgica(
       sangramento_estimado: form.sangramento_estimado || null,
       observacoes_adicionais: form.observacoes_adicionais || null,
 
+      // 10. Plano terapêutico
       uso_antibioticos: form.uso_antibioticos || null,
       profilaxia_tev_tvp: form.profilaxia_tev_tvp || null,
       troca_curativo: form.troca_curativo || null,

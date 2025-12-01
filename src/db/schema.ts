@@ -105,6 +105,13 @@ export interface DbSystemUser {
   criado_em: string; // ISO datetime (timestamptz)
 }
 
+export type DbDescricaoCirurgicaStatus =
+  | "AGUARDANDO"
+  | "CONFIRMADO"
+  | "EM_FATURAMENTO"
+  | "PAGO"
+  | "EM_GLOSA";
+
 /**
  * Descrição cirúrgica (tabela: descricoes_cirurgicas)
  * Campos agrupam todas as seções da ficha.
@@ -112,6 +119,9 @@ export interface DbSystemUser {
 export interface DbDescricaoCirurgica {
   id: string;
   user_id: string;
+
+  // Status geral da descrição / caso
+  status: DbDescricaoCirurgicaStatus | null;
 
   // 1. Identificação do Paciente
   prontuario: string | null;
