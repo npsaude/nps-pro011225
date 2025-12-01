@@ -78,11 +78,33 @@ const Login = () => {
       });
 
       showSuccess("Usuário administrador criado com sucesso.");
+
+      // Preenche o formulário principal com os dados recém-criados
+      setEmail(registerEmail.trim());
+      setSenha(registerSenha);
+
       setShowRegister(false);
       setRegisterNome("");
       setRegisterEmail("");
       setRegisterSenha("");
       setRegisterSenhaConfirm("");
+
+      // Opcional: tenta login automático para validar o Auth
+      try {
+        await loginWithRole({
+          email: email || registerEmail.trim(),
+          password: senha || registerSenha,
+          allowedRole: "ADMIN",
+        });
+        showSuccess("Login automático realizado. Redirecionando...");
+        navigate("/admin/dashboard");
+      } catch (loginErr) {
+        const loginMsg =
+          loginErr instanceof Error
+            ? loginErr.message
+            : "Usuário criado, mas não foi possível fazer login automático. Verifique seu e-mail e senha.";
+        showError(loginMsg);
+      }
     } catch (err) {
       const message =
         err instanceof Error
