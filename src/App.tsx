@@ -15,6 +15,7 @@ import SadtNova from "./pages/SadtNova";
 import SadtEditar from "./pages/SadtEditar";
 import ResetPassword from "./pages/ResetPassword";
 import ClinicasCadastro from "./pages/ClinicasCadastro";
+import MedicosCadastro from "./pages/MedicosCadastro";
 
 const queryClient = new QueryClient();
 
@@ -38,8 +39,9 @@ const App = () => (
           <Route path="/sadt/editar/:id" element={<SadtEditar />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
 
-          {/* Cadastro administrativo de clínicas/hospitais */}
+          {/* Cadastros administrativos */}
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
+          <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
