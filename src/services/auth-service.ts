@@ -1,5 +1,6 @@
 import type { DbSystemUser } from "@/db/schema";
 import { supabase } from "@/integrations/supabase/client";
+import { salvarMedico } from "@/services/medicos-service";
 
 export type AllowedRole = "ADMIN" | "MEDICO";
 
@@ -66,6 +67,7 @@ export async function loginWithRole(params: {
  * - Se já existir ("User already registered"), apenas valida a senha.
  * - Em ambos os casos, garante que exista um registro em usuarios_sistema
  *   (criando ou atualizando pela coluna email).
+ * - Se o usuário for MÉDICO, também garante um registro inicial em medicos.
  */
 export async function registerUser(params: {
   nome: string;
@@ -218,6 +220,35 @@ export async function registerUser(params: {
     throw new Error(
       "Não foi possível obter o cadastro do usuário após salvar em usuarios_sistema.",
     );
+  }
+
+  // 3) Se for médico, garante um registro inicial na tabela medicos
+  if (role === "MEDICO") {
+    try {
+      await salvarMedico({
+        id: upsertResult.id_user,
+        nome: upsertResult.nome,
+        email: upsertResult.email,
+        telefone_whatsapp: null,
+        crm: null,
+        clinicas_ids: [],
+      });
+      // eslint-disable-next-line no-console
+      console.log(
+        "Registro inicial criado/atualizado na tabela medicos para o usuário médico:",
+        upsertResult.id_user,
+      );
+    } catch (error) {
+      // Não bloqueia o fluxo, apenas loga para diagnóstico
+      // eslint-disable-next-line no-console
+      console.error(
+        "Não foi possível criar/atualizar o registro inicial em medicos para o usuário médico:",
+        {
+          usuarioSistema: upsertResult,
+          error,
+        },
+      );
+    }
   }
 
   return upsertResult;
