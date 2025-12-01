@@ -26,16 +26,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     setIsUploading(true);
-    const loadingId = showLoading(
-      "Enviando arquivos da descrição cirúrgica...",
-    );
+    const loadingId = showLoading("Enviando arquivos da descrição cirúrgica...");
 
     // Guardar os caminhos dos arquivos enviados para enviar à função Edge
     const uploadedFilePaths: string[] = [];
 
     try {
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
 
       if (userError || !userData?.user) {
         showError("Faça login novamente para enviar arquivos.");
@@ -67,24 +64,24 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      // Chama a função Edge que aciona o ChatGPT e cria a descrição cirúrgica
-      const { data: aiData, error: aiError } =
-        await supabase.functions.invoke("process-descricao-cirurgica", {
-          body: {
+      // Dispara a função Edge via fetch (fire-and-forget) em modo no-cors
+      const functionUrl =
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
+
+      try {
+        await fetch(functionUrl, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify({
             userId,
             files: uploadedFilePaths.map((path) => ({ path })),
-          },
+          }),
         });
-
-      if (aiError) {
+      } catch {
         throw new Error(
-          aiError.message ||
-            "Arquivos enviados, mas não foi possível analisar a descrição cirúrgica com a IA.",
+          "Arquivos enviados, mas não foi possível iniciar a análise automática. Tente novamente mais tarde.",
         );
       }
-
-      // Opcional: usar o ID retornado pela função, se precisar
-      // console.log("Descrição cirúrgica criada:", aiData);
 
       showSuccess(
         "Arquivos enviados e análise da descrição cirúrgica iniciada com sucesso.",

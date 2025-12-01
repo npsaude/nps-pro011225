@@ -32,9 +32,8 @@ serve(async (req) => {
     });
   }
 
-  // OPCIONAL: se quiser manter uma checagem de autorização no futuro,
-  // pode-se usar o header aqui. No momento, não vamos bloquear se faltar.
-  const authHeader = req.headers.get("Authorization");
+  // Não vamos bloquear por Authorization aqui
+  // const authHeader = req.headers.get("Authorization");
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -55,7 +54,8 @@ serve(async (req) => {
 
   let body: RequestBody;
   try {
-    body = (await req.json()) as RequestBody;
+    const raw = await req.text();
+    body = JSON.parse(raw) as RequestBody;
   } catch {
     return new Response(
       JSON.stringify({ error: "Body JSON inválido." }),
@@ -291,8 +291,7 @@ Não inclua comentários no JSON, apenas o objeto.
   }
 
   const completion = await openaiResponse.json();
-  const messageContent =
-    completion?.choices?.[0]?.message?.content;
+  const messageContent = completion?.choices?.[0]?.message?.content;
 
   if (!messageContent) {
     console.error("Resposta da OpenAI sem conteúdo:", completion);
