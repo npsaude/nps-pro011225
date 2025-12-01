@@ -26,10 +26,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     setIsUploading(true);
-    const loadingId = showLoading("Enviando arquivos da descrição cirúrgica...");
+    const loadingId = showLoading(
+      "Enviando arquivos da descrição cirúrgica...",
+    );
+
+    // Guardar os caminhos dos arquivos enviados para enviar à função Edge
+    const uploadedFilePaths: string[] = [];
 
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
 
       if (userError || !userData?.user) {
         showError("Faça login novamente para enviar arquivos.");
@@ -57,9 +63,32 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             `Falha ao enviar "${file.name}": ${uploadError.message}`,
           );
         }
+
+        uploadedFilePaths.push(filePath);
       }
 
-      showSuccess("Arquivos enviados com sucesso para análise.");
+      // Chama a função Edge que aciona o ChatGPT e cria a descrição cirúrgica
+      const { data: aiData, error: aiError } =
+        await supabase.functions.invoke("process-descricao-cirurgica", {
+          body: {
+            userId,
+            files: uploadedFilePaths.map((path) => ({ path })),
+          },
+        });
+
+      if (aiError) {
+        throw new Error(
+          aiError.message ||
+            "Arquivos enviados, mas não foi possível analisar a descrição cirúrgica com a IA.",
+        );
+      }
+
+      // Opcional: usar o ID retornado pela função, se precisar
+      // console.log("Descrição cirúrgica criada:", aiData);
+
+      showSuccess(
+        "Arquivos enviados e análise da descrição cirúrgica iniciada com sucesso.",
+      );
       setFiles([]);
     } catch (err) {
       const message =
