@@ -66,7 +66,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       // Dispara a função Edge via fetch (fire-and-forget) em modo no-cors
       const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/functions";
 
       try {
         await fetch(functionUrl, {
