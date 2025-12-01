@@ -42,8 +42,7 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  // Em desenvolvimento: apenas buscamos o registro correspondente em usuarios_sistema,
-  // sem bloquear o login caso não exista ou não esteja ativo.
+  // Busca correspondente em usuarios_sistema (sem bloquear login em dev)
   const { data: systemUser, error: systemUserError } = await supabase
     .from("usuarios_sistema")
     .select("*")
@@ -51,15 +50,12 @@ export async function loginWithRole(params: {
     .maybeSingle();
 
   if (systemUserError) {
-    // Não bloqueia o login; apenas registra o erro no console
-    // para facilitar debug na fase de desenvolvimento.
     // eslint-disable-next-line no-console
     console.error("Erro ao carregar usuarios_sistema:", systemUserError);
   }
 
   const typedUser = systemUser as DbSystemUser | null;
 
-  // Se quiser, no futuro podemos comparar typedUser.regra com allowedRole e bloquear aqui.
   return {
     user: typedUser,
     role: typedUser?.regra ?? null,
@@ -67,9 +63,9 @@ export async function loginWithRole(params: {
 }
 
 /**
- * Cadastro real:
- * 1) Cria usuário no Supabase Auth (envia e-mail de confirmação automaticamente, se configurado).
- * 2) Cria registro correspondente na tabela usuarios_sistema com regra e ativo=true.
+ * Cadastro:
+ * 1) Cria usuário no Supabase Auth.
+ * 2) Cria registro correspondente em usuarios_sistema com regra e ativo=true.
  */
 export async function registerUser(params: {
   nome: string;
@@ -103,19 +99,28 @@ export async function registerUser(params: {
   }
 
   // Cria o registro em usuarios_sistema.
+  const insertPayload = {
+    nome,
+    email,
+    celular: null,
+    regra: role,
+    ativo: true,
+  };
+
   const { data: inserted, error: insertError } = await supabase
     .from("usuarios_sistema")
-    .insert({
-      nome,
-      email,
-      celular: null,
-      regra: role,
-      ativo: true,
-    })
+    .insert(insertPayload)
     .select("*")
     .single();
 
   if (insertError) {
+    // Log detalhado no console para facilitar o debug em desenvolvimento
+    // eslint-disable-next-line no-console
+    console.error("Erro ao inserir em usuarios_sistema:", {
+      insertPayload,
+      insertError,
+    });
+
     throw new Error(
       insertError.message ||
         "Usuário criado na autenticação, mas não foi possível salvar no cadastro de usuários do sistema.",
