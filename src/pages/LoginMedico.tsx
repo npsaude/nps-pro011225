@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
-import { registerUser, sendPasswordReset, requestLoginLinkWithRole } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
@@ -30,25 +30,27 @@ const LoginMedico = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email.trim()) {
-      showError("Informe o e-mail para acessar.");
+    if (!email.trim() || !senha) {
+      showError("Informe e-mail e senha para acessar.");
       return;
     }
     setIsLoading(true);
 
     try {
-      await requestLoginLinkWithRole({
+      await loginWithRole({
         email: email.trim(),
+        password: senha,
         allowedRole: "MEDICO",
       });
-      showSuccess(
-        "Enviamos um link de acesso para seu e-mail. Clique no link para entrar no portal do médico.",
-      );
+
+      showSuccess("Login realizado com sucesso.");
+      // Por enquanto, direciona para o mesmo dashboard existente.
+      navigate("/admin/dashboard");
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível iniciar o acesso. Verifique seus dados.";
+          : "Não foi possível fazer login. Verifique seus dados.";
       showError(message);
     } finally {
       setIsLoading(false);
@@ -94,7 +96,7 @@ const LoginMedico = () => {
       setRegisterSenhaConfirm("");
 
       setEmail(registerEmail.trim());
-      setSenha("");
+      setSenha(registerSenha);
     } catch (err) {
       const message =
         err instanceof Error
@@ -115,12 +117,14 @@ const LoginMedico = () => {
     setResetLoading(true);
     try {
       await sendPasswordReset(email.trim());
-      showSuccess("Enviamos um e-mail com instruções para redefinir sua senha.");
+      showSuccess(
+        "Simulamos o envio de instruções de redefinição de senha. Use a tela de redefinição após autenticar.",
+      );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível enviar o e-mail de recuperação.";
+          : "Não foi possível simular o envio de recuperação.";
       showError(message);
     } finally {
       setResetLoading(false);
@@ -176,8 +180,8 @@ const LoginMedico = () => {
                 Entre para acompanhar suas SADTs.
               </h1>
               <p className="text-xs text-emerald-100/80 sm:text-sm">
-                Informe o e-mail cadastrado. Vamos enviar um link de acesso
-                seguro para o portal do médico.
+                Acesse com seu e-mail e senha cadastrados e acompanhe o status de
+                envio, faturamento e glosas dos seus atendimentos.
               </p>
             </div>
 
@@ -205,7 +209,7 @@ const LoginMedico = () => {
               {/* Senha */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-emerald-100/90">
-                  Senha (usada para redefinição, não para login direto)
+                  Senha
                 </label>
                 <div className="flex items-center rounded-xl bg-slate-900/70 ring-1 ring-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-400">
                   <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-emerald-500/30 text-emerald-300">
@@ -213,8 +217,9 @@ const LoginMedico = () => {
                   </span>
                   <Input
                     type="password"
-                    placeholder="Use para redefinição, se necessário"
+                    placeholder="Digite sua senha"
                     className="h-11 border-none bg-transparent text-sm text-slate-50 placeholder:text-emerald-300/60 focus-visible:ring-0"
+                    required
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                   />
@@ -242,7 +247,7 @@ const LoginMedico = () => {
                 >
                   <ArrowRightCircle className="h-4 w-4" />
                   <span>
-                    {isLoading ? "Enviando link..." : "Enviar link de acesso"}
+                    {isLoading ? "Entrando..." : "Entrar como médico"}
                   </span>
                 </Button>
 
@@ -363,13 +368,12 @@ const LoginMedico = () => {
               </p>
             </div>
             <ul className="mt-1 space-y-1.5 text-left text-xs text-emerald-100/90 sm:text-sm lg:text-right">
-              <li>• Acesso seguro, vinculado ao seu cadastro de usuário.</li>
+              <li>• Acesso seguro (mock), vinculado ao seu cadastro.</li>
               <li>
                 • Visualização rápida de SADTs em análise, pagas ou com glosa.
               </li>
               <li>
-                • Ambiente preparado para integração com prontuário e
-                faturamento.
+                • Ambiente preparado para futura integração com Auth real.
               </li>
             </ul>
           </section>

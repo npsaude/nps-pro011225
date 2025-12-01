@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
-import { registerUser, sendPasswordReset, requestLoginLinkWithRole } from "@/services/auth-service";
+import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,24 +25,25 @@ const Login = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email.trim()) {
-      showError("Informe o e-mail para acessar.");
+    if (!email.trim() || !senha) {
+      showError("Informe e-mail e senha para acessar.");
       return;
     }
     setIsLoading(true);
     try {
-      await requestLoginLinkWithRole({
+      await loginWithRole({
         email: email.trim(),
+        password: senha,
         allowedRole: "ADMIN",
       });
-      showSuccess(
-        "Enviamos um link de acesso para seu e-mail. Clique no link para entrar no painel.",
-      );
+
+      showSuccess("Login realizado com sucesso.");
+      navigate("/admin/dashboard");
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível iniciar o acesso. Verifique seus dados.";
+          : "Não foi possível fazer login. Verifique seus dados.";
       showError(message);
     } finally {
       setIsLoading(false);
@@ -87,9 +88,9 @@ const Login = () => {
       setRegisterSenha("");
       setRegisterSenhaConfirm("");
 
-      // Preenche o campo de e-mail principal com o novo usuário
+      // Preenche o formulário principal com o novo usuário
       setEmail(registerEmail.trim());
-      setSenha("");
+      setSenha(registerSenha);
     } catch (err) {
       const message =
         err instanceof Error
@@ -110,12 +111,14 @@ const Login = () => {
     setResetLoading(true);
     try {
       await sendPasswordReset(email.trim());
-      showSuccess("Enviamos um e-mail com instruções para redefinir sua senha.");
+      showSuccess(
+        "Simulamos o envio de instruções de redefinição de senha. Use a tela de redefinição após autenticar.",
+      );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível enviar o e-mail de recuperação.";
+          : "Não foi possível simular o envio de recuperação.";
       showError(message);
     } finally {
       setResetLoading(false);
@@ -156,15 +159,15 @@ const Login = () => {
             Faça login para continuar
           </h1>
           <p className="mb-5 text-xs text-slate-500 sm:text-sm">
-            Informe seu e-mail cadastrado. Vamos enviar um link de acesso seguro
-            para o painel administrativo.
+            Use seu e-mail e senha cadastrados para acessar o painel
+            administrativo da clínica.
           </p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Campo usuário/e-mail */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">
-                E-mail
+                Usuário ou e-mail
               </label>
               <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
                 <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-300">
@@ -172,7 +175,7 @@ const Login = () => {
                 </span>
                 <Input
                   type="email"
-                  placeholder="email@exemplo.com"
+                  placeholder="Insira seu usuário ou e-mail"
                   className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
                   required
                   value={email}
@@ -181,10 +184,10 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Campo senha (mantido apenas para consistência visual) */}
+            {/* Campo senha */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">
-                Senha (usada para redefinição, não para login direto)
+                Senha
               </label>
               <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
                 <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-300">
@@ -192,8 +195,9 @@ const Login = () => {
                 </span>
                 <Input
                   type="password"
-                  placeholder="Use para redefinição, se necessário"
+                  placeholder="Insira sua senha"
                   className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
+                  required
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                 />
@@ -225,7 +229,7 @@ const Login = () => {
               >
                 <ArrowRightCircle className="h-4 w-4" />
                 <span>
-                  {isLoading ? "Enviando link..." : "Enviar link de acesso"}
+                  {isLoading ? "Entrando..." : "Entrar como administrador"}
                 </span>
               </Button>
 
