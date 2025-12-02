@@ -42,6 +42,11 @@ import {
 import { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { contarDescricoesCirurgicasPorStatus } from "@/services/descricao-cirurgica-service";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+} from "@/components/ui/avatar";
 
 const clinicOptions = [
   { id: "todas", name: "Todas as clínicas" },
@@ -107,6 +112,8 @@ const recentSadt = [
     protocolo: "SADT-2024-13451",
     data: "03 Jul, 2024",
     medico: "Carlos Pereira",
+    medicoAvatar:
+      "https://images.pexels.com/photos/5327581/pexels-photo-5327581.jpeg?auto=compress&cs=tinysrgb&w=160",
     valor: "R$ 2.450,00",
     status: "PAGA",
     statusColor:
@@ -116,6 +123,8 @@ const recentSadt = [
     protocolo: "SADT-2024-13398",
     data: "28 Jun, 2024",
     medico: "Ana Costa",
+    medicoAvatar:
+      "https://images.pexels.com/photos/5327657/pexels-photo-5327657.jpeg?auto=compress&cs=tinysrgb&w=160",
     valor: "R$ 1.280,00",
     status: "EM ANÁLISE",
     statusColor:
@@ -125,6 +134,7 @@ const recentSadt = [
     protocolo: "SADT-2024-13340",
     data: "25 Jun, 2024",
     medico: "João Almeida",
+    medicoAvatar: "/perfil.jpeg",
     valor: "R$ 980,00",
     status: "GLOSA",
     statusColor:
@@ -136,6 +146,15 @@ const Dashboard = () => {
   const [selectedClinic, setSelectedClinic] = useState<string>("todas");
   const [selectedDoctor, setSelectedDoctor] = useState<string>("todos");
   const [pendingDescricoes, setPendingDescricoes] = useState<number>(0);
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (
+      (parts[0]?.charAt(0) ?? "").toUpperCase() +
+      (parts[parts.length - 1]?.charAt(0) ?? "").toUpperCase()
+    );
+  };
 
   useEffect(() => {
     const fetchPendingDescricoes = async () => {
@@ -371,7 +390,20 @@ const Dashboard = () => {
                           {row.protocolo}
                         </TableCell>
                         <TableCell>{row.data}</TableCell>
-                        <TableCell>{row.medico}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage
+                                src={row.medicoAvatar}
+                                alt={row.medico}
+                              />
+                              <AvatarFallback>
+                                {getInitials(row.medico)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{row.medico}</span>
+                          </div>
+                        </TableCell>
                         <TableCell>{row.valor}</TableCell>
                         <TableCell>
                           <Badge

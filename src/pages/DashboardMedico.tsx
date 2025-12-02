@@ -16,7 +16,7 @@ const DashboardMedico = () => {
   const numeroCirurgiasAno = "96";
   const totalAReceber = "R$ 72.500,00";
   const valorGlosa = "R$ 18.300,00";
-  const percentualGlosaRecuperadoNumero = 68; // 0–100
+  const percentualGlosaRecuperadoNumero = 83; // 0–100
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[#0F172A] text-slate-50">
