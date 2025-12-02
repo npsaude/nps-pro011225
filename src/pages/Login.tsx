@@ -148,10 +148,10 @@ const Login = () => {
             />
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-sm font-semibold text-slate-900/95">
+            <span className="text-sm font-semibold text-white">
               NP Saúde Pró
             </span>
-            <span className="text-[11px] font-medium tracking-[0.22em] text-slate-800/75">
+            <span className="text-[11px] font-medium tracking-[0.22em] text-white/80">
               ACESSO ADMINISTRATIVO
             </span>
           </div>
@@ -197,24 +197,44 @@ const Login = () => {
               </span>
               <span className="h-px flex-1 bg-slate-200" />
             </div>
-            <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-3 gap-3">
+              {/* Google */}
               <button
                 type="button"
-                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+                aria-label="Continuar com Google"
+                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
               >
-                <span className="text-[15px]">G</span>
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google"
+                  className="h-5 w-5"
+                />
               </button>
+
+              {/* Apple */}
               <button
                 type="button"
-                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm"
+                aria-label="Continuar com Apple"
+                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
               >
-                <span className="text-[15px]"></span>
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
+                  alt="Apple"
+                  className="h-5 w-5"
+                />
               </button>
+
+              {/* Microsoft */}
               <button
                 type="button"
-                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+                aria-label="Continuar com Microsoft"
+                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
               >
-                <span className="text-[15px]">▢</span>
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                  alt="Microsoft"
+                  className="h-5 w-5"
+                />
               </button>
             </div>
           </div>
