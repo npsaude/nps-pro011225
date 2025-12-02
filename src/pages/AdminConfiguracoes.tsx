@@ -4,6 +4,7 @@ import {
   Search,
   KeyRound,
   FileSignature,
+  Database,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -20,12 +21,14 @@ import {
 import { carregarAppSettings, salvarTokenOpenAI } from "@/services/app-settings-service";
 import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { criarDadosExemplo } from "@/services/demo-data-service";
 
 const AdminConfiguracoes = () => {
   const navigate = useNavigate();
   const [token, setToken] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [criandoDemo, setCriandoDemo] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -48,6 +51,22 @@ const AdminConfiguracoes = () => {
 
     void load();
   }, []);
+
+  const handleCriarDadosExemplo = async () => {
+    setCriandoDemo(true);
+    try {
+      await criarDadosExemplo();
+      showSuccess("Dados de exemplo criados/atualizados com sucesso.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível criar os dados de exemplo.";
+      showError(message);
+    } finally {
+      setCriandoDemo(false);
+    }
+  };
 
   const handleSalvar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -126,6 +145,36 @@ const AdminConfiguracoes = () => {
                   Configure aqui o Token OpenAI utilizado pelos recursos de leitura automática de guias e documentos.
                 </p>
               </section>
+
+              {/* Bloco para criação de dados de exemplo */}
+              <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                      <Database className="h-4 w-4" />
+                    </span>
+                    <span>Dados de exemplo</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Crie automaticamente clínicas, médicos e uma descrição cirúrgica aprovada para demonstrar o funcionamento do sistema.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-start justify-between gap-3 text-xs sm:flex-row sm:items-center sm:text-sm">
+                    <p className="max-w-xl text-slate-500 dark:text-slate-400">
+                      Este recurso cria registros apenas se as tabelas ainda estiverem vazias. Você pode utilizá-lo com segurança em ambiente de desenvolvimento para popular os cadastros com exemplos reais.
+                    </p>
+                    <Button
+                      type="button"
+                      className="h-9 rounded-full px-4 text-xs sm:text-sm"
+                      onClick={handleCriarDadosExemplo}
+                      disabled={criandoDemo}
+                    >
+                      {criandoDemo ? "Criando dados..." : "Criar dados de exemplo"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader>

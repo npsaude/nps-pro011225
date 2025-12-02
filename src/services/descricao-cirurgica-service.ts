@@ -272,9 +272,9 @@ export async function listarDescricoesCirurgicasDoMedicoLogado(): Promise<
   const { data, error } = await supabase
     .from("descricoes_cirurgicas")
     .select(
-      "id, prontuario, nome_social, registro_civil, data_fim_procedimento, status, cirurgiao_responsavel",
+      "id, prontuario, nome_social, registro_civil, data_fim_procedimento, status, cirurgiao_responsavel, created_at",
     )
-    .order("data_fim_procedimento", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
     throw new Error(
