@@ -1242,11 +1242,15 @@ const DescricaoCirurgicaPage: React.FC = () => {
                       <div className="space-y-1">
                         <Label>Diagnóstico pré = pós?</Label>
                         <UiSelect
-                          value={form.watch("diagnostico_pre_igual_pos")}
+                          value={
+                            form.watch("diagnostico_pre_igual_pos") === ""
+                              ? "nao_informado"
+                              : form.watch("diagnostico_pre_igual_pos")
+                          }
                           onValueChange={(v) =>
                             void form.setValue(
                               "diagnostico_pre_igual_pos",
-                              v as any,
+                              v === "nao_informado" ? "" : (v as SimNao),
                             )
                           }
                           disabled={disabled}
@@ -1255,7 +1259,9 @@ const DescricaoCirurgicaPage: React.FC = () => {
                             <UiSelectValue placeholder="Selecione" />
                           </UiSelectTrigger>
                           <UiSelectContent>
-                            <UiSelectItem value="">Não informado</UiSelectItem>
+                            <UiSelectItem value="nao_informado">
+                              Não informado
+                            </UiSelectItem>
                             <UiSelectItem value="sim">Sim</UiSelectItem>
                             <UiSelectItem value="nao">Não</UiSelectItem>
                           </UiSelectContent>
@@ -1264,11 +1270,15 @@ const DescricaoCirurgicaPage: React.FC = () => {
                       <div className="space-y-1">
                         <Label>Houve complicações?</Label>
                         <UiSelect
-                          value={form.watch("houve_complicacoes")}
+                          value={
+                            form.watch("houve_complicacoes") === ""
+                              ? "nao_informado"
+                              : form.watch("houve_complicacoes")
+                          }
                           onValueChange={(v) =>
                             void form.setValue(
                               "houve_complicacoes",
-                              v as any,
+                              v === "nao_informado" ? "" : (v as SimNao),
                             )
                           }
                           disabled={disabled}
@@ -1277,7 +1287,9 @@ const DescricaoCirurgicaPage: React.FC = () => {
                             <UiSelectValue placeholder="Selecione" />
                           </UiSelectTrigger>
                           <UiSelectContent>
-                            <UiSelectItem value="">Não informado</UiSelectItem>
+                            <UiSelectItem value="nao_informado">
+                              Não informado
+                            </UiSelectItem>
                             <UiSelectItem value="sim">Sim</UiSelectItem>
                             <UiSelectItem value="nao">Não</UiSelectItem>
                           </UiSelectContent>
@@ -1286,11 +1298,15 @@ const DescricaoCirurgicaPage: React.FC = () => {
                       <div className="space-y-1">
                         <Label>Possui peça anatômica?</Label>
                         <UiSelect
-                          value={form.watch("possui_peca_anatomo")}
+                          value={
+                            form.watch("possui_peca_anatomo") === ""
+                              ? "nao_informado"
+                              : form.watch("possui_peca_anatomo")
+                          }
                           onValueChange={(v) =>
                             void form.setValue(
                               "possui_peca_anatomo",
-                              v as any,
+                              v === "nao_informado" ? "" : (v as SimNao),
                             )
                           }
                           disabled={disabled}
@@ -1299,7 +1315,9 @@ const DescricaoCirurgicaPage: React.FC = () => {
                             <UiSelectValue placeholder="Selecione" />
                           </UiSelectTrigger>
                           <UiSelectContent>
-                            <UiSelectItem value="">Não informado</UiSelectItem>
+                            <UiSelectItem value="nao_informado">
+                              Não informado
+                            </UiSelectItem>
                             <UiSelectItem value="sim">Sim</UiSelectItem>
                             <UiSelectItem value="nao">Não</UiSelectItem>
                           </UiSelectContent>
@@ -1399,13 +1417,15 @@ const DescricaoCirurgicaPage: React.FC = () => {
                       <div className="space-y-1">
                         <Label>Acomp. pela instituição?</Label>
                         <UiSelect
-                          value={form.watch(
-                            "acompanhamento_pela_instituicao",
-                          )}
+                          value={
+                            form.watch("acompanhamento_pela_instituicao") === ""
+                              ? "nao_informado"
+                              : form.watch("acompanhamento_pela_instituicao")
+                          }
                           onValueChange={(v) =>
                             void form.setValue(
                               "acompanhamento_pela_instituicao",
-                              v as any,
+                              v === "nao_informado" ? "" : (v as SimNao),
                             )
                           }
                           disabled={disabled}
@@ -1414,7 +1434,9 @@ const DescricaoCirurgicaPage: React.FC = () => {
                             <UiSelectValue placeholder="Selecione" />
                           </UiSelectTrigger>
                           <UiSelectContent>
-                            <UiSelectItem value="">Não informado</UiSelectItem>
+                            <UiSelectItem value="nao_informado">
+                              Não informado
+                            </UiSelectItem>
                             <UiSelectItem value="sim">Sim</UiSelectItem>
                             <UiSelectItem value="nao">Não</UiSelectItem>
                           </UiSelectContent>
