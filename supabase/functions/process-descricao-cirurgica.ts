@@ -12,6 +12,80 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Helpers para normalizar datas/horas vindas da OpenAI (formato brasileiro -> ISO/Postgres)
+function normalizeDate(value: unknown): string | null {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // Já está em formato ISO (YYYY-MM-DD...)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return s.slice(0, 10);
+  }
+
+  // Formato brasileiro: DD/MM/YYYY ou DD/MM/YYYY HH:MM[:SS]
+  const match = s.match(
+    /^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (match) {
+    const [, dd, mm, yyyy] = match;
+    return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
+  }
+
+  console.warn("normalizeDate: formato de data desconhecido, descartando:", s);
+  return null;
+}
+
+function normalizeTime(value: unknown): string | null {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // HH:MM ou HH:MM:SS
+  const match = s.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (match) {
+    const [, hh, mm, ss] = match;
+    return `${hh}:${mm}:${ss ?? "00"}`; // HH:MM:SS
+  }
+
+  console.warn("normalizeTime: formato de hora desconhecido, descartando:", s);
+  return null;
+}
+
+function normalizeDateTime(value: unknown): string | null {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // Já está em ISO ou formato YYYY-MM-DD HH:MM[:SS]
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    // Se vier sem segundos, adiciona
+    const match = s.match(
+      /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/,
+    );
+    if (match) {
+      const [, datePart, hh, mm, ss] = match;
+      return `${datePart} ${hh}:${mm}:${ss ?? "00"}`;
+    }
+    return s;
+  }
+
+  // Formato brasileiro: DD/MM/YYYY HH:MM[:SS]
+  const match = s.match(
+    /^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+  if (match) {
+    const [, dd, mm, yyyy, hh, min, ss] = match;
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss ?? "00"}`;
+  }
+
+  console.warn(
+    "normalizeDateTime: formato de data/hora desconhecido, descartando:",
+    s,
+  );
+  return null;
+}
+
 interface UploadedFile {
   path: string;
 }
@@ -574,20 +648,22 @@ Regras importantes:
     registro_civil: desc?.registro_civil ?? null,
     cpf: desc?.cpf ?? null,
     matricula: desc?.matricula ?? null,
-    data_nascimento: desc?.data_nascimento ?? null,
+    data_nascimento: normalizeDate(desc?.data_nascimento),
     idade: desc?.idade ?? null,
     sexo: desc?.sexo ?? null,
 
     convenio_plano: desc?.convenio_plano ?? null,
     setor: desc?.setor ?? null,
     leito: desc?.leito ?? null,
-    dthr_admissao: desc?.dthr_admissao ?? null,
+    dthr_admissao: normalizeDateTime(desc?.dthr_admissao),
 
     tipo_cirurgia: desc?.tipo_cirurgia ?? null,
-    data_inicio_procedimento: desc?.data_inicio_procedimento ?? null,
-    hora_inicio_procedimento: desc?.hora_inicio_procedimento ?? null,
-    data_fim_procedimento: desc?.data_fim_procedimento ?? null,
-    hora_fim_procedimento: desc?.hora_fim_procedimento ?? null,
+    data_inicio_procedimento: normalizeDate(desc?.data_inicio_procedimento),
+    hora_inicio_procedimento: normalizeTime(
+      desc?.hora_inicio_procedimento,
+    ),
+    data_fim_procedimento: normalizeDate(desc?.data_fim_procedimento),
+    hora_fim_procedimento: normalizeTime(desc?.hora_fim_procedimento),
     diagnostico_pre_operatorio: desc?.diagnostico_pre_operatorio ?? null,
     diagnostico_pos_operatorio: desc?.diagnostico_pos_operatorio ?? null,
 
@@ -597,9 +673,9 @@ Regras importantes:
 
     cirurgiao_responsavel: desc?.cirurgiao_responsavel ?? null,
     cirurgiao_responsavel_crm: desc?.cirurgiao_responsavel_crm ?? null,
-    data_hora_afere: desc?.data_hora_afere ?? null,
+    data_hora_afere: normalizeDateTime(desc?.data_hora_afere),
     usuario_impressao: desc?.usuario_impressao ?? null,
-    data_hora_impressao: desc?.data_hora_impressao ?? null,
+    data_hora_impressao: normalizeDateTime(desc?.data_hora_impressao),
 
     materiais: desc?.materiais ?? null,
 
