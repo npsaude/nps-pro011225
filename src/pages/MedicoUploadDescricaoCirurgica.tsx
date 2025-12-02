@@ -4,9 +4,20 @@ import { ArrowLeft, Upload, Image as ImageIcon, FileText } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import {
+  showError,
+  showSuccess,
+  showLoading,
+  dismissToast,
+} from "@/utils/toast";
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -16,7 +27,28 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
-    setFiles(selectedFiles);
+
+    // Filtrar apenas imagens (formatos suportados pela OpenAI: png, jpeg, gif, webp)
+    const imageFiles = selectedFiles.filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    const ignoredCount = selectedFiles.length - imageFiles.length;
+
+    if (ignoredCount > 0) {
+      showError(
+        "Alguns arquivos não são imagens e foram ignorados. Envie apenas fotos (PNG, JPEG, GIF ou WEBP) para leitura automática.",
+      );
+    }
+
+    if (imageFiles.length === 0) {
+      setFiles([]);
+      showError(
+        "Nenhum arquivo de imagem válido foi selecionado. Envie apenas fotos (PNG, JPEG, GIF ou WEBP).",
+      );
+      return;
+    }
+
+    setFiles(imageFiles);
   };
 
   const handleUpload = async () => {
@@ -64,7 +96,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      // Dispara a função Edge via fetch (fire-and-forget) em modo no-cors
+      // Dispara a função Edge via fetch (fire-and-forget)
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/functions";
 
@@ -133,7 +165,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <span>Enviar Descrição Cirúrgica</span>
               </CardTitle>
               <CardDescription className="text-xs text-emerald-100/80 sm:text-sm">
-                Selecione as fotos e arquivos (por exemplo, imagens do prontuário ou PDFs) relacionados à cirurgia.
+                Selecione as fotos (imagens do prontuário, laudos, relatórios)
+                relacionadas à cirurgia. Atualmente, apenas imagens (PNG, JPEG,
+                GIF ou WEBP) são usadas para leitura automática.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -147,17 +181,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <FileText className="h-4 w-4" />
                   </div>
                   <p className="text-[11px] text-emerald-100/80">
-                    Toque no botão abaixo para selecionar fotos ou arquivos PDF.
+                    Toque no botão abaixo para selecionar fotos da descrição
+                    cirúrgica.
                   </p>
                   <p className="mt-1 text-[10px] text-emerald-200/70">
-                    Você pode selecionar vários arquivos de uma vez.
+                    Apenas imagens (PNG, JPEG, GIF ou WEBP) são aceitas para
+                    leitura automática e faturamento.
                   </p>
 
                   <div className="mt-4">
                     <Input
                       type="file"
                       multiple
-                      accept="image/*,application/pdf"
+                      accept="image/*"
                       onChange={handleFileChange}
                       className="cursor-pointer border-emerald-500/40 bg-slate-950/70 text-[11px] file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-white hover:file:bg-emerald-400"
                     />
