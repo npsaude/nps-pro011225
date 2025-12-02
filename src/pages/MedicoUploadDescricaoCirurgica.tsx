@@ -28,27 +28,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
-    // Filtrar apenas imagens (formatos suportados pela OpenAI: png, jpeg, gif, webp)
-    const imageFiles = selectedFiles.filter((file) =>
-      file.type.startsWith("image/"),
+    // Aceitar imagens (para leitura automática) e PDFs (para armazenamento/consulta)
+    const allowedFiles = selectedFiles.filter(
+      (file) => file.type.startsWith("image/") || file.type === "application/pdf",
     );
-    const ignoredCount = selectedFiles.length - imageFiles.length;
+    const ignoredCount = selectedFiles.length - allowedFiles.length;
 
     if (ignoredCount > 0) {
       showError(
-        "Alguns arquivos não são imagens e foram ignorados. Envie apenas fotos (PNG, JPEG, GIF ou WEBP) para leitura automática.",
+        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
       );
     }
 
-    if (imageFiles.length === 0) {
+    if (allowedFiles.length === 0) {
       setFiles([]);
       showError(
-        "Nenhum arquivo de imagem válido foi selecionado. Envie apenas fotos (PNG, JPEG, GIF ou WEBP).",
+        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
       );
       return;
     }
 
-    setFiles(imageFiles);
+    setFiles(allowedFiles);
   };
 
   const handleUpload = async () => {
@@ -166,8 +166,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </CardTitle>
               <CardDescription className="text-xs text-emerald-100/80 sm:text-sm">
                 Selecione as fotos (imagens do prontuário, laudos, relatórios)
-                relacionadas à cirurgia. Atualmente, apenas imagens (PNG, JPEG,
-                GIF ou WEBP) são usadas para leitura automática.
+                e/ou PDFs relacionados à cirurgia. Atualmente, apenas imagens
+                (PNG, JPEG, GIF ou WEBP) são usadas para leitura automática; os
+                PDFs ficam armazenados para consulta.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -181,19 +182,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <FileText className="h-4 w-4" />
                   </div>
                   <p className="text-[11px] text-emerald-100/80">
-                    Toque no botão abaixo para selecionar fotos da descrição
-                    cirúrgica.
+                    Toque no botão abaixo para selecionar fotos ou PDFs da
+                    descrição cirúrgica.
                   </p>
                   <p className="mt-1 text-[10px] text-emerald-200/70">
-                    Apenas imagens (PNG, JPEG, GIF ou WEBP) são aceitas para
-                    leitura automática e faturamento.
+                    Imagens (PNG, JPEG, GIF, WEBP) serão usadas na leitura
+                    automática; PDFs serão armazenados para futura consulta.
                   </p>
 
                   <div className="mt-4">
                     <Input
                       type="file"
                       multiple
-                      accept="image/*"
+                      accept="image/*,application/pdf"
                       onChange={handleFileChange}
                       className="cursor-pointer border-emerald-500/40 bg-slate-950/70 text-[11px] file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-white hover:file:bg-emerald-400"
                     />
@@ -236,7 +237,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <p className="mt-2 text-[10px] text-emerald-100/70">
                 Os arquivos serão armazenados com segurança no sistema e
                 vinculados à sua conta de médico para futura conferência e
-                faturamento.
+                faturamento. A leitura automática usa apenas as imagens
+                suportadas.
               </p>
             </CardContent>
           </Card>
