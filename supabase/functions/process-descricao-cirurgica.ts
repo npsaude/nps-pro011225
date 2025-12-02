@@ -24,7 +24,7 @@ interface RequestBody {
 serve(async (req) => {
   const method = req.method.toUpperCase();
 
-  // Trata o preflight CORS ANTES de qualquer outra validação
+  // Preflight CORS
   if (method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -152,42 +152,27 @@ serve(async (req) => {
 
   console.log("URLs assinadas para todos os arquivos:", signedUrls);
 
-  // Filtrar apenas as imagens em formatos suportados pela OpenAI (png, jpeg, gif, webp)
+  // Separar imagens e PDFs
   const imageUrls = signedUrls.filter((url) =>
     /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
   );
+  const pdfUrls = signedUrls.filter((url) => /\.pdf(\?|$)/i.test(url));
 
-  if (imageUrls.length === 0) {
-    console.error(
-      "Nenhuma imagem em formato suportado encontrada (apenas PDFs ou outros formatos).",
-    );
-    return new Response(
-      JSON.stringify({
-        error:
-          "Nenhuma imagem em formato suportado encontrada. A OpenAI aceita apenas png, jpeg, gif ou webp. PDFs ainda não são suportados automaticamente.",
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  console.log("URLs de imagens enviadas para a OpenAI:", imageUrls);
+  console.log("URLs de imagens:", imageUrls);
+  console.log("URLs de PDFs:", pdfUrls);
 
   // 3) Instruções de extração e formato JSON esperado
   const jsonFormatInstructions = `
 Você é um assistente especializado em faturamento médico e descrições cirúrgicas.
 
-A partir das IMAGENS anexadas nesta conversa (fotos de prontuário, laudos, relatórios, etc.),
+A partir dos DOCUMENTOS anexados (imagens e/ou PDFs de prontuário, laudos, relatórios, etc.),
 extraia todos os dados relevantes para preencher uma ficha de descrição cirúrgica.
 
-Regra importante:
+Regras importantes:
 - Use APENAS informações que aparecem claramente nos documentos.
 - Se um campo não estiver presente ou não for possível inferir com segurança, use null nesse campo.
 - Não invente dados.
-
-Retorne APENAS um JSON com o seguinte formato (sem comentários):
+- Responda APENAS com um JSON válido, sem comentários ou explicações extras, no formato abaixo:
 
 {
   "prontuario": string | null,
@@ -270,111 +255,312 @@ Retorne APENAS um JSON com o seguinte formato (sem comentários):
 }
 `;
 
-  // 4) Chamar OpenAI Chat Completions em modo multimodal (texto + imagens)
-  const openaiResponse = await fetch(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiToken}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "Você é um assistente de IA especializado em leitura de documentos médicos (imagens) e faturamento. Sempre que solicitado, responda com JSON válido.",
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: jsonFormatInstructions,
-              },
-              ...imageUrls.map((url) => ({
-                type: "image_url",
-                image_url: {
-                  url,
-                  detail: "high",
+  let desc: any = null;
+
+  // 4A) Fluxo para IMAGENS (visão com chat/completions)
+  if (imageUrls.length > 0) {
+    console.log("Usando fluxo de VISÃO com gpt-4o-mini para imagens.");
+
+    const openaiResponse = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiToken}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          temperature: 0,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "Você é um assistente de IA especializado em leitura de documentos médicos (imagens) e faturamento. Sempre responda com JSON válido.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: jsonFormatInstructions,
                 },
-              })),
-            ],
+                ...imageUrls.map((url) => ({
+                  type: "image_url",
+                  image_url: {
+                    url,
+                    detail: "high",
+                  },
+                })),
+              ],
+            },
+          ],
+        }),
+      },
+    );
+
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error("Erro da OpenAI (visão):", errorText);
+      return new Response(
+        JSON.stringify({
+          error: "Erro ao chamar a API da OpenAI (visão).",
+          details: errorText,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const completion = await openaiResponse.json();
+    const messageContent = completion?.choices?.[0]?.message?.content;
+
+    if (!messageContent) {
+      console.error("Resposta da OpenAI sem conteúdo (visão):", completion);
+      return new Response(
+        JSON.stringify({
+          error: "Resposta da OpenAI sem conteúdo utilizável (visão).",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(messageContent);
+    } catch (e) {
+      console.error(
+        "Falha ao fazer parse do JSON da OpenAI (visão):",
+        e,
+        messageContent,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Falha ao interpretar a resposta da OpenAI (visão) como JSON.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    console.log(
+      "Resposta da OpenAI (visão) parseada (primeiros 2000 caracteres):",
+      JSON.stringify(parsed).slice(0, 2000),
+    );
+
+    desc = parsed;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      parsed.descricao_cirurgica &&
+      typeof parsed.descricao_cirurgica === "object" &&
+      !Array.isArray(parsed.descricao_cirurgica)
+    ) {
+      desc = parsed.descricao_cirurgica;
+    }
+  }
+  // 4B) Fluxo para PDFs (file_search com Responses API)
+  else if (pdfUrls.length > 0) {
+    console.log("Usando fluxo de PDF com gpt-4.1-mini + file_search.");
+
+    const fileIds: string[] = [];
+
+    // 4B-1) Baixar PDFs das URLs assinadas e enviar para OpenAI como arquivos
+    for (const pdfUrl of pdfUrls) {
+      try {
+        console.log("Baixando PDF:", pdfUrl);
+        const pdfResp = await fetch(pdfUrl);
+        if (!pdfResp.ok) {
+          console.error("Falha ao baixar PDF:", pdfUrl, await pdfResp.text());
+          continue;
+        }
+
+        const pdfArrayBuffer = await pdfResp.arrayBuffer();
+        const pdfBlob = new Blob([pdfArrayBuffer], {
+          type: "application/pdf",
+        });
+
+        const formData = new FormData();
+        formData.append("file", pdfBlob, "descricao_cirurgica.pdf");
+        formData.append("purpose", "assistants");
+
+        const uploadResp = await fetch(
+          "https://api.openai.com/v1/files",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${openaiToken}`,
+            },
+            body: formData,
           },
-        ],
-      }),
-    },
-  );
+        );
 
-  if (!openaiResponse.ok) {
-    const errorText = await openaiResponse.text();
-    console.error("Erro da OpenAI:", errorText);
+        if (!uploadResp.ok) {
+          const errText = await uploadResp.text();
+          console.error("Erro ao enviar PDF para a OpenAI:", errText);
+          continue;
+        }
+
+        const uploadJson = await uploadResp.json();
+        const fileId = uploadJson?.id;
+        if (fileId) {
+          fileIds.push(fileId);
+        }
+      } catch (e) {
+        console.error("Erro inesperado ao processar PDF:", e);
+      }
+    }
+
+    if (fileIds.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Não foi possível enviar nenhum PDF para a OpenAI. Verifique os arquivos e tente novamente.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 4B-2) Chamar Responses API usando file_search
+    const responsesResp = await fetch(
+      "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiToken}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-mini",
+          input: jsonFormatInstructions,
+          attachments: fileIds.map((id) => ({
+            file_id: id,
+            tools: [{ type: "file_search" }],
+          })),
+        }),
+      },
+    );
+
+    if (!responsesResp.ok) {
+      const errText = await responsesResp.text();
+      console.error("Erro da OpenAI (PDF / responses):", errText);
+      return new Response(
+        JSON.stringify({
+          error: "Erro ao chamar a API da OpenAI para analisar PDFs.",
+          details: errText,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const respJson = await responsesResp.json();
+
+    let textContent = "";
+    try {
+      const firstOutput = respJson?.output?.[0];
+      const firstContent = firstOutput?.content?.[0];
+      const textObj = firstContent?.text;
+      textContent = textObj?.value ?? "";
+    } catch (e) {
+      console.error("Erro ao extrair texto da resposta (PDF):", e, respJson);
+    }
+
+    if (!textContent) {
+      console.error("Resposta da OpenAI (PDF) sem conteúdo de texto:", respJson);
+      return new Response(
+        JSON.stringify({
+          error:
+            "Resposta da OpenAI (PDF) não contém conteúdo de texto utilizável.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(textContent);
+    } catch (e) {
+      console.error(
+        "Falha ao fazer parse do JSON da OpenAI (PDF):",
+        e,
+        textContent,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Falha ao interpretar a resposta da OpenAI (PDF) como JSON.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    console.log(
+      "Resposta da OpenAI (PDF) parseada (primeiros 2000 caracteres):",
+      JSON.stringify(parsed).slice(0, 2000),
+    );
+
+    desc = parsed;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      parsed.descricao_cirurgica &&
+      typeof parsed.descricao_cirurgica === "object" &&
+      !Array.isArray(parsed.descricao_cirurgica)
+    ) {
+      desc = parsed.descricao_cirurgica;
+    }
+  } else {
+    // Sem imagens e sem PDFs válidos
+    console.error(
+      "Nenhum arquivo em formato suportado encontrado (nem imagens nem PDFs).",
+    );
     return new Response(
       JSON.stringify({
-        error: "Erro ao chamar a API da OpenAI.",
-        details: errorText,
+        error:
+          "Nenhum arquivo em formato suportado encontrado. Envie imagens (png, jpeg, gif, webp) e/ou PDFs.",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  if (!desc || typeof desc !== "object") {
+    console.error("Objeto de descrição cirúrgica inválido:", desc);
+    return new Response(
+      JSON.stringify({
+        error:
+          "A resposta da OpenAI não pôde ser interpretada como uma descrição cirúrgica válida.",
       }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
-  }
-
-  const completion = await openaiResponse.json();
-  const messageContent = completion?.choices?.[0]?.message?.content;
-
-  if (!messageContent) {
-    console.error("Resposta da OpenAI sem conteúdo:", completion);
-    return new Response(
-      JSON.stringify({
-        error: "Resposta da OpenAI sem conteúdo utilizável.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(messageContent);
-  } catch (e) {
-    console.error("Falha ao fazer parse do JSON da OpenAI:", e, messageContent);
-    return new Response(
-      JSON.stringify({
-        error: "Falha ao interpretar a resposta da OpenAI como JSON.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  console.log(
-    "Resposta da OpenAI parseada (primeiros 2000 caracteres):",
-    JSON.stringify(parsed).slice(0, 2000),
-  );
-
-  // IMPORTANTE: usamos o objeto inteiro retornado pela OpenAI.
-  // Se, por algum motivo, ela aninhar tudo dentro de "descricao_cirurgica",
-  // fazemos um fallback para esse objeto interno.
-  let desc: any = parsed;
-  if (
-    parsed &&
-    typeof parsed === "object" &&
-    !Array.isArray(parsed) &&
-    parsed.descricao_cirurgica &&
-    typeof parsed.descricao_cirurgica === "object" &&
-    !Array.isArray(parsed.descricao_cirurgica)
-  ) {
-    desc = parsed.descricao_cirurgica;
   }
 
   // 5) Montar objeto para inserir em descricoes_cirurgicas
