@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
@@ -37,39 +36,58 @@ import {
 import { showError, showSuccess } from "@/utils/toast";
 import {
   criarDescricaoCirurgica,
+  atualizarDescricaoCirurgicaCompleta,
   type DescricaoCirurgicaFormData,
   listarDescricoesCirurgicasDoMedicoLogado,
   type DescricaoCirurgicaResumoMedico,
   excluirDescricaoCirurgica,
-  atualizarStatusDescricaoCirurgica,
   buscarDescricaoCirurgicaPorId,
+  type SimNao,
 } from "@/services/descricao-cirurgica-service";
-import type {
-  DbDescricaoCirurgicaStatus,
-  DbDescricaoCirurgica,
-} from "@/db/schema";
+import type { DbDescricaoCirurgica } from "@/db/schema";
 import AdminDescricaoCirurgicaList from "@/components/descricao-cirurgica/AdminDescricaoCirurgicaList";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
+function toDateInput(value: string | null): string {
+  if (!value) return "";
+  // pegamos sempre os 10 primeiros caracteres YYYY-MM-DD
+  return value.slice(0, 10);
+}
+
+function toTimeInput(value: string | null): string {
+  if (!value) return "";
+  const match = value.match(/(\d{2}:\d{2})/);
+  return match ? match[1] : "";
+}
+
+function toDateTimeLocalInput(value: string | null): string {
+  if (!value) return "";
+  const datePart = toDateInput(value);
+  const timePart = toTimeInput(value);
+  if (!datePart || !timePart) return "";
+  return `${datePart}T${timePart}`;
+}
+
+function mapBoolToSimNao(value: boolean | null): SimNao {
+  if (value === true) return "sim";
+  if (value === false) return "nao";
+  return "";
+}
+
 const DescricaoCirurgicaPage: React.FC = () => {
-  const navigate = useNavigate();
   const [salvando, setSalvando] = useState(false);
   const [listaDescricoes, setListaDescricoes] = useState<
     DescricaoCirurgicaResumoMedico[]
   >([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [viewItem, setViewItem] =
     useState<DescricaoCirurgicaResumoMedico | null>(null);
   const [viewData, setViewData] = useState<DbDescricaoCirurgica | null>(null);
   const [carregandoView, setCarregandoView] = useState(false);
 
-  const [editItem, setEditItem] =
-    useState<DescricaoCirurgicaResumoMedico | null>(null);
-  const [editStatus, setEditStatus] = useState<DbDescricaoCirurgicaStatus | "">(
-    "",
-  );
   const [processandoAcao, setProcessandoAcao] = useState(false);
   const [pendingDescricoes, setPendingDescricoes] = useState<number>(0);
 
@@ -204,10 +222,16 @@ const DescricaoCirurgicaPage: React.FC = () => {
   const onSubmit = async (data: DescricaoCirurgicaFormData) => {
     setSalvando(true);
     try {
-      await criarDescricaoCirurgica(data);
-      showSuccess("Descrição cirúrgica salva com sucesso.");
+      if (editingId) {
+        await atualizarDescricaoCirurgicaCompleta(editingId, data);
+        showSuccess("Descrição cirúrgica atualizada com sucesso.");
+      } else {
+        await criarDescricaoCirurgica(data);
+        showSuccess("Descrição cirúrgica salva com sucesso.");
+      }
       reset();
       setShowForm(false);
+      setEditingId(null);
       await carregarDescricoes();
     } catch (err) {
       const message =
@@ -223,9 +247,12 @@ const DescricaoCirurgicaPage: React.FC = () => {
   const disabled = salvando || isSubmitting;
 
   const handleNovaDescricao = () => {
-    reset();
+    setEditingId(null);
+    reset(); // volta aos valores padrão (tudo em branco)
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleVisualizar = async (item: DescricaoCirurgicaResumoMedico) => {
@@ -247,9 +274,161 @@ const DescricaoCirurgicaPage: React.FC = () => {
     }
   };
 
-  const handleEditar = (item: DescricaoCirurgicaResumoMedico) => {
-    setEditItem(item);
-    setEditStatus(item.status ?? "AGUARDANDO");
+  const handleEditar = async (item: DescricaoCirurgicaResumoMedico) => {
+    setSalvando(true);
+    try {
+      const data = await buscarDescricaoCirurgicaPorId(item.id);
+
+      const procedimentos =
+        (data.procedimentos as any[])?.map((p) => ({
+          procedimento_id: (p.procedimento_id ?? "") as string,
+          descricao_procedimento: (p.descricao_procedimento ?? "") as string,
+          codigo_procedimento: (p.codigo_procedimento ?? "") as string,
+          tipo_procedimento: (p.tipo_procedimento ?? "") as string,
+          quantidade:
+            p.quantidade != null ? String(p.quantidade) : "",
+        })) ?? [
+          {
+            procedimento_id: "",
+            descricao_procedimento: "",
+            codigo_procedimento: "",
+            tipo_procedimento: "",
+            quantidade: "",
+          },
+        ];
+
+      const equipe =
+        (data.equipe as any[])?.map((e) => ({
+          nome_profissional: (e.nome_profissional ?? "") as string,
+          funcao: (e.funcao ?? "") as string,
+          conselho: (e.conselho ?? "") as string,
+          numero_conselho: (e.numero_conselho ?? "") as string,
+          uf_conselho: (e.uf_conselho ?? "") as string,
+        })) ?? [
+          {
+            nome_profissional: "",
+            funcao: "",
+            conselho: "",
+            numero_conselho: "",
+            uf_conselho: "",
+          },
+        ];
+
+      const materiais =
+        (data.materiais as any[])?.map((m) => ({
+          material_id: (m.material_id ?? "") as string,
+          nome_material: (m.nome_material ?? "") as string,
+          descricao_material: (m.descricao_material ?? "") as string,
+          quantidade:
+            m.quantidade != null ? String(m.quantidade) : "",
+          lote: (m.lote ?? "") as string,
+          fabricante: (m.fabricante ?? "") as string,
+        })) ?? [
+          {
+            material_id: "",
+            nome_material: "",
+            descricao_material: "",
+            quantidade: "",
+            lote: "",
+            fabricante: "",
+          },
+        ];
+
+      const formValues: DescricaoCirurgicaFormData = {
+        prontuario: data.prontuario ?? "",
+        registro: data.registro ?? "",
+        nome_social: data.nome_social ?? "",
+        registro_civil: data.registro_civil ?? "",
+        cpf: data.cpf ?? "",
+        matricula: data.matricula ?? "",
+        data_nascimento: toDateInput(data.data_nascimento ?? null),
+        idade:
+          data.idade != null ? String(data.idade) : "",
+        sexo: data.sexo ?? "",
+
+        convenio_plano: data.convenio_plano ?? "",
+        setor: data.setor ?? "",
+        leito: data.leito ?? "",
+        dthr_admissao: toDateTimeLocalInput(data.dthr_admissao ?? null),
+
+        status: (data.status as string) ?? "AGUARDANDO",
+        tipo_cirurgia: data.tipo_cirurgia ?? "",
+        data_inicio_procedimento: toDateInput(
+          data.data_inicio_procedimento ?? null,
+        ),
+        hora_inicio_procedimento: toTimeInput(
+          data.hora_inicio_procedimento ?? null,
+        ),
+        data_fim_procedimento: toDateInput(
+          data.data_fim_procedimento ?? null,
+        ),
+        hora_fim_procedimento: toTimeInput(
+          data.hora_fim_procedimento ?? null,
+        ),
+        diagnostico_pre_operatorio:
+          data.diagnostico_pre_operatorio ?? "",
+        diagnostico_pos_operatorio:
+          data.diagnostico_pos_operatorio ?? "",
+
+        descricao_cirurgica: data.descricao_cirurgica ?? "",
+
+        cirurgiao_responsavel: data.cirurgiao_responsavel ?? "",
+        cirurgiao_responsavel_crm:
+          data.cirurgiao_responsavel_crm ?? "",
+        data_hora_afere: toDateTimeLocalInput(
+          data.data_hora_afere ?? null,
+        ),
+        usuario_impressao: data.usuario_impressao ?? "",
+        data_hora_impressao: toDateTimeLocalInput(
+          data.data_hora_impressao ?? null,
+        ),
+
+        diagnostico_pre_igual_pos: mapBoolToSimNao(
+          (data.diagnostico_pre_igual_pos as boolean | null) ?? null,
+        ),
+        houve_complicacoes: mapBoolToSimNao(
+          (data.houve_complicacoes as boolean | null) ?? null,
+        ),
+        descricao_complicacoes: data.descricao_complicacoes ?? "",
+        possui_peca_anatomo: mapBoolToSimNao(
+          (data.possui_peca_anatomo as boolean | null) ?? null,
+        ),
+        sangramento_estimado: data.sangramento_estimado ?? "",
+        observacoes_adicionais:
+          data.observacoes_adicionais ?? "",
+
+        uso_antibioticos: data.uso_antibioticos ?? "",
+        profilaxia_tev_tvp: data.profilaxia_tev_tvp ?? "",
+        troca_curativo: data.troca_curativo ?? "",
+        dieta: data.dieta ?? "",
+        deambulacao: data.deambulacao ?? "",
+        previsao_alta: data.previsao_alta ?? "",
+        acompanhamento_pela_instituicao: mapBoolToSimNao(
+          (data.acompanhamento_pela_instituicao as boolean | null) ??
+            null,
+        ),
+        outras_orientacoes: data.outras_orientacoes ?? "",
+
+        procedimentos,
+        equipe,
+        materiais,
+      };
+
+      reset(formValues);
+      setEditingId(item.id);
+      setShowForm(true);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar a descrição para edição.";
+      showError(message);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const handleExcluir = async (item: DescricaoCirurgicaResumoMedico) => {
@@ -268,26 +447,6 @@ const DescricaoCirurgicaPage: React.FC = () => {
         err instanceof Error
           ? err.message
           : "Não foi possível excluir a descrição cirúrgica.";
-      showError(message);
-    } finally {
-      setProcessandoAcao(false);
-    }
-  };
-
-  const handleSalvarStatus = async () => {
-    if (!editItem || !editStatus) return;
-    setProcessandoAcao(true);
-    try {
-      await atualizarStatusDescricaoCirurgica(editItem.id, editStatus);
-      showSuccess("Status atualizado com sucesso.");
-      setEditItem(null);
-      setEditStatus("");
-      await carregarDescricoes();
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível atualizar o status.";
       showError(message);
     } finally {
       setProcessandoAcao(false);
@@ -355,19 +514,9 @@ const DescricaoCirurgicaPage: React.FC = () => {
             </div>
           </header>
 
-          {/* Lista + Formulário */}
+          {/* Formulário + Lista */}
           <main className="flex-1 overflow-y-auto pb-2">
-            <div className="mb-4">
-              <AdminDescricaoCirurgicaList
-                items={listaDescricoes}
-                isLoading={carregandoLista}
-                onNovaDescricao={handleNovaDescricao}
-                onVisualizar={handleVisualizar}
-                onEditar={handleEditar}
-                onExcluir={handleExcluir}
-              />
-            </div>
-
+            {/* Formulário sempre acima da lista quando ativo */}
             {showForm && (
               <form
                 onSubmit={handleSubmit(onSubmit)}
@@ -377,10 +526,14 @@ const DescricaoCirurgicaPage: React.FC = () => {
                 <Card className="border-slate-200/80 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-900/70">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold">
-                      1. Identificação do Paciente
+                      {editingId
+                        ? "Editar descrição cirúrgica"
+                        : "Nova descrição cirúrgica"}
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Dados básicos do paciente conforme prontuário.
+                      {editingId
+                        ? "Altere os dados necessários da descrição selecionada."
+                        : "Preencha os dados básicos do paciente conforme prontuário."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -1287,6 +1440,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
                     onClick={() => {
                       reset();
                       setShowForm(false);
+                      setEditingId(null);
                     }}
                     disabled={disabled}
                   >
@@ -1297,11 +1451,27 @@ const DescricaoCirurgicaPage: React.FC = () => {
                     className="rounded-full bg-[#135bec] text-white hover:bg-[#0f4ac0]"
                     disabled={disabled}
                   >
-                    {disabled ? "Salvando..." : "Salvar descrição cirúrgica"}
+                    {disabled
+                      ? "Salvando..."
+                      : editingId
+                        ? "Atualizar descrição cirúrgica"
+                        : "Salvar descrição cirúrgica"}
                   </Button>
                 </div>
               </form>
             )}
+
+            {/* Lista de descrições */}
+            <div className="mb-4">
+              <AdminDescricaoCirurgicaList
+                items={listaDescricoes}
+                isLoading={carregandoLista}
+                onNovaDescricao={handleNovaDescricao}
+                onVisualizar={handleVisualizar}
+                onEditar={handleEditar}
+                onExcluir={handleExcluir}
+              />
+            </div>
           </main>
         </div>
       </div>
@@ -1414,101 +1584,6 @@ const DescricaoCirurgicaPage: React.FC = () => {
                     ? viewData.descricao_cirurgica
                     : "Nenhum texto de descrição cadastrado."}
                 </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de alteração de status */}
-      <Dialog
-        open={!!editItem}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditItem(null);
-            setEditStatus("");
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Alterar status da descrição</DialogTitle>
-            <DialogDescription>
-              Atualize o status da descrição cirúrgica selecionada.
-            </DialogDescription>
-          </DialogHeader>
-
-          {editItem && (
-            <div className="space-y-4 text-sm">
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">
-                  Paciente
-                </Label>
-                <p className="font-medium">
-                  {editItem.nomePaciente || "-"}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">
-                  Status atual
-                </Label>
-                <p>{editItem.status ?? "AGUARDANDO"}</p>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs text-slate-500">
-                  Novo status
-                </Label>
-                <UiSelect
-                  value={editStatus || "AGUARDANDO"}
-                  onValueChange={(value) =>
-                    setEditStatus(value as DbDescricaoCirurgicaStatus)
-                  }
-                  disabled={processandoAcao}
-                >
-                  <UiSelectTrigger>
-                    <UiSelectValue placeholder="Selecione o novo status" />
-                  </UiSelectTrigger>
-                  <UiSelectContent>
-                    <UiSelectItem value="AGUARDANDO">
-                      Aguardando
-                    </UiSelectItem>
-                    <UiSelectItem value="CONFIRMADO">
-                      Confirmado
-                    </UiSelectItem>
-                    <UiSelectItem value="EM_FATURAMENTO">
-                      Em faturamento
-                    </UiSelectItem>
-                    <UiSelectItem value="PAGO">Pago</UiSelectItem>
-                    <UiSelectItem value="EM_GLOSA">
-                      Em glosa
-                    </UiSelectItem>
-                  </UiSelectContent>
-                </UiSelect>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => {
-                    setEditItem(null);
-                    setEditStatus("");
-                  }}
-                  disabled={processandoAcao}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  className="rounded-full bg-[#135bec] text-white hover:bg-[#0f4ac0]"
-                  onClick={() => void handleSalvarStatus()}
-                  disabled={processandoAcao || !editStatus}
-                >
-                  {processandoAcao ? "Salvando..." : "Salvar status"}
-                </Button>
               </div>
             </div>
           )}

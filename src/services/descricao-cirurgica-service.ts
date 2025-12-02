@@ -120,20 +120,7 @@ function toIntOrNull(value: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-/**
- * Cria uma descrição cirúrgica completa em uma única tabela (descricoes_cirurgicas),
- * incluindo procedimentos, equipe e materiais como JSON.
- */
-export async function criarDescricaoCirurgica(
-  form: DescricaoCirurgicaFormData,
-): Promise<DbDescricaoCirurgica> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData?.user) {
-    throw new Error("Usuário não autenticado. Faça login novamente.");
-  }
-
-  const userId = userData.user.id;
-
+function buildJsonFromForm(form: DescricaoCirurgicaFormData) {
   const procedimentosJson =
     form.procedimentos
       ?.filter(
@@ -174,6 +161,31 @@ export async function criarDescricaoCirurgica(
         lote: m.lote || null,
         fabricante: m.fabricante || null,
       })) ?? [];
+
+  return {
+    procedimentosJson,
+    equipeJson,
+    materiaisJson,
+  };
+}
+
+/**
+ * Cria uma descrição cirúrgica completa em uma única tabela (descricoes_cirurgicas),
+ * incluindo procedimentos, equipe e materiais como JSON.
+ */
+export async function criarDescricaoCirurgica(
+  form: DescricaoCirurgicaFormData,
+): Promise<DbDescricaoCirurgica> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    throw new Error("Usuário não autenticado. Faça login novamente.");
+  }
+
+  const userId = userData.user.id;
+
+  const { procedimentosJson, equipeJson, materiaisJson } = buildJsonFromForm(
+    form,
+  );
 
   const { data: inserted, error } = await supabase
     .from("descricoes_cirurgicas")
@@ -259,6 +271,107 @@ export async function criarDescricaoCirurgica(
   }
 
   return inserted as DbDescricaoCirurgica;
+}
+
+/**
+ * Atualiza todos os campos de uma descrição cirúrgica existente (exceto o id e o user_id).
+ */
+export async function atualizarDescricaoCirurgicaCompleta(
+  id: string,
+  form: DescricaoCirurgicaFormData,
+): Promise<DbDescricaoCirurgica> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    throw new Error("Usuário não autenticado. Faça login novamente.");
+  }
+
+  const { procedimentosJson, equipeJson, materiaisJson } = buildJsonFromForm(
+    form,
+  );
+
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .update({
+      // Status geral
+      status: form.status || "AGUARDANDO",
+
+      // 1. Identificação
+      prontuario: form.prontuario || null,
+      registro: form.registro || null,
+      nome_social: form.nome_social || null,
+      registro_civil: form.registro_civil || null,
+      cpf: form.cpf || null,
+      matricula: form.matricula || null,
+      data_nascimento: form.data_nascimento || null,
+      idade: toIntOrNull(form.idade),
+      sexo: form.sexo || null,
+
+      // 2. Internação
+      convenio_plano: form.convenio_plano || null,
+      setor: form.setor || null,
+      leito: form.leito || null,
+      dthr_admissao: form.dthr_admissao || null,
+
+      // 3. Iniciais
+      tipo_cirurgia: form.tipo_cirurgia || null,
+      data_inicio_procedimento: form.data_inicio_procedimento || null,
+      hora_inicio_procedimento: form.hora_inicio_procedimento || null,
+      data_fim_procedimento: form.data_fim_procedimento || null,
+      hora_fim_procedimento: form.hora_fim_procedimento || null,
+      diagnostico_pre_operatorio: form.diagnostico_pre_operatorio || null,
+      diagnostico_pos_operatorio: form.diagnostico_pos_operatorio || null,
+
+      // 4. Procedimentos (JSON)
+      procedimentos:
+        procedimentosJson.length > 0 ? procedimentosJson : null,
+
+      // 5. Equipe (JSON)
+      equipe: equipeJson.length > 0 ? equipeJson : null,
+
+      // 6. Texto descrição
+      descricao_cirurgica: form.descricao_cirurgica || null,
+
+      // 7. Auditoria
+      cirurgiao_responsavel: form.cirurgiao_responsavel || null,
+      cirurgiao_responsavel_crm: form.cirurgiao_responsavel_crm || null,
+      data_hora_afere: form.data_hora_afere || null,
+      usuario_impressao: form.usuario_impressao || null,
+      data_hora_impressao: form.data_hora_impressao || null,
+
+      // 8. Materiais (JSON)
+      materiais: materiaisJson.length > 0 ? materiaisJson : null,
+
+      // 9. Adicionais
+      diagnostico_pre_igual_pos: mapSimNao(form.diagnostico_pre_igual_pos),
+      houve_complicacoes: mapSimNao(form.houve_complicacoes),
+      descricao_complicacoes: form.descricao_complicacoes || null,
+      possui_peca_anatomo: mapSimNao(form.possui_peca_anatomo),
+      sangramento_estimado: form.sangramento_estimado || null,
+      observacoes_adicionais: form.observacoes_adicionais || null,
+
+      // 10. Plano terapêutico
+      uso_antibioticos: form.uso_antibioticos || null,
+      profilaxia_tev_tvp: form.profilaxia_tev_tvp || null,
+      troca_curativo: form.troca_curativo || null,
+      dieta: form.dieta || null,
+      deambulacao: form.deambulacao || null,
+      previsao_alta: form.previsao_alta || null,
+      acompanhamento_pela_instituicao: mapSimNao(
+        form.acompanhamento_pela_instituicao,
+      ),
+      outras_orientacoes: form.outras_orientacoes || null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    throw new Error(
+      error?.message || "Não foi possível atualizar a descrição cirúrgica.",
+    );
+  }
+
+  return data as DbDescricaoCirurgica;
 }
 
 /**
