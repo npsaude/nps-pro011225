@@ -333,3 +333,25 @@ export async function atualizarStatusDescricaoCirurgica(
     );
   }
 }
+
+/**
+ * Conta descrições cirúrgicas por status.
+ * Pode ser usado para exibir badges de notificação (ex: status AGUARDANDO).
+ */
+export async function contarDescricoesCirurgicasPorStatus(
+  status: DbDescricaoCirurgicaStatus,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select("id", { count: "exact", head: true })
+    .eq("status", status);
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível contar as descrições cirúrgicas.",
+    );
+  }
+
+  return count ?? 0;
+}
