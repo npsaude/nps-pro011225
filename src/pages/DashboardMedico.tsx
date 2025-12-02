@@ -19,12 +19,12 @@ const DashboardMedico = () => {
   const percentualGlosaRecuperado = "68%";
 
   return (
-    <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
-      {/* Fundo em gradiente médico */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#0F2A43] text-slate-50">
+      {/* Fundo gradiente estilo app */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#0F2A43_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_55%)]" />
 
-      <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {/* Topo */}
+      <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-5 sm:px-5 sm:py-6">
+        {/* Topo com voltar e status */}
         <header className="mb-4 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -37,67 +37,69 @@ const DashboardMedico = () => {
 
           <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span>Portal do Médico · Online</span>
+            <span>Portal do Médico</span>
           </div>
         </header>
 
-        {/* Cabeçalho do dashboard */}
+        {/* Card de saudação + info do médico */}
         <section className="mb-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold text-emerald-100 sm:text-base">
-              Olá, Adriano.
-            </p>
-            <div className="space-y-0.5">
-              <h1 className="text-lg font-semibold leading-tight text-slate-50 sm:text-xl">
-                Visão geral das suas cirurgias
-              </h1>
-              <p className="text-[11px] text-emerald-100/80 sm:text-xs">
-                Acompanhe rapidamente receita, glosas e valores em aberto.
+          <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3.5 text-sm shadow-[0_18px_40px_rgba(0,0,0,0.6)] ring-1 ring-slate-900/60 backdrop-blur">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/90">
+                Bem-vindo
+              </span>
+              <p className="text-sm font-semibold text-slate-50">
+                Olá, Adriano.
               </p>
+              <p className="text-[11px] text-emerald-100/80">
+                Acompanhe suas cirurgias, valores pagos e glosas em um só lugar.
+              </p>
+            </div>
+            <div className="ml-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-semibold text-slate-950 shadow-[0_0_22px_rgba(16,185,129,0.8)]">
+              AD
             </div>
           </div>
         </section>
 
         {/* Conteúdo principal */}
-        <main className="flex-1">
+        <main className="flex-1 space-y-4">
           {/* CTA principal: Enviar Descrição Cirúrgica */}
-          <section className="mb-4">
+          <section>
             <button
               type="button"
-              className="flex w-full items-center justify-between rounded-2xl bg-emerald-500 px-4 py-3 text-left text-sm font-semibold text-white shadow-[0_18px_50px_rgba(16,185,129,0.6)] transition-transform hover:translate-y-0.5"
+              className="flex w-full items-center justify-between rounded-3xl bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-3.5 text-left text-sm font-semibold text-white shadow-[0_22px_55px_rgba(16,185,129,0.7)] transition-transform hover:translate-y-0.5"
               onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600/80">
-                  <Upload className="h-4 w-4" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600/90 shadow-inner">
+                  <Upload className="h-4.5 w-4.5" />
                 </span>
                 <div className="flex flex-col">
                   <span>Enviar Descrição Cirúrgica</span>
-                  <span className="text-[11px] font-normal text-emerald-100/90">
-                    Envie fotos e arquivos para análise.
+                  <span className="text-[11px] font-normal text-emerald-100/95">
+                    Fotos da guia, laudos ou PDFs completos.
                   </span>
                 </div>
               </div>
             </button>
           </section>
 
-          {/* Acompanhamento simples */}
-          <section className="mb-5">
+          {/* Acompanhamento das descrições */}
+          <section>
             <button
               type="button"
-              className="flex w-full items-center justify-between rounded-2xl bg-slate-950/80 px-4 py-3 text-left text-xs font-medium text-emerald-100 ring-1 ring-emerald-500/30 transition-colors hover:bg-emerald-950/70"
+              className="flex w-full items-center justify-between rounded-3xl bg-slate-950/85 px-4 py-3 text-left text-xs font-medium text-emerald-100 shadow-md ring-1 ring-emerald-500/30 transition-colors hover:bg-emerald-950/70"
               onClick={() => navigate("/medico/descricao-cirurgica")}
             >
               <div className="flex flex-col">
                 <span className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90">
                   Acompanhamento
                 </span>
-                <span className="mt-1 text-sm font-semibold">
+                <span className="mt-1 text-sm font-semibold text-slate-50">
                   Minhas descrições cirúrgicas
                 </span>
                 <span className="text-[11px] text-emerald-100/80">
-                  Veja os registros estruturados gerados a partir dos documentos
-                  enviados.
+                  Veja o status e o resultado dos envios recentes.
                 </span>
               </div>
               <span className="text-[11px] font-semibold text-emerald-300">
@@ -106,20 +108,20 @@ const DashboardMedico = () => {
             </button>
           </section>
 
-          {/* Cards de indicadores */}
+          {/* Cards de indicadores financeiros */}
           <section className="space-y-3">
             {/* Linha 1 */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
+              <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                     Receita total no ano
                   </span>
                   <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
                     {receitaTotalAno}
                   </span>
                   <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Considerando todos os procedimentos lançados.
+                    Soma de todos os procedimentos lançados.
                   </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
@@ -127,16 +129,16 @@ const DashboardMedico = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
+              <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                     Cirurgias no ano
                   </span>
                   <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
                     {numeroCirurgiasAno}
                   </span>
                   <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Número de cirurgias com documentação enviada.
+                    Incluindo somente cirurgias com documentação enviada.
                   </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
@@ -147,16 +149,16 @@ const DashboardMedico = () => {
 
             {/* Linha 2 */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
+              <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                     Total a receber
                   </span>
                   <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
                     {totalAReceber}
                   </span>
                   <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Valor ainda não pago pelos planos de saúde.
+                    Valores ainda não pagos pelos planos de saúde.
                   </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
@@ -164,9 +166,9 @@ const DashboardMedico = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-rose-500/30">
+              <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-rose-500/35">
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-rose-200/80">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-rose-200/80">
                     Valor em glosa
                   </span>
                   <span className="mt-1 text-lg font-semibold text-rose-100 sm:text-xl">
@@ -183,9 +185,9 @@ const DashboardMedico = () => {
             </div>
 
             {/* Linha 3 */}
-            <div className="flex items-center justify-between rounded-2xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-400/40">
+            <div className="flex items-center justify-between rounded-3xl bg-slate-950/90 px-4 py-3 shadow-md ring-1 ring-emerald-400/45">
               <div className="flex flex-col">
-                <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
+                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                   % de glosa recuperado
                 </span>
                 <span className="mt-1 text-2xl font-semibold text-emerald-100">
@@ -203,11 +205,11 @@ const DashboardMedico = () => {
           </section>
 
           {/* Rodapé explicativo */}
-          <section className="mt-4 border-t border-emerald-500/20 pt-3 text-[11px] text-emerald-100/80">
+          <section className="border-t border-emerald-500/25 pt-3 text-[11px] text-emerald-100/80">
             <p>
-              Os valores exibidos são um resumo financeiro das suas cirurgias
-              no ano. Em breve, você poderá filtrar por período, convênio e
-              tipo de procedimento.
+              Este painel é um resumo das suas cirurgias e valores do ano. Em
+              breve você poderá filtrar por período, convênio e tipo de
+              procedimento.
             </p>
           </section>
         </main>
