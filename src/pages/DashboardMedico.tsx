@@ -120,9 +120,6 @@ const DashboardMedico = () => {
                   <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
                     {receitaTotalAno}
                   </span>
-                  <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Soma de todos os procedimentos lançados.
-                  </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
                   <Wallet className="h-5 w-5" />
@@ -136,9 +133,6 @@ const DashboardMedico = () => {
                   </span>
                   <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
                     {numeroCirurgiasAno}
-                  </span>
-                  <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Incluindo somente cirurgias com documentação enviada.
                   </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
@@ -157,9 +151,6 @@ const DashboardMedico = () => {
                   <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
                     {totalAReceber}
                   </span>
-                  <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Valores ainda não pagos pelos planos de saúde.
-                  </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
                   <FileHeart className="h-5 w-5" />
@@ -173,9 +164,6 @@ const DashboardMedico = () => {
                   </span>
                   <span className="mt-1 text-lg font-semibold text-rose-100 sm:text-xl">
                     {valorGlosa}
-                  </span>
-                  <span className="mt-1 text-[11px] text-rose-100/80">
-                    Montante glosado nas cirurgias do ano.
                   </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-200">
