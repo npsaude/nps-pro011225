@@ -117,7 +117,7 @@ const DashboardMedico = () => {
                   <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                     Receita total no ano
                   </span>
-                  <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
+                  <span className="mt-1 text-base font-semibold text-emerald-100 sm:text-lg whitespace-nowrap">
                     {receitaTotalAno}
                   </span>
                 </div>
@@ -148,7 +148,7 @@ const DashboardMedico = () => {
                   <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
                     Total a receber
                   </span>
-                  <span className="mt-1 text-lg font-semibold text-emerald-100 sm:text-xl">
+                  <span className="mt-1 text-base font-semibold text-emerald-100 sm:text-lg whitespace-nowrap">
                     {totalAReceber}
                   </span>
                 </div>
@@ -162,7 +162,7 @@ const DashboardMedico = () => {
                   <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-rose-200/80">
                     Valor em glosa
                   </span>
-                  <span className="mt-1 text-lg font-semibold text-rose-100 sm:text-xl">
+                  <span className="mt-1 text-base font-semibold text-rose-100 sm:text-lg whitespace-nowrap">
                     {valorGlosa}
                   </span>
                 </div>
