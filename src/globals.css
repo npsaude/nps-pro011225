@@ -4,89 +4,96 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Paleta baseada no styleguide */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Fundos principais em tons claros (Cinza Titan / Azul Gelo) */
+    --background: 213 24% 97%; /* aprox #F5F7F9 (titan_gray) */
+    --foreground: 215 14% 20%; /* texto principal em cinza escuro/obsidiano */
+
+    --card: 214 46% 94%; /* aprox #E6EEF7 (ice_blue) */
+    --card-foreground: 215 14% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 14% 20%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primárias: Azul Aço / Azul Carbônico */
+    --primary: 205 58% 29%; /* aprox #1D4E77 (steel_blue) */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secundário: Cobre Médico */
+    --secondary: 26 49% 52%; /* aprox #C17A47 (medical_copper) */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Neutros / superfícies */
+    --muted: 214 21% 90%; /* entre titan_gray e light_graphite */
+    --muted-foreground: 217 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 205 46% 92%; /* azul gelo mais claro para realces suaves */
+    --accent-foreground: 215 24% 26%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Estados */
+    --destructive: 16 55% 47%; /* cobre mais escuro para erros/alertas fortes */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Bordas, inputs e anéis */
+    --border: 214 21% 84%; /* aprox #D9DEE3 (light_graphite) */
+    --input: 214 21% 84%;
+    --ring: 205 58% 29%; /* Azul Aço para foco */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Sidebar / navegação (desktop-first) usando Azul Carbônico e Obsidiano */
+    --sidebar-background: 211 63% 16%; /* aprox #0F2A43 (carbon_blue) */
+    --sidebar-foreground: 210 25% 96%; /* texto quase branco */
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 205 58% 29%; /* steel_blue */
+    --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-accent: 26 49% 52%; /* medical_copper */
+    --sidebar-accent-foreground: 0 0% 100%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 210 26% 23%; /* linha em cinza/azul escuro */
+    --sidebar-ring: 205 58% 29%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Modo escuro inspirado em Azul Carbônico + Cinza Obsidiano */
+    --background: 210 14% 10%; /* fundo geral escuro */
+    --foreground: 210 40% 96%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 214 18% 16%;
+    --card-foreground: 210 40% 96%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 214 18% 16%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 205 58% 42%; /* steel_blue um pouco mais claro para contraste */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 26 49% 52%; /* cobre médico mantém o contraste */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 215 19% 22%;
+    --muted-foreground: 215 20% 75%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 205 45% 26%;
+    --accent-foreground: 210 40% 96%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 16 55% 47%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 215 19% 22%;
+    --input: 215 19% 22%;
+    --ring: 205 58% 42%;
+
+    --sidebar-background: 210 14% 8%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 205 58% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 26 49% 52%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 19% 22%;
+    --sidebar-ring: 205 58% 42%;
   }
 }
 
@@ -96,6 +103,15 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter",
+      "Roboto", sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold;
   }
 }
