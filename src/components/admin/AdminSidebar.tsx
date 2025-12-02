@@ -108,7 +108,7 @@ const AdminSidebar = ({
             </span>
           </button>
 
-          {/* Descrição Cirúrgica */}
+          {/* Desc. Cirúrgica */}
           <button
             className={
               currentSection === "descricao" ? activeMain : inactiveMain
@@ -125,7 +125,7 @@ const AdminSidebar = ({
               >
                 <FileSignature className="h-4 w-4" />
               </span>
-              <span className="font-medium">Descrição Cirúrgica</span>
+              <span className="font-medium">Desc. Cirúrgica</span>
             </span>
           </button>
 
