@@ -20,7 +20,8 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
   const endX = centerX + radius * Math.cos(endAngle);
   const endY = centerY + radius * Math.sin(endAngle);
 
-  const largeArcFlag = safeValue > max / 2 ? 1 : 0;
+  // Nosso arco vai de 0 a 180° no máximo, então sempre usamos o arco "curto"
+  const largeArcFlag = 0;
 
   // Ângulo do ponteiro dentro do semicírculo
   const pointerAngle = Math.PI + (Math.PI * safeValue) / max;
@@ -44,14 +45,16 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           strokeLinecap="round"
         />
 
-        {/* Arco preenchido conforme o valor */}
-        <path
-          d={`M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
-          fill="none"
-          stroke="url(#glosa-gauge-gradient)"
-          strokeWidth={10}
-          strokeLinecap="round"
-        />
+        {/* Arco preenchido conforme o valor (não renderiza se valor = 0) */}
+        {safeValue > 0 && (
+          <path
+            d={`M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
+            fill="none"
+            stroke="url(#glosa-gauge-gradient)"
+            strokeWidth={10}
+            strokeLinecap="round"
+          />
+        )}
 
         <defs>
           <linearGradient
