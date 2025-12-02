@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
-  FileText,
   Users,
   Stethoscope,
   MessageCircle,
@@ -12,7 +11,7 @@ import {
 } from "lucide-react";
 
 interface AdminSidebarProps {
-  section?: "home" | "sadt" | "descricao" | "cadastro" | "config";
+  section?: "home" | "descricao" | "cadastro" | "config";
   cadastroSubsection?: "clinicas" | "medicos" | "planos";
 }
 
@@ -26,7 +25,6 @@ const AdminSidebar = ({
   const currentSection: AdminSidebarProps["section"] = useMemo(() => {
     if (section) return section;
     const path = location.pathname;
-    if (path.startsWith("/sadt")) return "sadt";
     if (path.startsWith("/descricao-cirurgica")) return "descricao";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
@@ -107,25 +105,6 @@ const AdminSidebar = ({
                 <Home className="h-4 w-4" />
               </span>
               <span className="font-medium">Home</span>
-            </span>
-          </button>
-
-          {/* SADTs */}
-          <button
-            className={currentSection === "sadt" ? activeMain : inactiveMain}
-            onClick={() => navigate("/sadt/cadastro")}
-          >
-            <span className="flex items-center gap-3">
-              <span
-                className={
-                  currentSection === "sadt"
-                    ? iconWrapperActive
-                    : iconWrapperInactive
-                }
-              >
-                <FileText className="h-4 w-4" />
-              </span>
-              <span className="font-medium">SADT&apos;s</span>
             </span>
           </button>
 

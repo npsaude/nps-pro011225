@@ -110,7 +110,8 @@ const SadtCadastro: React.FC = () => {
     <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       {/* Container principal */}
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
-        <AdminSidebar section="sadt" />
+        {/* Usa section='cadastro' para alinhar com o tipo permitido */}
+        <AdminSidebar section="cadastro" />
 
         {/* Área principal */}
         <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
