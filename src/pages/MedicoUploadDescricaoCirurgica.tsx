@@ -28,7 +28,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
-    // Aceitar imagens (para leitura automática) e PDFs (para armazenamento/consulta)
     const allowedFiles = selectedFiles.filter(
       (file) => file.type.startsWith("image/") || file.type === "application/pdf",
     );
@@ -60,7 +59,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setIsUploading(true);
     const loadingId = showLoading("Enviando arquivos da descrição cirúrgica...");
 
-    // Guardar os caminhos dos arquivos enviados para enviar à função Edge
     const uploadedFilePaths: string[] = [];
 
     try {
@@ -96,7 +94,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      // Dispara a função Edge via fetch (fire-and-forget)
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/functions";
 
@@ -133,8 +130,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   return (
     <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
-      {/* Fundo em gradiente médico, mobile-first */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#0f766e_0,#020617_55%),radial-gradient(circle_at_100%_100%,#22c55e_0,#020617_50%)] opacity-90" />
+      {/* Fundo em gradiente médico */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
         {/* Topo */}
@@ -156,7 +153,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         {/* Conteúdo */}
         <main className="flex-1 flex flex-col items-center justify-start">
-          <Card className="w-full max-w-md rounded-3xl border-emerald-500/25 bg-slate-950/80 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
+          <Card className="w-full max-w-md rounded-3xl border-emerald-500/35 bg-slate-950/85 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
@@ -166,9 +163,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </CardTitle>
               <CardDescription className="text-xs text-emerald-100/80 sm:text-sm">
                 Selecione as fotos (imagens do prontuário, laudos, relatórios)
-                e/ou PDFs relacionados à cirurgia. Atualmente, apenas imagens
-                (PNG, JPEG, GIF ou WEBP) são usadas para leitura automática; os
-                PDFs ficam armazenados para consulta.
+                e/ou PDFs relacionados à cirurgia. Imagens são usadas na leitura
+                automática; PDFs ficam armazenados para consulta.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -176,12 +172,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <label className="block text-[11px] font-medium text-emerald-100/90">
                   Arquivos da descrição cirúrgica
                 </label>
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-500/40 bg-slate-900/60 px-4 py-5 text-center">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-500/45 bg-slate-900/70 px-4 py-5 text-center">
                   <div className="mb-2 flex items-center justify-center gap-2 text-emerald-200">
                     <ImageIcon className="h-4 w-4" />
                     <FileText className="h-4 w-4" />
                   </div>
-                  <p className="text-[11px] text-emerald-100/80">
+                  <p className="text-[11px] text-emerald-100/85">
                     Toque no botão abaixo para selecionar fotos ou PDFs da
                     descrição cirúrgica.
                   </p>
@@ -196,14 +192,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       multiple
                       accept="image/*,application/pdf"
                       onChange={handleFileChange}
-                      className="cursor-pointer border-emerald-500/40 bg-slate-950/70 text-[11px] file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-white hover:file:bg-emerald-400"
+                      className="cursor-pointer border-emerald-500/45 bg-slate-950/80 text-[11px] text-emerald-100 file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-white hover:file:bg-emerald-400"
                     />
                   </div>
                 </div>
               </div>
 
               {files.length > 0 && (
-                <div className="space-y-1 rounded-2xl bg-slate-900/70 p-3 text-[11px] text-emerald-100/90">
+                <div className="space-y-1 rounded-2xl bg-slate-900/80 p-3 text-[11px] text-emerald-100/90 ring-1 ring-emerald-500/30">
                   <p className="mb-1 font-semibold">
                     Arquivos selecionados ({files.length}):
                   </p>
@@ -211,7 +207,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     {files.map((file) => (
                       <li
                         key={file.name + file.lastModified}
-                        className="truncate rounded-lg bg-slate-950/70 px-2 py-1"
+                        className="truncate rounded-lg bg-slate-950/80 px-2 py-1"
                       >
                         {file.name}
                       </li>
@@ -234,7 +230,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 </span>
               </Button>
 
-              <p className="mt-2 text-[10px] text-emerald-100/70">
+              <p className="mt-2 text-[10px] text-emerald-100/75">
                 Os arquivos serão armazenados com segurança no sistema e
                 vinculados à sua conta de médico para futura conferência e
                 faturamento. A leitura automática usa apenas as imagens

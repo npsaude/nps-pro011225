@@ -14,7 +14,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import SadtList from "@/components/sadt/SadtList";
 import { SadtResumo } from "@/components/sadt/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { showSuccess } from "@/utils/toast";
 
 const initialSadtList: SadtResumo[] = [
@@ -53,8 +59,6 @@ const SadtCadastro: React.FC = () => {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Carrega SADTs do localStorage (criadas via GPT ou cadastro) e junta com as mocks,
-  // além de garantir que tudo fique salvo em localStorage.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -109,18 +113,15 @@ const SadtCadastro: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      {/* Fundo em gradiente suave */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[#e5f0ff] via-[#f8fbff] to-[#e3eeff] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-
+    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       {/* Container principal */}
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
-        {/* Sidebar */}
-        <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:bg-slate-900/90 lg:flex">
+        {/* Sidebar admin */}
+        <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-[#0F2A43] p-4 text-slate-50 shadow-[0_18px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:flex">
           <div className="flex flex-col gap-8">
             {/* Logo */}
             <div className="flex items-center gap-3 px-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#135bec]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1D4E77]">
                 <img
                   src="/logo.jpeg"
                   alt="Logo NP Saúde Pró"
@@ -128,24 +129,24 @@ const SadtCadastro: React.FC = () => {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold leading-none text-slate-900 dark:text-slate-50">
+                <span className="text-sm font-semibold leading-none text-slate-50">
                   NP Saúde Pró
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-300">
                   Painel administrativo
                 </span>
               </div>
             </div>
 
             {/* Menu */}
-            <nav className="flex flex-col gap-1">
+            <nav className="flex flex-col gap-1 text-sm">
               {/* Home */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/50"
                 onClick={() => navigate("/admin/dashboard")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
                     <Home className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Home</span>
@@ -154,7 +155,7 @@ const SadtCadastro: React.FC = () => {
 
               {/* SADT's - ativo */}
               <button
-                className="flex items-center justify-between rounded-2xl bg-[#135bec] px-3 py-2.5 text-sm text-white shadow-md shadow-blue-500/40 transition-all"
+                className="flex items-center justify-between rounded-2xl bg-[#1D4E77] px-3 py-2.5 text-sm text-white shadow-md shadow-slate-900/50 transition-all"
                 onClick={() => navigate("/sadt/cadastro")}
               >
                 <span className="flex items-center gap-3">
@@ -167,11 +168,11 @@ const SadtCadastro: React.FC = () => {
 
               {/* Descrição Cirúrgica */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/50"
                 onClick={() => navigate("/descricao-cirurgica")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
                     <FileSignature className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Descrição Cirúrgica</span>
@@ -179,9 +180,9 @@ const SadtCadastro: React.FC = () => {
               </button>
 
               {/* Recursos */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/50">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
                     <Stethoscope className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Recursos</span>
@@ -189,38 +190,38 @@ const SadtCadastro: React.FC = () => {
               </button>
 
               {/* Cadastro com subitens */}
-              <div className="mt-1 rounded-2xl bg-slate-50/80 p-2 text-xs text-slate-500 ring-1 ring-slate-100/80 dark:bg-slate-900/70 dark:text-slate-300 dark:ring-slate-800">
+              <div className="mt-1 rounded-2xl bg-slate-900/40 p-2 text-xs text-slate-200 ring-1 ring-slate-800">
                 <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-slate-100">
                     <Users className="h-4 w-4" />
                   </span>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                  <span className="text-xs font-semibold text-slate-50">
                     Cadastro
                   </span>
                 </div>
                 <div className="mt-1 space-y-1">
                   <button
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900/60"
                     onClick={() => navigate("/cadastro/clinicas")}
                   >
                     <span className="ml-7">Clínicas</span>
                   </button>
                   <button
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900/60"
                     onClick={() => navigate("/cadastro/medicos")}
                   >
                     <span className="ml-7">Médicos</span>
                   </button>
-                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-300/80 hover:bg-slate-900/60">
                     <span className="ml-7">Planos de Saúde</span>
                   </button>
                 </div>
               </div>
 
               {/* Mensagens */}
-              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/50">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
                     <MessageCircle className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Mensagens</span>
@@ -230,13 +231,13 @@ const SadtCadastro: React.FC = () => {
                 </span>
               </button>
 
-              {/* Configurações -> navega para tela nova */}
+              {/* Configurações */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/50"
                 onClick={() => navigate("/admin/configuracoes")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
                     <Settings className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Configurações</span>
@@ -244,9 +245,9 @@ const SadtCadastro: React.FC = () => {
               </button>
 
               {/* Ajuda */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/50">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
                     <HelpCircle className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Ajuda</span>
@@ -256,8 +257,8 @@ const SadtCadastro: React.FC = () => {
           </div>
 
           {/* Logout */}
-          <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+          <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-900/60">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
               <HelpCircle className="h-4 w-4" />
             </span>
             <span>Sair</span>
@@ -265,11 +266,78 @@ const SadtCadastro: React.FC = () => {
         </aside>
 
         {/* Área principal */}
-        {/* ...restante da tela permanece igual... */}
+        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
+          {/* Header */}
+          <header className="flex items-center justify-between gap-3">
+            <div className="flex flex-col">
+              <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#E6EEF7] text-[#1D4E77] dark:bg-slate-800 dark:text-slate-100">
+                  <FileText className="h-4 w-4" />
+                </span>
+                <span>Cadastro de SADTs</span>
+              </h1>
+              <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+                Liste, crie e gerencie as guias SADT da sua operação.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center rounded-full bg-[#F5F7F9] px-3 py-1 text-sm text-slate-600 ring-1 ring-[#D9DEE3] focus-within:ring-[#1D4E77] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
+                <Search className="mr-2 h-4 w-4 text-slate-400" />
+                <span className="h-7 w-40 bg-transparent text-xs text-slate-800 dark:text-slate-50 sm:w-52 sm:text-sm">
+                  SADTs cadastradas
+                </span>
+              </div>
+
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E6EEF7] text-slate-600 shadow-sm ring-1 ring-[#D9DEE3]/70 transition-colors hover:bg-[#D9DEE3] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                <Bell className="h-4 w-4" />
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1">
+            <SadtList
+              items={sadtList}
+              onNewClick={handleNovaSadt}
+              onView={handleViewSadt}
+              onEdit={handleEditSadt}
+              onDelete={handleDeleteSadt}
+            />
+          </main>
+        </div>
       </div>
 
       {/* Modal de visualização */}
-      {/* ...restante da tela permanece igual... */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalhes da SADT</DialogTitle>
+            <DialogDescription>
+              Visualize as principais informações da guia SADT selecionada.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSadt && (
+            <div className="mt-2 space-y-2 text-xs sm:text-sm">
+              <p>
+                <span className="font-semibold">Nº Guia Principal: </span>
+                {selectedSadt.numeroGuiaPrincipal}
+              </p>
+              <p>
+                <span className="font-semibold">Data Autorização: </span>
+                {selectedSadt.dataAutorizacao}
+              </p>
+              <p>
+                <span className="font-semibold">Profissional Solicitante: </span>
+                {selectedSadt.nomeProfissionalSolicitante}
+              </p>
+              <p>
+                <span className="font-semibold">Operadora: </span>
+                {selectedSadt.identificacaoOperadora}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

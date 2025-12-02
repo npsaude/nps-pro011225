@@ -12,8 +12,6 @@ import {
 const DashboardMedico = () => {
   const navigate = useNavigate();
 
-  // Por enquanto usamos valores estáticos de exemplo.
-  // Depois podemos substituir por dados reais do banco.
   const receitaTotalAno = "R$ 485.200,00";
   const numeroCirurgiasAno = "96";
   const totalAReceber = "R$ 72.500,00";
@@ -22,8 +20,8 @@ const DashboardMedico = () => {
 
   return (
     <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
-      {/* Fundo em gradiente médico, mobile-first */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#0f766e_0,#020617_55%),radial-gradient(circle_at_100%_100%,#22c55e_0,#020617_50%)] opacity-90" />
+      {/* Fundo em gradiente médico */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
         {/* Topo */}
@@ -74,7 +72,7 @@ const DashboardMedico = () => {
                   <Upload className="h-4 w-4" />
                 </span>
                 <div className="flex flex-col">
-                  <span>Enviar Descrição Cirurgica</span>
+                  <span>Enviar Descrição Cirúrgica</span>
                   <span className="text-[11px] font-normal text-emerald-100/90">
                     Envie fotos e arquivos da descrição cirúrgica para análise.
                   </span>
@@ -108,9 +106,9 @@ const DashboardMedico = () => {
             </button>
           </section>
 
-          {/* Cards de indicadores - mobile first */}
+          {/* Cards de indicadores */}
           <section className="space-y-3">
-            {/* Linha 1: Receita total + Nº cirurgias */}
+            {/* Linha 1 */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
@@ -147,7 +145,7 @@ const DashboardMedico = () => {
               </div>
             </div>
 
-            {/* Linha 2: Total a receber + Valor em glosa */}
+            {/* Linha 2 */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
@@ -166,7 +164,7 @@ const DashboardMedico = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-red-500/30">
+              <div className="flex items-center justify-between rounded-2xl bg-slate-950/70 px-4 py-3 shadow-md ring-1 ring-rose-500/30">
                 <div className="flex flex-col">
                   <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-rose-200/80">
                     Valor em glosa
@@ -184,7 +182,7 @@ const DashboardMedico = () => {
               </div>
             </div>
 
-            {/* Linha 3: Percentual de glosa recuperado */}
+            {/* Linha 3 */}
             <div className="flex items-center justify-between rounded-2xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-400/40">
               <div className="flex flex-col">
                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">

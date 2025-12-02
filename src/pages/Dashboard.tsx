@@ -118,21 +118,21 @@ const activities = [
     tipo: "Nova SADT",
     descricao: "SADT criada para o médico Maria Silva",
     tempo: "Há 5 minutos",
-    color: "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+    color: "bg-emerald-500/10 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300",
   },
   {
     id: 2,
     tipo: "Lembrete",
     descricao: "Cobrança enviada ao convênio Vida Mais",
     tempo: "Hoje, 10:23",
-    color: "bg-amber-500/15 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+    color: "bg-amber-500/10 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300",
   },
   {
     id: 3,
     tipo: "Glosa",
     descricao: "Nova glosa recebida do convênio Bem Estar",
     tempo: "Ontem, 18:04",
-    color: "bg-rose-500/15 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+    color: "bg-rose-500/10 text-rose-800 dark:bg-rose-500/10 dark:text-rose-300",
   },
 ];
 
@@ -177,18 +177,15 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      {/* Fundo em gradiente suave */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[#e5f0ff] via-[#f8fbff] to-[#e3eeff] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-
+    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       {/* Container principal */}
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
-        {/* Sidebar */}
-        <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:bg-slate-900/90 lg:flex">
+        {/* Sidebar com Azul Carbônico */}
+        <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-[#0F2A43] p-4 text-slate-50 shadow-[0_18px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:flex">
           <div className="flex flex-col gap-8">
             {/* Logo */}
             <div className="flex items-center gap-3 px-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#135bec]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1D4E77]">
                 <img
                   src="/logo.jpeg"
                   alt="Logo NP Saúde Pró"
@@ -196,19 +193,19 @@ const Dashboard = () => {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold leading-none text-slate-900 dark:text-slate-50">
+                <span className="text-sm font-semibold leading-none text-slate-50">
                   NP Saúde Pró
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-300">
                   Painel administrativo
                 </span>
               </div>
             </div>
 
             {/* Menu */}
-            <nav className="flex flex-col gap-1">
-              {/* Home */}
-              <button className="flex items-center justify-between rounded-2xl bg-[#135bec] px-3 py-2.5 text-sm text-white shadow-md shadow-blue-500/40 transition-all">
+            <nav className="flex flex-col gap-1 text-sm">
+              {/* Home ativo */}
+              <button className="flex items-center justify-between rounded-2xl bg-[#1D4E77] px-3 py-2.5 text-white shadow-md shadow-slate-900/50 transition-all">
                 <span className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white">
                     <Home className="h-4 w-4" />
@@ -217,13 +214,13 @@ const Dashboard = () => {
                 </span>
               </button>
 
-              {/* SADT's */}
+              {/* SADTs */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/40"
                 onClick={() => navigate("/sadt/cadastro")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100">
                     <FileText className="h-4 w-4" />
                   </span>
                   <span className="font-medium">SADT&apos;s</span>
@@ -232,11 +229,11 @@ const Dashboard = () => {
 
               {/* Descrição Cirúrgica */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/40"
                 onClick={() => navigate("/descricao-cirurgica")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100">
                     <FileSignature className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Descrição Cirúrgica</span>
@@ -244,48 +241,48 @@ const Dashboard = () => {
               </button>
 
               {/* Recursos */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/40">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100">
                     <Stethoscope className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Recursos</span>
                 </span>
               </button>
 
-              {/* Cadastro com subitens */}
-              <div className="mt-1 rounded-2xl bg-slate-50/80 p-2 text-xs text-slate-500 ring-1 ring-slate-100/80 dark:bg-slate-900/70 dark:text-slate-300 dark:ring-slate-800">
+              {/* Cadastro */}
+              <div className="mt-1 rounded-2xl bg-slate-900/40 p-2 text-xs text-slate-200 ring-1 ring-slate-800">
                 <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-slate-100">
                     <Users className="h-4 w-4" />
                   </span>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                  <span className="text-xs font-semibold text-slate-50">
                     Cadastro
                   </span>
                 </div>
                 <div className="mt-1 space-y-1">
                   <button
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900/60"
                     onClick={() => navigate("/cadastro/clinicas")}
                   >
                     <span className="ml-7">Clínicas</span>
                   </button>
                   <button
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900/60"
                     onClick={() => navigate("/cadastro/medicos")}
                   >
                     <span className="ml-7">Médicos</span>
                   </button>
-                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                  <button className="flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs text-slate-300/80 hover:bg-slate-900/60">
                     <span className="ml-7">Planos de Saúde</span>
                   </button>
                 </div>
               </div>
 
               {/* Mensagens */}
-              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/40">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100">
                     <MessageCircle className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Mensagens</span>
@@ -297,11 +294,11 @@ const Dashboard = () => {
 
               {/* Configurações */}
               <button
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/40"
                 onClick={() => navigate("/admin/configuracoes")}
               >
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100">
                     <Settings className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Configurações</span>
@@ -309,9 +306,9 @@ const Dashboard = () => {
               </button>
 
               {/* Ajuda */}
-              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+              <button className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-slate-200 transition-all hover:bg-slate-900/40">
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100">
                     <HelpCircle className="h-4 w-4" />
                   </span>
                   <span className="font-medium">Ajuda</span>
@@ -321,30 +318,30 @@ const Dashboard = () => {
           </div>
 
           {/* Logout */}
-          <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+          <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-900/60">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
               <HelpCircle className="h-4 w-4" />
             </span>
             <span>Sair</span>
           </button>
         </aside>
 
-        {/* Área principal */}
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-transparent lg:bg-white/80 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl dark:lg:bg-slate-900/90">
+        {/* Área principal clara */}
+        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
           {/* Header */}
           <header className="flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
                 Dashboard
               </h1>
-              <p className="text-xs text-slate-400 sm:text-sm">
+              <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
                 Visão geral das SADTs, descrições cirúrgicas e faturamento.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               {/* Campo de busca */}
-              <div className="hidden items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200/80 focus-within:ring-[#135bec] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
+              <div className="hidden items-center rounded-full bg-[#F5F7F9] px-3 py-1 text-sm text-slate-600 ring-1 ring-[#D9DEE3] focus-within:ring-[#1D4E77] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
                 <Search className="mr-2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
@@ -353,11 +350,11 @@ const Dashboard = () => {
                 />
               </div>
 
-              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-sm ring-1 ring-slate-200/70 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E6EEF7] text-slate-600 shadow-sm ring-1 ring-[#D9DEE3]/70 transition-colors hover:bg-[#D9DEE3] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
                 <Bell className="h-4 w-4" />
               </button>
 
-              <div className="flex items-center gap-2 rounded-full bg-slate-100/70 px-2 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:px-3">
+              <div className="flex items-center gap-2 rounded-full bg-[#F5F7F9] px-2 py-1.5 text-xs shadow-sm ring-1 ring-[#D9DEE3] dark:bg-slate-800 dark:ring-slate-700 sm:px-3">
                 <img
                   src="/perfil.jpeg"
                   alt="Foto de Jurandy Pessoa"
@@ -377,7 +374,7 @@ const Dashboard = () => {
 
           {/* Filtros por clínica e médico */}
           <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-            <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+            <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
                   Clínica
@@ -405,7 +402,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+            <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
                   Médico
@@ -443,7 +440,7 @@ const Dashboard = () => {
                 return (
                   <Card
                     key={metric.title}
-                    className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90"
+                    className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90"
                   >
                     <CardContent className="flex items-center justify-between gap-3 p-3 sm:p-4">
                       <div className="space-y-1">
@@ -453,7 +450,7 @@ const Dashboard = () => {
                         <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
                           {metric.value}
                         </p>
-                        <p className="text-[11px] text-emerald-600 dark:text-emerald-300">
+                        <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
                           {metric.helper}
                         </p>
                       </div>
@@ -470,7 +467,7 @@ const Dashboard = () => {
 
             {/* Gráfico + atividades */}
             <section className="grid gap-4 lg:grid-cols-3">
-              <Card className="lg:col-span-2 border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+              <Card className="lg:col-span-2 border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                     SADTs enviadas x pagas x retorno de glosa
@@ -484,24 +481,24 @@ const Dashboard = () => {
                     <ComposedChart data={yearlySadtData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        stroke="#e2e8f0"
+                        stroke="#E2E8F0"
                         vertical={false}
                       />
                       <XAxis
                         dataKey="mes"
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fontSize: 11, fill: "#64748b" }}
+                        tick={{ fontSize: 11, fill: "#64748B" }}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fontSize: 11, fill: "#64748b" }}
+                        tick={{ fontSize: 11, fill: "#64748B" }}
                       />
                       <RechartsTooltip
                         contentStyle={{
                           borderRadius: 12,
-                          borderColor: "#e2e8f0",
+                          borderColor: "#E2E8F0",
                           fontSize: 11,
                         }}
                       />
@@ -532,7 +529,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+              <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                     Atividades recentes
@@ -562,7 +559,7 @@ const Dashboard = () => {
 
             {/* Tabela de SADTs recentes */}
             <section>
-              <Card className="border-slate-100 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90">
+              <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                     SADTs recentes
@@ -574,7 +571,7 @@ const Dashboard = () => {
                 <CardContent className="overflow-x-auto pt-0">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-b border-slate-100 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                      <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                         <TableHead>Protocolo</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Médico</TableHead>
@@ -586,7 +583,7 @@ const Dashboard = () => {
                       {recentSadt.map((row) => (
                         <TableRow
                           key={row.protocolo}
-                          className="border-b border-slate-50 text-xs hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/60"
+                          className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60"
                         >
                           <TableCell className="font-medium text-slate-900 dark:text-slate-50">
                             {row.protocolo}

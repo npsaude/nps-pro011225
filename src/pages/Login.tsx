@@ -121,14 +121,11 @@ const Login = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      {/* Fundo com gradiente suave, mais clean */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-[#e5f0ff] via-[#f8fbff] to-[#e3eeff] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
         {/* Logo / título */}
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#135bec] shadow-sm shadow-blue-500/30">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1D4E77] shadow-sm shadow-slate-400/40">
             <img
               src="/logo.jpeg"
               alt="Logo NP Saúde Pró"
@@ -145,8 +142,8 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Card de login mais clean */}
-        <div className="w-full rounded-2xl bg-white/90 px-6 py-6 text-slate-900 shadow-sm ring-1 ring-slate-100/80 backdrop-blur-sm dark:bg-slate-900/95 dark:ring-slate-800 sm:px-7 sm:py-7">
+        {/* Card de login com paleta clara */}
+        <div className="w-full rounded-2xl bg-white/95 px-6 py-6 text-slate-900 shadow-[0_18px_40px_rgba(15,23,42,0.10)] ring-1 ring-[#D9DEE3] backdrop-blur-sm dark:bg-slate-900/95 dark:ring-slate-800 sm:px-7 sm:py-7">
           <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">
             ADMINISTRADOR
           </p>
@@ -164,14 +161,14 @@ const Login = () => {
               <label className="block text-xs font-semibold text-slate-600">
                 Usuário ou e-mail
               </label>
-              <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
-                <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-300">
+              <div className="flex items-center rounded-xl bg-[#F5F7F9] ring-1 ring-[#D9DEE3] focus-within:ring-2 focus-within:ring-[#1D4E77]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-[#D9DEE3] text-slate-500">
                   <Mail className="h-4 w-4" />
                 </span>
                 <Input
                   type="email"
                   placeholder="Insira seu usuário ou e-mail"
-                  className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
+                  className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -184,14 +181,14 @@ const Login = () => {
               <label className="block text-xs font-semibold text-slate-600">
                 Senha
               </label>
-              <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70 dark:bg-slate-900 dark:ring-slate-700">
-                <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400 dark:border-slate-800 dark:text-slate-300">
+              <div className="flex items-center rounded-xl bg-[#F5F7F9] ring-1 ring-[#D9DEE3] focus-within:ring-2 focus-within:ring-[#1D4E77]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-[#D9DEE3] text-slate-500">
                   <Lock className="h-4 w-4" />
                 </span>
                 <Input
                   type="password"
                   placeholder="Insira sua senha"
-                  className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-500"
+                  className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
                   required
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
@@ -207,7 +204,7 @@ const Login = () => {
               </label>
               <button
                 type="button"
-                className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-[#135bec] hover:underline"
+                className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-[#1D4E77] hover:underline"
                 onClick={handleForgotPassword}
                 disabled={resetLoading}
               >
@@ -220,7 +217,7 @@ const Login = () => {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#135bec] text-sm font-semibold text-white shadow-sm shadow-blue-500/40 transition-transform hover:translate-y-0.5 hover:bg-[#135bec]/90 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1D4E77] text-sm font-semibold text-white shadow-md shadow-slate-400/40 transition-transform hover:translate-y-0.5 hover:bg-[#163b58] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <ArrowRightCircle className="h-4 w-4" />
                 <span>
@@ -231,7 +228,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowRegister((prev) => !prev)}
-                className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 underline-offset-2 hover:text-[#135bec] hover:underline"
+                className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 underline-offset-2 hover:text-[#C17A47] hover:underline"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 <span>
@@ -245,8 +242,8 @@ const Login = () => {
 
           {/* Bloco de criação de usuário admin */}
           {showRegister && (
-            <div className="mt-4 rounded-xl bg-slate-50 px-3 py-3 text-xs ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
-              <p className="mb-2 text-[11px] font-semibold text-slate-600 dark:text-slate-200">
+            <div className="mt-4 rounded-xl bg-[#F5F7F9] px-3 py-3 text-xs ring-1 ring-[#D9DEE3] dark:bg-slate-900 dark:ring-slate-700">
+              <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
                 Criar novo usuário administrador
               </p>
               <form className="space-y-2.5" onSubmit={handleCreateAccount}>
@@ -258,7 +255,7 @@ const Login = () => {
                     type="text"
                     value={registerNome}
                     onChange={(e) => setRegisterNome(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-8 border-[#D9DEE3] bg-white text-xs placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                     placeholder="Digite o nome"
                   />
                 </div>
@@ -270,7 +267,7 @@ const Login = () => {
                     type="email"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-8 border-[#D9DEE3] bg-white text-xs placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                     placeholder="email@exemplo.com"
                   />
                 </div>
@@ -283,7 +280,7 @@ const Login = () => {
                       type="password"
                       value={registerSenha}
                       onChange={(e) => setRegisterSenha(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-8 border-[#D9DEE3] bg-white text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                     />
                   </div>
                   <div className="space-y-1">
@@ -296,7 +293,7 @@ const Login = () => {
                       onChange={(e) =>
                         setRegisterSenhaConfirm(e.target.value)
                       }
-                      className="h-8 text-xs"
+                      className="h-8 border-[#D9DEE3] bg-white text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                     />
                   </div>
                 </div>
@@ -305,7 +302,7 @@ const Login = () => {
                   <Button
                     type="submit"
                     disabled={registerLoading}
-                    className="h-8 w-full rounded-full bg-slate-900 text-[11px] font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                    className="h-8 w-full rounded-full bg-[#0F2A43] text-[11px] font-semibold text-white hover:bg-[#1D4E77] dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                   >
                     {registerLoading ? "Criando..." : "Criar administrador"}
                   </Button>
@@ -315,12 +312,12 @@ const Login = () => {
           )}
 
           {/* Separador e link para médico */}
-          <div className="mt-5 border-t border-slate-100 pt-4 text-center text-xs text-slate-400 dark:border-slate-800">
+          <div className="mt-5 border-t border-[#D9DEE3] pt-4 text-center text-xs text-slate-400 dark:border-slate-800">
             <p className="mb-2">Você é médico e deseja acessar suas SADTs?</p>
             <Button
               type="button"
               variant="outline"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border-[#0f766e]/25 bg-teal-50/80 px-4 text-xs font-semibold text-[#0f766e] shadow-sm hover:bg-teal-100 dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border-[#1F8A70]/30 bg-[#E6EEF7] px-4 text-xs font-semibold text-[#1F8A70] shadow-sm hover:bg-[#D9F1E7] dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
               onClick={() => navigate("/login-medico")}
             >
               <Stethoscope className="h-4 w-4" />
