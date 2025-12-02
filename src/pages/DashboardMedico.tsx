@@ -25,7 +25,7 @@ const DashboardMedico = () => {
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
         {/* Topo */}
-        <header className="mb-5 flex items-center justify-between gap-3">
+        <header className="mb-4 flex items-center justify-between gap-3">
           <button
             type="button"
             className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur"
@@ -42,12 +42,12 @@ const DashboardMedico = () => {
         </header>
 
         {/* Cabeçalho do dashboard */}
-        <section className="mb-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 shadow-md shadow-emerald-400/40">
-              <FileHeart className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex flex-col">
+        <section className="mb-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-emerald-100 sm:text-base">
+              Olá, Adriano.
+            </p>
+            <div className="space-y-0.5">
               <h1 className="text-lg font-semibold leading-tight text-slate-50 sm:text-xl">
                 Visão geral das suas cirurgias
               </h1>
@@ -60,28 +60,28 @@ const DashboardMedico = () => {
 
         {/* Conteúdo principal */}
         <main className="flex-1">
-          {/* CTA principal */}
+          {/* CTA principal: Enviar Descrição Cirúrgica */}
           <section className="mb-4">
             <button
               type="button"
-              className="flex w-full items-center justify-between rounded-2xl bg-emerald-500 px-4 py-3 text-left text-sm font-semibold text-white shadow-lg shadow-emerald-500/40 transition-transform hover:translate-y-0.5"
+              className="flex w-full items-center justify-between rounded-2xl bg-emerald-500 px-4 py-3 text-left text-sm font-semibold text-white shadow-[0_18px_50px_rgba(16,185,129,0.6)] transition-transform hover:translate-y-0.5"
               onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600/70">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600/80">
                   <Upload className="h-4 w-4" />
                 </span>
                 <div className="flex flex-col">
                   <span>Enviar Descrição Cirúrgica</span>
                   <span className="text-[11px] font-normal text-emerald-100/90">
-                    Envie fotos e arquivos da descrição cirúrgica para análise.
+                    Envie fotos e arquivos para análise.
                   </span>
                 </div>
               </div>
             </button>
           </section>
 
-          {/* Acompanhamento / menu simples */}
+          {/* Acompanhamento simples */}
           <section className="mb-5">
             <button
               type="button"
@@ -119,7 +119,7 @@ const DashboardMedico = () => {
                     {receitaTotalAno}
                   </span>
                   <span className="mt-1 text-[11px] text-emerald-100/70">
-                    Considerando todos os procedimentos cirúrgicos lançados.
+                    Considerando todos os procedimentos lançados.
                   </span>
                 </div>
                 <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
@@ -192,7 +192,8 @@ const DashboardMedico = () => {
                   {percentualGlosaRecuperado}
                 </span>
                 <span className="mt-1 text-[11px] text-emerald-100/80">
-                  Percentual do valor glosado que já foi revertido em pagamento.
+                  Percentual do valor glosado que já foi revertido em
+                  pagamento.
                 </span>
               </div>
               <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
@@ -205,8 +206,8 @@ const DashboardMedico = () => {
           <section className="mt-4 border-t border-emerald-500/20 pt-3 text-[11px] text-emerald-100/80">
             <p>
               Os valores exibidos são um resumo financeiro das suas cirurgias
-              no ano. Em breve, você poderá filtrar por período, convênio e tipo
-              de procedimento.
+              no ano. Em breve, você poderá filtrar por período, convênio e
+              tipo de procedimento.
             </p>
           </section>
         </main>

@@ -48,7 +48,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         .maybeSingle();
 
       if (!error && data?.nome) {
-        // Usa apenas o primeiro nome para deixar mais pessoal
         const primeiroNome = (data.nome as string).split(" ")[0];
         setMedicoNome(primeiroNome);
       }
@@ -82,14 +81,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     setFiles(allowedFiles);
-  };
-
-  const handleGoToStep2 = () => {
-    if (files.length === 0) {
-      showError("Selecione pelo menos um arquivo para continuar.");
-      return;
-    }
-    setStep(2);
+    setStep(2); // assim que selecionar arquivos, avança para a etapa de revisão
   };
 
   const handleUpload = async () => {
@@ -136,6 +128,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
+      // Chama a edge function que processa a descrição cirúrgica
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/functions";
 
@@ -172,8 +165,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  const progressWidth = step === 1 ? "50%" : "100%";
-
   const saudacao = medicoNome ? `Olá, ${medicoNome}.` : "Olá, médico.";
 
   const handleNovaDescricao = () => {
@@ -182,18 +173,29 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setView("upload");
   };
 
+  const totalArquivos = files.length;
+  const arquivosLabel =
+    totalArquivos === 0
+      ? "Nenhum arquivo"
+      : totalArquivos === 1
+      ? "1 arquivo"
+      : `${totalArquivos} arquivos`;
+
+  // Auxiliar simples para distinguir ícone/label
+  const isImage = (file: File) => file.type.startsWith("image/");
+
   return (
     <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
       {/* Fundo em gradiente médico */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {/* PRIMEIRA LINHA - MOBILE FIRST */}
+        {/* Saudação no topo */}
         <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
           {saudacao}
         </p>
 
-        {/* Topo */}
+        {/* Cabeçalho simples */}
         <header className="mb-5 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -210,274 +212,164 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           </div>
         </header>
 
-        {/* Conteúdo */}
+        {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
-          {view === "upload" ? (
-            <Card className="w-full max-w-xl rounded-3xl border-emerald-500/35 bg-slate-950/90 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
-                      <Upload className="h-4 w-4" />
-                    </span>
-                    <span>Enviar Descrição Cirúrgica</span>
-                  </div>
-                  {files.length > 0 && (
-                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-medium text-emerald-200 ring-1 ring-emerald-500/30">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      {files.length} arquivo(s)
-                    </span>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-xs text-emerald-100/80 sm:text-sm">
-                  Siga os passos para selecionar as imagens e/ou PDFs da descrição
-                  cirúrgica e enviar com segurança para o sistema.
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-5 text-xs sm:text-sm">
-                {/* Barra de progresso de passos */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[11px] text-emerald-100/80">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                          step === 1
-                            ? "bg-emerald-500 text-white"
-                            : "bg-emerald-900 text-emerald-200"
-                        }`}
-                      >
-                        1
-                      </span>
-                      <span>Selecionar arquivos</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                          step === 2
-                            ? "bg-emerald-500 text-white"
-                            : "bg-emerald-900 text-emerald-200"
-                        }`}
-                      >
-                        2
-                      </span>
-                      <span>Revisar e enviar</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-slate-900/80">
-                    <div
-                      className="h-1.5 rounded-full bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-500 transition-all duration-500"
-                      style={{ width: progressWidth }}
-                    />
-                  </div>
-                </div>
-
-                {/* Passo 1: Selecionar arquivos */}
-                {step === 1 && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <h2 className="text-sm font-semibold text-emerald-100">
-                        Passo 1 — selecione os arquivos
-                      </h2>
-                      <p className="text-[11px] text-emerald-100/80">
-                        Envie fotos (PNG, JPEG, GIF, WEBP) ou PDFs da descrição
-                        cirúrgica, laudos e relatórios. Imagens serão usadas na
-                        leitura automática; PDFs serão armazenados para consulta.
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-dashed border-emerald-500/45 bg-slate-900/80 px-4 py-5 text-center">
-                      <div className="mb-3 flex items-center justify-center gap-2 text-emerald-200">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950/80">
-                          <ImageIcon className="h-4 w-4" />
+          {view === "upload" && (
+            <>
+              {/* Etapa 1 - Nova Descrição */}
+              {step === 1 && (
+                <Card className="w-full max-w-xs rounded-3xl border-emerald-500/35 bg-slate-950/90 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
+                  <CardHeader className="pb-3 text-center">
+                    <CardTitle className="text-base sm:text-lg">
+                      Nova Descrição
+                    </CardTitle>
+                    <CardDescription className="text-xs text-emerald-100/80 sm:text-sm">
+                      Toque para adicionar fotos ou documentos da cirurgia.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5 text-xs sm:text-sm">
+                    <div className="flex justify-center">
+                      <label className="flex h-40 w-40 cursor-pointer flex-col items-center justify-center rounded-[32px] bg-gradient-to-b from-emerald-500 to-emerald-400 text-center text-sm font-semibold text-white shadow-[0_25px_60px_rgba(16,185,129,0.7)]">
+                        <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600/80 shadow-inner">
+                          <Upload className="h-6 w-6" />
                         </span>
-                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950/80">
-                          <FileText className="h-4 w-4" />
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-emerald-100">
-                        Clique no botão abaixo para selecionar as fotos e/ou PDFs
-                        da descrição cirúrgica.
-                      </p>
-                      <p className="mt-1 text-[10px] text-emerald-200/75">
-                        Imagens são usadas na leitura automática; PDFs ficam
-                        armazenados para conferência futura.
-                      </p>
-
-                      <div className="mt-4 flex justify-center">
-                        <label className="inline-flex cursor-pointer items-center">
-                          <Input
-                            type="file"
-                            multiple
-                            accept="image/*,application/pdf"
-                            onChange={handleFileChange}
-                            className="hidden"
-                          />
-                          <span className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[11px] font-semibold text-white shadow-lg shadow-emerald-500/40 transition hover:bg-emerald-400">
-                            <Upload className="h-3.5 w-3.5" />
-                            Escolher arquivos
-                          </span>
-                        </label>
-                      </div>
-
-                      {files.length > 0 && (
-                        <p className="mt-3 text-[11px] text-emerald-200">
-                          {files.length} arquivo(s) selecionado(s). Clique em
-                          &quot;Continuar&quot; para revisar e enviar.
-                        </p>
-                      )}
+                        <span>Nova Descrição</span>
+                        <Input
+                          type="file"
+                          multiple
+                          accept="image/*,application/pdf"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
 
-                    {files.length > 0 && (
-                      <div className="space-y-1 rounded-2xl bg-slate-900/90 p-3 text-[11px] text-emerald-100/90 ring-1 ring-emerald-500/30">
-                        <p className="mb-1 font-semibold">
-                          Arquivos selecionados ({files.length}):
-                        </p>
-                        <ul className="max-h-28 space-y-1 overflow-y-auto text-[11px]">
-                          {files.map((file) => (
-                            <li
-                              key={file.name + file.lastModified}
-                              className="truncate rounded-lg bg-slate-950/80 px-2 py-1"
-                            >
+                    <p className="mt-1 text-center text-[10px] text-emerald-100/80">
+                      Você pode enviar fotos da guia, laudos ou PDFs completos
+                      da cirurgia.
+                    </p>
+
+                    <div className="mt-6 flex items-center justify-center">
+                      <span className="rounded-full bg-slate-900/80 px-4 py-1 text-[10px] text-emerald-100/80 ring-1 ring-slate-700">
+                        Seus dados são criptografados ponta a ponta.
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Etapa 2 - Revisão dos arquivos */}
+              {step === 2 && (
+                <Card className="w-full max-w-md rounded-3xl border-emerald-500/35 bg-slate-950/90 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
+                  <CardHeader className="pb-2">
+                    <div className="mb-2 flex items-center justify-between text-xs text-emerald-100/90">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/80 px-3 py-1 text-[11px] text-emerald-100 ring-1 ring-slate-700/80 hover:bg-slate-900/80"
+                        onClick={() => setStep(1)}
+                      >
+                        <ArrowLeft className="h-3 w-3" />
+                        <span>Voltar</span>
+                      </button>
+                      <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-200 ring-1 ring-emerald-500/40">
+                        {arquivosLabel}
+                      </span>
+                    </div>
+                    <CardTitle className="text-sm sm:text-base">
+                      Revisão
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4 pt-1 text-xs sm:text-sm">
+                    <div className="grid grid-cols-2 gap-3">
+                      {files.map((file) => (
+                        <div
+                          key={file.name + file.lastModified}
+                          className="flex flex-col items-stretch rounded-2xl bg-slate-900 ring-1 ring-slate-700/80"
+                        >
+                          <div className="relative flex h-32 items-center justify-center rounded-2xl bg-slate-900/90">
+                            {isImage(file) ? (
+                              <ImageIcon className="h-10 w-10 text-emerald-300/80" />
+                            ) : (
+                              <FileText className="h-10 w-10 text-emerald-300/80" />
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between px-2.5 py-2">
+                            <span className="line-clamp-2 text-[10px] text-emerald-100">
                               {file.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <Button
-                      type="button"
-                      onClick={handleGoToStep2}
-                      disabled={files.length === 0}
-                      className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-500/40 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <span>Continuar para revisão</span>
-                    </Button>
-                  </div>
-                )}
-
-                {/* Passo 2: Revisar e enviar */}
-                {step === 2 && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <h2 className="text-sm font-semibold text-emerald-100">
-                        Passo 2 — revisar e enviar
-                      </h2>
-                      <p className="text-[11px] text-emerald-100/80">
-                        Confira os arquivos selecionados abaixo e clique em
-                        &quot;Enviar arquivos&quot; para armazenar com segurança e
-                        iniciar a leitura automática.
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-900/90 p-4 ring-1 ring-emerald-500/30">
-                      <p className="flex items-center gap-2 text-[11px] font-semibold text-emerald-100">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </span>
-                        Arquivos selecionados
-                      </p>
-                      <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-[11px] text-emerald-50/95">
-                        {files.map((file) => (
-                          <li
-                            key={file.name + file.lastModified}
-                            className="flex items-center justify-between rounded-lg bg-slate-950/80 px-2 py-1"
-                          >
-                            <span className="truncate">{file.name}</span>
-                            <span className="ml-2 text-[10px] text-emerald-300/80">
-                              {(file.size / 1024).toFixed(0)} KB
                             </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                            <span className="ml-2 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-emerald-200">
+                              {isImage(file) ? "JPEG" : "PDF"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
 
-                    <div className="space-y-2 text-[10px] text-emerald-200/80">
-                      <p>
-                        • Os arquivos serão armazenados com segurança e vinculados
-                        à sua conta de médico.
-                      </p>
-                      <p>
-                        • A leitura automática utiliza apenas as imagens
-                        suportadas; PDFs permanecem disponíveis para conferência e
-                        faturamento.
-                      </p>
+                      {/* Slot para adicionar mais arquivos */}
+                      <label className="flex h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-600/80 bg-slate-900/60 text-[11px] text-emerald-100/80">
+                        <span className="mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-slate-800/80 text-emerald-300">
+                          +
+                        </span>
+                        <span>Adicionar</span>
+                        <Input
+                          type="file"
+                          multiple
+                          accept="image/*,application/pdf"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
 
                     <Button
                       type="button"
                       onClick={handleUpload}
                       disabled={isUploading || files.length === 0}
-                      className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-500/40 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                      className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 text-xs font-semibold text-white shadow-[0_18px_45px_rgba(16,185,129,0.7)] hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       <Upload className="h-4 w-4" />
                       <span>
-                        {isUploading
-                          ? "Enviando arquivos..."
-                          : "Enviar arquivos selecionados"}
+                        {isUploading ? "Enviando..." : "Enviar Agora"}
                       </span>
                     </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isUploading}
-                      onClick={() => setStep(1)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full border-emerald-500/40 bg-transparent text-xs font-semibold text-emerald-200 hover:bg-slate-900/70"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      <span>Voltar e alterar arquivos</span>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="w-full max-w-xl rounded-3xl border-emerald-500/35 bg-slate-950/90 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </span>
-                  <span>Descrição cirúrgica enviada</span>
+          {/* Tela de sucesso */}
+          {view === "success" && (
+            <Card className="w-full max-w-md rounded-3xl border-emerald-500/35 bg-slate-950/90 text-slate-50 shadow-[0_18px_60px_rgba(6,95,70,0.75)]">
+              <CardHeader className="pb-3 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.9)]">
+                  <CheckCircle2 className="h-9 w-9 text-white" />
+                </div>
+                <CardTitle className="text-lg font-semibold sm:text-xl">
+                  Enviado com sucesso!
                 </CardTitle>
-                <CardDescription className="text-xs text-emerald-100/80 sm:text-sm">
-                  Seus arquivos foram recebidos com sucesso e a análise automática já foi iniciada.
+                <CardDescription className="mt-1 text-xs text-emerald-100/85 sm:text-sm">
+                  Sua descrição cirúrgica já está sendo processada pelo
+                  sistema.
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-5 text-xs sm:text-sm">
-                <div className="rounded-2xl bg-slate-900/90 p-4 ring-1 ring-emerald-500/30">
-                  <p className="text-[11px] text-emerald-100/90">
-                    Você pode acompanhar o resultado da leitura e os registros estruturados
-                    na área de &quot;Minhas descrições cirúrgicas&quot; do portal.
-                  </p>
-                  <p className="mt-2 text-[11px] text-emerald-200/80">
-                    Deseja enviar uma nova descrição ou voltar ao menu inicial do médico?
-                  </p>
-                </div>
+              <CardContent className="space-y-4 pb-6 text-xs sm:text-sm">
+                <Button
+                  type="button"
+                  onClick={handleNovaDescricao}
+                  className="flex h-11 w-full items-center justify-center rounded-full bg-emerald-500 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(16,185,129,0.7)] hover:bg-emerald-400"
+                >
+                  Nova Descrição
+                </Button>
 
-                <div className="space-y-3">
-                  <Button
-                    type="button"
-                    onClick={handleNovaDescricao}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-500/40 hover:bg-emerald-400"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>Enviar outra Descrição Cirúrgica</span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/medico/dashboard")}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border-emerald-500/40 bg-transparent text-xs font-semibold text-emerald-200 hover:bg-slate-900/70"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    <span>Voltar ao menu</span>
-                  </Button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/medico/dashboard")}
+                  className="w-full text-center text-xs font-semibold text-emerald-100 underline-offset-2 hover:underline"
+                >
+                  Voltar ao Dashboard
+                </button>
               </CardContent>
             </Card>
           )}
