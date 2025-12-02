@@ -19,7 +19,7 @@ export async function loginWithRole(params: {
   password: string;
   allowedRole: AllowedRole;
 }): Promise<LoginResult> {
-  const { email, password } = params;
+  const { email, password, allowedRole } = params;
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -55,9 +55,32 @@ export async function loginWithRole(params: {
 
   const typedUser = systemUser as DbSystemUser | null;
 
+  // Garante que exista um registro em usuarios_sistema
+  if (!typedUser) {
+    throw new Error(
+      "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
+    );
+  }
+
+  // Garante que o papel do usuário é o permitido para essa área
+  if (typedUser.regra !== allowedRole) {
+    // Encerra sessão para evitar sessão ativa em área errada
+    await supabase.auth.signOut();
+
+    if (allowedRole === "MEDICO") {
+      throw new Error(
+        "Esta área é exclusiva para médicos. Utilize o acesso administrativo ou peça ao administrador para ajustar seu perfil.",
+      );
+    }
+
+    throw new Error(
+      "Esta área é exclusiva para administradores. Utilize o acesso do médico ou peça ao administrador para ajustar seu perfil.",
+    );
+  }
+
   return {
     user: typedUser,
-    role: typedUser?.regra ?? null,
+    role: typedUser.regra ?? null,
   };
 }
 
