@@ -1,12 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRightCircle, Stethoscope, UserPlus } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  ArrowRightCircle,
+  Stethoscope,
+  UserPlus,
+  ArrowLeft,
+} from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
-import { loginWithRole, registerUser, sendPasswordReset } from "@/services/auth-service";
+import {
+  loginWithRole,
+  registerUser,
+  sendPasswordReset,
+} from "@/services/auth-service";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -86,6 +97,7 @@ const Login = () => {
       );
       setEmail(registerEmail.trim());
       setSenha(registerSenha);
+      setShowRegister(false);
     } catch (err) {
       const message =
         err instanceof Error
@@ -121,214 +133,288 @@ const Login = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-[radial-gradient(circle_at_0%_0%,rgba(31,138,112,0.75)_0,rgba(6,78,59,0.95)_55%),radial-gradient(circle_at_100%_100%,rgba(34,197,94,0.6)_0,rgba(6,78,59,0.95)_55%)] text-slate-900">
+      {/* leve overlay para 60% de opacidade do verde cirúrgico premium */}
+      <div className="pointer-events-none absolute inset-0 bg-emerald-900/10" />
+
       <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
-        {/* Logo / título */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1D4E77] shadow-sm shadow-slate-400/40">
+        {/* Logo / marca */}
+        <div className="mb-6 flex flex-col items-center">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-[#0F2A43] shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
             <img
               src="/logo.jpeg"
               alt="Logo NP Saúde Pró"
-              className="h-9 w-9 rounded-xl object-cover"
+              className="h-10 w-10 rounded-2xl object-cover"
             />
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-semibold text-slate-900/95">
               NP Saúde Pró
             </span>
-            <span className="text-[11px] text-slate-500">
-              Acesso à área administrativa
+            <span className="text-[11px] font-medium tracking-[0.22em] text-slate-800/75">
+              ACESSO ADMINISTRATIVO
             </span>
           </div>
         </div>
 
-        {/* Card de login com paleta clara */}
-        <div className="w-full rounded-2xl bg-white/95 px-6 py-6 text-slate-900 shadow-[0_18px_40px_rgba(15,23,42,0.10)] ring-1 ring-[#D9DEE3] backdrop-blur-sm dark:bg-slate-900/95 dark:ring-slate-800 sm:px-7 sm:py-7">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">
-            ADMINISTRADOR
-          </p>
-          <h1 className="mb-1 text-lg font-semibold text-slate-900 dark:text-slate-50 sm:text-xl">
-            Faça login para continuar
-          </h1>
-          <p className="mb-5 text-xs text-slate-500 sm:text-sm">
-            Use seu e-mail e senha cadastrados para acessar o painel
-            administrativo da clínica.
-          </p>
-
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* Campo usuário/e-mail */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-600">
-                Usuário ou e-mail
-              </label>
-              <div className="flex items-center rounded-xl bg-[#F5F7F9] ring-1 ring-[#D9DEE3] focus-within:ring-2 focus-within:ring-[#1D4E77]">
-                <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-[#D9DEE3] text-slate-500">
-                  <Mail className="h-4 w-4" />
-                </span>
-                <Input
-                  type="email"
-                  placeholder="Insira seu usuário ou e-mail"
-                  className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Campo senha */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-600">
-                Senha
-              </label>
-              <div className="flex items-center rounded-xl bg-[#F5F7F9] ring-1 ring-[#D9DEE3] focus-within:ring-2 focus-within:ring-[#1D4E77]">
-                <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-[#D9DEE3] text-slate-500">
-                  <Lock className="h-4 w-4" />
-                </span>
-                <Input
-                  type="password"
-                  placeholder="Insira sua senha"
-                  className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
-                  required
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Lembrar / Esqueceu senha */}
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 text-xs text-slate-500">
-                <Checkbox className="h-3.5 w-3.5" />
-                <span>Lembrar de mim</span>
-              </label>
+        {/* Card principal (login ou cadastro) */}
+        <div className="w-full rounded-[32px] bg-white/95 px-6 py-7 text-slate-900 shadow-[0_24px_70px_rgba(15,23,42,0.30)] ring-1 ring-emerald-50 backdrop-blur-md sm:px-8 sm:py-8">
+          {/* Header dinâmico */}
+          {showRegister ? (
+            <div className="mb-5 flex flex-col gap-3">
               <button
                 type="button"
-                className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-[#1D4E77] hover:underline"
-                onClick={handleForgotPassword}
-                disabled={resetLoading}
+                onClick={() => setShowRegister(false)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-600"
               >
-                {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Voltar ao login</span>
               </button>
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900">
+                  Criar conta
+                </h1>
+                <p className="mt-1 text-xs text-slate-500">
+                  Solicite seu acesso administrativo.
+                </p>
+              </div>
             </div>
-
-            {/* Botão de login admin */}
-            <div className="pt-2 flex flex-col gap-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1D4E77] text-sm font-semibold text-white shadow-md shadow-slate-400/40 transition-transform hover:translate-y-0.5 hover:bg-[#163b58] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <ArrowRightCircle className="h-4 w-4" />
-                <span>
-                  {isLoading ? "Entrando..." : "Entrar como administrador"}
-                </span>
-              </Button>
-
-              <button
-                type="button"
-                onClick={() => setShowRegister((prev) => !prev)}
-                className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 underline-offset-2 hover:text-[#C17A47] hover:underline"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>
-                  {showRegister
-                    ? "Fechar criação de usuário"
-                    : "Criar novo usuário administrador"}
-                </span>
-              </button>
-            </div>
-          </form>
-
-          {/* Bloco de criação de usuário admin */}
-          {showRegister && (
-            <div className="mt-4 rounded-xl bg-[#F5F7F9] px-3 py-3 text-xs ring-1 ring-[#D9DEE3] dark:bg-slate-900 dark:ring-slate-700">
-              <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                Criar novo usuário administrador
+          ) : (
+            <div className="mb-5">
+              <h1 className="text-2xl font-semibold text-slate-900">Entrar</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Bem-vindo de volta ao portal administrativo.
               </p>
-              <form className="space-y-2.5" onSubmit={handleCreateAccount}>
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-600 dark:text-slate-300">
-                    Nome completo
-                  </label>
-                  <Input
-                    type="text"
-                    value={registerNome}
-                    onChange={(e) => setRegisterNome(e.target.value)}
-                    className="h-8 border-[#D9DEE3] bg-white text-xs placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-                    placeholder="Digite o nome"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-600 dark:text-slate-300">
-                    E-mail
-                  </label>
-                  <Input
-                    type="email"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    className="h-8 border-[#D9DEE3] bg-white text-xs placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="block text-[11px] text-slate-600 dark:text-slate-300">
-                      Senha
-                    </label>
-                    <Input
-                      type="password"
-                      value={registerSenha}
-                      onChange={(e) => setRegisterSenha(e.target.value)}
-                      className="h-8 border-[#D9DEE3] bg-white text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-[11px] text-slate-600 dark:text-slate-300">
-                      Confirmar senha
-                    </label>
-                    <Input
-                      type="password"
-                      value={registerSenhaConfirm}
-                      onChange={(e) =>
-                        setRegisterSenhaConfirm(e.target.value)
-                      }
-                      className="h-8 border-[#D9DEE3] bg-white text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-1">
-                  <Button
-                    type="submit"
-                    disabled={registerLoading}
-                    className="h-8 w-full rounded-full bg-[#0F2A43] text-[11px] font-semibold text-white hover:bg-[#1D4E77] dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
-                  >
-                    {registerLoading ? "Criando..." : "Criar administrador"}
-                  </Button>
-                </div>
-              </form>
             </div>
           )}
 
-          {/* Separador e link para médico */}
-          <div className="mt-5 border-t border-[#D9DEE3] pt-4 text-center text-xs text-slate-400 dark:border-slate-800">
-            <p className="mb-2">Você é médico e deseja acessar suas SADTs?</p>
+          {/* Separador OU CONTINUE COM + botões sociais (decorativos) */}
+          <div className="mb-5">
+            <div className="mb-4 flex items-center gap-3 text-[11px] text-slate-300">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span className="whitespace-nowrap tracking-[0.22em]">
+                OU CONTINUE COM
+              </span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              <button
+                type="button"
+                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+              >
+                <span className="text-[15px]">G</span>
+              </button>
+              <button
+                type="button"
+                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm"
+              >
+                <span className="text-[15px]"></span>
+              </button>
+              <button
+                type="button"
+                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+              >
+                <span className="text-[15px]">▢</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Formulário principal: login ou cadastro */}
+          {!showRegister ? (
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* E-mail */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-600">
+                  E-mail
+                </label>
+                <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#0F2A43]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-500">
+                    <Mail className="h-4 w-4" />
+                  </span>
+                  <Input
+                    type="email"
+                    placeholder="seu@email.com"
+                    className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Senha */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Senha
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={resetLoading}
+                    className="text-[11px] font-medium text-slate-400 hover:text-[#0F2A43]"
+                  >
+                    {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
+                  </button>
+                </div>
+                <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#0F2A43]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-500">
+                    <Lock className="h-4 w-4" />
+                  </span>
+                  <Input
+                    type="password"
+                    placeholder="Sua senha"
+                    className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+                    required
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Lembrar acesso */}
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox className="h-3.5 w-3.5" />
+                <span className="text-xs text-slate-500">Lembrar acesso</span>
+              </div>
+
+              {/* Botão entrar */}
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F2A43] text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,42,67,0.55)] transition-transform hover:translate-y-0.5 hover:bg-[#123557] disabled:cursor-not-allowed disabled:opacity-75"
+                >
+                  <span>{isLoading ? "Acessando..." : "Acessar conta"}</span>
+                  <ArrowRightCircle className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Link para cadastro */}
+              <p className="pt-1 text-center text-xs text-slate-500">
+                Não tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowRegister(true)}
+                  className="font-semibold text-[#0F2A43] hover:underline"
+                >
+                  Cadastre-se
+                </button>
+              </p>
+            </form>
+          ) : (
+            <form className="space-y-4" onSubmit={handleCreateAccount}>
+              {/* Nome completo */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-600">
+                  Nome completo
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Seu nome"
+                  value={registerNome}
+                  onChange={(e) => setRegisterNome(e.target.value)}
+                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                />
+              </div>
+
+              {/* E-mail */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-600">
+                  E-mail
+                </label>
+                <Input
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                />
+              </div>
+
+              {/* Senha / confirmar */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Senha
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Mín. 6 caracteres"
+                    value={registerSenha}
+                    onChange={(e) => setRegisterSenha(e.target.value)}
+                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Confirmar
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Repita a senha"
+                    value={registerSenhaConfirm}
+                    onChange={(e) =>
+                      setRegisterSenhaConfirm(e.target.value)
+                    }
+                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                  />
+                </div>
+              </div>
+
+              {/* Botão criar conta */}
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  disabled={registerLoading}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F2A43] text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,42,67,0.55)] transition-transform hover:translate-y-0.5 hover:bg-[#123557] disabled:cursor-not-allowed disabled:opacity-75"
+                >
+                  {registerLoading ? "Criando conta..." : "Criar conta"}
+                </Button>
+              </div>
+
+              {/* Termos / voltar login */}
+              <p className="text-[11px] leading-snug text-slate-400">
+                Ao se cadastrar, você concorda com nossos Termos de Serviço e
+                Política de Privacidade.
+              </p>
+            </form>
+          )}
+        </div>
+
+        {/* Acesso médico e rodapé de links */}
+        <div className="mt-4 flex w-full max-w-md flex-col items-center gap-4">
+          <div className="text-center text-xs text-slate-900/80">
+            <p className="mb-2">
+              Você é médico e deseja acompanhar suas cirurgias?
+            </p>
             <Button
               type="button"
               variant="outline"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border-[#1F8A70]/30 bg-[#E6EEF7] px-4 text-xs font-semibold text-[#1F8A70] shadow-sm hover:bg-[#D9F1E7] dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border-white/60 bg-emerald-50/80 px-4 text-[11px] font-semibold text-[#0F2A43] shadow-sm hover:bg-emerald-100/90"
               onClick={() => navigate("/login-medico")}
             >
               <Stethoscope className="h-4 w-4" />
               <span>Acessar como médico</span>
             </Button>
           </div>
-        </div>
 
-        <p className="mt-4 text-[11px] text-slate-500">
-          Acesso exclusivo para administradores autorizados da NP Saúde Pró.
-        </p>
+          <div className="mt-2 flex items-center justify-center gap-6 text-[11px] text-emerald-50/90">
+            <button type="button" className="hover:underline">
+              Privacidade
+            </button>
+            <button type="button" className="hover:underline">
+              Termos
+            </button>
+            <button type="button" className="hover:underline">
+              Ajuda
+            </button>
+          </div>
+
+          <p className="text-[10px] text-emerald-50/90">
+            © 2025 NP Saúde Pró. Plataforma segura.
+          </p>
+        </div>
       </div>
     </div>
   );
