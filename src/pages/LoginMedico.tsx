@@ -156,13 +156,14 @@ const LoginMedico = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-gradient-to-b from-[#e5f0ff] via-[#f8fbff] to-[#dcefff] text-slate-900">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1f8a70_0,transparent_55%),radial-gradient(circle_at_100%_100%,#135bec_0,transparent_55%)] opacity-70" />
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#0F2A43] text-slate-50">
+      {/* Fundo escuro usando Azul Carbônico + Obsidiano */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0F2A43] via-[#1D4E77] to-[#2B2F33]" />
 
       <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-8">
         {/* Logo / título */}
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#135bec] shadow-sm shadow-blue-500/40">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1F8A70] shadow-sm shadow-[#1F8A70]/50">
             <img
               src="/logo.jpeg"
               alt="Logo NP Saúde Pró"
@@ -170,24 +171,26 @@ const LoginMedico = () => {
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="text-sm font-semibold text-slate-50">
               NP Saúde Pró
             </span>
-            <span className="text-[11px] text-slate-500">Portal do Médico</span>
+            <span className="text-[11px] text-slate-300">
+              Portal do Médico
+            </span>
           </div>
         </div>
 
-        {/* Card principal */}
-        <div className="w-full rounded-3xl bg-white/95 px-6 py-6 shadow-md shadow-slate-200/60 ring-1 ring-slate-100 backdrop-blur-sm sm:px-7 sm:py-7">
+        {/* Card principal mais escuro */}
+        <div className="w-full rounded-3xl bg-[#1D4E77]/95 px-6 py-6 shadow-lg shadow-black/30 ring-1 ring-[#D9DEE3]/20 backdrop-blur-sm sm:px-7 sm:py-7">
           {/* Aba de modo: login x cadastro */}
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-semibold text-slate-900">
+              <h1 className="text-lg font-semibold text-slate-50">
                 {mode === "login"
                   ? "Acesse suas SADTs"
                   : "Crie seu acesso médico"}
               </h1>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-200/80">
                 {mode === "login"
                   ? "Entre com seu e-mail e senha cadastrados."
                   : "Cadastro vinculado à tabela de usuários do sistema."}
@@ -195,14 +198,14 @@ const LoginMedico = () => {
             </div>
           </div>
 
-          <div className="mb-4 flex rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-500">
+          <div className="mb-4 flex rounded-full bg-[#0F2A43]/50 p-1 text-xs font-medium text-slate-200">
             <button
               type="button"
               onClick={() => setMode("login")}
               className={`flex-1 rounded-full px-3 py-2 transition ${
                 mode === "login"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "bg-transparent"
+                  ? "bg-[#F5F7F9] text-[#0F2A43] shadow-sm"
+                  : "bg-transparent text-slate-200"
               }`}
             >
               Entrar
@@ -212,8 +215,8 @@ const LoginMedico = () => {
               onClick={() => setMode("register")}
               className={`flex-1 rounded-full px-3 py-2 transition ${
                 mode === "register"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "bg-transparent"
+                  ? "bg-[#F5F7F9] text-[#0F2A43] shadow-sm"
+                  : "bg-transparent text-slate-200"
               }`}
             >
               Criar conta
@@ -224,17 +227,17 @@ const LoginMedico = () => {
           {mode === "login" && (
             <form className="space-y-4" onSubmit={handleLoginSubmit}>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-600">
+                <label className="block text-xs font-semibold text-[#F5F7F9]">
                   E-mail
                 </label>
-                <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400">
+                <div className="flex items-center rounded-xl bg-[#0F2A43]/40 ring-1 ring-[#D9DEE3]/40 focus-within:ring-2 focus-within:ring-[#1F8A70]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-[#D9DEE3]/30 text-[#D9DEE3]">
                     <Mail className="h-4 w-4" />
                   </span>
                   <Input
                     type="email"
                     placeholder="seuemail@exemplo.com"
-                    className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+                    className="h-11 border-none bg-transparent text-sm text-slate-50 placeholder:text-[#D9DEE3] focus-visible:ring-0"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -243,17 +246,17 @@ const LoginMedico = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-600">
+                <label className="block text-xs font-semibold text-[#F5F7F9]">
                   Senha
                 </label>
-                <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#135bec]/70">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-400">
+                <div className="flex items-center rounded-xl bg-[#0F2A43]/40 ring-1 ring-[#D9DEE3]/40 focus-within:ring-2 focus-within:ring-[#1F8A70]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-[#D9DEE3]/30 text-[#D9DEE3]">
                     <Lock className="h-4 w-4" />
                   </span>
                   <Input
                     type="password"
                     placeholder="Digite sua senha"
-                    className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+                    className="h-11 border-none bg-transparent text-sm text-slate-50 placeholder:text-[#D9DEE3] focus-visible:ring-0"
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     required
@@ -261,13 +264,13 @@ const LoginMedico = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500">
+              <div className="flex items-center justify-between pt-1 text-[11px] text-[#F5F7F9]/80">
                 <span>Médico vinculado à tabela de usuários do sistema.</span>
                 <button
                   type="button"
                   onClick={handleForgotPassword}
                   disabled={resetLoading}
-                  className="font-semibold text-[#135bec] underline-offset-2 hover:underline disabled:opacity-60"
+                  className="font-semibold text-[#E6EEF7] underline-offset-2 hover:underline disabled:opacity-60"
                 >
                   {resetLoading ? "Enviando..." : "Esqueci a senha"}
                 </button>
@@ -277,7 +280,7 @@ const LoginMedico = () => {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#135bec] text-sm font-semibold text-white shadow-md shadow-blue-500/40 transition-transform hover:translate-y-0.5 hover:bg-[#135bec]/90 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#1F8A70] text-sm font-semibold text-white shadow-md shadow-black/40 transition-transform hover:translate-y-0.5 hover:bg-[#166854] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <ArrowRightCircle className="h-4 w-4" />
                   <span>{isLoading ? "Entrando..." : "Entrar como médico"}</span>
@@ -290,26 +293,26 @@ const LoginMedico = () => {
           {mode === "register" && (
             <form className="space-y-3.5" onSubmit={handleRegisterSubmit}>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-600">
+                <label className="block text-xs font-semibold text-[#F5F7F9]">
                   Nome completo
                 </label>
                 <Input
                   type="text"
                   placeholder="Digite seu nome"
-                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#135bec]/70"
+                  className="h-10 rounded-xl border border-[#D9DEE3]/40 bg-[#0F2A43]/40 text-sm text-slate-50 placeholder:text-[#D9DEE3] focus-visible:ring-2 focus-visible:ring-[#1F8A70]"
                   value={registerNome}
                   onChange={(e) => setRegisterNome(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-600">
+                <label className="block text-xs font-semibold text-[#F5F7F9]">
                   E-mail
                 </label>
                 <Input
                   type="email"
                   placeholder="email@exemplo.com"
-                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#135bec]/70"
+                  className="h-10 rounded-xl border border-[#D9DEE3]/40 bg-[#0F2A43]/40 text-sm text-slate-50 placeholder:text-[#D9DEE3] focus-visible:ring-2 focus-visible:ring-[#1F8A70]"
                   value={registerEmail}
                   onChange={(e) => setRegisterEmail(e.target.value)}
                 />
@@ -317,23 +320,23 @@ const LoginMedico = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-600">
+                  <label className="block text-xs font-semibold text-[#F5F7F9]">
                     Senha
                   </label>
                   <Input
                     type="password"
-                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-[#135bec]/70"
+                    className="h-10 rounded-xl border border-[#D9DEE3]/40 bg-[#0F2A43]/40 text-sm text-slate-50 placeholder:text-[#D9DEE3] focus-visible:ring-2 focus-visible:ring-[#1F8A70]"
                     value={registerSenha}
                     onChange={(e) => setRegisterSenha(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-600">
+                  <label className="block text-xs font-semibold text-[#F5F7F9]">
                     Confirmar senha
                   </label>
                   <Input
                     type="password"
-                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-[#135bec]/70"
+                    className="h-10 rounded-xl border border-[#D9DEE3]/40 bg-[#0F2A43]/40 text-sm text-slate-50 placeholder:text-[#D9DEE3] focus-visible:ring-2 focus-visible:ring-[#1F8A70]"
                     value={registerSenhaConfirm}
                     onChange={(e) => setRegisterSenhaConfirm(e.target.value)}
                   />
@@ -344,7 +347,7 @@ const LoginMedico = () => {
                 <Button
                   type="submit"
                   disabled={registerLoading}
-                  className="h-10 w-full rounded-full bg-[#1f8a70] text-xs font-semibold text-white shadow-md shadow-teal-500/40 hover:bg-[#1b715e] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="h-10 w-full rounded-full bg-[#1F8A70] text-xs font-semibold text-white shadow-md shadow-black/40 hover:bg-[#166854] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {registerLoading ? "Criando conta..." : "Criar usuário médico"}
                 </Button>
@@ -353,10 +356,10 @@ const LoginMedico = () => {
           )}
 
           {/* Separador social */}
-          <div className="mt-6 flex items-center gap-3 text-[11px] text-slate-400">
-            <div className="h-px flex-1 bg-slate-200" />
+          <div className="mt-6 flex items-center gap-3 text-[11px] text-[#E6EEF7]/80">
+            <div className="h-px flex-1 bg-[#D9DEE3]/30" />
             <span>ou continue com</span>
-            <div className="h-px flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-[#D9DEE3]/30" />
           </div>
 
           <div className="mt-4 flex items-center justify-center gap-4">
@@ -364,7 +367,7 @@ const LoginMedico = () => {
             <button
               type="button"
               onClick={() => handleSocialLogin("google")}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F7F9] shadow-sm ring-1 ring-[#D9DEE3]/70 hover:bg-[#E6EEF7]"
               aria-label="Entrar com Google"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5">
@@ -391,7 +394,7 @@ const LoginMedico = () => {
             <button
               type="button"
               onClick={() => handleSocialLogin("apple")}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white shadow-sm ring-1 ring-slate-800 hover:bg-slate-900"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white shadow-sm ring-1 ring-black/60 hover:bg-[#111111]"
               aria-label="Entrar com Apple"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -403,7 +406,7 @@ const LoginMedico = () => {
             <button
               type="button"
               onClick={() => handleSocialLogin("azure")}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F7F9] shadow-sm ring-1 ring-[#D9DEE3]/70 hover:bg-[#E6EEF7]"
               aria-label="Entrar com Microsoft"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5">
@@ -415,14 +418,14 @@ const LoginMedico = () => {
             </button>
           </div>
 
-          <div className="mt-5 text-center text-[11px] text-slate-400">
+          <div className="mt-5 text-center text-[11px] text-[#E6EEF7]/80">
             <p>
               Em caso de dúvidas sobre seu acesso, entre em contato com a
               coordenação da clínica.
             </p>
             <button
               type="button"
-              className="mt-2 font-medium text-[#135bec] underline-offset-2 hover:underline"
+              className="mt-2 font-medium text-[#E6EEF7] underline-offset-2 hover:underline"
               onClick={() => navigate("/login")}
             >
               Sou administrador
