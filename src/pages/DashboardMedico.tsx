@@ -6,8 +6,8 @@ import {
   Activity,
   FileHeart,
   AlertCircle,
-  TrendingUp,
 } from "lucide-react";
+import GlosaGauge from "../components/dashboard/GlosaGauge";
 
 const DashboardMedico = () => {
   const navigate = useNavigate();
@@ -16,12 +16,12 @@ const DashboardMedico = () => {
   const numeroCirurgiasAno = "96";
   const totalAReceber = "R$ 72.500,00";
   const valorGlosa = "R$ 18.300,00";
-  const percentualGlosaRecuperado = "68%";
+  const percentualGlosaRecuperadoNumero = 68; // 0–100
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#0F2A43] text-slate-50">
-      {/* Fundo gradiente estilo app */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#0F2A43_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_55%)]" />
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#0F172A] text-slate-50">
+      {/* Fundo gradiente inspirado no app mobile */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_50%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_55%)]" />
 
       <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-5 sm:px-5 sm:py-6">
         {/* Topo com voltar e status */}
@@ -41,9 +41,9 @@ const DashboardMedico = () => {
           </div>
         </header>
 
-        {/* Card de saudação + info do médico */}
+        {/* Card de saudação + info do médico (similar ao DashboardView de referência) */}
         <section className="mb-4">
-          <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3.5 text-sm shadow-[0_18px_40px_rgba(0,0,0,0.6)] ring-1 ring-slate-900/60 backdrop-blur">
+          <div className="flex items-center justify-between rounded-3xl bg-slate-950/85 px-4 py-3.5 text-sm shadow-[0_18px_40px_rgba(0,0,0,0.6)] ring-1 ring-slate-900/60 backdrop-blur">
             <div className="flex flex-col gap-1">
               <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/90">
                 Bem-vindo
@@ -63,7 +63,7 @@ const DashboardMedico = () => {
 
         {/* Conteúdo principal */}
         <main className="flex-1 space-y-4">
-          {/* CTA principal: Enviar Descrição Cirúrgica */}
+          {/* CTA principal: Enviar Descrição Cirúrgica (botão grande, como no protótipo) */}
           <section>
             <button
               type="button"
@@ -108,9 +108,9 @@ const DashboardMedico = () => {
             </button>
           </section>
 
-          {/* Cards de indicadores financeiros */}
+          {/* Cards de indicadores financeiros + velocímetro de glosa */}
           <section className="space-y-3">
-            {/* Linha 1 */}
+            {/* Linha 1: Receita e Cirurgias */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
@@ -147,7 +147,7 @@ const DashboardMedico = () => {
               </div>
             </div>
 
-            {/* Linha 2 */}
+            {/* Linha 2: Total a receber e valor em glosa */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex items-center justify-between rounded-3xl bg-slate-950/80 px-4 py-3 shadow-md ring-1 ring-emerald-500/25">
                 <div className="flex flex-col">
@@ -184,23 +184,21 @@ const DashboardMedico = () => {
               </div>
             </div>
 
-            {/* Linha 3 */}
-            <div className="flex items-center justify-between rounded-3xl bg-slate-950/90 px-4 py-3 shadow-md ring-1 ring-emerald-400/45">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
-                  % de glosa recuperado
-                </span>
-                <span className="mt-1 text-2xl font-semibold text-emerald-100">
-                  {percentualGlosaRecuperado}
-                </span>
-                <span className="mt-1 text-[11px] text-emerald-100/80">
-                  Percentual do valor glosado que já foi revertido em
-                  pagamento.
-                </span>
+            {/* Linha 3: Velocímetro de glosa recuperada */}
+            <div className="flex flex-col rounded-3xl bg-slate-950/90 px-4 py-3 shadow-md ring-1 ring-emerald-400/45">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200/80">
+                    % de glosa recuperado
+                  </span>
+                  <span className="mt-1 text-[11px] text-emerald-100/80">
+                    Percentual do valor glosado que já foi revertido em
+                    pagamento.
+                  </span>
+                </div>
               </div>
-              <div className="ml-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
-                <TrendingUp className="h-5 w-5" />
-              </div>
+
+              <GlosaGauge value={percentualGlosaRecuperadoNumero} />
             </div>
           </section>
 
