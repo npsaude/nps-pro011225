@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -30,13 +30,39 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+  const [medicoNome, setMedicoNome] = useState<string>("");
+
+  // Carrega o nome do médico logado para exibir na saudação
+  useEffect(() => {
+    const carregarNomeMedico = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+
+      const email = authData.user?.email;
+      if (!email) return;
+
+      const { data, error } = await supabase
+        .from("usuarios_sistema")
+        .select("nome")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (!error && data?.nome) {
+        // Usa apenas o primeiro nome para deixar mais pessoal
+        const primeiroNome = (data.nome as string).split(" ")[0];
+        setMedicoNome(primeiroNome);
+      }
+    };
+
+    void carregarNomeMedico();
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
     const allowedFiles = selectedFiles.filter(
-      (file) => file.type.startsWith("image/") || file.type === "application/pdf",
+      (file) =>
+        file.type.startsWith("image/") || file.type === "application/pdf",
     );
     const ignoredCount = selectedFiles.length - allowedFiles.length;
 
@@ -146,12 +172,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const progressWidth = step === 1 ? "50%" : "100%";
 
+  const saudacao = medicoNome
+    ? `Olá, ${medicoNome}.`
+    : "Olá, médico.";
+
   return (
     <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
       {/* Fundo em gradiente médico */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
+        {/* PRIMEIRA LINHA - MOBILE FIRST */}
+        <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
+          {saudacao}
+        </p>
+
         {/* Topo */}
         <header className="mb-5 flex items-center justify-between gap-3">
           <button
