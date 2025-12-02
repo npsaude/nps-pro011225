@@ -97,7 +97,7 @@ export interface DescricaoCirurgicaFormData {
   outras_orientacoes: string;
 }
 
-// Resumo para listagem do médico
+// Resumo para listagem do médico / admin
 export interface DescricaoCirurgicaResumoMedico {
   id: string;
   nomeMedico: string | null;
@@ -262,9 +262,7 @@ export async function criarDescricaoCirurgica(
 }
 
 /**
- * Lista descrições cirúrgicas para exibição no painel do médico.
- * Neste momento, a listagem traz todos os registros disponíveis,
- * respeitando as políticas de segurança do Supabase.
+ * Lista descrições cirúrgicas para exibição no painel do médico/admin.
  */
 export async function listarDescricoesCirurgicasDoMedicoLogado(): Promise<
   DescricaoCirurgicaResumoMedico[]
@@ -336,7 +334,6 @@ export async function atualizarStatusDescricaoCirurgica(
 
 /**
  * Conta descrições cirúrgicas por status.
- * Pode ser usado para exibir badges de notificação (ex: status AGUARDANDO).
  */
 export async function contarDescricoesCirurgicasPorStatus(
   status: DbDescricaoCirurgicaStatus,
@@ -354,4 +351,25 @@ export async function contarDescricoesCirurgicasPorStatus(
   }
 
   return count ?? 0;
+}
+
+/**
+ * Busca uma descrição cirúrgica completa pelo ID.
+ */
+export async function buscarDescricaoCirurgicaPorId(
+  id: string,
+): Promise<DbDescricaoCirurgica> {
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    throw new Error(
+      error?.message || "Não foi possível carregar a descrição cirúrgica.",
+    );
+  }
+
+  return data as DbDescricaoCirurgica;
 }
