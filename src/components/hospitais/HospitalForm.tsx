@@ -16,15 +16,15 @@ import {
 import type { HospitalInput, Hospital } from "@/services/hospitais-service";
 
 const hospitalSchema = z.object({
-  razao_social: z.string().min(1, "Informe a razão social."),
-  nome_fantasia: z.string().min(1, "Informe o nome fantasia."),
+  razao_social: z.string(),
+  nome_fantasia: z.string(),
   nome_rede: z.string().optional(),
-  cnpj: z.string().min(1, "Informe o CNPJ."),
-  endereco: z.string().min(1, "Informe o endereço."),
+  cnpj: z.string(),
+  endereco: z.string(),
   complemento: z.string().optional(),
-  bairro: z.string().min(1, "Informe o bairro."),
-  cidade: z.string().min(1, "Informe a cidade."),
-  uf: z.string().min(2, "UF inválida.").max(2, "UF inválida."),
+  bairro: z.string(),
+  cidade: z.string(),
+  uf: z.string().max(2, "UF inválida."),
   telefone: z.string().optional(),
   contato: z.string().optional(),
   cargo: z.string().optional(),

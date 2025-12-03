@@ -31,7 +31,7 @@ export interface HospitalDocumentoEspecifico {
   created_at: string;
 }
 
-const BUCKET_NAME = "NPS-pro";
+const BUCKET_NAME = "nps-pro";
 
 export async function listarHospitais(): Promise<Hospital[]> {
   const { data, error } = await supabase
@@ -113,7 +113,7 @@ export async function uploadDocumentoEspecifico(
 ): Promise<HospitalDocumentoEspecifico> {
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const timestamp = Date.now();
-  const filePath = `documentos_especificos/${hospitalId}/${timestamp}-${safeName}`;
+  const filePath = `documentos_especificos/Hospitais/${hospitalId}/${timestamp}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from(BUCKET_NAME)

@@ -58,7 +58,6 @@ const HospitaisList = () => {
   const [saving, setSaving] = useState(false);
 
   // Documentos específicos
-  const [docsDialogOpen, setDocsDialogOpen] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(
     null,
   );
@@ -111,12 +110,34 @@ const HospitaisList = () => {
 
   const openNew = () => {
     setEditing(null);
+    setSelectedHospital(null);
+    setDocumentos([]);
+    setDocNome("");
+    setDocFile(null);
     setDialogOpen(true);
   };
 
-  const openEdit = (hospital: Hospital) => {
+  const openEdit = async (hospital: Hospital) => {
     setEditing(hospital);
     setDialogOpen(true);
+    setSelectedHospital(hospital);
+    setDocsLoading(true);
+    setDocumentos([]);
+    setDocNome("");
+    setDocFile(null);
+
+    try {
+      const docs = await listarDocumentosEspecificos(hospital.id);
+      setDocumentos(docs);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar os documentos específicos.";
+      showError(message);
+    } finally {
+      setDocsLoading(false);
+    }
   };
 
   const handleSubmit = async (values: HospitalInput) => {
@@ -135,6 +156,10 @@ const HospitaisList = () => {
       }
       setDialogOpen(false);
       setEditing(null);
+      setSelectedHospital(null);
+      setDocumentos([]);
+      setDocNome("");
+      setDocFile(null);
     } catch (err) {
       const message =
         err instanceof Error
@@ -148,7 +173,6 @@ const HospitaisList = () => {
 
   const openDocsDialog = async (hospital: Hospital) => {
     setSelectedHospital(hospital);
-    setDocsDialogOpen(true);
     setDocsLoading(true);
     setDocNome("");
     setDocFile(null);
@@ -348,7 +372,7 @@ const HospitaisList = () => {
                           variant="outline"
                           size="sm"
                           className="h-7 rounded-full px-2 text-[11px]"
-                          onClick={() => void openDocsDialog(h)}
+                          onClick={() => void openEdit(h)}
                         >
                           <Paperclip className="mr-1.5 h-3 w-3" />
                           Gerenciar
@@ -380,6 +404,10 @@ const HospitaisList = () => {
             setDialogOpen(open);
             if (!open) {
               setEditing(null);
+              setSelectedHospital(null);
+              setDocumentos([]);
+              setDocNome("");
+              setDocFile(null);
             }
           }}
         >
@@ -398,119 +426,104 @@ const HospitaisList = () => {
               onSubmit={handleSubmit}
               isSubmitting={saving}
             />
-          </DialogContent>
-        </Dialog>
 
-        {/* Diálogo de Documentos específicos */}
-        <Dialog
-          open={docsDialogOpen}
-          onOpenChange={(open) => {
-            setDocsDialogOpen(open);
-            if (!open) {
-              setSelectedHospital(null);
-              setDocumentos([]);
-              setDocNome("");
-              setDocFile(null);
-            }
-          }}
-        >
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>
-                Documentos específicos{" "}
-                {selectedHospital ? `- ${selectedHospital.nome_fantasia}` : ""}
-              </DialogTitle>
-              <DialogDescription>
-                Cadastre documentos específicos do hospital (protocolos,
-                modelos de contrato, etc.). Os arquivos serão salvos na pasta{" "}
-                <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  documentos_especificos
-                </code>{" "}
-                no storage do Supabase.
-              </DialogDescription>
-            </DialogHeader>
+            {editing && selectedHospital && selectedHospital.id === editing.id && (
+              <div className="mt-6 space-y-4 text-xs sm:text-sm">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                    Documentos específicos
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    Cadastre documentos específicos do hospital (protocolos,
+                    modelos de contrato, etc.). Os arquivos serão salvos na pasta{" "}
+                    <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      documentos_especificos/Hospitais
+                    </code>{" "}
+                    no storage do Supabase.
+                  </p>
+                </div>
 
-            <div className="space-y-4 text-xs sm:text-sm">
-              {/* Upload */}
-              <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                  Novo documento específico
-                </p>
-                <div className="grid gap-2 sm:grid-cols-[1.5fr_1.5fr_auto]">
-                  <div>
-                    <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
-                      Nome do documento
-                    </label>
-                    <Input
-                      value={docNome}
-                      onChange={(e) => setDocNome(e.target.value)}
-                      placeholder="Ex.: Protocolo cirúrgico"
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
-                      Arquivo
-                    </label>
-                    <input
-                      type="file"
-                      onChange={handleDocFileChange}
-                      className="block h-8 w-full cursor-pointer text-[11px] text-slate-600 file:mr-2 file:h-8 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:text-[11px] file:font-medium file:text-slate-700 hover:file:bg-slate-300 dark:text-slate-200 dark:file:bg-slate-700 dark:file:text-slate-100 dark:hover:file:bg-slate-600"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={docSaving}
-                      className="h-8 rounded-full px-3 text-[11px]"
-                      onClick={() => void handleUploadDocumento()}
-                    >
-                      {docSaving ? "Enviando..." : "Enviar"}
-                    </Button>
+                {/* Upload */}
+                <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                  <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                    Novo documento específico
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-[1.5fr_1.5fr_auto]">
+                    <div>
+                      <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                        Nome do documento
+                      </label>
+                      <Input
+                        value={docNome}
+                        onChange={(e) => setDocNome(e.target.value)}
+                        placeholder="Ex.: Protocolo cirúrgico"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                        Arquivo
+                      </label>
+                      <input
+                        type="file"
+                        onChange={handleDocFileChange}
+                        className="block h-8 w-full cursor-pointer text-[11px] text-slate-600 file:mr-2 file:h-8 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:text-[11px] file:font-medium file:text-slate-700 hover:file:bg-slate-300 dark:text-slate-200 dark:file:bg-slate-700 dark:file:text-slate-100 dark:hover:file:bg-slate-600"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={docSaving}
+                        className="h-8 rounded-full px-3 text-[11px]"
+                        onClick={() => void handleUploadDocumento()}
+                      >
+                        {docSaving ? "Enviando..." : "Enviar"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Lista de documentos */}
-              <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                  Documentos cadastrados
-                </p>
-                {docsLoading ? (
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Carregando documentos...
+                {/* Lista de documentos */}
+                <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                  <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                    Documentos cadastrados
                   </p>
-                ) : documentos.length === 0 ? (
-                  <p className="text-[11px] text-slate-400">
-                    Nenhum documento específico cadastrado para este hospital.
-                  </p>
-                ) : (
-                  <div className="max-h-60 space-y-2 overflow-auto">
-                    {documentos.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
-                            <FileText className="h-3.5 w-3.5" />
-                          </span>
-                          <div className="flex flex-col">
-                            <span className="text-[11px] font-medium">
-                              {doc.nome_documento}
+                  {docsLoading ? (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Carregando documentos...
+                    </p>
+                  ) : documentos.length === 0 ? (
+                    <p className="text-[11px] text-slate-400">
+                      Nenhum documento específico cadastrado para este hospital.
+                    </p>
+                  ) : (
+                    <div className="max-h-60 space-y-2 overflow-auto">
+                      {documentos.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                              <FileText className="h-3.5 w-3.5" />
                             </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                              {doc.file_path}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-[11px] font-medium">
+                                {doc.nome_documento}
+                              </span>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                {doc.file_path}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </CardContent>
