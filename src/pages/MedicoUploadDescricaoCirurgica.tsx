@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Upload,
@@ -25,13 +25,26 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
+type ViewState = "start" | "upload" | "success";
+
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { hospitalId } = (location.state ?? {}) as { hospitalId?: string };
+
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [medicoNome, setMedicoNome] = useState<string>("");
-  const [view, setView] = useState<"upload" | "success">("upload");
+  const [view, setView] = useState<ViewState>("start");
+
+  // Garante que a tela só seja acessada após escolha de hospital
+  useEffect(() => {
+    if (!hospitalId) {
+      showError("Selecione um hospital para enviar a descrição cirúrgica.");
+      navigate("/medico/dashboard");
+    }
+  }, [hospitalId, navigate]);
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -96,7 +109,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     const uploadedFilePaths: string[] = [];
 
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
 
       if (userError || !userData?.user) {
         showError("Faça login novamente para enviar arquivos.");
@@ -131,7 +145,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       // Chama a edge function que processa a descrição cirúrgica
       const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/functions";
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
 
       try {
         await fetch(functionUrl, {
@@ -140,6 +154,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           body: JSON.stringify({
             userId,
             files: uploadedFilePaths.map((path) => ({ path })),
+            // hospitalId está disponível aqui caso você queira usá-lo depois na função
+            hospitalId,
           }),
         });
       } catch {
@@ -171,7 +187,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleNovaDescricao = () => {
     setFiles([]);
     setStep(1);
-    setView("upload");
+    setView("start");
   };
 
   const totalArquivos = files.length;
@@ -215,7 +231,180 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
-          {/* ... resto do componente permanece igual ... */}
+          {view === "start" && (
+            <div className="mt-4 flex w-full max-w-md flex-col items-stretch">
+              <Card className="relative overflow-hidden rounded-[2.2rem] border-emerald-500/25 bg-slate-950/90 text-center shadow-[0_30px_80px_rgba(16,185,129,0.5)]">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(16,185,129,0.45)_0,transparent_55%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.4)_0,transparent_55%)] opacity-90" />
+                <div className="relative z-10 px-6 py-7 sm:px-8 sm:py-8">
+                  <CardHeader className="mb-4 space-y-2 px-0">
+                    <CardTitle className="text-lg font-semibold text-slate-50 sm:text-xl">
+                      Nova Descrição
+                    </CardTitle>
+                    <CardDescription className="text-xs text-emerald-50/90 sm:text-sm">
+                      Toque para adicionar fotos ou documentos da cirurgia.
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="space-y-5 px-0">
+                    <button
+                      type="button"
+                      onClick={() => setView("upload")}
+                      className="mx-auto flex h-40 w-40 flex-col items-center justify-center rounded-[2rem] bg-gradient-to-b from-emerald-400 to-emerald-500 text-emerald-50 shadow-[0_28px_65px_rgba(16,185,129,0.85)] transition-transform hover:translate-y-0.5 sm:h-44 sm:w-44"
+                    >
+                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/70">
+                        <Upload className="h-6 w-6" />
+                      </div>
+                      <span className="text-sm font-semibold">
+                        Nova Descrição
+                      </span>
+                    </button>
+
+                    <p className="px-2 text-xs text-emerald-50/90 sm:text-[13px]">
+                      Você pode enviar fotos da guia, laudos ou PDFs completos
+                      da cirurgia.
+                    </p>
+
+                    <div className="mt-3 rounded-full border border-emerald-400/40 bg-slate-950/80 px-4 py-2 text-center text-[11px] text-emerald-100/90">
+                      Seus dados são criptografados ponta a ponta.
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {view === "upload" && (
+            <div className="mt-2 flex w-full max-w-md flex-col gap-4">
+              <Card className="rounded-3xl border-slate-800 bg-slate-950/90 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-base text-slate-50 sm:text-lg">
+                    Enviar arquivos da cirurgia
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-300 sm:text-sm">
+                    Selecione fotos nítidas ou PDFs completos dos documentos da
+                    cirurgia.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <label
+                    htmlFor="files"
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-400/60 bg-slate-900/70 px-4 py-6 text-center text-xs text-emerald-100/90 transition-colors hover:bg-slate-900"
+                  >
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-300">
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm font-medium text-emerald-50">
+                      Toque para selecionar fotos ou PDFs
+                    </p>
+                    <p className="mt-1 text-[11px] text-emerald-100/80">
+                      Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
+                    </p>
+                    <Input
+                      id="files"
+                      type="file"
+                      multiple
+                      className="mt-3 hidden"
+                      accept="image/*,application/pdf"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+
+                  <div className="flex items-center justify-between rounded-2xl bg-slate-900/80 px-3 py-2 text-[11px] text-slate-200">
+                    <span className="font-medium text-emerald-100">
+                      Arquivos selecionados:
+                    </span>
+                    <span className="text-emerald-300">{arquivosLabel}</span>
+                  </div>
+
+                  {files.length > 0 && (
+                    <div className="space-y-2 rounded-2xl bg-slate-900/70 p-3 text-xs">
+                      {files.map((file) => (
+                        <div
+                          key={file.name + file.lastModified}
+                          className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-slate-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-800/80 text-emerald-300">
+                              {isImage(file) ? (
+                                <ImageIcon className="h-4 w-4" />
+                              ) : (
+                                <FileText className="h-4 w-4" />
+                              )}
+                            </span>
+                            <span className="line-clamp-1 text-[11px] sm:text-xs">
+                              {file.name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-300">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    className="mt-1 w-full rounded-2xl bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                    disabled={isUploading || files.length === 0}
+                    onClick={handleUpload}
+                  >
+                    {isUploading ? "Enviando..." : "Enviar descrição cirúrgica"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full rounded-2xl text-xs text-emerald-100 hover:bg-slate-900"
+                    onClick={handleNovaDescricao}
+                    disabled={isUploading}
+                  >
+                    Voltar para Nova Descrição
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {view === "success" && (
+            <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
+              <Card className="rounded-3xl border-emerald-500/30 bg-slate-950/95 text-center shadow-[0_22px_60px_rgba(16,185,129,0.7)]">
+                <CardContent className="space-y-4 px-6 py-7">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                    <CheckCircle2 className="h-8 w-8" />
+                  </div>
+                  <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+                    Descrição enviada!
+                  </h2>
+                  <p className="text-xs text-emerald-50/90 sm:text-sm">
+                    Recebemos seus arquivos e a análise da descrição cirúrgica
+                    foi iniciada. Você poderá acompanhar o status na área{" "}
+                    <span className="font-semibold">
+                      &quot;Minhas descrições cirúrgicas&quot;
+                    </span>
+                    .
+                  </p>
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button
+                      type="button"
+                      className="w-full rounded-2xl bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                      onClick={handleNovaDescricao}
+                    >
+                      Enviar nova descrição
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full rounded-2xl border-emerald-500/40 bg-slate-950/90 text-xs text-emerald-100 hover:bg-slate-900"
+                      onClick={() => navigate("/medico/descricao-cirurgica")}
+                    >
+                      Ver minhas descrições cirúrgicas
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </main>
       </div>
     </div>
