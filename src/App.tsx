@@ -22,6 +22,7 @@ import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
 import MedicoUploadDescricaoCirurgica from "./pages/MedicoUploadDescricaoCirurgica";
 import MedicoDescricoesCirurgicas from "./pages/MedicoDescricoesCirurgicas";
 import DescricaoCirurgicaArquivosPage from "./pages/DescricaoCirurgicaArquivos";
+import HospitaisCadastro from "./pages/HospitaisCadastro";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
 
           {/* Cadastros administrativos */}
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
+          <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
 
           {/* Configurações administrativas */}

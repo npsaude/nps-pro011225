@@ -12,7 +12,7 @@ import {
 
 interface AdminSidebarProps {
   section?: "home" | "descricao" | "cadastro" | "config";
-  cadastroSubsection?: "clinicas" | "medicos" | "planos";
+  cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "planos";
 }
 
 const AdminSidebar = ({
@@ -27,6 +27,7 @@ const AdminSidebar = ({
     const path = location.pathname;
     if (path.startsWith("/descricao-cirurgica")) return "descricao";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
+    if (path.startsWith("/cadastro/hospitais")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
     if (path.startsWith("/admin/configuracoes")) return "config";
     if (path.startsWith("/admin")) return "home";
@@ -38,6 +39,7 @@ const AdminSidebar = ({
       if (cadastroSubsection) return cadastroSubsection;
       const path = location.pathname;
       if (path.startsWith("/cadastro/clinicas")) return "clinicas";
+      if (path.startsWith("/cadastro/hospitais")) return "hospitais";
       if (path.startsWith("/cadastro/medicos")) return "medicos";
       if (path.includes("planos")) return "planos";
       return undefined;
@@ -158,7 +160,17 @@ const AdminSidebar = ({
                 }
                 onClick={() => navigate("/cadastro/clinicas")}
               >
-                <span className="ml-7">Clínicas / Hospitais</span>
+                <span className="ml-7">Clínicas</span>
+              </button>
+              <button
+                className={
+                  currentCadastroSub === "hospitais"
+                    ? cadastroItemActive
+                    : cadastroItemInactive
+                }
+                onClick={() => navigate("/cadastro/hospitais")}
+              >
+                <span className="ml-7">Hospitais</span>
               </button>
               <button
                 className={
