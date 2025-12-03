@@ -637,7 +637,15 @@ Regras importantes:
     );
   }
 
-  // 5) Montar objeto para inserir em descricoes_cirurgicas
+  // 5) Calcular pasta de armazenamento (storage_folder) a partir do primeiro arquivo
+  let storageFolder: string | null = null;
+  const firstFile = files[0];
+  if (firstFile?.path && firstFile.path.includes("/")) {
+    const lastSlash = firstFile.path.lastIndexOf("/");
+    storageFolder = firstFile.path.substring(0, lastSlash); // ex: descricao_cirurgica/<userId>
+  }
+
+  // 6) Montar objeto para inserir em descricoes_cirurgicas
   const insertData: Record<string, unknown> = {
     user_id: userId,
     status: "AGUARDANDO",
@@ -706,9 +714,12 @@ Regras importantes:
         ? desc.acompanhamento_pela_instituicao
         : null,
     outras_orientacoes: desc?.outras_orientacoes ?? null,
+
+    // Nova informação: pasta do storage onde os arquivos desta descrição foram salvos
+    storage_folder: storageFolder,
   };
 
-  // 6) Inserir na tabela descricoes_cirurgicas
+  // 7) Inserir na tabela descricoes_cirurgicas
   const { data: inserted, error: insertError } = await supabase
     .from("descricoes_cirurgicas")
     .insert(insertData)
@@ -733,7 +744,7 @@ Regras importantes:
 
   const descricaoId = inserted.id as string;
 
-  // 7) Inserir registros de arquivos vinculados à descrição
+  // 8) Inserir registros de arquivos vinculados à descrição
   const arquivosRows =
     files.map((f) => ({
       descricao_id: descricaoId,

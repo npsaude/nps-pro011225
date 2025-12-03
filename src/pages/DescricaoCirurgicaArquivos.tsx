@@ -49,33 +49,89 @@ const DescricaoCirurgicaArquivosPage: React.FC = () => {
 
         setDescricao(desc);
 
-        const arquivosComUrl: ArquivoComUrl[] = await Promise.all(
-          arquivosDb.map(async (arq) => {
-            const { data, error } = await supabase.storage
-              .from(bucketName)
-              .createSignedUrl(arq.file_path, 60 * 60);
+        let arquivosComUrl: ArquivoComUrl[] = [];
 
-            if (error) {
-              console.error(
-                "Erro ao criar URL assinada para arquivo:",
-                arq.file_path,
-                error,
-              );
-            }
+        // 1) Primeiro, tenta pelos registros da tabela descricoes_cirurgicas_arquivos
+        if (arquivosDb.length > 0) {
+          arquivosComUrl = await Promise.all(
+            arquivosDb.map(async (arq) => {
+              const { data, error } = await supabase.storage
+                .from(bucketName)
+                .createSignedUrl(arq.file_path, 60 * 60);
 
-            const fileName =
-              arq.file_path.split("/")[arq.file_path.split("/").length - 1];
+              if (error) {
+                console.error(
+                  "Erro ao criar URL assinada para arquivo:",
+                  arq.file_path,
+                  error,
+                );
+              }
 
-            const isImage = /\.(png|jpe?g|gif|webp)$/i.test(arq.file_path);
+              const fileName =
+                arq.file_path.split("/")[arq.file_path.split("/").length - 1];
 
-            return {
-              ...arq,
-              signedUrl: data?.signedUrl ?? null,
-              isImage,
-              fileName,
-            };
-          }),
-        );
+              const isImage = /\.(png|jpe?g|gif|webp)$/i.test(arq.file_path);
+
+              return {
+                ...arq,
+                signedUrl: data?.signedUrl ?? null,
+                isImage,
+                fileName,
+              };
+            }),
+          );
+        }
+        // 2) Se não achar nada na tabela, tenta usar a pasta storage_folder direto no Storage
+        else if (desc.storage_folder) {
+          const { data: listData, error: listError } = await supabase.storage
+            .from(bucketName)
+            .list(desc.storage_folder, { limit: 100 });
+
+          if (listError) {
+            console.error(
+              "Erro ao listar arquivos no Storage para pasta:",
+              desc.storage_folder,
+              listError,
+            );
+          } else if (listData && listData.length > 0) {
+            arquivosComUrl = await Promise.all(
+              listData.map(async (obj) => {
+                const filePath = `${desc.storage_folder}/${obj.name}`;
+
+                const { data, error } = await supabase.storage
+                  .from(bucketName)
+                  .createSignedUrl(filePath, 60 * 60);
+
+                if (error) {
+                  console.error(
+                    "Erro ao criar URL assinada para arquivo listado:",
+                    filePath,
+                    error,
+                  );
+                }
+
+                const isImage = /\.(png|jpe?g|gif|webp)$/i.test(filePath);
+
+                const arquivoBase: DescricaoCirurgicaArquivo = {
+                  id: obj.name, // não temos o id da tabela, usamos o nome como identificador
+                  descricao_id: desc.id,
+                  user_id: desc.user_id,
+                  file_path: filePath,
+                  created_at:
+                    (obj as any).created_at ??
+                    new Date().toISOString(),
+                };
+
+                return {
+                  ...arquivoBase,
+                  signedUrl: data?.signedUrl ?? null,
+                  isImage,
+                  fileName: obj.name,
+                };
+              }),
+            );
+          }
+        }
 
         setArquivos(arquivosComUrl);
       } catch (err) {
@@ -223,7 +279,7 @@ const DescricaoCirurgicaArquivosPage: React.FC = () => {
                   </p>
                 ) : arquivos.length === 0 ? (
                   <p className="text-xs text-slate-500">
-                    Nenhum arquivo anexado para esta descrição.
+                    Nenhum arquivo anexado encontrado para esta descrição.
                   </p>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

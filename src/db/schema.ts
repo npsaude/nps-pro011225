@@ -223,6 +223,9 @@ export interface DbDescricaoCirurgica {
   acompanhamento_pela_instituicao: boolean | null;
   outras_orientacoes: string | null;
 
+  // Pasta do Storage onde os arquivos desta descrição foram salvos
+  storage_folder: string | null;
+
   created_at: string;
   updated_at: string;
 }
