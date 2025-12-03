@@ -427,103 +427,113 @@ const HospitaisList = () => {
               isSubmitting={saving}
             />
 
-            {editing && selectedHospital && selectedHospital.id === editing.id && (
-              <div className="mt-6 space-y-4 text-xs sm:text-sm">
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                    Documentos específicos
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    Cadastre documentos específicos do hospital (protocolos,
-                    modelos de contrato, etc.). Os arquivos serão salvos na pasta{" "}
-                    <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      documentos_especificos/Hospitais
-                    </code>{" "}
-                    no storage do Supabase.
-                  </p>
-                </div>
+            {/* Seção de documentos específicos no final do cadastro */}
+            <div className="mt-6 space-y-4 text-xs sm:text-sm">
+              <div>
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                  Documentos específicos
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  Cadastre documentos específicos do hospital (protocolos,
+                  modelos de contrato, etc.). Os arquivos serão salvos na pasta{" "}
+                  <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    documentos_especificos/Hospitais
+                  </code>{" "}
+                  no storage do Supabase.
+                </p>
+              </div>
 
-                {/* Upload */}
-                <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                  <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                    Novo documento específico
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-[1.5fr_1.5fr_auto]">
-                    <div>
-                      <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
-                        Nome do documento
-                      </label>
-                      <Input
-                        value={docNome}
-                        onChange={(e) => setDocNome(e.target.value)}
-                        placeholder="Ex.: Protocolo cirúrgico"
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
-                        Arquivo
-                      </label>
-                      <input
-                        type="file"
-                        onChange={handleDocFileChange}
-                        className="block h-8 w-full cursor-pointer text-[11px] text-slate-600 file:mr-2 file:h-8 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:text-[11px] file:font-medium file:text-slate-700 hover:file:bg-slate-300 dark:text-slate-200 dark:file:bg-slate-700 dark:file:text-slate-100 dark:hover:file:bg-slate-600"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={docSaving}
-                        className="h-8 rounded-full px-3 text-[11px]"
-                        onClick={() => void handleUploadDocumento()}
-                      >
-                        {docSaving ? "Enviando..." : "Enviar"}
-                      </Button>
+              {selectedHospital ? (
+                <>
+                  {/* Upload */}
+                  <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                      Novo documento específico
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-[1.5fr_1.5fr_auto]">
+                      <div>
+                        <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                          Nome do documento
+                        </label>
+                        <Input
+                          value={docNome}
+                          onChange={(e) => setDocNome(e.target.value)}
+                          placeholder="Ex.: Protocolo cirúrgico"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                          Arquivo
+                        </label>
+                        <input
+                          type="file"
+                          onChange={handleDocFileChange}
+                          className="block h-8 w-full cursor-pointer text-[11px] text-slate-600 file:mr-2 file:h-8 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:text-[11px] file:font-medium file:text-slate-700 hover:file:bg-slate-300 dark:text-slate-200 dark:file:bg-slate-700 dark:file:text-slate-100 dark:hover:file:bg-slate-600"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={docSaving}
+                          className="h-8 rounded-full px-3 text-[11px]"
+                          onClick={() => void handleUploadDocumento()}
+                        >
+                          {docSaving ? "Enviando..." : "Enviar"}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Lista de documentos */}
-                <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                  <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                    Documentos cadastrados
-                  </p>
-                  {docsLoading ? (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Carregando documentos...
+                  {/* Lista de documentos */}
+                  <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <p className="mb-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                      Documentos cadastrados
                     </p>
-                  ) : documentos.length === 0 ? (
-                    <p className="text-[11px] text-slate-400">
-                      Nenhum documento específico cadastrado para este hospital.
-                    </p>
-                  ) : (
-                    <div className="max-h-60 space-y-2 overflow-auto">
-                      {documentos.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
-                              <FileText className="h-3.5 w-3.5" />
-                            </span>
-                            <div className="flex flex-col">
-                              <span className="text-[11px] font-medium">
-                                {doc.nome_documento}
+                    {docsLoading ? (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Carregando documentos...
+                      </p>
+                    ) : documentos.length === 0 ? (
+                      <p className="text-[11px] text-slate-400">
+                        Nenhum documento específico cadastrado para este hospital.
+                      </p>
+                    ) : (
+                      <div className="max-h-60 space-y-2 overflow-auto">
+                        {documentos.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                                <FileText className="h-3.5 w-3.5" />
                               </span>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                                {doc.file_path}
-                              </span>
+                              <div className="flex flex-col">
+                                <span className="text-[11px] font-medium">
+                                  {doc.nome_documento}
+                                </span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                  {doc.file_path}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl bg-slate-50 p-3 text-[11px] text-slate-500 ring-1 ring-dashed ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700">
+                  Para anexar documentos específicos, primeiro salve o hospital.
+                  Depois, reabra este cadastro na opção{" "}
+                  <span className="font-semibold">Editar hospital</span> para
+                  liberar o envio de arquivos.
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </CardContent>
