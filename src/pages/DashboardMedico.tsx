@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -8,6 +9,25 @@ import {
   AlertCircle,
 } from "lucide-react";
 import GlosaGauge from "../components/dashboard/GlosaGauge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
 
 const DashboardMedico = () => {
   const navigate = useNavigate();
@@ -18,8 +38,173 @@ const DashboardMedico = () => {
   const valorGlosa = "R$ 18.300,00";
   const percentualGlosaRecuperadoNumero = 83; // 0–100
 
+  const [hospitalModalOpen, setHospitalModalOpen] = useState(false);
+  const [hospitaisMedico, setHospitaisMedico] = useState<
+    { id: string; nome_fantasia: string }[]
+  >([]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>("");
+  const [loadingHospitais, setLoadingHospitais] = useState(false);
+
+  useEffect(() => {
+    if (!hospitalModalOpen) return;
+
+    const carregarHospitaisDoMedico = async () => {
+      setLoadingHospitais(true);
+      try {
+        const { data: authData, error: authError } =
+          await supabase.auth.getUser();
+
+        if (authError || !authData?.user) {
+          showError("Faça login para enviar a descrição cirúrgica.");
+          navigate("/login-medico");
+          return;
+        }
+
+        const email = authData.user.email;
+        if (!email) {
+          showError(
+            "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
+          );
+          return;
+        }
+
+        const { data: medico, error: medicoError } = await supabase
+          .from("medicos")
+          .select("hospitais_ids")
+          .eq("email", email)
+          .maybeSingle();
+
+        if (medicoError) {
+          throw new Error(
+            medicoError.message ||
+              "Não foi possível carregar os hospitais vinculados ao seu cadastro.",
+          );
+        }
+
+        const hospitaisIds: string[] = (medico?.hospitais_ids as string[]) ?? [];
+
+        if (!hospitaisIds.length) {
+          setHospitaisMedico([]);
+          return;
+        }
+
+        const { data: hospitaisData, error: hospitaisError } = await supabase
+          .from("hospitais")
+          .select("id, nome_fantasia")
+          .in("id", hospitaisIds)
+          .order("nome_fantasia", { ascending: true });
+
+        if (hospitaisError) {
+          throw new Error(
+            hospitaisError.message ||
+              "Não foi possível carregar a lista de hospitais.",
+          );
+        }
+
+        setHospitaisMedico(
+          (hospitaisData ?? []) as { id: string; nome_fantasia: string }[],
+        );
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Não foi possível carregar os hospitais vinculados ao seu cadastro.";
+        showError(message);
+      } finally {
+        setLoadingHospitais(false);
+      }
+    };
+
+    void carregarHospitaisDoMedico();
+  }, [hospitalModalOpen, navigate]);
+
+  const handleContinuarEnvio = () => {
+    if (!selectedHospitalId) {
+      showError("Selecione um hospital para continuar.");
+      return;
+    }
+
+    setHospitalModalOpen(false);
+    navigate("/medico/descricao-cirurgica/enviar", {
+      state: { hospitalId: selectedHospitalId },
+    });
+  };
+
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[#0F172A] text-slate-50">
+      {/* Modal de seleção de hospital */}
+      <Dialog open={hospitalModalOpen} onOpenChange={setHospitalModalOpen}>
+        <DialogContent className="border-slate-800 bg-slate-950 text-slate-50">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg">
+              Selecione o hospital
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-300 sm:text-sm">
+              Escolha o hospital onde a cirurgia será realizada para continuar
+              com o envio da descrição cirúrgica.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-3 space-y-2">
+            {loadingHospitais ? (
+              <p className="text-sm text-slate-300">
+                Carregando hospitais onde você atua...
+              </p>
+            ) : hospitaisMedico.length === 0 ? (
+              <p className="text-sm text-slate-300">
+                Não encontramos hospitais vinculados ao seu cadastro. Entre em
+                contato com o administrador do sistema.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="hospital"
+                  className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-200/80"
+                >
+                  Hospital
+                </Label>
+                <Select
+                  value={selectedHospitalId}
+                  onValueChange={setSelectedHospitalId}
+                >
+                  <SelectTrigger id="hospital">
+                    <SelectValue placeholder="Selecione o hospital" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hospitaisMedico.map((h) => (
+                      <SelectItem key={h.id} value={h.id}>
+                        {h.nome_fantasia}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setHospitalModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                loadingHospitais ||
+                hospitaisMedico.length === 0 ||
+                !selectedHospitalId
+              }
+              onClick={handleContinuarEnvio}
+            >
+              Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Fundo gradiente inspirado no app mobile */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_50%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_55%)]" />
 
@@ -68,7 +253,7 @@ const DashboardMedico = () => {
             <button
               type="button"
               className="flex w-full items-center justify-between rounded-3xl bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-3.5 text-left text-sm font-semibold text-white shadow-[0_22px_55px_rgba(16,185,129,0.7)] transition-transform hover:translate-y-0.5"
-              onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
+              onClick={() => setHospitalModalOpen(true)}
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600/90 shadow-inner">
