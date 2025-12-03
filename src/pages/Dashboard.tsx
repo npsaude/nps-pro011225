@@ -314,8 +314,8 @@ const Dashboard = () => {
           </section>
 
           {/* Resto do dashboard (gráfico + tabela) permanece igual */}
-          <section className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2 border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
+          <section className="grid gap-4 lg:grid-cols-5">
+            <Card className="lg:col-span-3 border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   SADTs enviadas x pagas x retorno de glosa
@@ -378,7 +378,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Ranking de médicos por faturamento */}
-            <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
+            <Card className="lg:col-span-2 border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   Médicos com maior faturamento
