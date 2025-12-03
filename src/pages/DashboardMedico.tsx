@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -45,78 +45,76 @@ const DashboardMedico = () => {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>("");
   const [loadingHospitais, setLoadingHospitais] = useState(false);
 
-  useEffect(() => {
-    if (!hospitalModalOpen) return;
+  const carregarHospitaisDoMedico = async () => {
+    setLoadingHospitais(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    const carregarHospitaisDoMedico = async () => {
-      setLoadingHospitais(true);
-      try {
-        const { data: authData, error: authError } =
-          await supabase.auth.getUser();
-
-        if (authError || !authData?.user) {
-          showError("Faça login para enviar a descrição cirúrgica.");
-          navigate("/login-medico");
-          return;
-        }
-
-        const email = authData.user.email;
-        if (!email) {
-          showError(
-            "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
-          );
-          return;
-        }
-
-        const { data: medico, error: medicoError } = await supabase
-          .from("medicos")
-          .select("hospitais_ids")
-          .eq("email", email)
-          .maybeSingle();
-
-        if (medicoError) {
-          throw new Error(
-            medicoError.message ||
-              "Não foi possível carregar os hospitais vinculados ao seu cadastro.",
-          );
-        }
-
-        const hospitaisIds: string[] = (medico?.hospitais_ids as string[]) ?? [];
-
-        if (!hospitaisIds.length) {
-          setHospitaisMedico([]);
-          return;
-        }
-
-        const { data: hospitaisData, error: hospitaisError } = await supabase
-          .from("hospitais")
-          .select("id, nome_fantasia")
-          .in("id", hospitaisIds)
-          .order("nome_fantasia", { ascending: true });
-
-        if (hospitaisError) {
-          throw new Error(
-            hospitaisError.message ||
-              "Não foi possível carregar a lista de hospitais.",
-          );
-        }
-
-        setHospitaisMedico(
-          (hospitaisData ?? []) as { id: string; nome_fantasia: string }[],
-        );
-      } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : "Não foi possível carregar os hospitais vinculados ao seu cadastro.";
-        showError(message);
-      } finally {
-        setLoadingHospitais(false);
+      if (authError || !authData?.user) {
+        showError("Faça login para enviar a descrição cirúrgica.");
+        navigate("/login-medico");
+        return;
       }
-    };
 
+      const email = authData.user.email;
+      if (!email) {
+        showError(
+          "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
+        );
+        return;
+      }
+
+      const { data: medico, error: medicoError } = await supabase
+        .from("medicos")
+        .select("hospitais_ids")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (medicoError) {
+        throw new Error(
+          medicoError.message ||
+            "Não foi possível carregar os hospitais vinculados ao seu cadastro.",
+        );
+      }
+
+      const hospitaisIds: string[] = (medico?.hospitais_ids as string[]) ?? [];
+
+      if (!hospitaisIds.length) {
+        setHospitaisMedico([]);
+        return;
+      }
+
+      const { data: hospitaisData, error: hospitaisError } = await supabase
+        .from("hospitais")
+        .select("id, nome_fantasia")
+        .in("id", hospitaisIds)
+        .order("nome_fantasia", { ascending: true });
+
+      if (hospitaisError) {
+        throw new Error(
+          hospitaisError.message ||
+            "Não foi possível carregar a lista de hospitais.",
+        );
+      }
+
+      setHospitaisMedico(
+        (hospitaisData ?? []) as { id: string; nome_fantasia: string }[],
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar os hospitais vinculados ao seu cadastro.";
+      showError(message);
+    } finally {
+      setLoadingHospitais(false);
+    }
+  };
+
+  const handleAbrirModalHospitais = () => {
+    setHospitalModalOpen(true);
     void carregarHospitaisDoMedico();
-  }, [hospitalModalOpen, navigate]);
+  };
 
   const handleContinuarEnvio = () => {
     if (!selectedHospitalId) {
@@ -226,7 +224,7 @@ const DashboardMedico = () => {
           </div>
         </header>
 
-        {/* Card de saudação + info do médico (similar ao DashboardView de referência) */}
+        {/* Card de saudação + info do médico */}
         <section className="mb-4">
           <div className="flex items-center justify-between rounded-3xl bg-slate-950/85 px-4 py-3.5 text-sm shadow-[0_18px_40px_rgba(0,0,0,0.6)] ring-1 ring-slate-900/60 backdrop-blur">
             <div className="flex flex-col gap-1">
@@ -248,12 +246,12 @@ const DashboardMedico = () => {
 
         {/* Conteúdo principal */}
         <main className="flex-1 space-y-4">
-          {/* CTA principal: Enviar Descrição Cirúrgica (botão grande, como no protótipo) */}
+          {/* CTA principal: Enviar Descrição Cirúrgica */}
           <section>
             <button
               type="button"
               className="flex w-full items-center justify-between rounded-3xl bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-3.5 text-left text-sm font-semibold text-white shadow-[0_22px_55px_rgba(16,185,129,0.7)] transition-transform hover:translate-y-0.5"
-              onClick={() => setHospitalModalOpen(true)}
+              onClick={handleAbrirModalHospitais}
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600/90 shadow-inner">
