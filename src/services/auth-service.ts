@@ -255,6 +255,7 @@ export async function registerUser(params: {
         telefone_whatsapp: null,
         crm: null,
         clinicas_ids: [],
+        hospitais_ids: [], // médico recém-criado ainda sem hospitais vinculados
       });
       // eslint-disable-next-line no-console
       console.log(

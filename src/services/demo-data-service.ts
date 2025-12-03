@@ -140,6 +140,7 @@ export async function criarDadosExemplo(): Promise<void> {
       telefone_whatsapp: (medicoUser.celular as string | null) ?? null,
       crm: "12345-SP",
       clinicas_ids: clinicaIds.length > 0 ? [clinicaIds[0]] : [],
+      hospitais_ids: [], // sem hospitais específicos no seed de exemplo
     });
   }
 

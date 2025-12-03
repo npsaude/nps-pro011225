@@ -7,6 +7,7 @@ export interface Medico {
   telefone_whatsapp: string | null;
   crm: string | null;
   clinicas_ids: string[]; // lista de IDs de clínicas vinculadas
+  hospitais_ids: string[]; // lista de IDs de hospitais onde atua
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +19,7 @@ export type MedicoInput = {
   telefone_whatsapp: string | null;
   crm: string | null;
   clinicas_ids: string[];
+  hospitais_ids: string[];
 };
 
 export async function listarMedicos(): Promise<Medico[]> {
@@ -35,9 +37,7 @@ export async function listarMedicos(): Promise<Medico[]> {
   return (data ?? []) as Medico[];
 }
 
-export async function salvarMedico(
-  payload: MedicoInput,
-): Promise<Medico> {
+export async function salvarMedico(payload: MedicoInput): Promise<Medico> {
   // upsert pela PK "id" (mesmo id do usuarios_sistema com regra MEDICO)
   const { data, error } = await supabase
     .from("medicos")
@@ -49,6 +49,7 @@ export async function salvarMedico(
         telefone_whatsapp: payload.telefone_whatsapp,
         crm: payload.crm,
         clinicas_ids: payload.clinicas_ids,
+        hospitais_ids: payload.hospitais_ids,
       },
       { onConflict: "id" },
     )

@@ -38,6 +38,8 @@ import type { Medico, MedicoInput } from "@/services/medicos-service";
 import { listarMedicos, salvarMedico } from "@/services/medicos-service";
 import type { Clinica } from "@/services/clinicas-service";
 import { listarClinicas } from "@/services/clinicas-service";
+import type { Hospital } from "@/services/hospitais-service";
+import { listarHospitais } from "@/services/hospitais-service";
 import type { DbSystemUser } from "@/db/schema";
 import { supabase } from "@/integrations/supabase/client";
 import MedicoForm from "@/components/medicos/MedicoForm";
@@ -46,6 +48,7 @@ import { showError, showSuccess } from "@/utils/toast";
 interface MedicosListState {
   medicos: Medico[];
   clinicas: Clinica[];
+  hospitais: Hospital[];
   usuariosMedico: DbSystemUser[];
 }
 
@@ -53,6 +56,7 @@ const MedicosList = () => {
   const [state, setState] = useState<MedicosListState>({
     medicos: [],
     clinicas: [],
+    hospitais: [],
     usuariosMedico: [],
   });
   const [loading, setLoading] = useState(true);
@@ -67,9 +71,10 @@ const MedicosList = () => {
     const loadAll = async () => {
       setLoading(true);
       try {
-        const [medicos, clinicas] = await Promise.all([
+        const [medicos, clinicas, hospitais] = await Promise.all([
           listarMedicos(),
           listarClinicas(),
+          listarHospitais(),
         ]);
 
         const { data: usuariosMedico, error } = await supabase
@@ -89,6 +94,7 @@ const MedicosList = () => {
         setState({
           medicos,
           clinicas,
+          hospitais,
           usuariosMedico: (usuariosMedico ?? []) as DbSystemUser[],
         });
       } catch (err) {
@@ -187,7 +193,7 @@ const MedicosList = () => {
               <span>Cadastro complementar de médicos</span>
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Defina CRM, telefone (WhatsApp) e as clínicas em que cada médico atua.
+              Defina CRM, telefone (WhatsApp) e as clínicas e hospitais em que cada médico atua.
             </CardDescription>
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               Total cadastrados:{" "}
@@ -236,6 +242,9 @@ const MedicosList = () => {
                   <TableHead className="px-4 py-3">
                     Clínicas vinculadas
                   </TableHead>
+                  <TableHead className="px-4 py-3">
+                    Hospitais onde atua
+                  </TableHead>
                   <TableHead className="px-4 py-3 text-right">
                     Ações
                   </TableHead>
@@ -245,7 +254,7 @@ const MedicosList = () => {
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="px-4 py-6 text-center text-xs text-slate-400"
                     >
                       Nenhum médico com cadastro complementar encontrado.
@@ -298,6 +307,28 @@ const MedicosList = () => {
                               })}
                         </div>
                       </TableCell>
+                      <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                        <div className="flex flex-wrap gap-1">
+                          {medico.hospitais_ids?.length === 0 ||
+                          !medico.hospitais_ids
+                            ? "-"
+                            : medico.hospitais_ids.map((id) => {
+                                const h = state.hospitais.find(
+                                  (hos) => hos.id === id,
+                                );
+                                if (!h) return null;
+                                return (
+                                  <span
+                                    key={id}
+                                    className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                  >
+                                    <Building2 className="h-3 w-3" />
+                                    {h.nome_fantasia}
+                                  </span>
+                                );
+                              })}
+                        </div>
+                      </TableCell>
                       <TableCell className="px-4 py-3 text-right">
                         <Button
                           variant="ghost"
@@ -321,7 +352,9 @@ const MedicosList = () => {
           <div className="mt-4 rounded-2xl bg-slate-50 px-3 py-3 text-[11px] text-slate-500 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-800">
             <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
               <UserSearch className="h-3.5 w-3.5" />
-              <span>Médicos com usuário criado, mas sem cadastro complementar:</span>
+              <span>
+                Médicos com usuário criado, mas sem cadastro complementar:
+              </span>
             </div>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {medicosSemCadastro.map((u) => (
@@ -360,7 +393,9 @@ const MedicosList = () => {
                 : "Selecione um médico para cadastrar"}
             </DialogTitle>
             <DialogDescription>
-              Os dados de nome e e-mail vêm da tabela de usuários médicos; aqui você complementa com CRM, WhatsApp e as clínicas onde atua.
+              Os dados de nome e e-mail vêm da tabela de usuários médicos; aqui
+              você complementa com CRM, WhatsApp e as clínicas e hospitais onde
+              atua.
             </DialogDescription>
           </DialogHeader>
 
@@ -376,6 +411,7 @@ const MedicosList = () => {
                 null
               }
               clinicas={state.clinicas}
+              hospitais={state.hospitais}
               onSubmit={handleSubmit}
               isSubmitting={saving}
             />

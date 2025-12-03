@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { Medico, MedicoInput } from "@/services/medicos-service";
 import type { Clinica } from "@/services/clinicas-service";
+import type { Hospital } from "@/services/hospitais-service";
 
 const medicoSchema = z.object({
   telefone_whatsapp: z
@@ -31,6 +32,7 @@ const medicoSchema = z.object({
     .or(z.literal("")),
   crm: z.string().optional().or(z.literal("")),
   clinicas_ids: z.array(z.string()).min(1, "Selecione ao menos uma clínica."),
+  hospitais_ids: z.array(z.string()).min(1, "Selecione ao menos um hospital."),
 });
 
 export type MedicoFormValues = z.infer<typeof medicoSchema>;
@@ -43,6 +45,7 @@ interface MedicoFormProps {
   };
   medicoExistente?: Medico | null;
   clinicas: Clinica[];
+  hospitais: Hospital[];
   onSubmit: (input: MedicoInput) => Promise<void> | void;
   isSubmitting?: boolean;
 }
@@ -51,16 +54,20 @@ const MedicoForm = ({
   medicoBase,
   medicoExistente,
   clinicas,
+  hospitais,
   onSubmit,
   isSubmitting,
 }: MedicoFormProps) => {
   const [clinicaSearch, setClinicaSearch] = useState("");
+  const [hospitalSearch, setHospitalSearch] = useState("");
+
   const form = useForm<MedicoFormValues>({
     resolver: zodResolver(medicoSchema),
     defaultValues: {
       telefone_whatsapp: "",
       crm: "",
       clinicas_ids: [],
+      hospitais_ids: [],
     },
   });
 
@@ -70,6 +77,7 @@ const MedicoForm = ({
         telefone_whatsapp: medicoExistente.telefone_whatsapp ?? "",
         crm: medicoExistente.crm ?? "",
         clinicas_ids: medicoExistente.clinicas_ids ?? [],
+        hospitais_ids: medicoExistente.hospitais_ids ?? [],
       });
     }
   }, [medicoExistente, form]);
@@ -79,6 +87,12 @@ const MedicoForm = ({
     clinicas.forEach((c) => map.set(c.id, c));
     return map;
   }, [clinicas]);
+
+  const hospitaisMap = useMemo(() => {
+    const map = new Map<string, Hospital>();
+    hospitais.forEach((h) => map.set(h.id, h));
+    return map;
+  }, [hospitais]);
 
   const clinicasFiltradas = useMemo(() => {
     if (!clinicaSearch.trim()) return clinicas;
@@ -92,6 +106,18 @@ const MedicoForm = ({
     });
   }, [clinicas, clinicaSearch]);
 
+  const hospitaisFiltrados = useMemo(() => {
+    if (!hospitalSearch.trim()) return hospitais;
+    const term = hospitalSearch.toLowerCase();
+    return hospitais.filter((h) => {
+      return (
+        h.razao_social.toLowerCase().includes(term) ||
+        h.nome_fantasia.toLowerCase().includes(term) ||
+        (h.cidade ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [hospitais, hospitalSearch]);
+
   const handleSubmit = (values: MedicoFormValues) => {
     const payload: MedicoInput = {
       id: medicoBase.id,
@@ -100,6 +126,7 @@ const MedicoForm = ({
       telefone_whatsapp: values.telefone_whatsapp || null,
       crm: values.crm || null,
       clinicas_ids: values.clinicas_ids,
+      hospitais_ids: values.hospitais_ids,
     };
 
     void onSubmit(payload);
@@ -120,7 +147,23 @@ const MedicoForm = ({
     }
   };
 
+  const toggleHospital = (id: string) => {
+    const current = form.getValues("hospitais_ids");
+    if (current.includes(id)) {
+      form.setValue(
+        "hospitais_ids",
+        current.filter((h) => h !== id),
+        { shouldValidate: true },
+      );
+    } else {
+      form.setValue("hospitais_ids", [...current, id], {
+        shouldValidate: true,
+      });
+    }
+  };
+
   const selectedClinicas = form.watch("clinicas_ids");
+  const selectedHospitais = form.watch("hospitais_ids");
 
   return (
     <Form {...form}>
@@ -185,6 +228,7 @@ const MedicoForm = ({
           />
         </div>
 
+        {/* Clínicas vinculadas */}
         <FormField
           control={form.control}
           name="clinicas_ids"
@@ -286,6 +330,120 @@ const MedicoForm = ({
                           type="button"
                           className="ml-0.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200"
                           onClick={() => toggleClinica(id)}
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </FormItem>
+          )}
+        />
+
+        {/* Hospitais onde atua */}
+        <FormField
+          control={form.control}
+          name="hospitais_ids"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Hospitais onde atua</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex h-9 w-full items-center justify-between rounded-xl border-slate-200 bg-white px-3 text-left text-xs font-normal dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    {field.value.length === 0 ? (
+                      <span className="text-slate-400">
+                        Selecione um ou mais hospitais
+                      </span>
+                    ) : (
+                      <span className="line-clamp-1 text-slate-700 dark:text-slate-200">
+                        {field.value
+                          .map((id) => hospitaisMap.get(id)?.nome_fantasia)
+                          .filter(Boolean)
+                          .join(", ")}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-3 text-xs sm:text-sm">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Buscar por nome, razão social ou cidade..."
+                        className="h-8 pl-8 text-xs"
+                        value={hospitalSearch}
+                        onChange={(e) => setHospitalSearch(e.target.value)}
+                      />
+                    </div>
+                    {hospitalSearch && (
+                      <button
+                        type="button"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200"
+                        onClick={() => setHospitalSearch("")}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-52 space-y-1 overflow-auto pt-1">
+                    {hospitaisFiltrados.length === 0 ? (
+                      <p className="px-1 py-2 text-[11px] text-slate-400">
+                        Nenhum hospital encontrado.
+                      </p>
+                    ) : (
+                      hospitaisFiltrados.map((h) => {
+                        const selected = field.value.includes(h.id);
+                        return (
+                          <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => toggleHospital(h.id)}
+                            className={`flex w-full flex-col rounded-xl px-2.5 py-2 text-left transition-colors ${
+                              selected
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-100"
+                                : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                            }`}
+                          >
+                            <span className="text-[13px] font-medium">
+                              {h.nome_fantasia}
+                            </span>
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                              {h.razao_social}
+                            </span>
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                              {h.cidade} / {h.uf}
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <FormMessage className="mt-1" />
+
+              {selectedHospitais.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {selectedHospitais.map((id) => {
+                    const h = hospitaisMap.get(id);
+                    if (!h) return null;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      >
+                        {h.nome_fantasia}
+                        <button
+                          type="button"
+                          className="ml-0.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200"
+                          onClick={() => toggleHospital(id)}
                         >
                           <X className="h-2.5 w-2.5" />
                         </button>
