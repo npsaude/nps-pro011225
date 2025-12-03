@@ -165,10 +165,13 @@ const DashboardMedico = () => {
                   value={selectedHospitalId}
                   onValueChange={setSelectedHospitalId}
                 >
-                  <SelectTrigger id="hospital">
+                  <SelectTrigger
+                    id="hospital"
+                    className="bg-slate-900 text-slate-50 placeholder:text-slate-400 border-emerald-500/40 focus:ring-emerald-500"
+                  >
                     <SelectValue placeholder="Selecione o hospital" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-900 text-slate-50">
                     {hospitaisMedico.map((h) => (
                       <SelectItem key={h.id} value={h.id}>
                         {h.nome_fantasia}
