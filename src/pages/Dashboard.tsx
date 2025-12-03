@@ -107,38 +107,55 @@ const yearlySadtData = [
   { mes: "Dez", enviados: 110, pagos: 85, retornoGlosa: 23 },
 ];
 
-const recentSadt = [
+const topDoctorsByRevenue = [
   {
-    protocolo: "SADT-2024-13451",
-    data: "03 Jul, 2024",
-    medico: "Carlos Pereira",
-    medicoAvatar:
+    id: "dr-carlos-pereira",
+    name: "Dr. Carlos Pereira",
+    specialty: "Ortopedia",
+    avatar:
       "https://images.pexels.com/photos/5327581/pexels-photo-5327581.jpeg?auto=compress&cs=tinysrgb&w=160",
-    valor: "R$ 2.450,00",
-    status: "PAGA",
-    statusColor:
-      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    sadtCount: 184,
+    revenue: "R$ 320.450,00",
+    growth: "+12,4%",
   },
   {
-    protocolo: "SADT-2024-13398",
-    data: "28 Jun, 2024",
-    medico: "Ana Costa",
-    medicoAvatar:
+    id: "dra-ana-costa",
+    name: "Dra. Ana Costa",
+    specialty: "Cardiologia",
+    avatar:
       "https://images.pexels.com/photos/5327657/pexels-photo-5327657.jpeg?auto=compress&cs=tinysrgb&w=160",
-    valor: "R$ 1.280,00",
-    status: "EM ANÁLISE",
-    statusColor:
-      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    sadtCount: 162,
+    revenue: "R$ 295.870,00",
+    growth: "+9,1%",
   },
   {
-    protocolo: "SADT-2024-13340",
-    data: "25 Jun, 2024",
-    medico: "João Almeida",
-    medicoAvatar: "/perfil.jpeg",
-    valor: "R$ 980,00",
-    status: "GLOSA",
-    statusColor:
-      "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+    id: "dr-joao-almeida",
+    name: "Dr. João Almeida",
+    specialty: "Cirurgia Geral",
+    avatar: "/perfil.jpeg",
+    sadtCount: 148,
+    revenue: "R$ 268.300,00",
+    growth: "+7,8%",
+  },
+  {
+    id: "dra-maria-silva",
+    name: "Dra. Maria Silva",
+    specialty: "Ginecologia",
+    avatar:
+      "https://images.pexels.com/photos/8460151/pexels-photo-8460151.jpeg?auto=compress&cs=tinysrgb&w=160",
+    sadtCount: 131,
+    revenue: "R$ 241.920,00",
+    growth: "+5,2%",
+  },
+  {
+    id: "dr-ricardo-lima",
+    name: "Dr. Ricardo Lima",
+    specialty: "Neurologia",
+    avatar:
+      "https://images.pexels.com/photos/8376304/pexels-photo-8376304.jpeg?auto=compress&cs=tinysrgb&w=160",
+    sadtCount: 119,
+    revenue: "R$ 225.110,00",
+    growth: "+4,6%",
   },
 ];
 
@@ -360,56 +377,65 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
+            {/* Ranking de médicos por faturamento */}
             <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  SADTs recentes
+                  Médicos com maior faturamento
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-400">
-                  Últimas SADTs lançadas no sistema
+                  Top 5 médicos por valor faturado no período selecionado
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto pt-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                      <TableHead>Protocolo</TableHead>
-                      <TableHead>Data</TableHead>
                       <TableHead>Médico</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">SADTs</TableHead>
+                      <TableHead className="text-right">Faturamento</TableHead>
+                      <TableHead className="text-right">Tendência</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentSadt.map((row) => (
+                    {topDoctorsByRevenue.map((doctor, index) => (
                       <TableRow
-                        key={row.protocolo}
+                        key={doctor.id}
                         className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60"
                       >
-                        <TableCell className="font-medium text-slate-900 dark:text-slate-50">
-                          {row.protocolo}
-                        </TableCell>
-                        <TableCell>{row.data}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            <span className="w-5 text-[11px] font-semibold text-slate-400">
+                              {index + 1}º
+                            </span>
                             <Avatar className="h-7 w-7">
                               <AvatarImage
-                                src={row.medicoAvatar}
-                                alt={row.medico}
+                                src={doctor.avatar}
+                                alt={doctor.name}
                               />
                               <AvatarFallback>
-                                {getInitials(row.medico)}
+                                {getInitials(doctor.name)}
                               </AvatarFallback>
                             </Avatar>
-                            <span>{row.medico}</span>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-medium text-slate-900 dark:text-slate-50">
+                                {doctor.name}
+                              </span>
+                              <span className="text-[11px] text-slate-400">
+                                {doctor.specialty}
+                              </span>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>{row.valor}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={`${row.statusColor} border-0 px-2 py-0.5 text-[11px] font-semibold`}
-                          >
-                            {row.status}
+                        <TableCell className="text-right text-xs text-slate-600 dark:text-slate-200">
+                          {doctor.sadtCount.toLocaleString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold text-slate-900 dark:text-slate-50">
+                          {doctor.revenue}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="border-0 bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            ↑ {doctor.growth}
                           </Badge>
                         </TableCell>
                       </TableRow>
