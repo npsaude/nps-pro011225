@@ -105,7 +105,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       }
 
       const userId = userData.user.id;
-      const bucketName = "nps-pro";
+      // Nome do bucket deve ser exatamente igual ao que aparece no Supabase (NPS-pro)
+      const bucketName = "NPS-pro";
 
       for (const file of files) {
         const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");

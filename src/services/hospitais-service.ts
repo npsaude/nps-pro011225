@@ -31,7 +31,8 @@ export interface HospitalDocumentoEspecifico {
   created_at: string;
 }
 
-const BUCKET_NAME = "nps-pro";
+// ATENÇÃO: o nome do bucket precisa bater exatamente com o do Supabase (NPS-pro)
+const BUCKET_NAME = "NPS-pro";
 
 export async function listarHospitais(): Promise<Hospital[]> {
   const { data, error } = await supabase
