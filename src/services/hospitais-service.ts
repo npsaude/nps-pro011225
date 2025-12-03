@@ -17,11 +17,16 @@ export interface Hospital {
   nome_contato_faturamento: string | null;
   email_contato_faturamento: string | null;
   telefone_contato_faturamento: string | null;
+  storage_folder: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type HospitalInput = Omit<Hospital, "id" | "created_at" | "updated_at">;
+// No input não precisamos enviar storage_folder; ele será gerado automaticamente
+export type HospitalInput = Omit<
+  Hospital,
+  "id" | "created_at" | "updated_at" | "storage_folder"
+>;
 
 export interface HospitalDocumentoEspecifico {
   id: string;
@@ -114,7 +119,10 @@ export async function uploadDocumentoEspecifico(
 ): Promise<HospitalDocumentoEspecifico> {
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const timestamp = Date.now();
-  const filePath = `documentos_especificos/Hospitais/${hospitalId}/${timestamp}-${safeName}`;
+
+  // Pasta base do hospital no storage (pode ter vários arquivos dentro dela)
+  const storageFolder = `documentos_especificos/Hospitais/${hospitalId}`;
+  const filePath = `${storageFolder}/${timestamp}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from(BUCKET_NAME)
@@ -144,6 +152,22 @@ export async function uploadDocumentoEspecifico(
     throw new Error(
       error?.message ||
         "Documento enviado, mas não foi possível salvar o registro no banco.",
+    );
+  }
+
+  // Atualiza o cadastro do hospital para lembrar a pasta onde os arquivos ficam guardados
+  const { error: hospitalUpdateError } = await supabase
+    .from("hospitais")
+    .update({
+      storage_folder: storageFolder,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", hospitalId);
+
+  if (hospitalUpdateError) {
+    throw new Error(
+      hospitalUpdateError.message ||
+        "Documento enviado, mas não foi possível atualizar a pasta de armazenamento do hospital.",
     );
   }
 
