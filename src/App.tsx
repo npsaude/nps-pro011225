@@ -21,6 +21,7 @@ import AdminConfiguracoes from "./pages/AdminConfiguracoes";
 import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
 import MedicoUploadDescricaoCirurgica from "./pages/MedicoUploadDescricaoCirurgica";
 import MedicoDescricoesCirurgicas from "./pages/MedicoDescricoesCirurgicas";
+import DescricaoCirurgicaArquivosPage from "./pages/DescricaoCirurgicaArquivos";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,10 @@ const App = () => (
 
           {/* Nova tela de Descrição Cirúrgica (admin) */}
           <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
+          <Route
+            path="/descricao-cirurgica/:id/arquivos"
+            element={<DescricaoCirurgicaArquivosPage />}
+          />
 
           {/* Dashboard específico para médico */}
           <Route path="/medico/dashboard" element={<DashboardMedico />} />

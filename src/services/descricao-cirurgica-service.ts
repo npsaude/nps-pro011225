@@ -107,6 +107,14 @@ export interface DescricaoCirurgicaResumoMedico {
   status: DbDescricaoCirurgicaStatus | null;
 }
 
+export interface DescricaoCirurgicaArquivo {
+  id: string;
+  descricao_id: string;
+  user_id: string;
+  file_path: string;
+  created_at: string;
+}
+
 function mapSimNao(value: SimNao): boolean | null {
   if (value === "sim") return true;
   if (value === "nao") return false;
@@ -182,7 +190,6 @@ export async function criarDescricaoCirurgica(
   }
 
   const userId = userData.user.id;
-
   const { procedimentosJson, equipeJson, materiaisJson } = buildJsonFromForm(
     form,
   );
@@ -485,4 +492,26 @@ export async function buscarDescricaoCirurgicaPorId(
   }
 
   return data as DbDescricaoCirurgica;
+}
+
+/**
+ * Lista arquivos anexados a uma descrição cirúrgica.
+ */
+export async function listarArquivosDescricaoCirurgica(
+  descricaoId: string,
+): Promise<DescricaoCirurgicaArquivo[]> {
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas_arquivos")
+    .select("id, descricao_id, user_id, file_path, created_at")
+    .eq("descricao_id", descricaoId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível carregar os arquivos anexados a esta descrição.",
+    );
+  }
+
+  return (data ?? []) as DescricaoCirurgicaArquivo[];
 }

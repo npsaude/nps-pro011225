@@ -715,7 +715,7 @@ Regras importantes:
     .select("id")
     .single();
 
-  if (insertError) {
+  if (insertError || !inserted?.id) {
     console.error(
       "Erro ao inserir em descricoes_cirurgicas:",
       insertError,
@@ -731,10 +731,43 @@ Regras importantes:
     );
   }
 
+  const descricaoId = inserted.id as string;
+
+  // 7) Inserir registros de arquivos vinculados à descrição
+  const arquivosRows =
+    files.map((f) => ({
+      descricao_id: descricaoId,
+      user_id: userId,
+      file_path: f.path,
+    })) ?? [];
+
+  if (arquivosRows.length > 0) {
+    const { error: arquivosError } = await supabase
+      .from("descricoes_cirurgicas_arquivos")
+      .insert(arquivosRows);
+
+    if (arquivosError) {
+      console.error(
+        "Erro ao inserir em descricoes_cirurgicas_arquivos:",
+        arquivosError,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Descrição criada, mas houve erro ao registrar os arquivos anexados.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+  }
+
   return new Response(
     JSON.stringify({
       success: true,
-      descricao_cirurgica_id: inserted?.id,
+      descricao_cirurgica_id: descricaoId,
     }),
     {
       status: 200,

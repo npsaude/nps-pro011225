@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Pencil, Trash2, Plus } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +26,7 @@ type Props = {
   onVisualizar: (item: DescricaoCirurgicaResumoMedico) => void;
   onEditar: (item: DescricaoCirurgicaResumoMedico) => void;
   onExcluir: (item: DescricaoCirurgicaResumoMedico) => void;
+  onVerArquivos: (item: DescricaoCirurgicaResumoMedico) => void;
 };
 
 const statusLabel: Record<string, string> = {
@@ -56,6 +57,7 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
   onVisualizar,
   onEditar,
   onExcluir,
+  onVerArquivos,
 }) => {
   return (
     <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
@@ -178,9 +180,19 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                             size="icon"
                             className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                             onClick={() => onEditar(item)}
-                            aria-label="Editar status da descrição cirúrgica"
+                            aria-label="Editar descrição cirúrgica"
                           >
                             <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            onClick={() => onVerArquivos(item)}
+                            aria-label="Visualizar arquivos anexados"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             type="button"
