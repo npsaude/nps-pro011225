@@ -1,10 +1,11 @@
 import {
   Users,
-  Stethoscope,
-  HelpCircle,
+  Activity,
+  CheckCircle2,
   MessageCircle,
   Bell,
   Search,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -47,6 +48,8 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "@/components/ui/avatar";
+import GlosaGauge from "@/components/dashboard/GlosaGauge";
+import RegionBubbleMap from "@/components/dashboard/RegionBubbleMap";
 
 const clinicOptions = [
   { id: "todas", name: "Todas as clínicas" },
@@ -61,34 +64,51 @@ const doctorOptions = [
   { id: "dra-ana-costa", name: "Dra. Ana Costa" },
 ];
 
-const topMetrics = [
+type TopMetric = {
+  id: string;
+  title: string;
+  value: string;
+  helper: string;
+  icon: any;
+  iconBg: string;
+  isGauge?: boolean;
+  gaugeValue?: number;
+};
+
+const topMetrics: TopMetric[] = [
   {
+    id: "medicos",
     title: "Quantidade de médicos",
     value: "32",
-    helper: "↑ 4 neste mês",
-    gradient: "from-sky-400 to-sky-600",
+    helper: "4 neste mês",
     icon: Users,
+    iconBg: "bg-sky-500",
   },
   {
+    id: "sadts-atendidos",
     title: "SADTs atendidos",
     value: "2,8 mil",
-    helper: "↑ 320 vs. mês anterior",
-    gradient: "from-violet-400 to-violet-600",
-    icon: Stethoscope,
+    helper: "320 vs. mês anterior",
+    icon: Activity,
+    iconBg: "bg-violet-500",
   },
   {
-    title: "Índice de glosa",
-    value: "5,3%",
-    helper: "↓ 0,7 p.p.",
-    gradient: "from-amber-400 to-orange-600",
-    icon: HelpCircle,
+    id: "glosa-recuperada",
+    title: "Glosa recuperada",
+    value: "84%",
+    helper: "+12% vs. mês anterior",
+    icon: CheckCircle2,
+    iconBg: "bg-emerald-500",
+    isGauge: true,
+    gaugeValue: 84,
   },
   {
+    id: "valor-glosa-recuperado",
     title: "Valor de glosa recuperado",
     value: "R$ 180 mil",
-    helper: "↑ R$ 25 mil no mês",
-    gradient: "from-emerald-400 to-emerald-600",
+    helper: "R$ 25 mil no mês",
     icon: MessageCircle,
+    iconBg: "bg-emerald-500",
   },
 ];
 
@@ -222,14 +242,14 @@ const Dashboard = () => {
             </div>
           </header>
 
-          {/* Filtros mais compactos */}
-          <section className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-            <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
-              <CardHeader className="pb-1 pt-2">
-                <CardTitle className="text-[11px] font-semibold text-slate-600 dark:text-slate-200">
+          {/* Filtros principais */}
+          <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-2">
+            <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
                   Clínica
                 </CardTitle>
-                <CardDescription className="text-[10px] text-slate-400">
+                <CardDescription className="text-[11px] text-slate-400">
                   Filtrar por unidade
                 </CardDescription>
               </CardHeader>
@@ -238,7 +258,7 @@ const Dashboard = () => {
                   value={selectedClinic}
                   onValueChange={setSelectedClinic}
                 >
-                  <SelectTrigger className="h-8 w-full text-[11px]">
+                  <SelectTrigger className="h-10 w-full rounded-2xl text-sm">
                     <SelectValue placeholder="Selecione a clínica" />
                   </SelectTrigger>
                   <SelectContent>
@@ -252,12 +272,12 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
-              <CardHeader className="pb-1 pt-2">
-                <CardTitle className="text-[11px] font-semibold text-slate-600 dark:text-slate-200">
+            <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
                   Médico
                 </CardTitle>
-                <CardDescription className="text-[10px] text-slate-400">
+                <CardDescription className="text-[11px] text-slate-400">
                   Filtrar por médico
                 </CardDescription>
               </CardHeader>
@@ -266,7 +286,7 @@ const Dashboard = () => {
                   value={selectedDoctor}
                   onValueChange={setSelectedDoctor}
                 >
-                  <SelectTrigger className="h-8 w-full text-[11px]">
+                  <SelectTrigger className="h-10 w-full rounded-2xl text-sm">
                     <SelectValue placeholder="Selecione o médico" />
                   </SelectTrigger>
                   <SelectContent>
@@ -281,31 +301,43 @@ const Dashboard = () => {
             </Card>
           </section>
 
-          {/* Cards de métricas mais vibrantes */}
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {/* Cards de métricas no novo estilo */}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {topMetrics.map((metric) => {
               const Icon = metric.icon;
               return (
                 <Card
-                  key={metric.title}
-                  className="border-0 bg-gradient-to-br from-slate-900/90 to-slate-900 text-white shadow-[0_18px_40px_rgba(15,23,42,0.35)]"
+                  key={metric.id}
+                  className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
                 >
-                  <CardContent className="flex items-center justify-between gap-3 p-3 sm:p-4">
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-300/90">
-                        {metric.title}
-                      </p>
-                      <p className="text-xl font-semibold sm:text-2xl">
-                        {metric.value}
-                      </p>
-                      <p className="text-[11px] text-emerald-300">
-                        {metric.helper}
-                      </p>
+                  <CardContent className="flex h-40 flex-col justify-between rounded-3xl p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
+                          {metric.title}
+                        </p>
+                        {!metric.isGauge && (
+                          <p className="mt-1 text-2xl font-semibold">
+                            {metric.value}
+                          </p>
+                        )}
+                      </div>
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl ${metric.iconBg} text-white shadow-md`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
                     </div>
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${metric.gradient} text-white shadow-lg shadow-slate-900/40 sm:h-14 sm:w-14`}
-                    >
-                      <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+
+                    {metric.isGauge && (
+                      <div className="mt-2 flex justify-center">
+                        <GlosaGauge value={metric.gaugeValue ?? 0} />
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300">
+                      <ArrowUpRight className="h-3 w-3" />
+                      <span>{metric.helper}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -313,9 +345,9 @@ const Dashboard = () => {
             })}
           </section>
 
-          {/* Resto do dashboard (gráfico + tabela) permanece igual */}
+          {/* Gráfico de barras + ranking de médicos */}
           <section className="grid gap-4 lg:grid-cols-5">
-            <Card className="lg:col-span-3 border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
+            <Card className="lg:col-span-3 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   SADTs enviadas x pagas x retorno de glosa
@@ -324,7 +356,7 @@ const Dashboard = () => {
                   Visão consolidada dos últimos 12 meses
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-64 px-1 pb-4 pt-0 sm:h-72 sm:px-2">
+              <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={yearlySadtData}>
                     <CartesianGrid
@@ -377,8 +409,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Ranking de médicos por faturamento */}
-            <Card className="lg:col-span-2 border-[#D9DEE3] bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
+            <Card className="lg:col-span-2 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   Médicos com maior faturamento
@@ -442,6 +473,23 @@ const Dashboard = () => {
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Mapa de médicos por região */}
+          <section className="mt-2">
+            <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  Médicos atendidos por região
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-400">
+                  Distribuição por densidade
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <RegionBubbleMap />
               </CardContent>
             </Card>
           </section>
