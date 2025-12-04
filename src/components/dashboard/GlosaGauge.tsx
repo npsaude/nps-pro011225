@@ -20,7 +20,6 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
   const endX = centerX + radius * Math.cos(endAngle);
   const endY = centerY + radius * Math.sin(endAngle);
 
-  // Nosso arco vai de 0 a 180° no máximo, então sempre usamos o arco "curto"
   const largeArcFlag = 0;
 
   // Ângulo do ponteiro dentro do semicírculo
@@ -29,18 +28,20 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
   const pointerX = centerX + pointerRadius * Math.cos(pointerAngle);
   const pointerY = centerY + pointerRadius * Math.sin(pointerAngle);
 
+  const roundedPercent = Math.round(percentage);
+
   return (
     <div className="flex items-center justify-center">
       <svg
-        viewBox="0 0 120 70"
-        className="h-20 w-full max-w-[220px]"
+        viewBox="0 0 120 80"
+        className="h-16 w-full max-w-[220px]"
         aria-hidden="true"
       >
         {/* Arco de fundo */}
         <path
           d="M 16 60 A 44 44 0 0 1 104 60"
           fill="none"
-          stroke="rgba(15,23,42,0.9)"
+          stroke="rgba(15,23,42,0.85)"
           strokeWidth={10}
           strokeLinecap="round"
         />
@@ -89,18 +90,30 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           strokeWidth={2}
         />
 
+        {/* Percentual no centro do arco */}
+        <text
+          x={centerX}
+          y={52}
+          fontSize="14"
+          fontWeight="700"
+          textAnchor="middle"
+          fill="#f9fafb"
+        >
+          {roundedPercent}%
+        </text>
+
         {/* Marcadores 0% e 100% */}
         <text
           x={20}
-          y={65}
+          y={68}
           fontSize="8"
           fill="rgba(148, 163, 184, 0.9)"
         >
           0%
         </text>
         <text
-          x={96}
-          y={65}
+          x={100}
+          y={68}
           fontSize="8"
           textAnchor="end"
           fill="rgba(148, 163, 184, 0.9)"

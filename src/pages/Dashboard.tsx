@@ -300,41 +300,45 @@ const Dashboard = () => {
             </Card>
           </section>
 
-          {/* Cards de métricas no novo estilo */}
+          {/* Cards de métricas no estilo do mock */}
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {topMetrics.map((metric) => {
               const Icon = metric.icon;
+              const isGauge = metric.isGauge;
+
               return (
                 <Card
                   key={metric.id}
                   className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
                 >
-                  <CardContent className="flex flex-col justify-between rounded-3xl p-5 gap-2">
+                  <CardContent className="flex h-44 flex-col rounded-3xl p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
                           {metric.title}
                         </p>
-                        {!metric.isGauge && (
+                        {!isGauge && (
                           <p className="mt-1 text-2xl font-semibold">
                             {metric.value}
                           </p>
                         )}
                       </div>
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl ${metric.iconBg} text-white shadow-md`}
+                        className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${metric.iconBg} text-white shadow-md`}
                       >
                         <Icon className="h-5 w-5" />
                       </div>
                     </div>
 
-                    {metric.isGauge && (
-                      <div className="mt-1 flex justify-center">
+                    {isGauge ? (
+                      <div className="mt-3 flex flex-1 items-center justify-center">
                         <GlosaGauge value={metric.gaugeValue ?? 0} />
                       </div>
+                    ) : (
+                      <div className="flex-1" />
                     )}
 
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-emerald-300">
+                    <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300">
                       <ArrowUpRight className="h-3 w-3" />
                       <span>{metric.helper}</span>
                     </div>
