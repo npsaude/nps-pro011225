@@ -41,6 +41,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
   const [showFillingScreen, setShowFillingScreen] = useState(false);
+  const [fillingProgress, setFillingProgress] = useState(0);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -366,6 +367,33 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setIsUploading(false);
     }
   };
+
+  // Simula o preenchimento automático: barra progride e, ao final, dispara o envio
+  useEffect(() => {
+    if (!showFillingScreen) {
+      setFillingProgress(0);
+      return;
+    }
+
+    let current = 0;
+    setFillingProgress(0);
+
+    const interval = window.setInterval(() => {
+      current += 20;
+      if (current >= 100) {
+        window.clearInterval(interval);
+        setFillingProgress(100);
+        setShowFillingScreen(false);
+        void handleUpload();
+      } else {
+        setFillingProgress(current);
+      }
+    }, 400);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [showFillingScreen]);
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
 
@@ -1031,20 +1059,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela de progresso de preenchimento do formulário de honorários */}
       {showFillingScreen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm"
-          onClick={() => setShowFillingScreen(false)}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
           <div
             className="w-[88%] max-w-sm rounded-3xl border border-slate-800 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]"
-            onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
               Preenchendo Formulário...
             </h2>
             <div className="mt-5">
               <Progress
-                value={72}
+                value={fillingProgress}
                 className="h-2.5 rounded-full bg-slate-900"
               />
             </div>
