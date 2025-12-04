@@ -202,7 +202,7 @@ const LoginMedico = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key === "2") {
+      if (event.ctrlKey && event.shiftKey && event.code === "Digit2") {
         event.preventDefault();
         void handleMedicoShortcutLogin();
       }
