@@ -1,7 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type TipoUnidade = "CLINICA" | "HOSPITAL";
+
 export interface Clinica {
   id: string;
+  tipo_unidade: TipoUnidade;
+  codigo_referencial_got: string | null;
   razao_social: string;
   nome_fantasia: string;
   nome_rede: string | null;
@@ -34,7 +38,7 @@ export async function listarClinicas(): Promise<Clinica[]> {
 
   if (error) {
     throw new Error(
-      error.message || "Não foi possível carregar a lista de clínicas.",
+      error.message || "Não foi possível carregar a lista de clínicas/hospitais.",
     );
   }
 
@@ -52,7 +56,7 @@ export async function criarClinica(
 
   if (error) {
     throw new Error(
-      error.message || "Não foi possível cadastrar a clínica.",
+      error.message || "Não foi possível cadastrar a clínica/hospital.",
     );
   }
 
@@ -75,7 +79,7 @@ export async function atualizarClinica(
 
   if (error) {
     throw new Error(
-      error.message || "Não foi possível atualizar a clínica.",
+      error.message || "Não foi possível atualizar a clínica/hospital.",
     );
   }
 

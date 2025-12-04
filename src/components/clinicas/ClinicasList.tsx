@@ -62,7 +62,7 @@ const ClinicasList = () => {
         const message =
           err instanceof Error
             ? err.message
-            : "Erro ao carregar clínicas.";
+            : "Erro ao carregar clínicas/hospitais.";
         showError(message);
       } finally {
         setLoading(false);
@@ -84,7 +84,8 @@ const ClinicasList = () => {
           c.razao_social.toLowerCase().includes(term) ||
           c.nome_fantasia.toLowerCase().includes(term) ||
           (c.cnpj ?? "").toLowerCase().includes(term) ||
-          (c.cidade ?? "").toLowerCase().includes(term)
+          (c.cidade ?? "").toLowerCase().includes(term) ||
+          (c.codigo_referencial_got ?? "").toLowerCase().includes(term)
         );
       }),
     );
@@ -108,11 +109,11 @@ const ClinicasList = () => {
         setClinicas((prev) =>
           prev.map((c) => (c.id === updated.id ? updated : c)),
         );
-        showSuccess("Clínica atualizada com sucesso.");
+        showSuccess("Cadastro atualizado com sucesso.");
       } else {
         const created = await criarClinica(values);
         setClinicas((prev) => [...prev, created]);
-        showSuccess("Clínica cadastrada com sucesso.");
+        showSuccess("Cadastro criado com sucesso.");
       }
       setDialogOpen(false);
       setEditing(null);
@@ -120,12 +121,15 @@ const ClinicasList = () => {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível salvar a clínica.";
+          : "Não foi possível salvar o cadastro.";
       showError(message);
     } finally {
       setSaving(false);
     }
   };
+
+  const labelTipo = (tipo: Clinica["tipo_unidade"]) =>
+    tipo === "HOSPITAL" ? "Hospital" : "Clínica";
 
   return (
     <Card className="h-full rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
@@ -136,10 +140,10 @@ const ClinicasList = () => {
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
                 <Building2 className="h-4 w-4" />
               </span>
-              <span>Clínicas e hospitais</span>
+              <span>Cadastro de clínicas/hospitais</span>
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Cadastro de unidades de atendimento para vincular às SADTs.
+              Unifique aqui o cadastro de clínicas e hospitais para uso nas SADTs e faturamento.
             </CardDescription>
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               Total:{" "}
@@ -154,7 +158,7 @@ const ClinicasList = () => {
             <div className="w-full min-w-[200px] sm:w-60">
               <div className="relative">
                 <Input
-                  placeholder="Buscar por nome, CNPJ, cidade..."
+                  placeholder="Buscar por tipo, nome, CNPJ, cidade, GOT..."
                   className="h-9 rounded-full border-slate-200 bg-white px-3 text-xs shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -168,7 +172,7 @@ const ClinicasList = () => {
               onClick={openNew}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Nova clínica
+              Novo cadastro
             </Button>
           </div>
         </div>
@@ -177,18 +181,24 @@ const ClinicasList = () => {
       <CardContent className="mt-1 overflow-hidden rounded-b-2xl bg-white/90 dark:bg-slate-900/80">
         {loading ? (
           <p className="px-4 py-6 text-xs text-slate-500 dark:text-slate-400">
-            Carregando clínicas...
+            Carregando cadastros...
           </p>
         ) : (
           <div className="max-h-[520px] overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-slate-100 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                  <TableHead className="px-4 py-3">Tipo</TableHead>
+                  <TableHead className="px-4 py-3">
+                    Cód. Ref. (GOT)
+                  </TableHead>
                   <TableHead className="px-4 py-3">Razão social</TableHead>
                   <TableHead className="px-4 py-3">Nome fantasia</TableHead>
                   <TableHead className="px-4 py-3">CNPJ</TableHead>
                   <TableHead className="px-4 py-3">Cidade / UF</TableHead>
-                  <TableHead className="px-4 py-3">Contato faturamento</TableHead>
+                  <TableHead className="px-4 py-3">
+                    Contato faturamento
+                  </TableHead>
                   <TableHead className="px-4 py-3 text-right">
                     Ações
                   </TableHead>
@@ -198,10 +208,10 @@ const ClinicasList = () => {
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={8}
                       className="px-4 py-6 text-center text-xs text-slate-400"
                     >
-                      Nenhuma clínica cadastrada.
+                      Nenhuma clínica/hospital cadastrado.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -210,6 +220,12 @@ const ClinicasList = () => {
                       key={c.id}
                       className="border-b border-slate-50 text-xs hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/60"
                     >
+                      <TableCell className="px-4 py-3 font-medium text-slate-900 dark:text-slate-50">
+                        {labelTipo(c.tipo_unidade)}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                        {c.codigo_referencial_got || "-"}
+                      </TableCell>
                       <TableCell className="px-4 py-3 font-medium text-slate-900 dark:text-slate-50">
                         {c.razao_social}
                         {c.nome_rede && (
@@ -285,10 +301,12 @@ const ClinicasList = () => {
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Editar clínica/hospital" : "Nova clínica/hospital"}
+              {editing
+                ? "Editar clínica/hospital"
+                : "Novo cadastro de clínica/hospital"}
             </DialogTitle>
             <DialogDescription>
-              Preencha os dados da unidade para uso nas SADTs e faturamento.
+              Selecione se é uma clínica ou hospital e preencha os dados da unidade para uso nas SADTs e faturamento.
             </DialogDescription>
           </DialogHeader>
 

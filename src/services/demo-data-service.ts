@@ -14,7 +14,7 @@ import type { DbDescricaoCirurgicaStatus } from "@/db/schema";
  * quando as tabelas ainda estiverem vazias.
  */
 export async function criarDadosExemplo(): Promise<void> {
-  // 1) Garante que exista pelo menos uma clínica
+  // 1) Garante que exista pelo menos uma clínica/hospital
   const { data: clinicasExistentes, error: clinicasCheckError } =
     await supabase.from("clinicas").select("id").limit(2);
 
@@ -30,6 +30,8 @@ export async function criarDadosExemplo(): Promise<void> {
   if (!clinicasExistentes || clinicasExistentes.length === 0) {
     const exemplosClinicas: ClinicaInput[] = [
       {
+        tipo_unidade: "HOSPITAL",
+        codigo_referencial_got: "GOT-HOSP-001",
         razao_social: "Hospital São Lucas Ltda",
         nome_fantasia: "Hospital São Lucas",
         nome_rede: "Rede Vida Saudável",
@@ -47,6 +49,8 @@ export async function criarDadosExemplo(): Promise<void> {
         telefone_contato_faturamento: "(11) 4000-5678",
       },
       {
+        tipo_unidade: "CLINICA",
+        codigo_referencial_got: "GOT-CLI-001",
         razao_social: "Clínica Ortopédica Bem Viver Ltda",
         nome_fantasia: "Clínica Bem Viver",
         nome_rede: "Rede Vida Saudável",

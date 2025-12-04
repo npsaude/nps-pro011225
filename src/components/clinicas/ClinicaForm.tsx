@@ -13,9 +13,24 @@ import {
   FormField,
   FormMessage,
 } from "@/components/ui/form";
-import type { ClinicaInput, Clinica } from "@/services/clinicas-service";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type {
+  ClinicaInput,
+  Clinica,
+  TipoUnidade,
+} from "@/services/clinicas-service";
 
 const clinicaSchema = z.object({
+  tipo_unidade: z.enum(["CLINICA", "HOSPITAL"], {
+    required_error: "Selecione se é clínica ou hospital.",
+  }),
+  codigo_referencial_got: z.string().optional(),
   razao_social: z.string().min(1, "Informe a razão social."),
   nome_fantasia: z.string().min(1, "Informe o nome fantasia."),
   nome_rede: z.string().optional(),
@@ -49,6 +64,8 @@ const ClinicaForm = ({ clinica, onSubmit, isSubmitting }: ClinicaFormProps) => {
   const form = useForm<ClinicaFormValues>({
     resolver: zodResolver(clinicaSchema),
     defaultValues: {
+      tipo_unidade: "CLINICA",
+      codigo_referencial_got: "",
       razao_social: "",
       nome_fantasia: "",
       nome_rede: "",
@@ -70,6 +87,8 @@ const ClinicaForm = ({ clinica, onSubmit, isSubmitting }: ClinicaFormProps) => {
   useEffect(() => {
     if (clinica) {
       const mapped: ClinicaFormValues = {
+        tipo_unidade: clinica.tipo_unidade,
+        codigo_referencial_got: clinica.codigo_referencial_got ?? "",
         razao_social: clinica.razao_social,
         nome_fantasia: clinica.nome_fantasia,
         nome_rede: clinica.nome_rede ?? "",
@@ -83,7 +102,8 @@ const ClinicaForm = ({ clinica, onSubmit, isSubmitting }: ClinicaFormProps) => {
         contato: clinica.contato ?? "",
         cargo: clinica.cargo ?? "",
         nome_contato_faturamento: clinica.nome_contato_faturamento ?? "",
-        email_contato_faturamento: clinica.email_contato_faturamento ?? "",
+        email_contato_faturamento:
+          clinica.email_contato_faturamento ?? "",
         telefone_contato_faturamento:
           clinica.telefone_contato_faturamento ?? "",
       };
@@ -93,6 +113,9 @@ const ClinicaForm = ({ clinica, onSubmit, isSubmitting }: ClinicaFormProps) => {
 
   const handleSubmit = (values: ClinicaFormValues) => {
     const payload: ClinicaInput = {
+      tipo_unidade: values.tipo_unidade as TipoUnidade,
+      codigo_referencial_got:
+        values.codigo_referencial_got?.trim() || null,
       razao_social: values.razao_social,
       nome_fantasia: values.nome_fantasia,
       nome_rede: values.nome_rede || null,
@@ -122,6 +145,57 @@ const ClinicaForm = ({ clinica, onSubmit, isSubmitting }: ClinicaFormProps) => {
         onSubmit={form.handleSubmit(handleSubmit)}
         className="space-y-4 text-xs sm:text-sm"
       >
+        {/* Tipo e Código GOT */}
+        <div className="grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
+          <FormField
+            control={form.control}
+            name="tipo_unidade"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de unidade</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="CLINICA">
+                      Clínica
+                    </SelectItem>
+                    <SelectItem value="HOSPITAL">
+                      Hospital
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="codigo_referencial_got"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cód. Referencial (GOT)</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="Ex: GOT-001"
+                    className="h-9"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Dados cadastrais já existentes */}
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField
             control={form.control}
