@@ -32,7 +32,6 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectTrigger,
@@ -418,21 +417,19 @@ const Dashboard = () => {
                   Top 5 médicos por valor faturado no período selecionado
                 </CardDescription>
               </CardHeader>
-              <CardContent className="overflow-x-auto pt-0">
+              <CardContent className="overflow-x-auto pt-0 pb-3">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                       <TableHead>Médico</TableHead>
-                      <TableHead className="text-right">SADTs</TableHead>
                       <TableHead className="text-right">Faturamento</TableHead>
-                      <TableHead className="text-right">Tendência</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {topDoctorsByRevenue.map((doctor, index) => (
                       <TableRow
                         key={doctor.id}
-                        className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60"
+                        className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60 [&>td]:py-1.5"
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -458,16 +455,8 @@ const Dashboard = () => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right text-xs text-slate-600 dark:text-slate-200">
-                          {doctor.sadtCount.toLocaleString("pt-BR")}
-                        </TableCell>
                         <TableCell className="text-right text-xs font-semibold text-slate-900 dark:text-slate-50">
                           {doctor.revenue}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge className="border-0 bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                            ↑ {doctor.growth}
-                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
