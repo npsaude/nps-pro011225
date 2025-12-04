@@ -181,6 +181,16 @@ const KANBAN_CARD_COLORS: Record<FaturamentoStageId, string> = {
   6: "border-emerald-600 bg-gradient-to-br from-emerald-200 via-emerald-300 to-emerald-400 dark:border-emerald-800 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/80",
 };
 
+// Cores das bolinhas numeradas por estágio (coordenadas com a cor dos cards)
+const KANBAN_STAGE_COLORS: Record<FaturamentoStageId, string> = {
+  1: "border-sky-500 bg-sky-100 text-sky-700 dark:border-sky-600 dark:bg-sky-950/60 dark:text-sky-200",
+  2: "border-emerald-500 bg-emerald-100 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-200",
+  3: "border-indigo-500 bg-indigo-100 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-200",
+  4: "border-rose-500 bg-rose-100 text-rose-700 dark:border-rose-600 dark:bg-rose-950/60 dark:text-rose-200",
+  5: "border-amber-500 bg-amber-100 text-amber-700 dark:border-amber-600 dark:bg-amber-950/60 dark:text-amber-200",
+  6: "border-emerald-600 bg-emerald-200 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-200",
+};
+
 function statusToStage(status: DbDescricaoCirurgicaStatus | null): FaturamentoStageId {
   switch (status) {
     case "CONFIRMADO":
@@ -422,7 +432,12 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
           >
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full border border-sky-300 bg-white text-[11px] font-semibold text-sky-600 shadow-sm dark:border-sky-700 dark:bg-slate-900 dark:text-sky-300">
+                <div
+                  className={
+                    "flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold shadow-sm " +
+                    KANBAN_STAGE_COLORS[stage.id]
+                  }
+                >
                   {stage.id}
                 </div>
                 <div className="flex flex-col">
