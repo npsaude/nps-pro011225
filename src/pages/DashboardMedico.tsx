@@ -259,11 +259,11 @@ const DashboardMedico: React.FC = () => {
         </section>
 
         {/* Ações principais */}
-        <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <section className="mb-4 grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={handleAbrirModalHospitais}
-            className="flex h-24 flex-1 flex-col justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-400 px-4 py-3 text-left text-slate-50 shadow-[0_22px_55px_rgba(16,185,129,0.8)]"
+            className="flex h-24 flex-col justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-400 px-4 py-3 text-left text-slate-50 shadow-[0_22px_55px_rgba(16,185,129,0.8)]"
           >
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-600/95 text-slate-50 shadow-inner">
               <Upload className="h-4.5 w-4.5" />
@@ -274,7 +274,7 @@ const DashboardMedico: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate("/medico/descricao-cirurgica")}
-            className="flex h-24 flex-1 flex-col justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-indigo-400 px-4 py-3 text-left text-slate-50 shadow-[0_22px_55px_rgba(79,70,229,0.75)]"
+            className="flex h-24 flex-col justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-indigo-400 px-4 py-3 text-left text-slate-50 shadow-[0_22px_55px_rgba(79,70,229,0.75)]"
           >
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-600/95 text-slate-50 shadow-inner">
               <FileText className="h-4.5 w-4.5" />
