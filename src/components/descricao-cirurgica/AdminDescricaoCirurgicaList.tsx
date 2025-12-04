@@ -6,9 +6,6 @@ import {
   Plus,
   Paperclip,
   LineChart,
-  User,
-  Calendar,
-  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +31,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import type {
+  DbDescricaoCirurgicaStatus,
+} from "@/db/schema";
 import type { DescricaoCirurgicaResumoMedico } from "@/services/descricao-cirurgica-service";
 
 type Props = {
@@ -44,6 +44,7 @@ type Props = {
   onEditar: (item: DescricaoCirurgicaResumoMedico) => void;
   onExcluir: (item: DescricaoCirurgicaResumoMedico) => void;
   onVerArquivos: (item: DescricaoCirurgicaResumoMedico) => void;
+  onAtualizarStatus: (id: string, novoStatus: DbDescricaoCirurgicaStatus) => void;
 };
 
 const statusLabel: Record<string, string> = {
@@ -92,7 +93,6 @@ function getFaturamentoSteps(
   if (!item) return [];
   const status = item.status ?? "AGUARDANDO";
 
-  // Define em qual etapa o caso está, baseado no status geral.
   const statusStageMap: Record<string, number> = {
     AGUARDANDO: 1,
     CONFIRMADO: 2,
@@ -150,6 +150,60 @@ function getFaturamentoSteps(
   });
 }
 
+// --- Kanban helpers ---
+
+type FaturamentoStageId = 1 | 2 | 3 | 4 | 5 | 6;
+
+interface KanbanItem extends DescricaoCirurgicaResumoMedico {
+  stage: FaturamentoStageId;
+}
+
+const KANBAN_STAGES: {
+  id: FaturamentoStageId;
+  label: string;
+  helper: string;
+}[] = [
+  { id: 1, label: "Cirurgia realizada", helper: "—" },
+  { id: 2, label: "Faturado", helper: "Aguardando" },
+  { id: 3, label: "Recebimento", helper: "Aguardando" },
+  { id: 4, label: "Glosa", helper: "—" },
+  { id: 5, label: "Defesa de glosa", helper: "Aguardando" },
+  { id: 6, label: "Recebimento da glosa", helper: "n.c." },
+];
+
+function statusToStage(status: DbDescricaoCirurgicaStatus | null): FaturamentoStageId {
+  switch (status) {
+    case "CONFIRMADO":
+    case "EM_FATURAMENTO":
+      return 2;
+    case "PAGO":
+      return 3;
+    case "EM_GLOSA":
+      return 4;
+    case "AGUARDANDO":
+    default:
+      return 1;
+  }
+}
+
+function stageToStatus(stage: FaturamentoStageId): DbDescricaoCirurgicaStatus {
+  switch (stage) {
+    case 1:
+      return "AGUARDANDO";
+    case 2:
+      return "EM_FATURAMENTO";
+    case 3:
+      return "PAGO";
+    case 4:
+    case 5:
+      return "EM_GLOSA";
+    case 6:
+      return "PAGO";
+    default:
+      return "AGUARDANDO";
+  }
+}
+
 const AdminDescricaoCirurgicaList: React.FC<Props> = ({
   items,
   isLoading,
@@ -158,28 +212,315 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
   onEditar,
   onExcluir,
   onVerArquivos,
+  onAtualizarStatus,
 }) => {
   const [faturamentoOpen, setFaturamentoOpen] =
     React.useState<boolean>(false);
   const [selectedItem, setSelectedItem] =
     React.useState<DescricaoCirurgicaResumoMedico | null>(null);
 
+  const [viewMode, setViewMode] = React.useState<"table" | "kanban">("table");
+  const [kanbanItems, setKanbanItems] = React.useState<KanbanItem[]>([]);
+  const [draggingId, setDraggingId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const mapped: KanbanItem[] = items.map((item) => ({
+      ...item,
+      stage: statusToStage(item.status ?? "AGUARDANDO"),
+    }));
+    setKanbanItems(mapped);
+  }, [items]);
+
   const steps = React.useMemo(
     () => getFaturamentoSteps(selectedItem),
     [selectedItem],
+  );
+
+  const handleDragStart = (id: string) => {
+    setDraggingId(id);
+  };
+
+  const handleDropOnStage = (stageId: FaturamentoStageId) => {
+    if (!draggingId) return;
+
+    setKanbanItems((prev) =>
+      prev.map((item) =>
+        item.id === draggingId ? { ...item, stage: stageId } : item,
+      ),
+    );
+
+    const novoStatus = stageToStatus(stageId);
+    onAtualizarStatus(draggingId, novoStatus);
+    setDraggingId(null);
+  };
+
+  const renderTabela = () => (
+    <div className="max-h-[420px] overflow-auto rounded-2xl border border-slate-100 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/70">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-b border-slate-200 text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <TableHead className="w-10 px-3 py-2" />
+            <TableHead className="whitespace-nowrap px-3 py-2">
+              Nome do médico
+            </TableHead>
+            <TableHead className="whitespace-nowrap px-3 py-2">
+              Nome do paciente
+            </TableHead>
+            <TableHead className="whitespace-nowrap px-3 py-2">
+              Data fim procedimento
+            </TableHead>
+            <TableHead className="whitespace-nowrap px-3 py-2">
+              Nº prontuário
+            </TableHead>
+            <TableHead className="whitespace-nowrap px-3 py-2">
+              Status
+            </TableHead>
+            <TableHead className="whitespace-nowrap px-3 py-2 text-right">
+              Ações
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="px-3 py-5 text-center text-xs text-slate-500 dark:text-slate-300"
+              >
+                Carregando descrições cirúrgicas...
+              </TableCell>
+            </TableRow>
+          ) : items.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="px-3 py-5 text-center text-xs text-slate-500 dark:text-slate-300"
+              >
+                Nenhuma descrição cirúrgica encontrada.
+              </TableCell>
+            </TableRow>
+          ) : (
+            items.map((item) => {
+              const statusKey = item.status ?? "AGUARDANDO";
+              const label = statusLabel[statusKey] ?? statusKey;
+              const badgeClass =
+                statusBadgeClass[statusKey] ??
+                "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100";
+
+              return (
+                <TableRow
+                  key={item.id}
+                  className="border-b border-slate-100 text-xs hover:bg-white dark:border-slate-800 dark:hover:bg-slate-800/70"
+                >
+                  <TableCell className="px-3 py-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-white shadow-sm ring-2 ring-sky-100/70 transition-transform hover:translate-y-0.5 hover:shadow-md hover:from-sky-600 hover:to-emerald-600 dark:ring-sky-500/40"
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setFaturamentoOpen(true);
+                      }}
+                      aria-label="Ver progresso de faturamento"
+                    >
+                      <LineChart className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 font-medium text-slate-800 dark:text-slate-50">
+                    {item.nomeMedico || "-"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {item.nomePaciente || "-"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {item.dataFimProcedimento || "-"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {item.prontuario || "-"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    <Badge className={badgeClass}>{label}</Badge>
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    <div className="flex justify-end gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                        onClick={() => onVisualizar(item)}
+                        aria-label="Visualizar descrição cirúrgica"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                        onClick={() => onEditar(item)}
+                        aria-label="Editar descrição cirúrgica"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                        onClick={() => onVerArquivos(item)}
+                        aria-label="Visualizar arquivos anexados"
+                      >
+                        <Paperclip className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                        onClick={() => onExcluir(item)}
+                        aria-label="Excluir descrição cirúrgica"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  const renderKanban = () => (
+    <div className="flex gap-3 overflow-x-auto pb-1">
+      {KANBAN_STAGES.map((stage) => {
+        const itemsCol = kanbanItems.filter((it) => it.stage === stage.id);
+
+        return (
+          <div
+            key={stage.id}
+            className="flex min-w-[230px] max-w-xs flex-1 flex-col rounded-2xl bg-slate-50/80 p-3 ring-1 ring-slate-100 dark:bg-slate-900/70 dark:ring-slate-800"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleDropOnStage(stage.id);
+            }}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border border-sky-300 bg-white text-[11px] font-semibold text-sky-600 shadow-sm dark:border-sky-700 dark:bg-slate-900 dark:text-sky-300">
+                  {stage.id}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                    {stage.label}
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    {stage.helper}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[11px] font-medium text-slate-400">
+                {itemsCol.length}
+              </span>
+            </div>
+
+            <div className="mt-1 flex flex-1 flex-col gap-2">
+              {isLoading ? (
+                <p className="rounded-xl bg-slate-100/80 px-2 py-3 text-[11px] text-slate-400 dark:bg-slate-800/60 dark:text-slate-500">
+                  Carregando...
+                </p>
+              ) : itemsCol.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-200 px-2 py-6 text-center text-[11px] text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                  Arraste descrições para este estágio.
+                </p>
+              ) : (
+                itemsCol.map((item) => {
+                  const statusKey = item.status ?? "AGUARDANDO";
+                  const label = statusLabel[statusKey] ?? statusKey;
+                  const badgeClass =
+                    statusBadgeClass[statusKey] ??
+                    "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100";
+
+                  return (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={() => handleDragStart(item.id)}
+                      className="group cursor-grab rounded-xl border border-slate-200 bg-white/90 p-3 text-[11px] shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900/90"
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-50">
+                            {item.nomePaciente || "Paciente não informado"}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Dr(a). {item.nomeMedico || "—"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-400">
+                          Prontuário:{" "}
+                          <span className="font-medium text-slate-600 dark:text-slate-200">
+                            {item.prontuario || "—"}
+                          </span>
+                        </span>
+                        <Badge className={`px-2 py-0.5 text-[10px] ${badgeClass}`}>
+                          {label}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between gap-1">
+                        <span className="text-[10px] text-slate-400">
+                          Cirurgia: {item.dataFimProcedimento || "Sem data"}
+                        </span>
+                        <div className="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                            onClick={() => onVisualizar(item)}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                            onClick={() => onEditar(item)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 
   return (
     <>
       <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
         <CardHeader className="pb-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold sm:text-base">
                 Descrições cirúrgicas cadastradas
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                Lista das descrições já registradas no sistema.
+                Visualize em lista ou organize o faturamento em Kanban.
               </CardDescription>
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 Total:{" "}
@@ -189,157 +530,48 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                 registro(s)
               </p>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              className="inline-flex items-center gap-2 rounded-full bg-[#135bec] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0f4ac0]"
-              onClick={onNovaDescricao}
-            >
-              <Plus className="h-4 w-4" />
-              Nova descrição
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center rounded-full bg-slate-100 p-1 text-[11px] ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    viewMode === "table"
+                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                      : "text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
+                  }`}
+                  onClick={() => setViewMode("table")}
+                >
+                  Lista
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    viewMode === "kanban"
+                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                      : "text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
+                  }`}
+                  onClick={() => setViewMode("kanban")}
+                >
+                  Kanban
+                </button>
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                className="inline-flex items-center gap-2 rounded-full bg-[#135bec] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0f4ac0]"
+                onClick={onNovaDescricao}
+              >
+                <Plus className="h-4 w-4" />
+                Nova descrição
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="pt-0">
-          <div className="max-h-[420px] overflow-auto rounded-2xl border border-slate-100 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/70">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-slate-200 text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  <TableHead className="w-10 px-3 py-2" />
-                  <TableHead className="whitespace-nowrap px-3 py-2">
-                    Nome do médico
-                  </TableHead>
-                  <TableHead className="whitespace-nowrap px-3 py-2">
-                    Nome do paciente
-                  </TableHead>
-                  <TableHead className="whitespace-nowrap px-3 py-2">
-                    Data fim procedimento
-                  </TableHead>
-                  <TableHead className="whitespace-nowrap px-3 py-2">
-                    Nº prontuário
-                  </TableHead>
-                  <TableHead className="whitespace-nowrap px-3 py-2">
-                    Status
-                  </TableHead>
-                  <TableHead className="whitespace-nowrap px-3 py-2 text-right">
-                    Ações
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="px-3 py-5 text-center text-xs text-slate-500 dark:text-slate-300"
-                    >
-                      Carregando descrições cirúrgicas...
-                    </TableCell>
-                  </TableRow>
-                ) : items.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="px-3 py-5 text-center text-xs text-slate-500 dark:text-slate-300"
-                    >
-                      Nenhuma descrição cirúrgica encontrada.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  items.map((item) => {
-                    const statusKey = item.status ?? "AGUARDANDO";
-                    const label = statusLabel[statusKey] ?? statusKey;
-                    const badgeClass =
-                      statusBadgeClass[statusKey] ??
-                      "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-100";
-
-                    return (
-                      <TableRow
-                        key={item.id}
-                        className="border-b border-slate-100 text-xs hover:bg-white dark:border-slate-800 dark:hover:bg-slate-800/70"
-                      >
-                        <TableCell className="px-3 py-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-white shadow-sm ring-2 ring-sky-100/70 transition-transform hover:translate-y-0.5 hover:shadow-md hover:from-sky-600 hover:to-emerald-600 dark:ring-sky-500/40"
-                            onClick={() => {
-                              setSelectedItem(item);
-                              setFaturamentoOpen(true);
-                            }}
-                            aria-label="Ver progresso de faturamento"
-                          >
-                            <LineChart className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                        <TableCell className="px-3 py-2 font-medium text-slate-800 dark:text-slate-50">
-                          {item.nomeMedico || "-"}
-                        </TableCell>
-                        <TableCell className="px-3 py-2">
-                          {item.nomePaciente || "-"}
-                        </TableCell>
-                        <TableCell className="px-3 py-2">
-                          {item.dataFimProcedimento || "-"}
-                        </TableCell>
-                        <TableCell className="px-3 py-2">
-                          {item.prontuario || "-"}
-                        </TableCell>
-                        <TableCell className="px-3 py-2">
-                          <Badge className={badgeClass}>{label}</Badge>
-                        </TableCell>
-                        <TableCell className="px-3 py-2">
-                          <div className="flex justify-end gap-1.5">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                              onClick={() => onVisualizar(item)}
-                              aria-label="Visualizar descrição cirúrgica"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                              onClick={() => onEditar(item)}
-                              aria-label="Editar descrição cirúrgica"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                              onClick={() => onVerArquivos(item)}
-                              aria-label="Visualizar arquivos anexados"
-                            >
-                              <Paperclip className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7 rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                              onClick={() => onExcluir(item)}
-                              aria-label="Excluir descrição cirúrgica"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          {viewMode === "table" ? renderTabela() : renderKanban()}
         </CardContent>
       </Card>
 
@@ -360,9 +592,8 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
 
           {selectedItem && (
             <div className="space-y-5 text-sm">
-              {/* Cabeçalho com informações principais */}
               <div className="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100 dark:bg-slate-900/70 dark:ring-slate-800">
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-200">
                       {getInitials(selectedItem.nomeMedico)}
@@ -392,37 +623,21 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-200">
-                      <Calendar className="h-4 w-4" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                      Nº
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                        Data cirurgia
+                        Prontuário
                       </span>
                       <span className="text-xs font-medium text-slate-800 dark:text-slate-50">
-                        {selectedItem.dataFimProcedimento || "Não informado"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200">
-                      <DollarSign className="h-4 w-4" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                        Valor honorário
-                      </span>
-                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
-                        {/* Placeholder de valor até termos o campo real */}
-                        R$ 12.500,00
+                        {selectedItem.prontuario || "Não informado"}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Timeline de faturamento */}
               <div className="space-y-3 rounded-2xl bg-white/90 p-4 ring-1 ring-slate-100 dark:bg-slate-900/80 dark:ring-slate-800">
                 <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                   <span>Fluxo de faturamento</span>
