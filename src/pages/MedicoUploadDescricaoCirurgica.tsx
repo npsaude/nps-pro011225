@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   showError,
@@ -37,6 +38,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -477,7 +479,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showError("Selecione uma clínica para continuar.");
       return;
     }
-    void handleUpload();
+    // Apenas abre o modal de preenchimento automático por enquanto
+    setAutoFillDialogOpen(true);
   };
 
   return (
@@ -978,6 +981,51 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Modal de Preenchimento Automático de Honorários */}
+      <Dialog open={autoFillDialogOpen} onOpenChange={setAutoFillDialogOpen}>
+        <DialogContent className="w-[88%] max-w-sm rounded-3xl border-0 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600/15 text-blue-400">
+            <FileText className="h-6 w-6" />
+          </div>
+          <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+            Preenchimento Automático
+          </h2>
+          <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+            Você quer que o sistema preencha o formulário de honorários para
+            você?
+          </p>
+
+          <div className="mt-6 space-y-3">
+            <Button
+              type="button"
+              className="h-11 w-full rounded-2xl bg-blue-600 text-[13px] font-semibold text-slate-50 hover:bg-blue-500"
+              disabled={isUploading}
+              onClick={() => {
+                // Futuramente aqui entra a lógica de preenchimento automático
+                setAutoFillDialogOpen(false);
+                void handleUpload();
+              }}
+            >
+              {isUploading ? "Enviando..." : "Sim, preencher agora"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-2xl border-slate-700 bg-slate-900/90 text-[13px] font-semibold text-slate-100 hover:bg-slate-800"
+              disabled={isUploading}
+              onClick={() => {
+                // Neste caso envia sem preenchimento automático (lógica virá depois)
+                setAutoFillDialogOpen(false);
+                void handleUpload();
+              }}
+            >
+              Não, obrigado
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
