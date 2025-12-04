@@ -77,7 +77,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
     DescricaoCirurgicaResumoMedico[]
   >([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
-  const [showForm, setShowForm] = useState(true);
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [viewItem, setViewItem] =
