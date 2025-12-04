@@ -10,6 +10,7 @@ import {
   Building2,
   ChevronDown,
   X,
+  CircleDollarSign,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "start" | "hospital" | "upload" | "success";
+type ViewState = "start" | "hospital" | "upload" | "clinica" | "success";
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +50,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [hospitalStepView, setHospitalStepView] = useState<
     "selector" | "list"
   >("selector");
+
+  // Clínica para faturamento
+  const [selectedClinicaId, setSelectedClinicaId] = useState<
+    string | undefined
+  >(undefined);
+  const [selectedClinicaName, setSelectedClinicaName] =
+    useState<string>("");
+  const [clinicasMedico, setClinicasMedico] = useState<
+    { id: string; nome_fantasia: string }[]
+  >([]);
+  const [loadingClinicas, setLoadingClinicas] = useState(false);
+  const [clinicaStepView, setClinicaStepView] = useState<"selector" | "list">(
+    "selector",
+  );
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -152,6 +167,76 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
+  const carregarClinicasDoMedico = async () => {
+    setLoadingClinicas(true);
+    try {
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError || !authData?.user) {
+        showError("Faça login para selecionar a clínica de faturamento.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const email = authData.user.email;
+      if (!email) {
+        showError(
+          "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
+        );
+        return;
+      }
+
+      const { data: medico, error: medicoError } = await supabase
+        .from("medicos")
+        .select("clinicas_ids")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (medicoError) {
+        throw new Error(
+          medicoError.message ||
+            "Não foi possível carregar as clínicas vinculadas ao seu cadastro.",
+        );
+      }
+
+      const clinicasIds: string[] = (medico?.clinicas_ids as string[]) ?? [];
+
+      if (!clinicasIds.length) {
+        setClinicasMedico([]);
+        return;
+      }
+
+      const { data: clinicasData, error: clinicasError } = await supabase
+        .from("clinicas")
+        .select("id, nome_fantasia")
+        .in("id", clinicasIds)
+        .order("nome_fantasia", { ascending: true });
+
+      if (clinicasError) {
+        throw new Error(
+          clinicasError.message ||
+            "Não foi possível carregar a lista de clínicas.",
+        );
+      }
+
+      const lista = (clinicasData ?? []) as {
+        id: string;
+        nome_fantasia: string;
+      }[];
+
+      setClinicasMedico(lista);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar as clínicas vinculadas ao seu cadastro.";
+      showError(message);
+    } finally {
+      setLoadingClinicas(false);
+    }
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
@@ -191,6 +276,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
     if (!selectedHospitalId) {
       showError("Selecione o hospital onde a cirurgia foi realizada.");
+      return;
+    }
+
+    if (!selectedClinicaId) {
+      showError("Selecione a clínica pela qual o serviço será faturado.");
       return;
     }
 
@@ -246,6 +336,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             userId,
             files: uploadedFilePaths.map((path) => ({ path })),
             hospitalId: selectedHospitalId,
+            clinicaId: selectedClinicaId,
           }),
         });
       } catch {
@@ -281,6 +372,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setSelectedHospitalId(undefined);
     setSelectedHospitalName("");
     setHospitalStepView("selector");
+    setSelectedClinicaId(undefined);
+    setSelectedClinicaName("");
+    setClinicaStepView("selector");
   };
 
   const totalArquivos = files.length;
@@ -343,6 +437,47 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
     setView("upload");
+  };
+
+  // Fluxo de escolha de CLÍNICA (faturamento)
+  const handleAbrirClinicaSelector = () => {
+    setView("clinica");
+    setClinicaStepView("selector");
+    if (!clinicasMedico.length) {
+      void carregarClinicasDoMedico();
+    }
+  };
+
+  const handleAbrirListaClinicas = () => {
+    if (!loadingClinicas && clinicasMedico.length > 0) {
+      setClinicaStepView("list");
+    }
+  };
+
+  const handleSelecionarClinica = (clinica: {
+    id: string;
+    nome_fantasia: string;
+  }) => {
+    setSelectedClinicaId(clinica.id);
+    setSelectedClinicaName(clinica.nome_fantasia);
+    setClinicaStepView("selector");
+  };
+
+  const handleFecharSelecaoClinica = () => {
+    setView("upload");
+    setClinicaStepView("selector");
+  };
+
+  const handleVoltarListaClinicasParaSelector = () => {
+    setClinicaStepView("selector");
+  };
+
+  const handleContinuarAposClinica = () => {
+    if (!selectedClinicaId) {
+      showError("Selecione uma clínica para continuar.");
+      return;
+    }
+    void handleUpload();
   };
 
   return (
@@ -662,7 +797,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     className="mt-8 h-11 w-full rounded-full bg-emerald-500 text-sm font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-70"
                     disabled={isUploading || files.length === 0}
-                    onClick={handleUpload}
+                    onClick={handleAbrirClinicaSelector}
                   >
                     {isUploading ? "Enviando..." : "Continuar Envio"}
                   </Button>
@@ -677,6 +812,127 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     Voltar para Nova Descrição
                   </Button>
                 </>
+              )}
+            </div>
+          )}
+
+          {view === "clinica" && (
+            <div className="mt-10 flex w-full max-w-sm flex-col items-center">
+              {clinicaStepView === "selector" ? (
+                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-50">
+                        {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        Por qual Clínica/Hospital o serviço será faturado?
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleFecharSelecaoClinica}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAbrirListaClinicas}
+                    disabled={
+                      loadingClinicas ||
+                      (!clinicasMedico.length && !selectedClinicaId)
+                    }
+                    className="flex w-full items-center justify-between rounded-2xl border border-emerald-500/40 bg-slate-900 px-4 py-3 text-left text-slate-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950">
+                        <CircleDollarSign className="h-4 w-4" />
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                          Faturamento por
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {selectedClinicaName ||
+                            (loadingClinicas
+                              ? "Carregando clínicas..."
+                              : clinicasMedico.length
+                                ? "Selecionar Clínica"
+                                : "Nenhuma clínica vinculada")}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-300" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleContinuarAposClinica}
+                    disabled={!selectedClinicaId || isUploading}
+                    className={`mt-6 w-full rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                      selectedClinicaId && !isUploading
+                        ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                        : "bg-slate-800 text-slate-400 cursor-not-allowed"
+                    }`}
+                  >
+                    {isUploading ? "Enviando..." : "Continuar"}
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                  <div className="mb-5 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleVoltarListaClinicasParaSelector}
+                      className="flex items-center gap-2 text-xs text-slate-300 hover:text-slate-100"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      <span>Voltar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFecharSelecaoClinica}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {loadingClinicas && (
+                      <p className="text-xs text-slate-300">
+                        Carregando clínicas onde você atua...
+                      </p>
+                    )}
+
+                    {!loadingClinicas &&
+                      clinicasMedico.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => handleSelecionarClinica(c)}
+                          className="flex w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left text-slate-50 hover:bg-slate-800"
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
+                            <Building2 className="h-4 w-4" />
+                          </span>
+                          <span className="text-sm font-medium">
+                            {c.nome_fantasia}
+                          </span>
+                        </button>
+                      ))}
+
+                    {!loadingClinicas && !clinicasMedico.length && (
+                      <p className="text-xs text-slate-400">
+                        Não encontramos clínicas vinculadas ao seu cadastro.
+                        Entre em contato com o administrador.
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
