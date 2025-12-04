@@ -11,7 +11,7 @@ const SadtSucesso = () => {
   const location = useLocation();
   const state = (location.state || {}) as LocationState;
 
-  const protocolo = state.protocolo ?? "SADT-2024-12345";
+  const protocolo = state.protocolo ?? "GHI-2024-12345";
 
   return (
     <div className="relative flex min-h-screen w-full bg-[#f4f7ff] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
@@ -38,7 +38,7 @@ const SadtSucesso = () => {
                 NP Saúde Pró
               </span>
               <span className="text-[11px] text-slate-400">
-                Envio de SADT concluído
+                Envio de GHI concluído
               </span>
             </div>
           </button>
@@ -52,7 +52,7 @@ const SadtSucesso = () => {
             </div>
 
             <h1 className="mt-5 text-xl font-semibold leading-tight text-slate-900 dark:text-slate-50 sm:text-2xl">
-              SADT enviada com sucesso!
+              GHI enviada com sucesso!
             </h1>
 
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
@@ -69,7 +69,7 @@ const SadtSucesso = () => {
                 {protocolo}
               </p>
               <p className="mt-2 text-[11px] text-slate-400">
-                Guarde este número para consultar o andamento da sua SADT.
+                Guarde este número para consultar o andamento da sua GHI.
               </p>
             </div>
 
@@ -79,7 +79,7 @@ const SadtSucesso = () => {
                 className="h-10 flex-1 rounded-full bg-[#135bec] text-xs font-semibold text-white shadow-md shadow-blue-500/40 hover:bg-[#135bec]/90 sm:text-sm"
                 onClick={() => navigate("/sadt/enviar")}
               >
-                Enviar outra SADT
+                Enviar outra GHI
               </Button>
               <Button
                 variant="ghost"

@@ -26,7 +26,7 @@ const Index = () => {
                 NP Saúde Pró
               </h2>
               <p className="text-xs text-slate-400">
-                Portal de envio de SADT e área administrativa
+                Portal de envio de GHI e área administrativa
               </p>
             </div>
           </div>
@@ -48,13 +48,13 @@ const Index = () => {
               <div className="space-y-3">
                 <p className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  Fluxo rápido de envio de SADT
+                  Fluxo rápido de envio de GHI
                 </p>
                 <h1 className="text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
-                  Envie suas SADTs de forma simples e organizada.
+                  Envie suas GHIs de forma simples e organizada.
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Informe os dados do médico, anexe os documentos necessários
+                  Informe os dados do paciente, anexe os documentos necessários
                   e acompanhe o status em tempo real na área administrativa.
                 </p>
               </div>
@@ -65,7 +65,7 @@ const Index = () => {
                   onClick={() => navigate("/sadt/enviar")}
                 >
                   <ArrowRightCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>Enviar SADT</span>
+                  <span>Enviar GHI</span>
                 </button>
                 <button
                   className="flex h-11 flex-1 items-center justify-center gap-2.5 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition-transform hover:translate-y-0.5 dark:bg-slate-100 dark:text-slate-900 sm:text-base"
@@ -90,10 +90,10 @@ const Index = () => {
                   NOVO
                 </p>
                 <h2 className="text-lg font-semibold leading-tight">
-                  Acompanhe o status das SADTs
+                  Acompanhe o status das GHIs
                 </h2>
                 <p className="text-xs text-sky-100 sm:text-sm">
-                  visualize rapidamente quais SADTs estão em análise, pagas ou
+                  visualize rapidamente quais GHIs estão em análise, pagas ou
                   com glosa no painel administrativo.
                 </p>
               </div>

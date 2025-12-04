@@ -22,7 +22,11 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { SadtResumo, SadtCadastroStatus, SadtEstagio } from "@/components/sadt/types";
+import {
+  SadtResumo,
+  SadtCadastroStatus,
+  SadtEstagio,
+} from "@/components/sadt/types";
 import { showSuccess } from "@/utils/toast";
 
 const SadtEditar: React.FC = () => {
@@ -101,7 +105,7 @@ const SadtEditar: React.FC = () => {
 
     window.localStorage.setItem("sadt-list", JSON.stringify(novaLista));
 
-    showSuccess("SADT atualizada com sucesso.");
+    showSuccess("GHI atualizada com sucesso.");
     navigate("/sadt/cadastro");
   };
 
@@ -149,7 +153,7 @@ const SadtEditar: React.FC = () => {
                 </span>
               </button>
 
-              {/* SADT's - ativo */}
+              {/* GHIs - ativo */}
               <button
                 className="flex items-center justify-between rounded-2xl bg-[#135bec] px-3 py-2.5 text-sm text-white shadow-md shadow-blue-500/40 transition-all"
                 onClick={() => navigate("/sadt/cadastro")}
@@ -158,7 +162,7 @@ const SadtEditar: React.FC = () => {
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white">
                     <FileText className="h-4 w-4" />
                   </span>
-                  <span className="font-medium">SADT&apos;s</span>
+                  <span className="font-medium">GHIs</span>
                 </span>
               </button>
 
@@ -245,10 +249,10 @@ const SadtEditar: React.FC = () => {
           <header className="flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
-                Editar SADT
+                Editar GHI
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Atualize os dados principais da guia de SADT.
+                Atualize os dados principais da guia de GHI.
               </p>
             </div>
 
@@ -292,11 +296,11 @@ const SadtEditar: React.FC = () => {
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
                     <FileText className="h-3.5 w-3.5" />
-                    <span>Guia SADT</span>
+                    <span>Guia GHI</span>
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50 sm:text-lg">
-                      Editar SADT
+                      Editar GHI
                     </h2>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
                       Ajuste o número da guia, datas, profissional, operadora, status e estágio.
@@ -321,12 +325,12 @@ const SadtEditar: React.FC = () => {
               <section className="rounded-3xl bg-white/90 p-4 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800">
                 {loading ? (
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Carregando dados da SADT...
+                    Carregando dados da GHI...
                   </p>
                 ) : !sadt ? (
                   <div className="space-y-3 text-sm">
                     <p className="font-medium text-slate-900 dark:text-slate-50">
-                      SADT não encontrada.
+                      GHI não encontrada.
                     </p>
                     <p className="text-slate-500 dark:text-slate-400">
                       Verifique se a guia ainda existe na lista ou tente novamente.

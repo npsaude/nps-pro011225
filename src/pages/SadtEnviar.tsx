@@ -177,7 +177,7 @@ const SadtEnviar = () => {
 
     const resposta = await mutateAsync(payload);
 
-    showSuccess("SADT enviada com sucesso!");
+    showSuccess("GHI enviada com sucesso!");
 
     limparArquivos();
     form.reset();
@@ -225,7 +225,7 @@ const SadtEnviar = () => {
                 NP Saúde Pró
               </span>
               <span className="text-[11px] text-slate-400">
-                Envio de SADT · passo único
+                Envio de GHI · passo único
               </span>
             </div>
           </button>
@@ -244,7 +244,7 @@ const SadtEnviar = () => {
             <div className="rounded-3xl bg-white/90 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.12)] ring-1 ring-slate-100/80 backdrop-blur-xl dark:bg-slate-900/90 dark:ring-slate-800 sm:p-7">
               <div className="flex flex-col gap-1 pb-4">
                 <h1 className="text-xl font-semibold leading-tight text-slate-900 dark:text-slate-50 sm:text-2xl">
-                  Envio de SADT
+                  Envio de GHI
                 </h1>
                 <p className="text-xs text-slate-400 sm:text-sm">
                   Preencha o telefone de contato e anexe os arquivos
@@ -383,7 +383,7 @@ const SadtEnviar = () => {
                   </div>
 
                   {/* Rodapé com botões */}
-                  <div className="mt-7 flex flex-col justify-end gap-3 border-t border-slate-100/80 pt-4 sm:flex-row sm:gap-4 dark:border-slate-800">
+                  <div className="mt-7 flex flex-col justify-end gap-3 border-top border-slate-100/80 pt-4 sm:flex-row sm:gap-4 dark:border-slate-800">
                     <Button
                       type="button"
                       variant="ghost"
@@ -402,7 +402,7 @@ const SadtEnviar = () => {
                       className="h-10 rounded-full bg-[#135bec] px-6 text-xs font-semibold text-white shadow-md shadow-blue-500/40 hover:bg-[#135bec]/90 sm:text-sm"
                       disabled={isPending}
                     >
-                      {isPending ? "Enviando..." : "Enviar SADT"}
+                      {isPending ? "Enviando..." : "Enviar GHI"}
                     </Button>
                   </div>
                 </form>
