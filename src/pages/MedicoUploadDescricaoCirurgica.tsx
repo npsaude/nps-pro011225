@@ -7,6 +7,9 @@ import {
   FileText,
   CheckCircle2,
   ShieldCheck,
+  Building2,
+  ChevronDown,
+  X,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -26,7 +29,7 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "start" | "upload" | "success";
+type ViewState = "start" | "hospital" | "upload" | "success";
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -39,7 +42,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
 
-  // hospitalId agora é opcional; o fluxo de seleção de hospital poderá ser ajustado em etapas futuras.
+  const [selectedHospitalId, setSelectedHospitalId] = useState<
+    string | undefined
+  >(hospitalId);
+  const [selectedHospitalName, setSelectedHospitalName] =
+    useState<string>("");
+  const [hospitaisMedico, setHospitaisMedico] = useState<
+    { id: string; nome_fantasia: string }[]
+  >([]);
+  const [loadingHospitais, setLoadingHospitais] = useState(false);
+  const [hospitalStepView, setHospitalStepView] = useState<
+    "selector" | "list"
+  >("selector");
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -63,6 +77,85 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
     void carregarNomeMedico();
   }, []);
+
+  const carregarHospitaisDoMedico = async () => {
+    setLoadingHospitais(true);
+    try {
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError || !authData?.user) {
+        showError("Faça login para selecionar o hospital.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const email = authData.user.email;
+      if (!email) {
+        showError(
+          "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
+        );
+        return;
+      }
+
+      const { data: medico, error: medicoError } = await supabase
+        .from("medicos")
+        .select("hospitais_ids")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (medicoError) {
+        throw new Error(
+          medicoError.message ||
+            "Não foi possível carregar os hospitais vinculados ao seu cadastro.",
+        );
+      }
+
+      const hospitaisIds: string[] = (medico?.hospitais_ids as string[]) ?? [];
+
+      if (!hospitaisIds.length) {
+        setHospitaisMedico([]);
+        return;
+      }
+
+      const { data: hospitaisData, error: hospitaisError } = await supabase
+        .from("hospitais")
+        .select("id, nome_fantasia")
+        .in("id", hospitaisIds)
+        .order("nome_fantasia", { ascending: true });
+
+      if (hospitaisError) {
+        throw new Error(
+          hospitaisError.message ||
+            "Não foi possível carregar a lista de hospitais.",
+        );
+      }
+
+      const lista = (hospitaisData ?? []) as {
+        id: string;
+        nome_fantasia: string;
+      }[];
+
+      setHospitaisMedico(lista);
+
+      const initialId = selectedHospitalId ?? hospitalId;
+      if (initialId) {
+        const match = lista.find((h) => h.id === initialId);
+        if (match) {
+          setSelectedHospitalId(match.id);
+          setSelectedHospitalName(match.nome_fantasia);
+        }
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar os hospitais vinculados ao seu cadastro.";
+      showError(message);
+    } finally {
+      setLoadingHospitais(false);
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
@@ -95,6 +188,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleUpload = async () => {
     if (files.length === 0) {
       showError("Selecione pelo menos um arquivo para enviar.");
+      return;
+    }
+
+    if (!selectedHospitalId) {
+      showError("Selecione o hospital onde a cirurgia foi realizada.");
       return;
     }
 
@@ -149,8 +247,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           body: JSON.stringify({
             userId,
             files: uploadedFilePaths.map((path) => ({ path })),
-            // hospitalId é opcional por enquanto; será utilizado se estiver presente
-            hospitalId,
+            hospitalId: selectedHospitalId,
           }),
         });
       } catch {
@@ -183,6 +280,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setFiles([]);
     setStep(1);
     setView("start");
+    setSelectedHospitalId(undefined);
+    setSelectedHospitalName("");
+    setHospitalStepView("selector");
   };
 
   const totalArquivos = files.length;
@@ -196,14 +296,54 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Auxiliar simples para distinguir ícone/label
   const isImage = (file: File) => file.type.startsWith("image/");
 
+  const handleIniciarFluxo = () => {
+    setView("hospital");
+    setHospitalStepView("selector");
+    if (!hospitaisMedico.length) {
+      void carregarHospitaisDoMedico();
+    }
+  };
+
+  const handleAbrirListaHospitais = () => {
+    if (!loadingHospitais && hospitaisMedico.length > 0) {
+      setHospitalStepView("list");
+    }
+  };
+
+  const handleSelecionarHospital = (hospital: {
+    id: string;
+    nome_fantasia: string;
+  }) => {
+    setSelectedHospitalId(hospital.id);
+    setSelectedHospitalName(hospital.nome_fantasia);
+    setHospitalStepView("selector");
+  };
+
+  const handleFecharSelecaoHospital = () => {
+    setView("start");
+    setHospitalStepView("selector");
+  };
+
+  const handleVoltarListaParaSelector = () => {
+    setHospitalStepView("selector");
+  };
+
+  const handleContinuarAposHospital = () => {
+    if (!selectedHospitalId) {
+      showError("Selecione um hospital para continuar.");
+      return;
+    }
+    setView("upload");
+  };
+
   return (
     <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
       {/* Fundo em gradiente médico */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {/* Saudação e cabeçalho aparecem apenas após iniciar */}
-        {view !== "start" && (
+        {/* Saudação e cabeçalho aparecem apenas nas etapas após seleção de hospital */}
+        {(view === "upload" || view === "success") && (
           <>
             <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
               {saudacao}
@@ -244,7 +384,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setView("upload")}
+                onClick={handleIniciarFluxo}
                 className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56 motion-safe:animate-soft-pulse"
               >
                 <div className="flex flex-col items-center gap-3">
@@ -260,6 +400,126 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <p className="mt-8 text-[11px] text-slate-400">
                 Seus dados são criptografados ponta a ponta.
               </p>
+            </div>
+          )}
+
+          {view === "hospital" && (
+            <div className="mt-10 flex w-full max-w-sm flex-col items-center">
+              {hospitalStepView === "selector" ? (
+                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-50">
+                        {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        Escolha qual o hospital a cirurgia foi realizada.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleFecharSelecaoHospital}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAbrirListaHospitais}
+                    disabled={
+                      loadingHospitais || (!hospitaisMedico.length && !selectedHospitalId)
+                    }
+                    className="flex w-full items-center justify-between rounded-2xl border border-emerald-500/40 bg-slate-900 px-4 py-3 text-left text-slate-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950">
+                        <Building2 className="h-4 w-4" />
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                          Hospital selecionado
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {selectedHospitalName ||
+                            (loadingHospitais
+                              ? "Carregando hospitais..."
+                              : hospitaisMedico.length
+                                ? "Selecionar Hospital"
+                                : "Nenhum hospital vinculado")}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-300" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleContinuarAposHospital}
+                    disabled={!selectedHospitalId}
+                    className={`mt-6 w-full rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                      selectedHospitalId
+                        ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                        : "bg-slate-800 text-slate-400 cursor-not-allowed"
+                    }`}
+                  >
+                    Continuar
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                  <div className="mb-5 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleVoltarListaParaSelector}
+                      className="flex items-center gap-2 text-xs text-slate-300 hover:text-slate-100"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      <span>Voltar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFecharSelecaoHospital}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {loadingHospitais && (
+                      <p className="text-xs text-slate-300">
+                        Carregando hospitais onde você atua...
+                      </p>
+                    )}
+
+                    {!loadingHospitais &&
+                      hospitaisMedico.map((h) => (
+                        <button
+                          key={h.id}
+                          type="button"
+                          onClick={() => handleSelecionarHospital(h)}
+                          className="flex w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left text-slate-50 hover:bg-slate-800"
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
+                            <Building2 className="h-4 w-4" />
+                          </span>
+                          <span className="text-sm font-medium">
+                            {h.nome_fantasia}
+                          </span>
+                        </button>
+                      ))}
+
+                    {!loadingHospitais && !hospitaisMedico.length && (
+                      <p className="text-xs text-slate-400">
+                        Não encontramos hospitais vinculados ao seu cadastro.
+                        Entre em contato com o administrador.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
