@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  BarChart,
+  ComposedChart,
   Bar,
   XAxis,
   YAxis,
@@ -18,22 +18,22 @@ interface RevenueChartProps {
 }
 
 const baseData = [
-  { name: "Jan", value: 32, line: 2 },
-  { name: "Fev", value: 24, line: 1.5 },
-  { name: "Mar", value: 48, line: 2.8 },
-  { name: "Abr", value: 20, line: 1.2 },
-  { name: "Mai", value: 55, line: 3.2 },
-  { name: "Jun", value: 40, line: 2.0 },
-  { name: "Jul", value: 72, line: 3.8 },
-  { name: "Ago", value: 60, line: 3.0 },
-  { name: "Set", value: 78, line: 4.0 },
-  { name: "Out", value: 70, line: 3.1 },
-  { name: "Nov", value: 69, line: 2.9 },
-  { name: "Dez", value: 100, line: 4.5, highlight: true },
+  { name: "Jan", value: 32, line: 6 },
+  { name: "Fev", value: 24, line: 4 },
+  { name: "Mar", value: 48, line: 8 },
+  { name: "Abr", value: 20, line: 3 },
+  { name: "Mai", value: 55, line: 9 },
+  { name: "Jun", value: 40, line: 7 },
+  { name: "Jul", value: 72, line: 12 },
+  { name: "Ago", value: 60, line: 10 },
+  { name: "Set", value: 78, line: 11 },
+  { name: "Out", value: 70, line: 9 },
+  { name: "Nov", value: 69, line: 8 },
+  { name: "Dez", value: 100, line: 14, highlight: true },
 ];
 
 const monthData = baseData.slice(-3); // últimos 3 meses
-const quarterData = baseData.slice(-6); // últimos 6 meses;
+const quarterData = baseData.slice(-6); // últimos 6 meses
 
 function getData(period: Period) {
   if (period === "mes") return monthData;
@@ -47,7 +47,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
   return (
     <div className="h-64 w-full sm:h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
+        <ComposedChart
           data={data}
           margin={{ top: 10, right: 8, left: -20, bottom: 0 }}
         >
@@ -81,7 +81,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             itemStyle={{ color: "#e2e8f0" }}
             formatter={(value: number, key: string) => {
               if (key === "value") return [`R$ ${value.toFixed(0)}k`, "Faturado"];
-              if (key === "line") return [`R$ ${value.toFixed(1)}k`, "Glosa"];
+              if (key === "line") return [`R$ ${value.toFixed(0)}k`, "Glosa"];
               return [value, key];
             }}
           />
@@ -102,7 +102,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             dot={false}
             strokeLinecap="round"
           />
-        </BarChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );
