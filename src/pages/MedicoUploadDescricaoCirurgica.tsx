@@ -336,21 +336,32 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
 
+      // Chama a Edge Function e valida a resposta; se houver erro lá, mostramos no app
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          files: uploadedFilePaths.map((path) => ({ path })),
+          hospitalId: selectedHospitalId,
+          clinicaId: selectedClinicaId,
+        }),
+      });
+
+      let responseJson: any = null;
       try {
-        await fetch(functionUrl, {
-          method: "POST",
-          mode: "no-cors",
-          body: JSON.stringify({
-            userId,
-            files: uploadedFilePaths.map((path) => ({ path })),
-            hospitalId: selectedHospitalId,
-            clinicaId: selectedClinicaId,
-          }),
-        });
+        responseJson = await response.json();
       } catch {
-        throw new Error(
-          "Arquivos enviados, mas não foi possível iniciar a análise automática. Tente novamente mais tarde.",
-        );
+        // se não veio JSON, seguimos só com o status HTTP
+      }
+
+      if (!response.ok || responseJson?.error) {
+        const errorMessage =
+          responseJson?.error ??
+          "Arquivos enviados, mas houve erro ao criar a descrição cirúrgica no servidor.";
+        throw new Error(errorMessage);
       }
 
       showSuccess(
