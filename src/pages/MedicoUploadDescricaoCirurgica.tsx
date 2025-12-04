@@ -245,7 +245,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setView("upload")}
-                className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56"
+                className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56 motion-safe:animate-soft-pulse"
               >
                 <div className="flex flex-col items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/80">
