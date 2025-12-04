@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -14,13 +14,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import {
   showError,
@@ -41,6 +35,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [step, setStep] = useState<1 | 2>(1);
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -181,8 +176,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    setFiles(allowedFiles);
-    setStep(2); // assim que selecionar arquivos, avança para a etapa de revisão
+    // acumula arquivos novos com os já selecionados
+    setFiles((prev) => [...prev, ...allowedFiles]);
+    setStep(2);
+    // limpa o input para permitir selecionar os mesmos arquivos novamente se necessário
+    event.target.value = "";
   };
 
   const handleUpload = async () => {
@@ -296,6 +294,17 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Auxiliar simples para distinguir ícone/label
   const isImage = (file: File) => file.type.startsWith("image/");
 
+  const handleAdicionarMais = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRemoverArquivo = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    if (files.length === 1) {
+      setStep(1);
+    }
+  };
+
   const handleIniciarFluxo = () => {
     setView("hospital");
     setHospitalStepView("selector");
@@ -353,7 +362,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <button
                 type="button"
                 className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur"
-                onClick={() => navigate("/medico/dashboard")}
+                onClick={
+                  view === "upload"
+                    ? () => {
+                        setView("hospital");
+                        setStep(1);
+                      }
+                    : () => navigate("/medico/dashboard")
+                }
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Voltar</span>
@@ -361,7 +377,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                <span>Envio de Desc. Cirúrgica</span>
+                <span>{view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}</span>
               </div>
             </header>
           </>
@@ -524,95 +540,144 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           )}
 
           {view === "upload" && (
-            <div className="mt-2 flex w-full max-w-md flex-col gap-4">
-              <Card className="rounded-3xl border-slate-800 bg-slate-950/90 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-base text-slate-50 sm:text-lg">
-                    Enviar arquivos da cirurgia
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-300 sm:text-sm">
-                    Selecione fotos nítidas ou PDFs completos dos documentos da
-                    cirurgia.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            <div className="mt-2 flex w-full max-w-md flex-col">
+              {/* Input de arquivos centralizado para ser usado tanto no card quanto em "+ Adicionar mais" */}
+              <Input
+                id="files-upload"
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+              />
+
+              {/* Barra de progresso simples do passo */}
+              <div className="mb-4">
+                <div className="h-1 w-full rounded-full bg-slate-800">
+                  <div className="h-1 w-1/3 rounded-full bg-emerald-500" />
+                </div>
+              </div>
+
+              {/* Título com Dr(a) + nome e hospital */}
+              <div className="mb-6">
+                <h1 className="text-lg font-semibold text-slate-50 sm:text-xl">
+                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                </h1>
+                <p className="mt-1 text-xs text-slate-300 sm:text-sm">
+                  {selectedHospitalName
+                    ? `Hospital ${selectedHospitalName}. ${
+                        files.length === 0
+                          ? "Toque abaixo para tirar fotos ou escolher arquivos."
+                          : "Confira os arquivos antes de enviar a Descrição Cirúrgica."
+                      }`
+                    : files.length === 0
+                      ? "Toque abaixo para tirar fotos ou escolher arquivos."
+                      : "Confira os arquivos antes de enviar a Descrição Cirúrgica."}
+                </p>
+              </div>
+
+              {files.length === 0 ? (
+                <>
+                  {/* Estado inicial: card grande para adicionar arquivos */}
                   <label
-                    htmlFor="files"
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-400/60 bg-slate-900/70 px-4 py-6 text-center text-xs text-emerald-100/90 transition-colors hover:bg-slate-900"
+                    htmlFor="files-upload"
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-400/70 bg-slate-950/80 px-6 py-10 text-center text-xs text-emerald-100/90 transition-colors hover:bg-slate-900"
                   >
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-300">
-                      <Upload className="h-5 w-5" />
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
+                      <Upload className="h-6 w-6" />
                     </div>
-                    <p className="text-sm font-medium text-emerald-50">
-                      Toque para selecionar fotos ou PDFs
+                    <p className="text-sm font-semibold text-emerald-50">
+                      Adicionar Arquivos
                     </p>
                     <p className="mt-1 text-[11px] text-emerald-100/80">
+                      Câmera ou Galeria
+                    </p>
+                    <p className="mt-3 text-[10px] text-emerald-100/70">
                       Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
                     </p>
-                    <Input
-                      id="files"
-                      type="file"
-                      multiple
-                      className="mt-3 hidden"
-                      accept="image/*,application/pdf"
-                      onChange={handleFileChange}
-                    />
                   </label>
-
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-900/80 px-3 py-2 text-[11px] text-slate-200">
-                    <span className="font-medium text-emerald-100">
-                      Arquivos selecionados:
-                    </span>
-                    <span className="text-emerald-300">{arquivosLabel}</span>
-                  </div>
-
-                  {files.length > 0 && (
-                    <div className="space-y-2 rounded-2xl bg-slate-900/70 p-3 text-xs">
-                      {files.map((file) => (
-                        <div
-                          key={file.name + file.lastModified}
-                          className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-slate-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-800/80 text-emerald-300">
-                              {isImage(file) ? (
-                                <ImageIcon className="h-4 w-4" />
-                              ) : (
-                                <FileText className="h-4 w-4" />
-                              )}
-                            </span>
-                            <span className="line-clamp-1 text-[11px] sm:text-xs">
-                              {file.name}
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-slate-300">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
                   <Button
                     type="button"
-                    className="mt-1 w-full rounded-2xl bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                    disabled
+                    className="mt-8 h-11 w-full rounded-full bg-slate-900 text-xs font-semibold text-slate-400"
+                  >
+                    Selecione arquivos acima
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {/* Estado com arquivos: lista para conferência + botão adicionar mais */}
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-200">
+                      Seus Arquivos ({files.length})
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-full border-emerald-500/60 bg-slate-950 text-[11px] font-semibold text-emerald-200 hover:bg-slate-900"
+                      onClick={handleAdicionarMais}
+                    >
+                      + Adicionar mais
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={file.name + file.lastModified + index}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-slate-950/90 px-4 py-3 text-xs text-slate-100 ring-1 ring-slate-800"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300">
+                            {isImage(file) ? (
+                              <ImageIcon className="h-4 w-4" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] sm:text-xs">
+                              {file.name}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-slate-400">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoverArquivo(index)}
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="mt-8 h-11 w-full rounded-full bg-emerald-500 text-sm font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-70"
                     disabled={isUploading || files.length === 0}
                     onClick={handleUpload}
                   >
-                    {isUploading ? "Enviando..." : "Enviar descrição cirúrgica"}
+                    {isUploading ? "Enviando..." : "Continuar Envio"}
                   </Button>
 
                   <Button
                     type="button"
                     variant="ghost"
-                    className="w-full rounded-2xl text-xs text-emerald-100 hover:bg-slate-900"
+                    className="mt-3 text-xs text-emerald-100 hover:bg-transparent hover:text-emerald-300"
                     onClick={handleNovaDescricao}
                     disabled={isUploading}
                   >
                     Voltar para Nova Descrição
                   </Button>
-                </CardContent>
-              </Card>
+                </>
+              )}
             </div>
           )}
 
