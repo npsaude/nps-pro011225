@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import {
   showError,
@@ -39,6 +40,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [view, setView] = useState<ViewState>("start");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
+  const [showFillingScreen, setShowFillingScreen] = useState(false);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -1004,7 +1006,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               onClick={() => {
                 // Futuramente aqui entra a lógica de preenchimento automático
                 setAutoFillDialogOpen(false);
-                void handleUpload();
+                setShowFillingScreen(true);
               }}
             >
               {isUploading ? "Enviando..." : "Sim, preencher agora"}
@@ -1026,6 +1028,32 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tela de progresso de preenchimento do formulário de honorários */}
+      {showFillingScreen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm"
+          onClick={() => setShowFillingScreen(false)}
+        >
+          <div
+            className="w-[88%] max-w-sm rounded-3xl border border-slate-800 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+              Preenchendo Formulário...
+            </h2>
+            <div className="mt-5">
+              <Progress
+                value={72}
+                className="h-2.5 rounded-full bg-slate-900"
+              />
+            </div>
+            <p className="mt-3 text-xs text-slate-300 sm:text-sm">
+              Aguarde um momento.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
