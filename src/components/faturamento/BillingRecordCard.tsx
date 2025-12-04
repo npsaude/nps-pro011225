@@ -28,9 +28,10 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
       <CardContent className="p-0">
         {/* Top header row */}
         <div className="flex flex-col gap-4 bg-[#EAF1FF] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-6">
+          {/* Blocos: Médico / Paciente / Data - distribuídos */}
+          <div className="flex w-full flex-1 flex-wrap items-center gap-6 sm:gap-10">
             {/* Médico */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-[180px] flex-1 items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D9E4FF] text-[13px] font-semibold text-[#163E99]">
                 {getInitials(record.doctorName)}
               </div>
@@ -45,7 +46,7 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
             </div>
 
             {/* Paciente */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-[180px] flex-1 items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E4FBF2] text-[13px] font-semibold text-emerald-600">
                 {getInitials(record.patientName)}
               </div>
@@ -60,7 +61,7 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
             </div>
 
             {/* Data cirurgia */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-[160px] flex-1 items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F4E9FF] text-fuchsia-600">
                 <CalendarDays className="h-5 w-5" />
               </div>
@@ -75,7 +76,7 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
             </div>
           </div>
 
-          {/* Valor honorário */}
+          {/* Valor honorário, alinhado à direita */}
           <div className="flex flex-col items-start sm:items-end">
             <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
               Valor honorário
@@ -86,40 +87,41 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
           </div>
         </div>
 
-        {/* Middle info row */}
-        <div className="flex flex-col gap-6 border-t border-[#D5DFEF] bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-wrap gap-8">
-            <div className="flex items-center gap-3">
-              <div className="text-[#2F4B7C]">
-                <Stethoscope className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Procedimento
-                </span>
-                <span className="mt-1 text-[13px] font-medium text-slate-900">
-                  {record.procedure}
-                </span>
-              </div>
+        {/* Middle info row: Procedimento / Hospital / Local faturamento em 3 colunas */}
+        <div className="grid gap-6 border-t border-[#D5DFEF] bg-white px-6 py-5 sm:grid-cols-3">
+          {/* Procedimento */}
+          <div className="flex items-start gap-3">
+            <div className="mt-[2px] text-[#2F4B7C]">
+              <Stethoscope className="h-4 w-4" />
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="text-[#2F4B7C]">
-                <Hospital className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Hospital
-                </span>
-                <span className="mt-1 text-[13px] font-medium text-slate-900">
-                  {record.hospital}
-                </span>
-              </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Procedimento
+              </span>
+              <span className="mt-1 text-[13px] font-medium text-slate-900">
+                {record.procedure}
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-[#2F4B7C]">
+          {/* Hospital */}
+          <div className="flex items-start gap-3">
+            <div className="mt-[2px] text-[#2F4B7C]">
+              <Hospital className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Hospital
+              </span>
+              <span className="mt-1 text-[13px] font-medium text-slate-900">
+                {record.hospital}
+              </span>
+            </div>
+          </div>
+
+          {/* Local Faturamento */}
+          <div className="flex items-start gap-3 sm:justify-end">
+            <div className="mt-[2px] text-[#2F4B7C]">
               <MapPin className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
