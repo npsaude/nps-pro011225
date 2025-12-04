@@ -12,7 +12,8 @@ function getStatusColors(status: BillingStatus) {
       return {
         circleBorder: "border-emerald-500",
         circleShadow: "shadow-[0_0_0_3px_rgba(16,185,129,0.18)]",
-        icon: "text-emerald-600",
+        circleBg: "bg-emerald-500",
+        icon: "text-white",
         label: "text-slate-700",
         value: "text-emerald-600",
         line: "bg-emerald-500",
@@ -21,6 +22,7 @@ function getStatusColors(status: BillingStatus) {
       return {
         circleBorder: "border-sky-500",
         circleShadow: "shadow-[0_0_0_3px_rgba(56,189,248,0.18)]",
+        circleBg: "bg-white",
         icon: "text-sky-600",
         label: "text-slate-700",
         value: "text-sky-600",
@@ -30,6 +32,7 @@ function getStatusColors(status: BillingStatus) {
       return {
         circleBorder: "border-amber-400",
         circleShadow: "shadow-[0_0_0_3px_rgba(251,191,36,0.24)]",
+        circleBg: "bg-white",
         icon: "text-amber-500",
         label: "text-slate-700",
         value: "text-amber-600",
@@ -39,6 +42,7 @@ function getStatusColors(status: BillingStatus) {
       return {
         circleBorder: "border-slate-300",
         circleShadow: "shadow-[0_0_0_3px_rgba(148,163,184,0.2)]",
+        circleBg: "bg-white",
         icon: "text-slate-500",
         label: "text-slate-500",
         value: "text-slate-400",
@@ -49,6 +53,7 @@ function getStatusColors(status: BillingStatus) {
       return {
         circleBorder: "border-slate-300",
         circleShadow: "shadow-[0_0_0_3px_rgba(148,163,184,0.15)]",
+        circleBg: "bg-white",
         icon: "text-slate-400",
         label: "text-slate-400",
         value: "text-slate-400",
@@ -74,17 +79,23 @@ function getStatusValueText(step: BillingStep): string {
   }
 }
 
-function StatusIcon({ status, className }: { status: BillingStatus, className?: string }) {
+function StatusIcon({
+  status,
+  className,
+}: {
+  status: BillingStatus;
+  className?: string;
+}) {
   switch (status) {
     case "completed":
-      return <CheckCircle2 className={`h-4 w-4 ${className}`} />;
+      return <CheckCircle2 className={`h-4 w-4 ${className ?? ""}`} />;
     case "processing":
     case "pending":
     case "waiting":
-      return <Clock3 className={`h-4 w-4 ${className}`} />;
+      return <Clock3 className={`h-4 w-4 ${className ?? ""}`} />;
     case "nc":
     default:
-      return <Minus className={`h-4 w-4 ${className}`} />;
+      return <Minus className={`h-4 w-4 ${className ?? ""}`} />;
   }
 }
 
@@ -105,12 +116,9 @@ const BillingStatusTimeline: React.FC<BillingStatusTimelineProps> = ({
             >
               <div className="flex w-full items-center">
                 <div
-                  className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border-[2.2px] bg-white ${colors.circleBorder} ${colors.circleShadow}`}
+                  className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border-[2.2px] bg-white ${colors.circleBorder} ${colors.circleShadow} ${colors.circleBg}`}
                 >
-                  <StatusIcon
-                    status={step.status}
-                    className={`h-4 w-4 ${colors.icon}`}
-                  />
+                  <StatusIcon status={step.status} className={colors.icon} />
                 </div>
                 {!isLast && (
                   <div

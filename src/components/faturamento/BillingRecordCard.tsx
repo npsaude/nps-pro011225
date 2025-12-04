@@ -89,8 +89,8 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
         {/* Middle info row */}
         <div className="flex flex-col gap-6 border-t border-[#D5DFEF] bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-wrap gap-8">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#2F4B7C]">
+            <div className="flex items-center gap-3">
+              <div className="text-[#2F4B7C]">
                 <Stethoscope className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
@@ -103,8 +103,8 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#2F4B7C]">
+            <div className="flex items-center gap-3">
+              <div className="text-[#2F4B7C]">
                 <Hospital className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
@@ -118,8 +118,8 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 text-[#2F4B7C]">
+          <div className="flex items-center gap-3">
+            <div className="text-[#2F4B7C]">
               <MapPin className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
