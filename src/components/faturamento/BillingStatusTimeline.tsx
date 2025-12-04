@@ -99,7 +99,7 @@ const BillingStatusTimeline: React.FC<BillingStatusTimelineProps> = ({
 }) => {
   return (
     <div className="mt-1 flex flex-col">
-      <div className="flex items-center gap-3 md:gap-6">
+      <div className="flex items-center">
         {steps.map((step, index) => {
           const colors = getStatusColors(step.status);
           const isFirst = index === 0;
