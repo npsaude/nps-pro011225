@@ -8,7 +8,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  LineChart,
   Line,
 } from "recharts";
 
@@ -48,7 +47,10 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
   return (
     <div className="h-64 w-full sm:h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 10, right: 8, left: -20, bottom: 0 }}
+        >
           <CartesianGrid
             stroke="#1f2937"
             vertical={false}
@@ -84,22 +86,22 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             }}
           />
           <Bar dataKey="value" radius={[8, 8, 4, 4]}>
-            {data.map((entry, index) => (
+            {data.map((entry) => (
               <Cell
                 key={entry.name}
                 fill={entry.highlight ? "#10B981" : "#1f2937"}
               />
             ))}
           </Bar>
-          <LineChart data={data}>
-            <Line
-              type="monotone"
-              dataKey="line"
-              stroke="#F97373"
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
+          {/* Linha vermelha representando a glosa mensal */}
+          <Line
+            type="monotone"
+            dataKey="line"
+            stroke="#EF4444"
+            strokeWidth={2}
+            dot={false}
+            strokeLinecap="round"
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
