@@ -102,9 +102,10 @@ const BillingStatusTimeline: React.FC<BillingStatusTimelineProps> = ({
       <div className="flex items-center gap-3 md:gap-6">
         {steps.map((step, index) => {
           const colors = getStatusColors(step.status);
+          const isFirst = index === 0;
           const isLast = index === steps.length - 1;
 
-          // linha herda a cor do passo atual se estiver concluído, senão cinza claro
+          // cor da linha entre este passo e o próximo
           const lineColor =
             step.status === "completed" ? colors.line : "bg-slate-200";
 
@@ -113,21 +114,27 @@ const BillingStatusTimeline: React.FC<BillingStatusTimelineProps> = ({
               key={step.id}
               className="flex flex-1 flex-col items-center text-center"
             >
-              {/* Linha + bolinha na mesma altura, como na referência */}
-              <div className="flex w-full items-center">
+              {/* Linha contínua passando de uma bolinha até a outra */}
+              <div className="relative flex w-full items-center justify-center">
+                {!isFirst && (
+                  <div
+                    className={`pointer-events-none absolute left-0 right-1/2 h-[2px] rounded-full ${lineColor}`}
+                  />
+                )}
+                {!isLast && (
+                  <div
+                    className={`pointer-events-none absolute left-1/2 right-0 h-[2px] rounded-full ${lineColor}`}
+                  />
+                )}
+
                 <div
-                  className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full border-[2px] ${colors.circleBorder} ${colors.circleBg}`}
+                  className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-[2px] ${colors.circleBorder} ${colors.circleBg}`}
                 >
                   <StatusIcon status={step.status} className={colors.icon} />
                 </div>
-                {!isLast && (
-                  <div
-                    className={`ml-1 hidden h-[2px] flex-1 rounded-full md:block ${lineColor}`}
-                  />
-                )}
               </div>
 
-              {/* Textos alinhados diretamente abaixo da bolinha */}
+              {/* Textos alinhados diretamente embaixo da bolinha, com letras menores */}
               <div
                 className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${colors.label}`}
               >
