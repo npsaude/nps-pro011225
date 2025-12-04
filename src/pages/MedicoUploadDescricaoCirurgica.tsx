@@ -396,6 +396,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   }, [showFillingScreen]);
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
+  const totalSteps = 6;
+  // Mapeia a etapa atual do fluxo para a barra de progresso
+  const currentStep =
+    view === "start" || view === "hospital"
+      ? 1
+      : view === "upload"
+        ? 2
+        : view === "clinica"
+          ? 3
+          : 6; // success = concluído
 
   const handleNovaDescricao = () => {
     setFiles([]);
@@ -545,11 +555,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                <span>{view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}</span>
+                <span>
+                  {view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}
+                </span>
               </div>
             </header>
           </>
         )}
+
+        {/* Barra de progresso do fluxo sempre no topo */}
+        <div className="mb-5 w-full max-w-md self-center">
+          <div className="h-1 w-full rounded-full bg-slate-800">
+            <div
+              className="h-1 rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+            />
+          </div>
+        </div>
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
@@ -724,13 +746,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 accept="image/*,application/pdf"
                 onChange={handleFileChange}
               />
-
-              {/* Barra de progresso simples do passo */}
-              <div className="mb-4">
-                <div className="h-1 w-full rounded-full bg-slate-800">
-                  <div className="h-1 w-1/3 rounded-full bg-emerald-500" />
-                </div>
-              </div>
 
               {/* Título com Dr(a) + nome e hospital */}
               <div className="mb-6">
