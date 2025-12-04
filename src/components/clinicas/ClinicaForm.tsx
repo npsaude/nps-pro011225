@@ -14,13 +14,6 @@ import {
   FormField,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type {
   ClinicaInput,
   Clinica,
@@ -168,24 +161,40 @@ const ClinicaForm = ({ clinica, onSubmit, isSubmitting }: ClinicaFormProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo de unidade</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="CLINICA">
+                    <FormControl>
+                      <div className="inline-flex w-full flex-wrap gap-2 rounded-full bg-slate-100 p-1 text-xs sm:text-sm">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={
+                            field.value === "CLINICA" ? "default" : "outline"
+                          }
+                          className={`flex-1 rounded-full ${
+                            field.value === "CLINICA"
+                              ? "bg-slate-900 text-slate-50 hover:bg-slate-800"
+                              : "bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                          onClick={() => field.onChange("CLINICA")}
+                        >
                           Clínica
-                        </SelectItem>
-                        <SelectItem value="HOSPITAL">
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={
+                            field.value === "HOSPITAL" ? "default" : "outline"
+                          }
+                          className={`flex-1 rounded-full ${
+                            field.value === "HOSPITAL"
+                              ? "bg-slate-900 text-slate-50 hover:bg-slate-800"
+                              : "bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                          onClick={() => field.onChange("HOSPITAL")}
+                        >
                           Hospital
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                        </Button>
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
