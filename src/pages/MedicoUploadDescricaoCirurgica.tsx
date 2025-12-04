@@ -999,40 +999,40 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 5 - SUCESSO GERAL (lista de descrições) */}
+          {/* TELA 5 - SUCESSO GERAL (final do processo) */}
           {view === "success" && (
             <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
-              <Card className="rounded-3xl border-emerald-500/30 bg-slate-950/95 text-center shadow-[0_22px_60px_rgba(16,185,129,0.7)]">
-                <CardContent className="space-y-4 px-6 py-7">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+              <Card className="rounded-3xl border-0 bg-slate-900/95 text-center shadow-[0_26px_70px_rgba(15,23,42,0.9)]">
+                <CardContent className="space-y-6 px-6 py-8">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_40px_rgba(16,185,129,0.8)]">
                     <CheckCircle2 className="h-8 w-8" />
                   </div>
-                  <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
-                    Descrição enviada!
-                  </h2>
-                  <p className="text-xs text-emerald-50/90 sm:text-sm">
-                    Recebemos seus arquivos e a análise da descrição cirúrgica
-                    foi iniciada. Você poderá acompanhar o status na área{" "}
-                    <span className="font-semibold">
-                      &quot;Minhas descrições cirúrgicas&quot;
-                    </span>
-                    .
-                  </p>
-                  <div className="flex flex-col gap-2 pt-2">
+                  <div className="space-y-2">
+                    <h2 className="text-lg font-semibold text-slate-50 sm:text-xl">
+                      {medicoNome
+                        ? `Tudo certo, Dr. ${medicoNome}!`
+                        : "Tudo certo!"}
+                    </h2>
+                    <p className="text-xs text-slate-200 sm:text-sm">
+                      A descrição cirúrgica e os documentos foram enviados com
+                      sucesso.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 pt-2">
                     <Button
                       type="button"
-                      className="w-full rounded-2xl bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                      className="h-11 w-full rounded-2xl bg-emerald-500 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
                       onClick={handleNovaDescricao}
                     >
-                      Enviar nova descrição
+                      Enviar Nova Descrição Cirúrgica
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full rounded-2xl border-emerald-500/40 bg-slate-950/90 text-xs text-emerald-100 hover:bg-slate-900"
-                      onClick={() => navigate("/medico/descricao-cirurgica")}
+                      className="h-11 w-full rounded-2xl border-0 bg-slate-800 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+                      onClick={() => navigate("/medico/dashboard")}
                     >
-                      Ver minhas descrições cirúrgicas
+                      Início
                     </Button>
                   </div>
                 </CardContent>
