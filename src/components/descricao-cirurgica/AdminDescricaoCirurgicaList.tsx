@@ -173,12 +173,12 @@ const KANBAN_STAGES: {
 
 // Classes de cor por coluna do Kanban
 const KANBAN_CARD_COLORS: Record<FaturamentoStageId, string> = {
-  1: "border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100/80 dark:border-sky-800 dark:from-slate-950 dark:via-slate-950 dark:to-sky-950/40",
-  2: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/80 dark:border-emerald-800 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/40",
-  3: "border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-indigo-100/80 dark:border-indigo-800 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/40",
-  4: "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-rose-100/80 dark:border-rose-800 dark:from-slate-950 dark:via-slate-950 dark:to-rose-950/40",
-  5: "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-100/80 dark:border-amber-800 dark:from-slate-950 dark:via-slate-950 dark:to-amber-950/40",
-  6: "border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-emerald-200/80 dark:border-emerald-900 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/60",
+  1: "border-sky-500 bg-gradient-to-br from-sky-100 via-sky-200 to-sky-300 dark:border-sky-700 dark:from-slate-950 dark:via-slate-950 dark:to-sky-950/60",
+  2: "border-emerald-500 bg-gradient-to-br from-emerald-100 via-emerald-200 to-emerald-300 dark:border-emerald-700 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/60",
+  3: "border-indigo-500 bg-gradient-to-br from-indigo-100 via-indigo-200 to-indigo-300 dark:border-indigo-700 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/60",
+  4: "border-rose-500 bg-gradient-to-br from-rose-100 via-rose-200 to-rose-300 dark:border-rose-700 dark:from-slate-950 dark:via-slate-950 dark:to-rose-950/60",
+  5: "border-amber-500 bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 dark:border-amber-700 dark:from-slate-950 dark:via-slate-950 dark:to-amber-950/60",
+  6: "border-emerald-600 bg-gradient-to-br from-emerald-200 via-emerald-300 to-emerald-400 dark:border-emerald-800 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/80",
 };
 
 function statusToStage(status: DbDescricaoCirurgicaStatus | null): FaturamentoStageId {
