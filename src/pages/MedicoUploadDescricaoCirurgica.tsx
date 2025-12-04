@@ -38,13 +38,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
 
-  // Garante que a tela só seja acessada após escolha de hospital
-  useEffect(() => {
-    if (!hospitalId) {
-      showError("Selecione um hospital para enviar a descrição cirúrgica.");
-      navigate("/medico/dashboard");
-    }
-  }, [hospitalId, navigate]);
+  // hospitalId agora é opcional; o fluxo de seleção de hospital poderá ser ajustado em etapas futuras.
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -154,7 +148,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           body: JSON.stringify({
             userId,
             files: uploadedFilePaths.map((path) => ({ path })),
-            // hospitalId está disponível aqui caso você queira usá-lo depois na função
+            // hospitalId é opcional por enquanto; será utilizado se estiver presente
             hospitalId,
           }),
         });
