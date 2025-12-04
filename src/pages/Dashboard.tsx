@@ -112,18 +112,18 @@ const topMetrics: TopMetric[] = [
 ];
 
 const yearlySadtData = [
-  { mes: "Jan", enviados: 65, pagos: 48, retornoGlosa: 12 },
-  { mes: "Fev", enviados: 59, pagos: 42, retornoGlosa: 10 },
-  { mes: "Mar", enviados: 80, pagos: 60, retornoGlosa: 15 },
-  { mes: "Abr", enviados: 81, pagos: 55, retornoGlosa: 13 },
-  { mes: "Mai", enviados: 56, pagos: 40, retornoGlosa: 11 },
-  { mes: "Jun", enviados: 55, pagos: 38, retornoGlosa: 10 },
-  { mes: "Jul", enviados: 70, pagos: 52, retornoGlosa: 16 },
-  { mes: "Ago", enviados: 75, pagos: 58, retornoGlosa: 17 },
-  { mes: "Set", enviados: 88, pagos: 68, retornoGlosa: 18 },
-  { mes: "Out", enviados: 92, pagos: 72, retornoGlosa: 19 },
-  { mes: "Nov", enviados: 101, pagos: 78, retornoGlosa: 21 },
-  { mes: "Dez", enviados: 110, pagos: 85, retornoGlosa: 23 },
+  { month: "Jan", enviadas: 65, pagas: 48, glosa: 12 },
+  { month: "Fev", enviadas: 59, pagas: 42, glosa: 10 },
+  { month: "Mar", enviadas: 80, pagas: 60, glosa: 15 },
+  { month: "Abr", enviadas: 81, pagas: 55, glosa: 13 },
+  { month: "Mai", enviadas: 56, pagas: 40, glosa: 11 },
+  { month: "Jun", enviadas: 55, pagas: 38, glosa: 10 },
+  { month: "Jul", enviadas: 70, pagas: 52, glosa: 16 },
+  { month: "Ago", enviadas: 75, pagas: 58, glosa: 17 },
+  { month: "Set", enviadas: 88, pagas: 68, glosa: 18 },
+  { month: "Out", enviadas: 92, pagas: 72, glosa: 19 },
+  { month: "Nov", enviadas: 101, pagas: 78, glosa: 21 },
+  { month: "Dez", enviadas: 110, pagas: 85, glosa: 23 },
 ];
 
 const topDoctorsByRevenue = [
@@ -353,7 +353,7 @@ const Dashboard = () => {
             <Card className="lg:col-span-3 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  SADTs enviadas x pagas x retorno de glosa
+                  SADTs enviadas x pagas x glosa
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-400">
                   Visão consolidada dos últimos 12 meses
@@ -368,7 +368,7 @@ const Dashboard = () => {
                       vertical={false}
                     />
                     <XAxis
-                      dataKey="mes"
+                      dataKey="month"
                       tickLine={false}
                       axisLine={false}
                       tick={{ fontSize: 11, fill: "#64748B" }}
@@ -386,23 +386,23 @@ const Dashboard = () => {
                       }}
                     />
                     <Bar
-                      dataKey="enviados"
-                      name="Enviados"
+                      dataKey="enviadas"
+                      name="SADTs enviadas"
                       barSize={16}
                       radius={[4, 4, 0, 0]}
                       fill="#38bdf8"
                     />
                     <Bar
-                      dataKey="pagos"
-                      name="Pagos"
+                      dataKey="pagas"
+                      name="SADTs pagas"
                       barSize={16}
                       radius={[4, 4, 0, 0]}
                       fill="#22c55e"
                     />
                     <Line
                       type="monotone"
-                      dataKey="retornoGlosa"
-                      name="Retorno de glosa"
+                      dataKey="glosa"
+                      name="Glosa"
                       stroke="#f97316"
                       strokeWidth={2}
                       dot={{ r: 3 }}
