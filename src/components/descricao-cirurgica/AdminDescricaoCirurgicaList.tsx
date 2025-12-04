@@ -171,6 +171,16 @@ const KANBAN_STAGES: {
   { id: 6, label: "Recebimento da glosa", helper: "n.c." },
 ];
 
+// Classes de cor por coluna do Kanban
+const KANBAN_CARD_COLORS: Record<FaturamentoStageId, string> = {
+  1: "border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100/80 dark:border-sky-800 dark:from-slate-950 dark:via-slate-950 dark:to-sky-950/40",
+  2: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/80 dark:border-emerald-800 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/40",
+  3: "border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-indigo-100/80 dark:border-indigo-800 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/40",
+  4: "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-rose-100/80 dark:border-rose-800 dark:from-slate-950 dark:via-slate-950 dark:to-rose-950/40",
+  5: "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-100/80 dark:border-amber-800 dark:from-slate-950 dark:via-slate-950 dark:to-amber-950/40",
+  6: "border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-emerald-200/80 dark:border-emerald-900 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/60",
+};
+
 function statusToStage(status: DbDescricaoCirurgicaStatus | null): FaturamentoStageId {
   switch (status) {
     case "CONFIRMADO":
@@ -451,22 +461,24 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                       key={item.id}
                       draggable
                       onDragStart={() => handleDragStart(item.id)}
-                      className="group cursor-grab rounded-xl border border-slate-200 bg-white/90 p-3 text-[11px] shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900/90"
+                      className={`group cursor-grab rounded-xl border p-3 text-[11px] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                        KANBAN_CARD_COLORS[stage.id]
+                      }`}
                     >
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold text-slate-800 dark:text-slate-50">
                             {item.nomePaciente || "Paciente não informado"}
                           </span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="text-[11px] text-slate-600 dark:text-slate-300">
                             Dr(a). {item.nomeMedico || "—"}
                           </span>
                         </div>
                       </div>
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-300">
                           Prontuário:{" "}
-                          <span className="font-medium text-slate-600 dark:text-slate-200">
+                          <span className="font-medium text-slate-700 dark:text-slate-100">
                             {item.prontuario || "—"}
                           </span>
                         </span>
@@ -475,7 +487,7 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                         </Badge>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-1">
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
                           Cirurgia: {item.dataFimProcedimento || "Sem data"}
                         </span>
                         <div className="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -483,7 +495,7 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                            className="h-6 w-6 rounded-full text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                             onClick={() => onVisualizar(item)}
                           >
                             <Eye className="h-3 w-3" />
@@ -492,7 +504,7 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                            className="h-6 w-6 rounded-full text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                             onClick={() => onEditar(item)}
                           >
                             <Pencil className="h-3 w-3" />
