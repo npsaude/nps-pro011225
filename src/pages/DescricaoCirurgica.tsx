@@ -77,7 +77,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
     DescricaoCirurgicaResumoMedico[]
   >([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [viewItem, setViewItem] =
@@ -109,8 +109,10 @@ const DescricaoCirurgicaPage: React.FC = () => {
   };
 
   useEffect(() => {
-    void carregarDescricoes();
-  }, []);
+    if (!showForm) {
+      void carregarDescricoes();
+    }
+  }, [showForm]);
 
   const form = useForm<DescricaoCirurgicaFormData>({
     defaultValues: {
@@ -1289,18 +1291,20 @@ const DescricaoCirurgicaPage: React.FC = () => {
               </Card>
             )}
 
-            {/* Lista de descrições */}
-            <div className="mb-4">
-              <AdminDescricaoCirurgicaList
-                items={listaDescricoes}
-                isLoading={carregandoLista}
-                onNovaDescricao={handleNovaDescricao}
-                onVisualizar={handleVisualizar}
-                onEditar={handleEditar}
-                onExcluir={handleExcluir}
-                onVerArquivos={handleVerArquivos}
-              />
-            </div>
+            {/* Lista de descrições: só aparece quando NÃO estiver cadastrando/editando */}
+            {!showForm && (
+              <div className="mb-4">
+                <AdminDescricaoCirurgicaList
+                  items={listaDescricoes}
+                  isLoading={carregandoLista}
+                  onNovaDescricao={handleNovaDescricao}
+                  onVisualizar={handleVisualizar}
+                  onEditar={handleEditar}
+                  onExcluir={handleExcluir}
+                  onVerArquivos={handleVerArquivos}
+                />
+              </div>
+            )}
           </main>
         </div>
       </div>
