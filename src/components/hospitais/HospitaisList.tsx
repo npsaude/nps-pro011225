@@ -411,7 +411,7 @@ const HospitaisList = () => {
             }
           }}
         >
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editing ? "Editar hospital" : "Novo hospital"}
