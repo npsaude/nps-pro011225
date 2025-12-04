@@ -553,44 +553,48 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
+          {/* TELA 1 - START: centralizada verticalmente como no layout */}
           {view === "start" && (
-            <div className="mt-8 flex w-full max-w-sm flex-col items-center text-center">
-              <p className="mb-2 text-sm font-semibold text-emerald-300">
-                {saudacao}
-              </p>
-              <h1 className="text-xl font-semibold text-slate-50 sm:text-2xl">
-                Nova Descrição Cirúrgica
-              </h1>
-              <p className="mt-3 max-w-xs text-sm text-slate-200">
-                Vamos começar o envio da sua Descrição Cirúrgica. É rápido e
-                seguro.
-              </p>
+            <div className="flex w-full flex-1 items-center justify-center">
+              <div className="flex w-full max-w-sm flex-col items-center text-center">
+                <p className="mb-2 text-sm font-semibold text-emerald-300">
+                  {saudacao}
+                </p>
+                <h1 className="text-xl font-semibold text-slate-50 sm:text-2xl">
+                  Nova Descrição Cirúrgica
+                </h1>
+                <p className="mt-3 max-w-xs text-sm text-slate-200">
+                  Vamos começar o envio da sua Descrição Cirúrgica. É rápido e
+                  seguro.
+                </p>
 
-              <button
-                type="button"
-                onClick={handleIniciarFluxo}
-                className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56 motion-safe:animate-soft-pulse"
-              >
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/80">
-                    <ShieldCheck className="h-5 w-5" />
+                <button
+                  type="button"
+                  onClick={handleIniciarFluxo}
+                  className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56 motion-safe:animate-soft-pulse"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/80">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <span className="text-[15px] font-semibold">
+                      Iniciar Agora
+                    </span>
                   </div>
-                  <span className="text-[15px] font-semibold">
-                    Iniciar Agora
-                  </span>
-                </div>
-              </button>
+                </button>
 
-              <p className="mt-8 text-[11px] text-slate-400">
-                Seus dados são criptografados ponta a ponta.
-              </p>
+                <p className="mt-8 text-[11px] text-slate-400">
+                  Seus dados são criptografados ponta a ponta.
+                </p>
+              </div>
             </div>
           )}
 
+          {/* TELA 2 - SELEÇÃO DE HOSPITAL: bottom-sheet ancorado ao rodapé */}
           {view === "hospital" && (
-            <div className="mt-10 flex w-full max-w-sm flex-col items-center">
+            <div className="flex w-full flex-1 items-end justify-center pb-5">
               {hospitalStepView === "selector" ? (
-                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-50">
@@ -652,7 +656,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
                   <div className="mb-5 flex items-center justify-between">
                     <button
                       type="button"
@@ -707,6 +711,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
+          {/* TELA 3 - UPLOAD: conteúdo no topo com header, barra e lista */}
           {view === "upload" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
               {/* Input de arquivos centralizado para ser usado tanto no card quanto em "+ Adicionar mais" */}
@@ -849,10 +854,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
+          {/* TELA 4 - CLÍNICA: bottom-sheet ancorado ao rodapé */}
           {view === "clinica" && (
-            <div className="mt-10 flex w-full max-w-sm flex-col items-center">
+            <div className="flex w-full flex-1 items-end justify-center pb-5">
               {clinicaStepView === "selector" ? (
-                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-50">
@@ -915,7 +921,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="w-full rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
                   <div className="mb-5 flex items-center justify-between">
                     <button
                       type="button"
