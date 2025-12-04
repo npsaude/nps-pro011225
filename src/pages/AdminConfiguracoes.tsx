@@ -142,7 +142,7 @@ const AdminConfiguracoes = () => {
                   <span>Integrações e chaves de API</span>
                 </h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Configure aqui o Token OpenAI utilizado pelos recursos de leitura automática de guias e documentos (GHI).
+                  Configure aqui o Token OpenAI utilizado pelos recursos de leitura automática de guias e documentos.
                 </p>
               </section>
 
@@ -185,7 +185,7 @@ const AdminConfiguracoes = () => {
                     <span>Token OpenAI</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Informe o token de API da OpenAI para habilitar a leitura automática de documentos (OCR inteligente das guias GHI).
+                    Informe o token de API da OpenAI para habilitar a leitura automática de documentos (OCR inteligente das guias SADT).
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -206,7 +206,7 @@ const AdminConfiguracoes = () => {
                         disabled={carregando}
                       />
                       <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        Use um token com permissão para o modelo que será utilizado na leitura das guias GHI.
+                        Use um token com permissão para o modelo que será utilizado na leitura das guias.
                         Guarde esta informação em local seguro. Apenas administradores devem ter acesso.
                       </p>
                     </div>

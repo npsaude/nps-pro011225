@@ -55,10 +55,10 @@ const SadtList: React.FC<SadtListProps> = ({
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold sm:text-base">
-              GHIs cadastradas
+              SADTs cadastradas
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Lista de guias GHI com status e estágio.
+              Lista de guias de SADT com status e estágio.
             </CardDescription>
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               Total:{" "}
@@ -95,7 +95,7 @@ const SadtList: React.FC<SadtListProps> = ({
                 className="rounded-full bg-indigo-600 px-4 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
                 onClick={onNewClick}
               >
-                Nova GHI
+                Nova SADT
               </Button>
             </div>
           </div>
@@ -136,7 +136,7 @@ const SadtList: React.FC<SadtListProps> = ({
                     colSpan={7}
                     className="px-4 py-6 text-center text-xs text-slate-400"
                   >
-                    Nenhuma GHI cadastrada até o momento.
+                    Nenhuma SADT cadastrada até o momento.
                   </TableCell>
                 </TableRow>
               ) : (

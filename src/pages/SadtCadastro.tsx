@@ -93,7 +93,7 @@ const SadtCadastro: React.FC = () => {
     if (typeof window === "undefined") return;
 
     const confirmar = window.confirm(
-      `Deseja realmente excluir a GHI ${sadt.numeroGuiaPrincipal || ""}?`,
+      `Deseja realmente excluir a SADT ${sadt.numeroGuiaPrincipal || ""}?`,
     );
     if (!confirmar) return;
 
@@ -103,7 +103,7 @@ const SadtCadastro: React.FC = () => {
       return novaLista;
     });
 
-    showSuccess("GHI excluída com sucesso.");
+    showSuccess("SADT excluída com sucesso.");
   };
 
   return (
@@ -122,10 +122,10 @@ const SadtCadastro: React.FC = () => {
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#E6EEF7] text-[#1D4E77] dark:bg-slate-800 dark:text-slate-100">
                   <FileText className="h-4 w-4" />
                 </span>
-                <span>Cadastro de GHIs</span>
+                <span>Cadastro de SADTs</span>
               </h1>
               <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                Liste, crie e gerencie as guias GHI da sua operação.
+                Liste, crie e gerencie as guias SADT da sua operação.
               </p>
             </div>
 
@@ -133,7 +133,7 @@ const SadtCadastro: React.FC = () => {
               <div className="hidden items-center rounded-full bg-[#F5F7F9] px-3 py-1 text-sm text-slate-600 ring-1 ring-[#D9DEE3] focus-within:ring-[#1D4E77] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
                 <Search className="mr-2 h-4 w-4 text-slate-400" />
                 <span className="h-7 w-40 bg-transparent text-xs text-slate-800 dark:text-slate-50 sm:w-52 sm:text-sm">
-                  GHIs cadastradas
+                  SADTs cadastradas
                 </span>
               </div>
 
@@ -159,9 +159,9 @@ const SadtCadastro: React.FC = () => {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Detalhes da GHI</DialogTitle>
+            <DialogTitle>Detalhes da SADT</DialogTitle>
             <DialogDescription>
-              Visualize as principais informações da guia GHI selecionada.
+              Visualize as principais informações da guia SADT selecionada.
             </DialogDescription>
           </DialogHeader>
           {selectedSadt && (

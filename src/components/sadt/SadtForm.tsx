@@ -109,10 +109,10 @@ const SadtForm: React.FC<SadtFormProps> = ({ onSubmit }) => {
     <Card className="h-full rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
       <CardHeader>
         <CardTitle className="text-base sm:text-lg">
-          Cadastro de GHI
+          Cadastro de SADT
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm">
-          Preencha os dados da guia GHI, incluindo status e estágio.
+          Preencha os dados da guia SADT, incluindo status e estágio.
         </CardDescription>
       </CardHeader>
       <CardContent className="max-h-[640px] overflow-auto pr-1 sm:pr-2">
@@ -931,7 +931,7 @@ const SadtForm: React.FC<SadtFormProps> = ({ onSubmit }) => {
                 type="submit"
                 className="rounded-full px-6 text-xs sm:text-sm"
               >
-                Salvar GHI
+                Salvar SADT
               </Button>
             </div>
           </form>

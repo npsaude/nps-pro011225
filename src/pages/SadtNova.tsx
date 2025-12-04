@@ -21,8 +21,7 @@ const SadtNova: React.FC = () => {
 
   const handleNewSadt = (values: SadtFormValues) => {
     // Futuramente, integrar com API/Banco de dados.
-    void values;
-    showSuccess("GHI cadastrada com sucesso.");
+    showSuccess("SADT cadastrada com sucesso.");
   };
 
   const handleBack = () => {
@@ -73,7 +72,7 @@ const SadtNova: React.FC = () => {
                 </span>
               </button>
 
-              {/* GHI - ativo */}
+              {/* SADT's - ativo */}
               <button
                 className="flex items-center justify-between rounded-2xl bg-[#135bec] px-3 py-2.5 text-sm text-white shadow-md shadow-blue-500/40 transition-all"
                 onClick={() => navigate("/sadt/cadastro")}
@@ -82,7 +81,7 @@ const SadtNova: React.FC = () => {
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white">
                     <FileText className="h-4 w-4" />
                   </span>
-                  <span className="font-medium">GHIs</span>
+                  <span className="font-medium">SADT&apos;s</span>
                 </span>
               </button>
 
@@ -169,10 +168,10 @@ const SadtNova: React.FC = () => {
           <header className="flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
-                Nova GHI
+                Nova SADT
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Cadastre uma nova guia de GHI para sua clínica.
+                Cadastre uma nova guia de SADT para sua clínica.
               </p>
             </div>
 
@@ -216,14 +215,14 @@ const SadtNova: React.FC = () => {
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
                     <FileText className="h-3.5 w-3.5" />
-                    <span>Guia GHI</span>
+                    <span>Guia SADT</span>
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50 sm:text-lg">
-                      Nova GHI
+                      Nova SADT
                     </h2>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                      Preencha os dados da guia GHI. Após o cadastro, você poderá acompanhar o status e o estágio do faturamento.
+                      Preencha os dados da guia SADT. Após o cadastro, você poderá acompanhar o status e o estágio do faturamento.
                     </p>
                   </div>
                 </div>

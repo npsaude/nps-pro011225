@@ -56,7 +56,7 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * Usa a API da OpenAI para tentar extrair alguns campos principais da GHI
+ * Usa a API da OpenAI para tentar extrair alguns campos principais da SADT
  * a partir do arquivo enviado (imagem ou PDF).
  *
  * Para teste: se não conseguir extrair, devolve um objeto vazio
@@ -72,13 +72,13 @@ async function extrairDadosSadtComGpt(
   const base64 = await fileToBase64(file);
 
   const systemPrompt =
-    "Você é um assistente que lê guias médicas (GHI) e devolve apenas JSON com alguns campos básicos da guia. " +
+    "Você é um assistente que lê guias médicas (SADT) e devolve apenas JSON com alguns campos básicos da guia. " +
     "IMPORTANTE: responda SEMPRE apenas um JSON válido, sem texto extra, no seguinte formato: " +
     '{ "numeroGuiaPrincipal": "...", "dataAutorizacao": "AAAA-MM-DD", "nomeProfissionalSolicitante": "...", "identificacaoOperadora": "..." }. ' +
     "Se algum dado não estiver claro, use string vazia para esse campo.";
 
   const userPrompt =
-    "Leia o documento de guia GHI a partir do conteúdo em base64 abaixo. " +
+    "Leia o documento de guia SADT a partir do conteúdo em base64 abaixo. " +
     "Se não conseguir ler completamente, faça a melhor inferência possível. " +
     `\n\nNome do arquivo: ${file.name}\nTipo: ${file.type}\n\nConteúdo em base64 (pode estar grande):\n${base64}`;
 
@@ -123,7 +123,7 @@ async function extrairDadosSadtComGpt(
 }
 
 /**
- * Salva um resumo de GHI no localStorage para uso na tela de lista.
+ * Salva um resumo de SADT no localStorage para uso na tela de lista.
  */
 function salvarSadtLocalmente(sadt: SadtResumo) {
   if (typeof window === "undefined") return;
@@ -162,9 +162,9 @@ export async function processarOcr(
 
 /**
  * Mock do endpoint POST /sadt/enviar
- * Cria um protocolo fictício e um registro de GHI com estágio AGUARDANDO.
+ * Cria um protocolo fictício e um registro de SADT com estágio AGUARDANDO.
  * Agora também envia o arquivo para a OpenAI para tentar extrair dados da guia
- * e salva um cadastro de GHI no localStorage.
+ * e salva um cadastro de SADT no localStorage.
  */
 export async function enviarSadt(
   payload: EnviarSadtPayload,
@@ -175,9 +175,9 @@ export async function enviarSadt(
   const agora = new Date();
   const ano = agora.getFullYear();
   const random = Math.floor(10000 + Math.random() * 90000);
-  const protocolo = `GHI-${ano}-${random}`;
+  const protocolo = `SADT-${ano}-${random}`;
 
-  const sadtId = `ghi-${agora.getTime()}-${random}`;
+  const sadtId = `sadt-${agora.getTime()}-${random}`;
 
   // Integração mock com OCR (mantida)
   void processarOcr({ sadtId });
