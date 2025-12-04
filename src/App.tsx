@@ -24,6 +24,8 @@ import MedicoDescricoesCirurgicas from "./pages/MedicoDescricoesCirurgicas";
 import DescricaoCirurgicaArquivosPage from "./pages/DescricaoCirurgicaArquivos";
 import HospitaisCadastro from "./pages/HospitaisCadastro";
 import MedicoInicio from "./pages/MedicoInicio";
+import AdminFaturamento from "./pages/AdminFaturamento";
+import AdminFinancas from "./pages/AdminFinancas";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,8 @@ const App = () => (
           <Route path="/sadt/nova" element={<SadtNova />} />
           <Route path="/sadt/editar/:id" element={<SadtEditar />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
+          <Route path="/admin/faturamento" element={<AdminFaturamento />} />
+          <Route path="/admin/financas" element={<AdminFinancas />} />
 
           {/* Nova tela de Descrição Cirúrgica (admin) */}
           <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />

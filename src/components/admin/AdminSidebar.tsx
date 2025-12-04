@@ -8,10 +8,12 @@ import {
   Settings,
   HelpCircle,
   FileSignature,
+  LineChart,
+  Wallet,
 } from "lucide-react";
 
 interface AdminSidebarProps {
-  section?: "home" | "descricao" | "cadastro" | "config";
+  section?: "home" | "descricao" | "faturamento" | "financas" | "cadastro" | "config";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "planos";
 }
 
@@ -26,6 +28,8 @@ const AdminSidebar = ({
     if (section) return section;
     const path = location.pathname;
     if (path.startsWith("/descricao-cirurgica")) return "descricao";
+    if (path.startsWith("/admin/faturamento")) return "faturamento";
+    if (path.startsWith("/admin/financas")) return "financas";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
@@ -128,6 +132,48 @@ const AdminSidebar = ({
                 <FileSignature className="h-4 w-4" />
               </span>
               <span className="font-medium">Desc. Cirúrgica</span>
+            </span>
+          </button>
+
+          {/* Faturamento */}
+          <button
+            className={
+              currentSection === "faturamento" ? activeMain : inactiveMain
+            }
+            onClick={() => navigate("/admin/faturamento")}
+          >
+            <span className="flex items-center gap-3">
+              <span
+                className={
+                  currentSection === "faturamento"
+                    ? iconWrapperActive
+                    : iconWrapperInactive
+                }
+              >
+                <LineChart className="h-4 w-4" />
+              </span>
+              <span className="font-medium">Faturamento</span>
+            </span>
+          </button>
+
+          {/* Finanças */}
+          <button
+            className={
+              currentSection === "financas" ? activeMain : inactiveMain
+            }
+            onClick={() => navigate("/admin/financas")}
+          >
+            <span className="flex items-center gap-3">
+              <span
+                className={
+                  currentSection === "financas"
+                    ? iconWrapperActive
+                    : iconWrapperInactive
+                }
+              >
+                <Wallet className="h-4 w-4" />
+              </span>
+              <span className="font-medium">Finanças</span>
             </span>
           </button>
 
