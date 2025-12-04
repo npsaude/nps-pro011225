@@ -264,14 +264,14 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-full text-slate-400 hover:bg-slate-100 hover:text-sky-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-white shadow-sm ring-2 ring-sky-100/70 transition-transform hover:translate-y-0.5 hover:shadow-md hover:from-sky-600 hover:to-emerald-600 dark:ring-sky-500/40"
                             onClick={() => {
                               setSelectedItem(item);
                               setFaturamentoOpen(true);
                             }}
                             aria-label="Ver progresso de faturamento"
                           >
-                            <LineChart className="h-3.5 w-3.5" />
+                            <LineChart className="h-4 w-4" />
                           </Button>
                         </TableCell>
                         <TableCell className="px-3 py-2 font-medium text-slate-800 dark:text-slate-50">
