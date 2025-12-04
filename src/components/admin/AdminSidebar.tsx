@@ -152,26 +152,20 @@ const AdminSidebar = ({
               </span>
             </div>
             <div className="mt-1 space-y-1">
+              {/* Clínicas / Hospitais unificado */}
               <button
                 className={
-                  currentCadastroSub === "clinicas"
+                  currentCadastroSub === "clinicas" ||
+                  currentCadastroSub === "hospitais"
                     ? cadastroItemActive
                     : cadastroItemInactive
                 }
                 onClick={() => navigate("/cadastro/clinicas")}
               >
-                <span className="ml-7">Clínicas</span>
+                <span className="ml-7">Clínicas / Hospitais</span>
               </button>
-              <button
-                className={
-                  currentCadastroSub === "hospitais"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/cadastro/hospitais")}
-              >
-                <span className="ml-7">Hospitais</span>
-              </button>
+
+              {/* Médicos */}
               <button
                 className={
                   currentCadastroSub === "medicos"
@@ -182,6 +176,8 @@ const AdminSidebar = ({
               >
                 <span className="ml-7">Médicos</span>
               </button>
+
+              {/* Planos de Saúde (placeholder de rota) */}
               <button
                 className={
                   currentCadastroSub === "planos"
