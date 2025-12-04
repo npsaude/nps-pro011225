@@ -30,10 +30,10 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
   const pointerY = centerY + pointerRadius * Math.sin(pointerAngle);
 
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex items-center justify-center">
       <svg
         viewBox="0 0 120 70"
-        className="h-24 w-full max-w-[220px]"
+        className="h-20 w-full max-w-[220px]"
         aria-hidden="true"
       >
         {/* Arco de fundo */}
@@ -108,16 +108,6 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           100%
         </text>
       </svg>
-
-      {/* Percentual abaixo do velocímetro */}
-      <div className="mt-1 flex flex-col items-center">
-        <span className="text-2xl font-semibold text-emerald-100">
-          {percentage.toFixed(0)}%
-        </span>
-        <span className="text-[11px] text-emerald-100/80">
-          glosa recuperada
-        </span>
-      </div>
     </div>
   );
 };
