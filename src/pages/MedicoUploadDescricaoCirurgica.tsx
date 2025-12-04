@@ -11,6 +11,7 @@ import {
   ChevronDown,
   X,
   CircleDollarSign,
+  Signature,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
   const [showFillingScreen, setShowFillingScreen] = useState(false);
   const [fillingProgress, setFillingProgress] = useState(0);
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -368,7 +370,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Simula o preenchimento automático: barra progride e, ao final, dispara o envio
+  // Simula o preenchimento automático: barra progride e, ao final, exibe tela de assinatura
   useEffect(() => {
     if (!showFillingScreen) {
       setFillingProgress(0);
@@ -384,7 +386,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         window.clearInterval(interval);
         setFillingProgress(100);
         setShowFillingScreen(false);
-        void handleUpload();
+        setSignatureDialogOpen(true);
       } else {
         setFillingProgress(current);
       }
@@ -1073,6 +1075,36 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               }}
             >
               Não, obrigado
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tela de Assinatura Digital do formulário de honorários */}
+      <Dialog open={signatureDialogOpen} onOpenChange={setSignatureDialogOpen}>
+        <DialogContent className="w-[88%] max-w-sm rounded-3xl border-0 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+            <Signature className="h-6 w-6" />
+          </div>
+          <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+            Assinatura Digital
+          </h2>
+          <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+            Vamos realizar a assinatura digital do formulário de honorários.
+            Toque em &quot;Assinar&quot; para confirmar.
+          </p>
+          <div className="mt-6">
+            <Button
+              type="button"
+              className="h-11 w-full rounded-2xl bg-emerald-500 text-[13px] font-semibold text-slate-950 hover:bg-emerald-400"
+              disabled={isUploading}
+              onClick={() => {
+                // Futuramente aqui entra a lógica de assinatura digital
+                setSignatureDialogOpen(false);
+                void handleUpload();
+              }}
+            >
+              Assinar
             </Button>
           </div>
         </DialogContent>
