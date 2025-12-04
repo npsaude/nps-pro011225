@@ -59,10 +59,19 @@ const getDensity = (doctors?: number): Density => {
 };
 
 const bubbleColor: Record<Density, string> = {
-  none: "#1d4ed8", // azul – sem dados (conforme pedido)
+  none: "#1d4ed8", // azul – sem dados
   low: "#fbbf24", // amarelo
   medium: "#22c55e", // verde
-  high: "#0f766e", // verde mais escuro (alta densidade)
+  high: "#0f766e", // verde mais escuro
+};
+
+// Raio da bolha proporcional à quantidade de médicos
+const getRadius = (doctors?: number): number => {
+  if (!doctors || doctors <= 0) return 7; // sem dados / 0 – bolha pequena azul
+  if (doctors <= 10) return 8;
+  if (doctors <= 20) return 10;
+  if (doctors <= 40) return 12;
+  return 14; // muitos médicos – bolha maior
 };
 
 const RegionBubbleMap = () => {
@@ -124,6 +133,19 @@ const RegionBubbleMap = () => {
           height={600}
           style={{ width: "100%", height: "100%" }}
         >
+          {/* Sombra das bolhas */}
+          <defs>
+            <filter id="bubbleShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow
+                dx="0"
+                dy="1"
+                stdDeviation="1.5"
+                floodColor="#020617"
+                floodOpacity="0.35"
+              />
+            </filter>
+          </defs>
+
           <ZoomableGroup
             center={center}
             zoom={zoom}
@@ -158,16 +180,17 @@ const RegionBubbleMap = () => {
               const color = bubbleColor[density];
               const displayDoctors =
                 state.doctors === undefined ? "-" : state.doctors.toString();
+              const radius = getRadius(state.doctors);
 
               return (
                 <Marker key={state.uf} coordinates={state.coordinates}>
                   <g transform="translate(-10, -12)">
                     <circle
-                      r={12}
+                      r={radius}
                       fill={color}
-                      stroke="#020617"
-                      strokeWidth={1.5}
-                      fillOpacity={0.95}
+                      stroke="none"
+                      filter="url(#bubbleShadow)"
+                      fillOpacity={0.96}
                     />
                     <text
                       x={0}
