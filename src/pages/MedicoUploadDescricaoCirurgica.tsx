@@ -12,6 +12,7 @@ import {
   X,
   CircleDollarSign,
   Signature,
+  Send,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showFillingScreen, setShowFillingScreen] = useState(false);
   const [fillingProgress, setFillingProgress] = useState(0);
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [showSigningScreen, setShowSigningScreen] = useState(false);
+  const [showSignedScreen, setShowSignedScreen] = useState(false);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -396,6 +399,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       window.clearInterval(interval);
     };
   }, [showFillingScreen]);
+
+  // Após clicar em Assinar, mostra tela de "Assinando..." e depois transita para "Documento Assinado"
+  useEffect(() => {
+    if (!showSigningScreen) return;
+
+    const timeout = window.setTimeout(() => {
+      setShowSigningScreen(false);
+      setShowSignedScreen(true);
+    }, 1500);
+
+    return () => window.clearTimeout(timeout);
+  }, [showSigningScreen]);
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
   const totalSteps = 6;
@@ -1101,7 +1116,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               onClick={() => {
                 // Futuramente aqui entra a lógica de assinatura digital
                 setSignatureDialogOpen(false);
-                void handleUpload();
+                setShowSigningScreen(true);
               }}
             >
               Assinar
@@ -1128,6 +1143,62 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             <p className="mt-3 text-xs text-slate-300 sm:text-sm">
               Aguarde um momento.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tela "Assinando..." */}
+      {showSigningScreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-[88%] max-w-sm rounded-3xl bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+              <Signature className="h-6 w-6" />
+            </div>
+            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+              Assinando...
+            </h2>
+            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+              Aplicando sua assinatura digital segura nos documentos.
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500/70 animate-pulse [animation-delay:150ms]" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500/40 animate-pulse [animation-delay:300ms]" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tela "Documento Assinado" */}
+      {showSignedScreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-[88%] max-w-sm rounded-3xl bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-slate-950">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+              Documento Assinado
+            </h2>
+            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+              A assinatura foi aplicada. O sistema irá enviar os documentos para
+              os e-mails de faturamento.
+            </p>
+            <div className="mt-6">
+              <Button
+                type="button"
+                className="h-11 w-full rounded-2xl bg-emerald-500 text-[13px] font-semibold text-slate-950 hover:bg-emerald-400"
+                disabled={isUploading}
+                onClick={() => {
+                  setShowSignedScreen(false);
+                  void handleUpload();
+                }}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <span>Enviar para Faturamento</span>
+                  <Send className="h-4 w-4" />
+                </span>
+              </Button>
+            </div>
           </div>
         </div>
       )}
