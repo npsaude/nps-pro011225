@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -131,6 +131,49 @@ const Login = () => {
       setResetLoading(false);
     }
   };
+
+  // Login rápido de desenvolvimento: Ctrl + Shift + 2
+  const handleAdminShortcutLogin = async () => {
+    if (isLoading) return;
+
+    const shortcutEmail = "newpersonsaude@gmail.com";
+    const shortcutSenha = "123456";
+
+    setEmail(shortcutEmail);
+    setSenha(shortcutSenha);
+    setIsLoading(true);
+
+    try {
+      await loginWithRole({
+        email: shortcutEmail,
+        password: shortcutSenha,
+        allowedRole: "ADMIN",
+      });
+
+      showSuccess("Login rápido (admin) realizado com sucesso.");
+      navigate("/admin/dashboard");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível fazer login rápido. Verifique o usuário de teste.";
+      showError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === "2") {
+        event.preventDefault();
+        void handleAdminShortcutLogin();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[radial-gradient(circle_at_0%_0%,rgba(31,138,112,0.75)_0,rgba(6,78,59,0.95)_55%),radial-gradient(circle_at_100%_100%,rgba(34,197,94,0.6)_0,rgba(6,78,59,0.95)_55%)] text-slate-900">

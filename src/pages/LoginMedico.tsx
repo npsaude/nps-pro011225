@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -168,6 +168,49 @@ const LoginMedico = () => {
       showError(message);
     }
   };
+
+  // Login rápido de desenvolvimento: Ctrl + Shift + 2
+  const handleMedicoShortcutLogin = async () => {
+    if (isLoading) return;
+
+    const shortcutEmail = "adriano.dapv@gmail.com";
+    const shortcutSenha = "123456";
+
+    setLoginEmail(shortcutEmail);
+    setLoginSenha(shortcutSenha);
+    setIsLoading(true);
+
+    try {
+      await loginWithRole({
+        email: shortcutEmail,
+        password: shortcutSenha,
+        allowedRole: "MEDICO",
+      });
+
+      showSuccess("Login rápido (médico) realizado com sucesso.");
+      navigate("/medico/dashboard");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível fazer login rápido. Verifique o usuário de teste.";
+      showError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === "2") {
+        event.preventDefault();
+        void handleMedicoShortcutLogin();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[#050B14] text-slate-50">
