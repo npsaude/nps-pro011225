@@ -133,8 +133,8 @@ const BillingRecordCard: React.FC<BillingRecordCardProps> = ({ record }) => {
           </div>
         </div>
 
-        {/* Timeline row */}
-        <div className="border-t border-[#D5DFEF] bg-[#F5F7FC] px-6 pb-5 pt-5">
+        {/* Timeline row (colada na borda inferior, como no modelo) */}
+        <div className="border-t border-[#D5DFEF] bg-[#F5F7FC] px-6 pb-5 pt-4">
           <BillingStatusTimeline steps={record.steps} />
         </div>
       </CardContent>

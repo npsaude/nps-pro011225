@@ -11,7 +11,6 @@ function getStatusColors(status: BillingStatus) {
     case "completed":
       return {
         circleBorder: "border-emerald-500",
-        circleShadow: "shadow-[0_0_0_3px_rgba(16,185,129,0.18)]",
         circleBg: "bg-emerald-500",
         icon: "text-white",
         label: "text-slate-700",
@@ -21,7 +20,6 @@ function getStatusColors(status: BillingStatus) {
     case "processing":
       return {
         circleBorder: "border-sky-500",
-        circleShadow: "shadow-[0_0_0_3px_rgba(56,189,248,0.18)]",
         circleBg: "bg-white",
         icon: "text-sky-600",
         label: "text-slate-700",
@@ -31,7 +29,6 @@ function getStatusColors(status: BillingStatus) {
     case "pending":
       return {
         circleBorder: "border-amber-400",
-        circleShadow: "shadow-[0_0_0_3px_rgba(251,191,36,0.24)]",
         circleBg: "bg-white",
         icon: "text-amber-500",
         label: "text-slate-700",
@@ -41,7 +38,6 @@ function getStatusColors(status: BillingStatus) {
     case "waiting":
       return {
         circleBorder: "border-slate-300",
-        circleShadow: "shadow-[0_0_0_3px_rgba(148,163,184,0.2)]",
         circleBg: "bg-white",
         icon: "text-slate-500",
         label: "text-slate-500",
@@ -52,7 +48,6 @@ function getStatusColors(status: BillingStatus) {
     default:
       return {
         circleBorder: "border-slate-300",
-        circleShadow: "shadow-[0_0_0_3px_rgba(148,163,184,0.15)]",
         circleBg: "bg-white",
         icon: "text-slate-400",
         label: "text-slate-400",
@@ -103,7 +98,7 @@ const BillingStatusTimeline: React.FC<BillingStatusTimelineProps> = ({
   steps,
 }) => {
   return (
-    <div className="mt-1 flex flex-col gap-4">
+    <div className="mt-2 flex flex-col">
       <div className="flex items-center gap-4 md:gap-8">
         {steps.map((step, index) => {
           const colors = getStatusColors(step.status);
@@ -114,18 +109,21 @@ const BillingStatusTimeline: React.FC<BillingStatusTimelineProps> = ({
               key={step.id}
               className="flex flex-1 flex-col items-center text-center"
             >
+              {/* Linha + bolinha na mesma altura, como na referência */}
               <div className="flex w-full items-center">
                 <div
-                  className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border-[2.2px] bg-white ${colors.circleBorder} ${colors.circleShadow} ${colors.circleBg}`}
+                  className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full border-[3px] ${colors.circleBorder} ${colors.circleBg}`}
                 >
                   <StatusIcon status={step.status} className={colors.icon} />
                 </div>
                 {!isLast && (
                   <div
-                    className={`ml-2 hidden h-[2px] flex-1 rounded-full md:block ${colors.line}`}
+                    className={`ml-2 hidden h-[3px] flex-1 rounded-full md:block ${colors.line}`}
                   />
                 )}
               </div>
+
+              {/* Títulos e valores alinhados abaixo */}
               <div
                 className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${colors.label}`}
               >
