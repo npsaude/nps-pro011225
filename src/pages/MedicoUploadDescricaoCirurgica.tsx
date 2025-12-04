@@ -13,6 +13,7 @@ import {
   CircleDollarSign,
   Signature,
   Send,
+  Mail,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [showSigningScreen, setShowSigningScreen] = useState(false);
   const [showSignedScreen, setShowSignedScreen] = useState(false);
+  const [showSendingScreen, setShowSendingScreen] = useState(false);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -271,10 +273,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    // acumula arquivos novos com os já selecionados
     setFiles((prev) => [...prev, ...allowedFiles]);
     setStep(2);
-    // limpa o input para permitir selecionar os mesmos arquivos novamente se necessário
     event.target.value = "";
   };
 
@@ -310,7 +310,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       }
 
       const userId = userData.user.id;
-      // Nome do bucket deve ser exatamente igual ao que aparece no Supabase (NPS-pro)
       const bucketName = "NPS-pro";
 
       for (const file of files) {
@@ -334,7 +333,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      // Chama a edge function que processa a descrição cirúrgica
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
 
@@ -370,6 +368,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     } finally {
       dismissToast(loadingId);
       setIsUploading(false);
+      setShowSendingScreen(false);
     }
   };
 
@@ -414,7 +413,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
   const totalSteps = 6;
-  // Mapeia a etapa atual do fluxo para a barra de progresso
   const currentStep =
     view === "start" || view === "hospital"
       ? 1
@@ -422,7 +420,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         ? 2
         : view === "clinica"
           ? 3
-          : 6; // success = concluído
+          : 6;
 
   const handleNovaDescricao = () => {
     setFiles([]);
@@ -441,10 +439,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     totalArquivos === 0
       ? "Nenhum arquivo"
       : totalArquivos === 1
-      ? "1 arquivo"
-      : `${totalArquivos} arquivos`;
+        ? "1 arquivo"
+        : `${totalArquivos} arquivos`;
 
-  // Auxiliar simples para distinguir ícone/label
   const isImage = (file: File) => file.type.startsWith("image/");
 
   const handleAdicionarMais = () => {
@@ -536,17 +533,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showError("Selecione uma clínica para continuar.");
       return;
     }
-    // Apenas abre o modal de preenchimento automático por enquanto
     setAutoFillDialogOpen(true);
   };
 
   return (
     <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
-      {/* Fundo em gradiente médico */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {/* Saudação e cabeçalho aparecem apenas nas etapas após seleção de hospital */}
         {(view === "upload" || view === "success") && (
           <>
             <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
@@ -592,7 +586,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
-          {/* TELA 1 - START: centralizada verticalmente como no layout */}
+          {/* TELA 1 - START */}
           {view === "start" && (
             <div className="flex w-full flex-1 items-center justify-center">
               <div className="flex w-full max-w-sm flex-col items-center text-center">
@@ -629,7 +623,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 2 - SELEÇÃO DE HOSPITAL: bottom-sheet ancorado ao rodapé */}
+          {/* TELA 2 - HOSPITAL */}
           {view === "hospital" && (
             <div className="flex w-full flex-1 items-end justify-center pb-5">
               {hospitalStepView === "selector" ? (
@@ -656,7 +650,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     onClick={handleAbrirListaHospitais}
                     disabled={
-                      loadingHospitais || (!hospitaisMedico.length && !selectedHospitalId)
+                      loadingHospitais ||
+                      (!hospitaisMedico.length && !selectedHospitalId)
                     }
                     className="flex w-full items-center justify-between rounded-2xl border border-emerald-500/40 bg-slate-900 px-4 py-3 text-left text-slate-50"
                   >
@@ -688,7 +683,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     className={`mt-6 w-full rounded-2xl px-4 py-2 text-sm font-semibold transition ${
                       selectedHospitalId
                         ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                        : "bg-slate-800 text-slate-400 cursor-not-allowed"
+                        : "cursor-not-allowed bg-slate-800 text-slate-400"
                     }`}
                   >
                     Continuar
@@ -750,10 +745,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 3 - UPLOAD: conteúdo no topo com header, barra e lista */}
+          {/* TELA 3 - UPLOAD */}
           {view === "upload" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
-              {/* Input de arquivos centralizado para ser usado tanto no card quanto em "+ Adicionar mais" */}
               <Input
                 id="files-upload"
                 ref={fileInputRef}
@@ -764,7 +758,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 onChange={handleFileChange}
               />
 
-              {/* Título com Dr(a) + nome e hospital */}
               <div className="mb-6">
                 <h1 className="text-lg font-semibold text-slate-50 sm:text-xl">
                   {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
@@ -784,7 +777,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               {files.length === 0 ? (
                 <>
-                  {/* Estado inicial: card grande para adicionar arquivos */}
                   <label
                     htmlFor="files-upload"
                     className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-400/70 bg-slate-950/80 px-6 py-10 text-center text-xs text-emerald-100/90 transition-colors hover:bg-slate-900"
@@ -813,10 +805,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 </>
               ) : (
                 <>
-                  {/* Estado com arquivos: lista para conferência + botão adicionar mais */}
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-xs font-semibold text-slate-200">
-                      Seus Arquivos ({files.length})
+                      Seus Arquivos ({arquivosLabel})
                     </p>
                     <Button
                       type="button"
@@ -886,7 +877,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 4 - CLÍNICA: bottom-sheet ancorado ao rodapé */}
+          {/* TELA 4 - CLÍNICA */}
           {view === "clinica" && (
             <div className="flex w-full flex-1 items-end justify-center pb-5">
               {clinicaStepView === "selector" ? (
@@ -946,7 +937,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     className={`mt-6 w-full rounded-2xl px-4 py-2 text-sm font-semibold transition ${
                       selectedClinicaId && !isUploading
                         ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                        : "bg-slate-800 text-slate-400 cursor-not-allowed"
+                        : "cursor-not-allowed bg-slate-800 text-slate-400"
                     }`}
                   >
                     {isUploading ? "Enviando..." : "Continuar"}
@@ -1008,6 +999,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
+          {/* TELA 5 - SUCESSO GERAL (lista de descrições) */}
           {view === "success" && (
             <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
               <Card className="rounded-3xl border-emerald-500/30 bg-slate-950/95 text-center shadow-[0_22px_60px_rgba(16,185,129,0.7)]">
@@ -1070,7 +1062,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               className="h-11 w-full rounded-2xl bg-blue-600 text-[13px] font-semibold text-slate-50 hover:bg-blue-500"
               disabled={isUploading}
               onClick={() => {
-                // Futuramente aqui entra a lógica de preenchimento automático
                 setAutoFillDialogOpen(false);
                 setShowFillingScreen(true);
               }}
@@ -1084,8 +1075,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               className="h-11 w-full rounded-2xl border-slate-700 bg-slate-900/90 text-[13px] font-semibold text-slate-100 hover:bg-slate-800"
               disabled={isUploading}
               onClick={() => {
-                // Neste caso envia sem preenchimento automático (lógica virá depois)
                 setAutoFillDialogOpen(false);
+                setShowSendingScreen(true);
                 void handleUpload();
               }}
             >
@@ -1114,7 +1105,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               className="h-11 w-full rounded-2xl bg-emerald-500 text-[13px] font-semibold text-slate-950 hover:bg-emerald-400"
               disabled={isUploading}
               onClick={() => {
-                // Futuramente aqui entra a lógica de assinatura digital
                 setSignatureDialogOpen(false);
                 setShowSigningScreen(true);
               }}
@@ -1128,9 +1118,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       {/* Tela de progresso de preenchimento do formulário de honorários */}
       {showFillingScreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div
-            className="w-[88%] max-w-sm rounded-3xl border border-slate-800 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]"
-          >
+          <div className="w-[88%] max-w-sm rounded-3xl border border-slate-800 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
             <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
               Preenchendo Formulário...
             </h2>
@@ -1169,7 +1157,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         </div>
       )}
 
-      {/* Tela "Documento Assinado" */}
+      {/* Tela "Documento Assinado" (pergunta se deseja enviar para faturamento) */}
       {showSignedScreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
           <div className="w-[88%] max-w-sm rounded-3xl bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
@@ -1180,8 +1168,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               Documento Assinado
             </h2>
             <p className="mt-2 text-xs text-slate-300 sm:text-sm">
-              A assinatura foi aplicada. O sistema irá enviar os documentos para
-              os e-mails de faturamento.
+              A assinatura foi aplicada. Deseja enviar os documentos para
+              faturamento agora?
             </p>
             <div className="mt-6">
               <Button
@@ -1190,6 +1178,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 disabled={isUploading}
                 onClick={() => {
                   setShowSignedScreen(false);
+                  setShowSendingScreen(true);
                   void handleUpload();
                 }}
               >
@@ -1199,6 +1188,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 </span>
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tela "Enviando" com ícones de envelope */}
+      {showSendingScreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm">
+          <div className="flex w-full max-w-sm flex-col items-center px-6 py-12 text-center">
+            <div className="relative mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_80px_rgba(16,185,129,0.9)]">
+              <Mail className="h-8 w-8" />
+              <span className="absolute -left-9 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full bg-slate-900 text-slate-300 shadow-md ring-1 ring-slate-800 animate-bounce">
+                <Mail className="mx-auto mt-2 h-4 w-4" />
+              </span>
+              <span className="absolute -right-9 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full bg-slate-900 text-slate-300 shadow-md ring-1 ring-slate-800 animate-bounce [animation-delay:180ms]">
+                <Mail className="mx-auto mt-2 h-4 w-4" />
+              </span>
+            </div>
+            <h2 className="text-lg font-semibold text-slate-50">Enviando</h2>
+            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+              Disparando e-mails para faturamento...
+            </p>
           </div>
         </div>
       )}
