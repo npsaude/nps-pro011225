@@ -309,7 +309,7 @@ const Dashboard = () => {
                   key={metric.id}
                   className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
                 >
-                  <CardContent className="flex h-40 flex-col justify-between rounded-3xl p-5">
+                  <CardContent className="flex flex-col justify-between rounded-3xl p-5 gap-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
@@ -329,12 +329,12 @@ const Dashboard = () => {
                     </div>
 
                     {metric.isGauge && (
-                      <div className="mt-2 flex justify-center">
+                      <div className="mt-1 flex justify-center">
                         <GlosaGauge value={metric.gaugeValue ?? 0} />
                       </div>
                     )}
 
-                    <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300">
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-emerald-300">
                       <ArrowUpRight className="h-3 w-3" />
                       <span>{metric.helper}</span>
                     </div>
