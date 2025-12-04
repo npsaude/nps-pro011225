@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   FileText,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -176,7 +177,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  const saudacao = medicoNome ? `Olá, ${medicoNome}.` : "Olá, médico.";
+  const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
 
   const handleNovaDescricao = () => {
     setFiles([]);
@@ -201,69 +202,64 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
 
       <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {/* Saudação no topo */}
-        <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
-          {saudacao}
-        </p>
+        {/* Saudação e cabeçalho aparecem apenas após iniciar */}
+        {view !== "start" && (
+          <>
+            <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
+              {saudacao}
+            </p>
 
-        {/* Cabeçalho simples */}
-        <header className="mb-5 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur"
-            onClick={() => navigate("/medico/dashboard")}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Voltar</span>
-          </button>
+            <header className="mb-5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur"
+                onClick={() => navigate("/medico/dashboard")}
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Voltar</span>
+              </button>
 
-          <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span>Envio de Desc. Cirúrgica</span>
-          </div>
-        </header>
+              <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span>Envio de Desc. Cirúrgica</span>
+              </div>
+            </header>
+          </>
+        )}
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
           {view === "start" && (
-            <div className="mt-4 flex w-full max-w-md flex-col items-stretch">
-              <Card className="relative overflow-hidden rounded-[2.2rem] border-emerald-500/25 bg-slate-950/90 text-center shadow-[0_30px_80px_rgba(16,185,129,0.5)]">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(16,185,129,0.45)_0,transparent_55%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.4)_0,transparent_55%)] opacity-90" />
-                <div className="relative z-10 px-6 py-7 sm:px-8 sm:py-8">
-                  <CardHeader className="mb-4 space-y-2 px-0">
-                    <CardTitle className="text-lg font-semibold text-slate-50 sm:text-xl">
-                      Nova Descrição
-                    </CardTitle>
-                    <CardDescription className="text-xs text-emerald-50/90 sm:text-sm">
-                      Toque para adicionar fotos ou documentos da cirurgia.
-                    </CardDescription>
-                  </CardHeader>
+            <div className="mt-8 flex w-full max-w-sm flex-col items-center text-center">
+              <p className="mb-2 text-sm font-semibold text-emerald-300">
+                {saudacao}
+              </p>
+              <h1 className="text-xl font-semibold text-slate-50 sm:text-2xl">
+                Nova Descrição Cirúrgica
+              </h1>
+              <p className="mt-3 max-w-xs text-sm text-slate-200">
+                Vamos começar o envio da sua Descrição Cirúrgica. É rápido e
+                seguro.
+              </p>
 
-                  <CardContent className="space-y-5 px-0">
-                    <button
-                      type="button"
-                      onClick={() => setView("upload")}
-                      className="mx-auto flex h-40 w-40 flex-col items-center justify-center rounded-[2rem] bg-gradient-to-b from-emerald-400 to-emerald-500 text-emerald-50 shadow-[0_28px_65px_rgba(16,185,129,0.85)] transition-transform hover:translate-y-0.5 sm:h-44 sm:w-44"
-                    >
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/70">
-                        <Upload className="h-6 w-6" />
-                      </div>
-                      <span className="text-sm font-semibold">
-                        Nova Descrição
-                      </span>
-                    </button>
-
-                    <p className="px-2 text-xs text-emerald-50/90 sm:text-[13px]">
-                      Você pode enviar fotos da guia, laudos ou PDFs completos
-                      da cirurgia.
-                    </p>
-
-                    <div className="mt-3 rounded-full border border-emerald-400/40 bg-slate-950/80 px-4 py-2 text-center text-[11px] text-emerald-100/90">
-                      Seus dados são criptografados ponta a ponta.
-                    </div>
-                  </CardContent>
+              <button
+                type="button"
+                onClick={() => setView("upload")}
+                className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/80">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <span className="text-[15px] font-semibold">
+                    Iniciar Agora
+                  </span>
                 </div>
-              </Card>
+              </button>
+
+              <p className="mt-8 text-[11px] text-slate-400">
+                Seus dados são criptografados ponta a ponta.
+              </p>
             </div>
           )}
 
