@@ -453,6 +453,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         ? "1 arquivo"
         : `${totalArquivos} arquivos`;
 
+  const isSameBillingLocation = Boolean(
+    selectedHospitalId &&
+      selectedClinicaId &&
+      selectedHospitalId === selectedClinicaId,
+  );
+
   const isImage = (file: File) => file.type.startsWith("image/");
 
   const handleAdicionarMais = () => {
@@ -1220,6 +1226,34 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             <p className="mt-2 text-xs text-slate-300 sm:text-sm">
               Disparando e-mails para faturamento...
             </p>
+            <div className="mt-4 w-full max-w-xs text-left text-[11px] text-slate-300 sm:text-xs">
+              {isSameBillingLocation ? (
+                <p>
+                  Avisando a clinica{" "}
+                  <span className="font-semibold">
+                    {selectedClinicaName || "selecionada"}
+                  </span>{" "}
+                  que esse serviço será faturado.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  <p>
+                    1. Avisando o hospital{" "}
+                    <span className="font-semibold">
+                      {selectedHospitalName || "selecionado"}
+                    </span>{" "}
+                    que esse serviço não será faturado.
+                  </p>
+                  <p>
+                    2. Avisando a clinica{" "}
+                    <span className="font-semibold">
+                      {selectedClinicaName || "selecionada"}
+                    </span>{" "}
+                    que esse serviço será faturado.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
