@@ -49,6 +49,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showSigningScreen, setShowSigningScreen] = useState(false);
   const [showSignedScreen, setShowSignedScreen] = useState(false);
   const [showSendingScreen, setShowSendingScreen] = useState(false);
+  const [sendingStep, setSendingStep] = useState<1 | 2>(1);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -458,6 +459,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       selectedClinicaId &&
       selectedHospitalId === selectedClinicaId,
   );
+
+  useEffect(() => {
+    if (!showSendingScreen || isSameBillingLocation) {
+      setSendingStep(1);
+      return;
+    }
+
+    setSendingStep(1);
+
+    const timeout = window.setTimeout(() => {
+      setSendingStep(2);
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [showSendingScreen, isSameBillingLocation]);
 
   const isImage = (file: File) => file.type.startsWith("image/");
 
@@ -1228,7 +1246,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </p>
             <div className="mt-4 w-full max-w-xs text-left text-[11px] text-slate-300 sm:text-xs">
               {isSameBillingLocation ? (
-                <p>
+                <p className="font-semibold text-emerald-200 animate-pulse">
                   Avisando a clinica{" "}
                   <span className="font-semibold">
                     {selectedClinicaName || "selecionada"}
@@ -1237,14 +1255,26 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 </p>
               ) : (
                 <div className="space-y-1">
-                  <p>
+                  <p
+                    className={
+                      sendingStep === 1
+                        ? "font-semibold text-emerald-200 animate-pulse"
+                        : "text-slate-300"
+                    }
+                  >
                     1. Avisando o hospital{" "}
                     <span className="font-semibold">
                       {selectedHospitalName || "selecionado"}
                     </span>{" "}
                     que esse serviço não será faturado.
                   </p>
-                  <p>
+                  <p
+                    className={
+                      sendingStep === 2
+                        ? "font-semibold text-emerald-200 animate-pulse"
+                        : "text-slate-400"
+                    }
+                  >
                     2. Avisando a clinica{" "}
                     <span className="font-semibold">
                       {selectedClinicaName || "selecionada"}
