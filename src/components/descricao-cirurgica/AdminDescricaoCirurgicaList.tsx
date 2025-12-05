@@ -542,58 +542,61 @@ const AdminDescricaoCirurgicaList: React.FC<Props> = ({
       <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-0.5">
-              <CardTitle className="text-sm font-semibold sm:text-base">
-                Descrições cirúrgicas cadastradas
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                Visualize em lista ou organize o faturamento em Kanban.
-              </CardDescription>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                Total:{" "}
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  {items.length}
-                </span>{" "}
-                registro(s)
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center rounded-full bg-slate-100 p-1 text-[11px] ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-                <button
-                  type="button"
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    viewMode === "table"
-                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
-                  }`}
-                  onClick={() => setViewMode("table")}
-                >
-                  Lista
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    viewMode === "kanban"
-                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
-                  }`}
-                  onClick={() => setViewMode("kanban")}
-                >
-                  Kanban
-                </button>
+            <div className="space-y-2">
+              <div className="space-y-0.5">
+                <CardTitle className="text-sm font-semibold sm:text-base">
+                  Descrições cirúrgicas cadastradas
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+                  Visualize em lista ou organize o faturamento em Kanban.
+                </CardDescription>
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                className="inline-flex items-center gap-2 rounded-full bg-[#135bec] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0f4ac0]"
-                onClick={onNovaDescricao}
-              >
-                <Plus className="h-4 w-4" />
-                Nova descrição
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center rounded-full bg-slate-100 p-1 text-[11px] ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
+                  <button
+                    type="button"
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      viewMode === "table"
+                        ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                        : "text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
+                    }`}
+                    onClick={() => setViewMode("table")}
+                  >
+                    Lista
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      viewMode === "kanban"
+                        ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                        : "text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
+                    }`}
+                    onClick={() => setViewMode("kanban")}
+                  >
+                    Kanban
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Total:{" "}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {items.length}
+                  </span>{" "}
+                  registro(s)
+                </p>
+              </div>
             </div>
+
+            <Button
+              type="button"
+              size="sm"
+              className="inline-flex items-center gap-2 rounded-full bg-[#135bec] px-3 text-xs font-medium text-white shadow-sm hover:bg-[#0f4ac0]"
+              onClick={onNovaDescricao}
+            >
+              <Plus className="h-4 w-4" />
+              Nova descrição
+            </Button>
           </div>
         </CardHeader>
 
