@@ -85,7 +85,7 @@ const topMetrics: TopMetric[] = [
   },
   {
     id: "sadts-atendidos",
-    title: "SADTs atendidos",
+    title: "GHIs atendidos",
     value: "2,8 mil",
     helper: "320 vs. mês anterior",
     icon: Activity,
@@ -218,7 +218,7 @@ const Dashboard = () => {
                 Dashboard
               </h1>
               <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                Visão geral das SADTs, descrições cirúrgicas e faturamento.
+                Visão geral das GHIs, descrições cirúrgicas e faturamento.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -353,7 +353,7 @@ const Dashboard = () => {
             <Card className="lg:col-span-3 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  SADTs enviadas x pagas x glosa
+                  GHIs enviadas x pagas x glosa
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-400">
                   Visão consolidada dos últimos 12 meses
@@ -387,14 +387,14 @@ const Dashboard = () => {
                     />
                     <Bar
                       dataKey="enviadas"
-                      name="SADTs enviadas"
+                      name="GHIs enviadas"
                       barSize={16}
                       radius={[4, 4, 0, 0]}
                       fill="#38bdf8"
                     />
                     <Bar
                       dataKey="pagas"
-                      name="SADTs pagas"
+                      name="GHIs pagas"
                       barSize={16}
                       radius={[4, 4, 0, 0]}
                       fill="#22c55e"
