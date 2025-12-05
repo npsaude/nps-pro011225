@@ -128,7 +128,7 @@ function getFaturamentoSteps(
     },
     {
       id: 5,
-      label: "Defesa de glosa",
+      label: "Recurso de glosa",
       helper: "Aguardando",
     },
     {
@@ -167,7 +167,7 @@ const KANBAN_STAGES: {
   { id: 2, label: "Faturado", helper: "Aguardando" },
   { id: 3, label: "Recebimento", helper: "Aguardando" },
   { id: 4, label: "Glosa", helper: "—" },
-  { id: 5, label: "Defesa de glosa", helper: "Aguardando" },
+  { id: 5, label: "Recurso de glosa", helper: "Aguardando" },
   { id: 6, label: "Recebimento da glosa", helper: "n.c." },
 ];
 
