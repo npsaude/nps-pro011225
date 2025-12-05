@@ -1229,58 +1229,96 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela "Enviando" com ícones de envelope */}
       {showSendingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm">
-          <div className="flex w-full max-w-sm flex-col items-center px-6 py-12 text-center">
-            <div className="relative mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_80px_rgba(16,185,129,0.9)]">
-              <Mail className="h-8 w-8" />
-              <span className="absolute -left-9 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full bg-slate-900 text-slate-300 shadow-md ring-1 ring-slate-800 animate-bounce">
-                <Mail className="mx-auto mt-2 h-4 w-4" />
-              </span>
-              <span className="absolute -right-9 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full bg-slate-900 text-slate-300 shadow-md ring-1 ring-slate-800 animate-bounce [animation-delay:180ms]">
-                <Mail className="mx-auto mt-2 h-4 w-4" />
-              </span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+          <div className="flex w-full max-w-sm flex-col items-center px-6 py-10 text-center">
+            {/* Orb animado ao estilo macOS */}
+            <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-emerald-500 via-cyan-400 to-sky-500 shadow-[0_0_80px_rgba(56,189,248,0.85)]">
+              <div className="absolute inset-1 rounded-[26px] bg-slate-950/70 backdrop-blur-xl" />
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900/80 shadow-[0_10px_40px_rgba(15,23,42,0.85)]">
+                <Mail className="h-8 w-8 text-emerald-300" />
+                {/* "Pacotes" de e-mail orbitando */}
+                <span className="pointer-events-none absolute -left-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-slate-900/90 text-slate-200 shadow-[0_10px_25px_rgba(15,23,42,0.85)] ring-1 ring-slate-800/80 animate-bounce">
+                  <Mail className="mx-auto mt-[7px] h-4 w-4" />
+                </span>
+                <span className="pointer-events-none absolute -right-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-slate-900/90 text-slate-200 shadow-[0_10px_25px_rgba(15,23,42,0.85)] ring-1 ring-slate-800/80 animate-bounce [animation-delay:220ms]">
+                  <Mail className="mx-auto mt-[7px] h-4 w-4" />
+                </span>
+              </div>
             </div>
-            <h2 className="text-lg font-semibold text-slate-50">Enviando</h2>
-            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
-              Disparando e-mails para faturamento...
+
+            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+              Sincronizando com o faturamento
+            </h2>
+            <p className="mt-2 text-[11px] text-slate-300 sm:text-xs">
+              Estamos transmitindo seus documentos de forma segura para os
+              e-mails de faturamento.
             </p>
-            <div className="mt-4 w-full max-w-xs text-left text-[11px] text-slate-300 sm:text-xs">
+
+            {/* Barra de "progresso" com brilho suave */}
+            <div className="mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-900">
+              <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-500 animate-[pulse_1.8s_ease-in-out_infinite]" />
+            </div>
+
+            <div className="mt-5 w-full max-w-xs rounded-2xl border border-slate-800/80 bg-slate-950/95 p-4 text-left text-[11px] text-slate-300 shadow-[0_18px_50px_rgba(15,23,42,0.95)] sm:text-xs">
               {isSameBillingLocation ? (
-                <p className="font-semibold text-emerald-200 animate-pulse">
-                  Avisando a clinica{" "}
-                  <span className="font-semibold">
-                    {selectedClinicaName || "selecionada"}
-                  </span>{" "}
-                  que esse serviço será faturado.
-                </p>
-              ) : (
-                <div className="space-y-1">
-                  <p
-                    className={
-                      sendingStep === 1
-                        ? "font-semibold text-emerald-200 animate-pulse"
-                        : "text-slate-300"
-                    }
-                  >
-                    1. Avisando o hospital{" "}
-                    <span className="font-semibold">
-                      {selectedHospitalName || "selecionado"}
-                    </span>{" "}
-                    que esse serviço não será faturado.
-                  </p>
-                  <p
-                    className={
-                      sendingStep === 2
-                        ? "font-semibold text-emerald-200 animate-pulse"
-                        : "text-slate-400"
-                    }
-                  >
-                    2. Avisando a clinica{" "}
-                    <span className="font-semibold">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-1 text-[10px] text-emerald-200 ring-1 ring-emerald-500/40">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>1 e-mail de faturamento em envio</span>
+                  </div>
+                  <p className="mt-1 font-medium text-emerald-100/90">
+                    Avisando a clinica{" "}
+                    <span className="font-semibold text-emerald-200">
                       {selectedClinicaName || "selecionada"}
                     </span>{" "}
                     que esse serviço será faturado.
                   </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-1 text-[10px] text-emerald-200 ring-1 ring-emerald-500/40">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>2 e-mails sendo enviados em sequência</span>
+                  </div>
+
+                  <div className="relative space-y-2 pl-4">
+                    {/* Linha vertical estilo timeline */}
+                    <span className="pointer-events-none absolute left-1 top-1 h-full w-px bg-gradient-to-b from-emerald-500/60 via-emerald-500/10 to-transparent" />
+
+                    <p
+                      className={
+                        sendingStep === 1
+                          ? "font-medium text-emerald-100 animate-pulse"
+                          : "font-medium text-slate-300"
+                      }
+                    >
+                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] text-emerald-300 ring-1 ring-emerald-500/40">
+                        1
+                      </span>
+                      Avisando o hospital{" "}
+                      <span className="font-semibold">
+                        {selectedHospitalName || "selecionado"}
+                      </span>{" "}
+                      que esse serviço não será faturado.
+                    </p>
+
+                    <p
+                      className={
+                        sendingStep === 2
+                          ? "font-medium text-emerald-100 animate-pulse"
+                          : "font-medium text-slate-500"
+                      }
+                    >
+                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/5 text-[10px] text-emerald-200 ring-1 ring-emerald-500/25">
+                        2
+                      </span>
+                      Avisando a clinica{" "}
+                      <span className="font-semibold">
+                        {selectedClinicaName || "selecionada"}
+                      </span>{" "}
+                      que esse serviço será faturado.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
