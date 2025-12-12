@@ -266,7 +266,7 @@ serve(async (req) => {
     "Retorne APENAS o conteúdo CSV, usando ponto e vírgula (;) como separador de colunas e vírgula como separador decimal nos valores monetários. " +
     "Não inclua comentários, explicações, markdown ou qualquer texto fora do CSV.";
 
-  // 6) Chamar a Responses API com input_file (sem attachments)
+  // 6) Chamar a Responses API com input_file
   try {
     console.log("Chamando OpenAI Responses API com input_file para extrato...");
 
@@ -318,8 +318,18 @@ serve(async (req) => {
     try {
       const firstOutput = respJson?.output?.[0];
       const firstContent = firstOutput?.content?.[0];
-      const textObj = firstContent?.text;
-      csvText = textObj?.value ?? "";
+
+      // Novo formato: type = "output_text" e text é STRING
+      if (firstContent?.type === "output_text" && typeof firstContent.text === "string") {
+        csvText = firstContent.text;
+      } else if (
+        firstContent?.text &&
+        typeof firstContent.text === "object" &&
+        typeof firstContent.text.value === "string"
+      ) {
+        // fallback para o caso de algum formato antigo em que text seja objeto { value }
+        csvText = firstContent.text.value;
+      }
     } catch (e) {
       console.error("Erro ao extrair CSV da resposta:", e, respJson);
     }
