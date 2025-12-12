@@ -9,6 +9,9 @@ import {
   Download,
 } from "lucide-react";
 
+import * as pdfjsLib from "pdfjs-dist";
+import "pdfjs-dist/build/pdf.worker.entry";
+
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import {
   Card,
@@ -33,6 +36,15 @@ import { showError, showSuccess } from "@/utils/toast";
 type ParsedRow = string[];
 
 const MAX_ROWS_PREVIEW = 200;
+
+// Garante que o worker do pdfjs está configurado (evita travar em alguns bundlers)
+if ((pdfjsLib as any).GlobalWorkerOptions) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  (pdfjsLib as any).GlobalWorkerOptions.workerSrc =
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    (pdfjsLib as any).GlobalWorkerOptions.workerSrc ||
+    `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjsLib as any).version || "3.11.174"}/pdf.worker.min.js`;
+}
 
 const AdminConverterPdf = () => {
   const navigate = useNavigate();
@@ -80,45 +92,79 @@ const AdminConverterPdf = () => {
   };
 
   /**
-   * Extrai texto bruto do PDF usando a API FileReader.
-   * ATENÇÃO: isso não reconstrói layout, mas nos dá conteúdo textual.
-   * Em um cenário com Docling, esta função seria substituída por uma chamada
-   * a um backend que usa Docling para extrair estrutura rica.
+   * Extrai texto do PDF de forma estruturada usando pdfjs-dist.
+   * Em vez de ler os bytes brutos (que viram lixo), usamos o motor de PDF
+   * para ler o conteúdo de texto página a página e agrupamos por linhas.
    */
-  const readPdfAsText = (pdfFile: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+  const extractLinesFromPdf = async (pdfFile: File): Promise<string[]> => {
+    const arrayBuffer = await pdfFile.arrayBuffer();
 
-      reader.onload = () => {
-        // Alguns navegadores retornam ArrayBuffer; aqui usamos como texto
-        const result = reader.result;
-        if (typeof result === "string") {
-          resolve(result);
-        } else {
-          // Fallback simples: converter buffer em string básica
-          try {
-            const decoder = new TextDecoder("utf-8");
-            resolve(decoder.decode(result as ArrayBuffer));
-          } catch (e) {
-            reject(
-              e instanceof Error
-                ? e
-                : new Error("Não foi possível ler o conteúdo do PDF."),
-            );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const loadingTask = (pdfjsLib as any).getDocument({ data: arrayBuffer });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const pdf = await loadingTask.promise;
+
+    const allLines: string[] = [];
+
+    // Percorre todas as páginas
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const numPages: number = pdf.numPages as number;
+
+    for (let pageNum = 1; pageNum <= numPages; pageNum += 1) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      const page = await pdf.getPage(pageNum);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      const textContent = await page.getTextContent();
+
+      type TextItem = {
+        str?: string;
+        transform?: number[];
+      };
+
+      const items = (textContent.items as TextItem[]) || [];
+
+      // Agrupa os itens por coordenada Y (linhas visuais)
+      const lineMap = new Map<number, string[]>();
+      const yTolerance = 3; // tolerância para considerar a mesma linha
+
+      for (const item of items) {
+        const str = (item.str ?? "").trim();
+        if (!str) continue;
+
+        const transform = item.transform ?? [];
+        const y = typeof transform[5] === "number" ? transform[5] : null;
+
+        if (y == null) {
+          allLines.push(str);
+          continue;
+        }
+
+        let targetKey: number | undefined;
+        for (const key of lineMap.keys()) {
+          if (Math.abs(key - y) <= yTolerance) {
+            targetKey = key;
+            break;
           }
         }
-      };
 
-      reader.onerror = () => {
-        reject(
-          reader.error ||
-            new Error("Erro ao ler o arquivo PDF. Tente novamente."),
-        );
-      };
+        if (targetKey === undefined) {
+          targetKey = y;
+          lineMap.set(targetKey, []);
+        }
 
-      // Lê como texto; para PDF real, o ideal seria usar pdf.js ou backend Docling
-      reader.readAsText(pdfFile);
-    });
+        lineMap.get(targetKey)!.push(str);
+      }
+
+      const pageLines = Array.from(lineMap.entries())
+        // pdfjs usa origem no canto inferior; ordenar do topo para baixo
+        .sort((a, b) => b[0] - a[0])
+        .map(([, parts]) => parts.join(" ").trim())
+        .filter((line) => line.length > 0);
+
+      allLines.push(...pageLines, ""); // separa páginas com linha em branco
+    }
+
+    return allLines;
   };
 
   /**
@@ -126,7 +172,9 @@ const AdminConverterPdf = () => {
    * - Se encontrar TAB ou ';', assume como delimitador de colunas.
    * - Caso contrário, quebra em colunas por múltiplos espaços.
    */
-  const buildRowsFromText = (text: string): { header: string[]; rows: ParsedRow[] } => {
+  const buildRowsFromText = (
+    text: string,
+  ): { header: string[]; rows: ParsedRow[] } => {
     const rawLines = text
       .split(/\r?\n/)
       .map((l) => l.trim())
@@ -162,26 +210,26 @@ const AdminConverterPdf = () => {
     // Primeiro registro vira cabeçalho se parecer rótulo (sem números predominantes)
     const first = parsed[0];
     const hasNumeric = first.some((c) => /\d/.test(c));
-    let header: string[];
+    let localHeader: string[];
     let body: ParsedRow[];
 
     if (!hasNumeric) {
-      header = first;
+      localHeader = first;
       body = parsed.slice(1);
     } else {
-      header = first.map((_, idx) => `Coluna ${idx + 1}`);
+      localHeader = first.map((_, idx) => `Coluna ${idx + 1}`);
       body = parsed;
     }
 
     // Normaliza largura das linhas ao tamanho do cabeçalho
-    const width = header.length;
+    const width = localHeader.length;
     const normalizedBody = body.map((row) => {
       if (row.length === width) return row;
       if (row.length > width) return row.slice(0, width);
       return [...row, ...Array(width - row.length).fill("")];
     });
 
-    return { header, rows: normalizedBody };
+    return { header: localHeader, rows: normalizedBody };
   };
 
   const handleConvert = async () => {
@@ -194,7 +242,8 @@ const AdminConverterPdf = () => {
     simulateProgress();
 
     try {
-      const text = await readPdfAsText(file);
+      const lines = await extractLinesFromPdf(file);
+      const text = lines.join("\n");
       const { header: builtHeader, rows: builtRows } = buildRowsFromText(text);
 
       if (builtRows.length === 0) {
@@ -232,7 +281,7 @@ const AdminConverterPdf = () => {
     }
 
     const escapeCsv = (value: string) => {
-      const needQuotes = /[",;\n]/.test(value);
+      const needQuotes = /[\",;\n]/.test(value);
       const normalized = value.replace(/"/g, '""');
       return needQuotes ? `"${normalized}"` : normalized;
     };
@@ -288,7 +337,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Pronto para plugar Docling / OCR avançado no backend
+                Extração de texto com pdfjs, pronta para Docling no backend
               </span>
             </div>
           </header>
