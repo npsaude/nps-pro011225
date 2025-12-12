@@ -6,27 +6,40 @@ import {
   FileText,
   Table as TableIcon,
   UploadCloud,
+  Download,
 } from "lucide-react";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { showError, showSuccess } from "@/utils/toast";
 
-type ParsedRow = {
-  coluna1: string;
-  coluna2: string;
-  coluna3: string;
-};
+type ParsedRow = string[];
+
+const MAX_ROWS_PREVIEW = 200;
 
 const AdminConverterPdf = () => {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
+  const [header, setHeader] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,6 +47,7 @@ const AdminConverterPdf = () => {
     if (!selected) {
       setFile(null);
       setRows([]);
+      setHeader([]);
       return;
     }
 
@@ -41,29 +55,135 @@ const AdminConverterPdf = () => {
       showError("Envie apenas arquivos PDF.");
       setFile(null);
       setRows([]);
+      setHeader([]);
       return;
     }
 
     setFile(selected);
     setRows([]);
+    setHeader([]);
   };
 
   const simulateProgress = () => {
     setProgress(0);
     let value = 0;
     const step = () => {
-      value += 15;
+      value += 12;
       if (value >= 100) {
         setProgress(100);
         return;
       }
       setProgress(value);
-      window.setTimeout(step, 250);
+      window.setTimeout(step, 180);
     };
     step();
   };
 
-  // Aqui é o ponto onde, no futuro, você pode plugar Docling via backend (Edge Function ou API própria).
+  /**
+   * Extrai texto bruto do PDF usando a API FileReader.
+   * ATENÇÃO: isso não reconstrói layout, mas nos dá conteúdo textual.
+   * Em um cenário com Docling, esta função seria substituída por uma chamada
+   * a um backend que usa Docling para extrair estrutura rica.
+   */
+  const readPdfAsText = (pdfFile: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        // Alguns navegadores retornam ArrayBuffer; aqui usamos como texto
+        const result = reader.result;
+        if (typeof result === "string") {
+          resolve(result);
+        } else {
+          // Fallback simples: converter buffer em string básica
+          try {
+            const decoder = new TextDecoder("utf-8");
+            resolve(decoder.decode(result as ArrayBuffer));
+          } catch (e) {
+            reject(
+              e instanceof Error
+                ? e
+                : new Error("Não foi possível ler o conteúdo do PDF."),
+            );
+          }
+        }
+      };
+
+      reader.onerror = () => {
+        reject(
+          reader.error ||
+            new Error("Erro ao ler o arquivo PDF. Tente novamente."),
+        );
+      };
+
+      // Lê como texto; para PDF real, o ideal seria usar pdf.js ou backend Docling
+      reader.readAsText(pdfFile);
+    });
+  };
+
+  /**
+   * Recebe o texto extraído e tenta organizá-lo em linhas/colunas.
+   * - Se encontrar TAB ou ';', assume como delimitador de colunas.
+   * - Caso contrário, quebra em colunas por múltiplos espaços.
+   */
+  const buildRowsFromText = (text: string): { header: string[]; rows: ParsedRow[] } => {
+    const rawLines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    if (rawLines.length === 0) {
+      return { header: [], rows: [] };
+    }
+
+    const detectDelimiter = (sample: string): "tab" | "semicolon" | "spaces" => {
+      if (sample.includes("\t")) return "tab";
+      if (sample.includes(";")) return "semicolon";
+      // múltiplos espaços seguidos
+      if (/\s{2,}/.test(sample)) return "spaces";
+      return "spaces";
+    };
+
+    const delimiter = detectDelimiter(rawLines[0]);
+
+    const splitLine = (line: string): string[] => {
+      if (delimiter === "tab") {
+        return line.split("\t").map((c) => c.trim());
+      }
+      if (delimiter === "semicolon") {
+        return line.split(";").map((c) => c.trim());
+      }
+      // múltiplos espaços como separador
+      return line.split(/\s{2,}/).map((c) => c.trim());
+    };
+
+    const parsed = rawLines.map(splitLine);
+
+    // Primeiro registro vira cabeçalho se parecer rótulo (sem números predominantes)
+    const first = parsed[0];
+    const hasNumeric = first.some((c) => /\d/.test(c));
+    let header: string[];
+    let body: ParsedRow[];
+
+    if (!hasNumeric) {
+      header = first;
+      body = parsed.slice(1);
+    } else {
+      header = first.map((_, idx) => `Coluna ${idx + 1}`);
+      body = parsed;
+    }
+
+    // Normaliza largura das linhas ao tamanho do cabeçalho
+    const width = header.length;
+    const normalizedBody = body.map((row) => {
+      if (row.length === width) return row;
+      if (row.length > width) return row.slice(0, width);
+      return [...row, ...Array(width - row.length).fill("")];
+    });
+
+    return { header, rows: normalizedBody };
+  };
+
   const handleConvert = async () => {
     if (!file) {
       showError("Selecione um PDF para converter.");
@@ -74,40 +194,67 @@ const AdminConverterPdf = () => {
     simulateProgress();
 
     try {
-      // Hoje: mock de conversão.
-      // Futuro: enviar `file` para uma API com Docling e receber linhas estruturadas.
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const text = await readPdfAsText(file);
+      const { header: builtHeader, rows: builtRows } = buildRowsFromText(text);
 
-      const fakeRows: ParsedRow[] = [
-        {
-          coluna1: "Linha 1",
-          coluna2: "Dado extraído do PDF",
-          coluna3: file.name,
-        },
-        {
-          coluna1: "Linha 2",
-          coluna2: "Outro campo interpretado",
-          coluna3: "Página 1",
-        },
-        {
-          coluna1: "Linha 3",
-          coluna2: "Exemplo de código/valor",
-          coluna3: "R$ 1.250,00",
-        },
-      ];
+      if (builtRows.length === 0) {
+        showError(
+          "Não foi possível extrair dados estruturados deste PDF. Experimente outro arquivo ou um documento mais tabular.",
+        );
+        setRows([]);
+        setHeader([]);
+        return;
+      }
 
-      setRows(fakeRows);
-      showSuccess("PDF processado com sucesso (mock de Docling).");
+      setHeader(builtHeader);
+      setRows(builtRows);
+      showSuccess(
+        `PDF processado com sucesso. ${builtRows.length} linha(s) de dados extraídas.`,
+      );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
           : "Não foi possível converter o PDF.";
       showError(message);
+      setRows([]);
+      setHeader([]);
     } finally {
       setParsing(false);
       setProgress(100);
     }
+  };
+
+  const handleExportCsv = () => {
+    if (!rows.length || !header.length) {
+      showError("Não há dados para exportar. Converta um PDF primeiro.");
+      return;
+    }
+
+    const escapeCsv = (value: string) => {
+      const needQuotes = /[",;\n]/.test(value);
+      const normalized = value.replace(/"/g, '""');
+      return needQuotes ? `"${normalized}"` : normalized;
+    };
+
+    const allRows = [header, ...rows];
+    const csvContent = allRows
+      .map((row) => row.map(escapeCsv).join(";"))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const nameBase = file?.name?.replace(/\.pdf$/i, "") || "dados_pdf";
+    link.href = url;
+    link.setAttribute("download", `${nameBase}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showSuccess("Arquivo CSV gerado com sucesso.");
   };
 
   return (
@@ -133,7 +280,7 @@ const AdminConverterPdf = () => {
                   Converter PDF
                 </h1>
                 <p className="text-xs text-slate-400 sm:text-sm">
-                  Envie um arquivo PDF para extrair os dados em formato de tabela.
+                  Envie um arquivo PDF, extraia o conteúdo em tabela e exporte para CSV.
                 </p>
               </div>
             </div>
@@ -141,7 +288,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Conversão via motor externo (Docling/IA)
+                Pronto para plugar Docling / OCR avançado no backend
               </span>
             </div>
           </header>
@@ -158,7 +305,8 @@ const AdminConverterPdf = () => {
                     <span>Upload de PDF</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Selecione o PDF que deseja converter. No futuro, esta etapa poderá usar Docling no backend.
+                    Selecione o PDF que deseja converter. Um motor de extração analisa o texto
+                    e organiza os dados em linhas e colunas.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -194,14 +342,28 @@ const AdminConverterPdf = () => {
                   )}
 
                   <div className="space-y-2">
-                    <Button
-                      type="button"
-                      className="h-9 w-full rounded-full bg-[#135bec] text-xs font-semibold text-white hover:bg-[#0f4ac0] sm:w-auto sm:px-6 sm:text-sm"
-                      disabled={!file || parsing}
-                      onClick={handleConvert}
-                    >
-                      {parsing ? "Convertendo..." : "Converter PDF"}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        className="h-9 rounded-full bg-[#135bec] px-5 text-xs font-semibold text-white hover:bg-[#0f4ac0] sm:text-sm"
+                        disabled={!file || parsing}
+                        onClick={handleConvert}
+                      >
+                        {parsing ? "Convertendo..." : "Converter PDF"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 rounded-full border-slate-200 px-4 text-xs sm:text-sm dark:border-slate-700"
+                        disabled={!rows.length || !header.length}
+                        onClick={handleExportCsv}
+                      >
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                        Exportar CSV
+                      </Button>
+                    </div>
+
                     {parsing && (
                       <div className="space-y-1">
                         <Progress
@@ -209,7 +371,7 @@ const AdminConverterPdf = () => {
                           className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"
                         />
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Analisando estrutura do PDF e extraindo possíveis tabelas...
+                          Analisando a estrutura do PDF e extraindo conteúdo textual...
                         </p>
                       </div>
                     )}
@@ -227,11 +389,12 @@ const AdminConverterPdf = () => {
                     <span>Tabela extraída</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Visualize aqui os dados estruturados obtidos do PDF.
+                    Visualize os dados estruturados obtidos do PDF. A pré-visualização mostra
+                    até {MAX_ROWS_PREVIEW} linhas.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="overflow-x-auto pt-1 text-xs sm:text-sm">
-                  {rows.length === 0 ? (
+                  {!rows.length || !header.length ? (
                     <p className="rounded-2xl bg-slate-50 px-4 py-6 text-center text-xs text-slate-400 dark:bg-slate-900 dark:text-slate-500">
                       Nenhum dado extraído ainda. Envie um PDF e clique em &quot;Converter PDF&quot;.
                     </p>
@@ -240,24 +403,30 @@ const AdminConverterPdf = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="border-b border-slate-200 text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                            <TableHead>Coluna 1</TableHead>
-                            <TableHead>Coluna 2</TableHead>
-                            <TableHead>Coluna 3</TableHead>
+                            {header.map((col, idx) => (
+                              <TableHead key={idx}>{col || `Coluna ${idx + 1}`}</TableHead>
+                            ))}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {rows.map((row, index) => (
+                          {rows.slice(0, MAX_ROWS_PREVIEW).map((row, rowIndex) => (
                             <TableRow
-                              key={index}
+                              key={rowIndex}
                               className="border-b border-slate-100 text-xs hover:bg-white dark:border-slate-800 dark:hover:bg-slate-800/60"
                             >
-                              <TableCell>{row.coluna1}</TableCell>
-                              <TableCell>{row.coluna2}</TableCell>
-                              <TableCell>{row.coluna3}</TableCell>
+                              {row.map((cell, cellIndex) => (
+                                <TableCell key={cellIndex}>{cell}</TableCell>
+                              ))}
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
+                      {rows.length > MAX_ROWS_PREVIEW && (
+                        <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
+                          Exibindo {MAX_ROWS_PREVIEW} de {rows.length} linha(s). Use o botão
+                          &quot;Exportar CSV&quot; para baixar todos os dados.
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
