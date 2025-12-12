@@ -110,7 +110,7 @@ const AdminConverterPdf = () => {
 
   /**
    * Envia o PDF em base64 (possivelmente truncado) para o ChatGPT
-   * usando o prompt específico em português, e pede que devolva APENAS um CSV com ';'.
+   * com regras rígidas para NÃO inventar dados, e pede que devolva APENAS um CSV com ';'.
    */
   const askChatGptForCsvFromPdfBase64 = async (
     base64Pdf: string,
@@ -121,43 +121,51 @@ const AdminConverterPdf = () => {
       "Você é um assistente especializado em ler PDFs de relatórios analíticos de faturamento médico. " +
       "Sua tarefa é receber o conteúdo de um arquivo PDF em base64 e devolver APENAS um arquivo CSV " +
       "seguindo exatamente as regras descritas pelo usuário. " +
+      "É EXTREMAMENTE IMPORTANTE que você **NÃO INVENTE** dados, linhas, códigos de procedimento, valores ou datas. " +
+      "Se não tiver 100% de certeza de um valor ou campo, deixe o campo vazio em vez de adivinhar. " +
       "Use sempre ponto e vírgula (;) como separador de coluna. " +
       "Não escreva nenhuma explicação, texto extra ou comentários fora do CSV.";
 
     const truncationNote = truncated
       ? "ATENÇÃO IMPORTANTE: o conteúdo em base64 foi truncado para caber no limite do modelo. " +
-        "Priorize a extração da tabela principal de atendimentos e dos valores relacionados a cada atendimento. " +
-        "Se algum trecho estiver incompleto, faça a melhor inferência possível, mas nunca invente valores fora de contexto.\n\n"
+        "Você **NÃO** deve inventar linhas ou procedimentos que não estejam claramente presentes na parte visível do PDF. " +
+        "Se algum atendimento ou procedimento estiver cortado, ignore-o ou deixe os campos vazios, mas nunca crie linhas extras com suposições.\n\n"
       : "";
 
     const userPrompt =
       truncationNote +
       "Usando o PDF de relatório analítico em anexo (conteúdo em base64 abaixo) como referência, " +
       "extraia os dados do PDF e crie um CSV com as seguintes instruções:\n\n" +
-      "1. Nome do médico: campo textual (ex.: Jose Airton Case Neto)\n" +
-      "2. Período: campo textual com o período do relatório (ex.: 'Novembro/2025' ou equivalente no PDF)\n\n" +
+      "1. Nome do médico: campo textual (ex.: Jose Airton Case Neto). Use exatamente o que está no PDF, sem alterar.\n" +
+      "2. Período: campo textual com o período do relatório (ex.: o período que aparece no cabeçalho do PDF). Use exatamente o texto do PDF.\n\n" +
       "3. Para cada atendimento/paciente, devem existir uma ou mais linhas, com as seguintes colunas:\n" +
-      "   3.1 Nome do paciente (ex.: WALLACY FILIPE DA MOTA SILVA)\n" +
-      "   3.2 Data do Atendimento (ex.: 28/08/2025)\n" +
-      "   3.3 Data do Pagamento (ex.: 03/10/2025)\n" +
+      "   3.1 Nome do paciente\n" +
+      "   3.2 Data do Atendimento\n" +
+      "   3.3 Data do Pagamento\n" +
       "   3.4 Pagante (ex.: AMIL)\n" +
-      "   3.5 Código do Procedimento (ex.: 10101012)\n" +
-      "   3.6 Descrição do Procedimento (ex.: CONSULTA CONSULTORIO SADT)\n" +
-      "   3.7 Valor Base (ex.: 91,00)\n" +
-      "   3.8 Glosa (ex.: 0,00)\n" +
-      "   3.9 Desconto (ex.: 9,24)\n" +
-      "   3.10 Líquido (ex.: 81,76)\n\n" +
+      "   3.5 Código do Procedimento\n" +
+      "   3.6 Descrição do Procedimento\n" +
+      "   3.7 Valor Base\n" +
+      "   3.8 Glosa\n" +
+      "   3.9 Desconto\n" +
+      "   3.10 Líquido\n\n" +
       "   Podem haver outras linhas de procedimentos para o mesmo paciente/atendimento. " +
-      "   Se houver, todas as linhas devem ser trazidas no CSV com os respectivos valores.\n\n" +
+      "   **Você só deve criar uma linha de procedimento se esse procedimento realmente existir no PDF. " +
+      "   Nunca crie códigos de procedimento, descrições ou valores que não apareçam claramente na tabela do PDF.**\n\n" +
       "4. Total de repasse:\n" +
-      "   Para cada atendimento (ou bloco de linhas do mesmo paciente/atendimento), calcule o Total de repasse do médico " +
-      "   conforme indicado no PDF. O valor do repasse deve aparecer APENAS NA ÚLTIMA LINHA daquele atendimento/paciente. " +
-      "   Nas demais linhas desse mesmo atendimento, deixe a coluna de Total de repasse vazia.\n\n" +
-      "Regras adicionais IMPORTANTES:\n" +
+      "   Para cada atendimento (ou bloco de linhas do mesmo paciente/atendimento), use exatamente o valor de Total de repasse " +
+      "   indicado no PDF para aquele atendimento. " +
+      "   O valor do repasse deve aparecer **APENAS NA ÚLTIMA LINHA** daquele atendimento/paciente na coluna TotalRepasse. " +
+      "   Nas demais linhas desse mesmo atendimento, deixe a coluna TotalRepasse **vazia**. " +
+      "   Se o PDF não trouxer explicitamente o Total de repasse para um atendimento, deixe a coluna TotalRepasse vazia (não invente).\n\n" +
+      "Regras adicionais MUITO IMPORTANTES (obrigatórias):\n" +
       "- Use SEMPRE vírgula como separador decimal (ex.: 81,76), igual ao PDF.\n" +
-      "- Tenha muito cuidado com as casas decimais dos valores. Não perca precisão e não misture separador de milhar com decimal.\n" +
-      "- Os valores devem refletir exatamente o que está no PDF.\n" +
-      "- O CSV deve ter uma linha de cabeçalho com as colunas na ordem abaixo, e depois uma linha para cada procedimento:\n" +
+      "- Tenha muito cuidado com as casas decimais dos valores. Não arredonde, não some e não subtraia nada por conta própria. " +
+      "  Apenas copie os valores exatamente como aparecem no PDF para cada campo (Valor Base, Glosa, Desconto, Líquido, Total de repasse).\n" +
+      "- NÃO crie linhas extras de procedimentos apenas por inferência. Se um procedimento não estiver claramente visível (código, descrição e valores), não o inclua.\n" +
+      "- NÃO altere a descrição dos procedimentos. Use o texto exato do PDF (por exemplo, 'CONSULTA CONSULTORIO SADT').\n" +
+      "- Se estiver em dúvida sobre qualquer campo, deixe-o vazio em vez de tentar adivinhar.\n" +
+      "- O CSV deve ter uma linha de cabeçalho com as colunas na ordem abaixo, e depois uma linha para cada procedimento exatamente como lido do PDF:\n" +
       "  NomeMedico;Periodo;NomePaciente;DataAtendimento;DataPagamento;Pagante;CodigoProcedimento;DescricaoProcedimento;ValorBase;Glosa;Desconto;Liquido;TotalRepasse\n\n" +
       "Agora, gere APENAS o conteúdo CSV (sem texto extra, sem markdown, sem comentários). " +
       "Segue o conteúdo base64 do PDF:\n\n" +
@@ -329,7 +337,7 @@ const AdminConverterPdf = () => {
                   Converter PDF (ChatGPT)
                 </h1>
                 <p className="text-xs text-slate-400 sm:text-sm">
-                  Envie um PDF; o ChatGPT usa o prompt específico para montar um CSV com os campos de repasse.
+                  Envie um PDF; o ChatGPT usa um prompt rígido para montar um CSV fiel aos dados do relatório.
                 </p>
               </div>
             </div>
@@ -337,7 +345,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Prompt customizado de repasse (apenas ChatGPT, sem libs de PDF)
+                Prompt mais rígido: não inventar procedimentos, valores ou repasses
               </span>
             </div>
           </header>
@@ -369,8 +377,7 @@ const AdminConverterPdf = () => {
                       className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
                     />
                     <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      O PDF é convertido para base64 e enviado à API da OpenAI com um prompt específico
-                      para extrair dados de paciente, procedimentos e total de repasse.
+                      O PDF é convertido para base64 e enviado à API da OpenAI com regras rígidas para não inventar dados.
                     </p>
                   </div>
 
@@ -420,7 +427,7 @@ const AdminConverterPdf = () => {
                           className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"
                         />
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Enviando o PDF (base64) para o ChatGPT com o prompt de repasse...
+                          Enviando o PDF (base64) para o ChatGPT com o prompt rígido de extração...
                         </p>
                       </div>
                     )}
