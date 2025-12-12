@@ -36,18 +36,6 @@ type ParsedRow = string[];
 
 const MAX_ROWS_PREVIEW = 200;
 
-// Configura o worker do pdfjs para carregar a partir de CDN.
-// Isso evita precisar importar arquivos internos como pdf.worker.entry.
-try {
-  const anyPdf = pdfjsLib as any;
-  if (anyPdf.GlobalWorkerOptions && !anyPdf.GlobalWorkerOptions.workerSrc) {
-    const version: string = anyPdf.version || "3.11.174";
-    anyPdf.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
-  }
-} catch {
-  // Se não conseguir configurar, o pdfjs ainda tenta um fallback interno.
-}
-
 const AdminConverterPdf = () => {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
@@ -95,12 +83,16 @@ const AdminConverterPdf = () => {
 
   /**
    * Extrai texto do PDF usando pdfjs-dist, agrupando itens por linha visual.
+   * Aqui rodamos o pdf.js SEM worker (disableWorker: true) para evitar erros de fake worker.
    */
   const extractLinesFromPdf = async (pdfFile: File): Promise<string[]> => {
     const arrayBuffer = await pdfFile.arrayBuffer();
 
     const anyPdf = pdfjsLib as any;
-    const loadingTask = anyPdf.getDocument({ data: arrayBuffer });
+    const loadingTask = anyPdf.getDocument({
+      data: arrayBuffer,
+      disableWorker: true, // força execução sem worker
+    });
     const pdf = await loadingTask.promise;
 
     const allLines: string[] = [];
@@ -323,7 +315,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Extração de texto com pdfjs, pronta para Docling no backend
+                Extração de texto com pdfjs (sem worker), pronta para Docling no backend
               </span>
             </div>
           </header>
