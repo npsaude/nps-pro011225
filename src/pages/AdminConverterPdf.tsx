@@ -9,6 +9,8 @@ import {
   Download,
 } from "lucide-react";
 
+import * as pdfjsLib from "pdfjs-dist";
+
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import {
   Card,
@@ -81,18 +83,6 @@ const AdminConverterPdf = () => {
     step();
   };
 
-  const fileToBase64 = (f: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.includes(",") ? result.split(",")[1] : result;
-        resolve(base64);
-      };
-      reader.onerror = () => reject(reader.error || new Error("Erro ao ler o arquivo PDF."));
-      reader.readAsDataURL(f);
-    });
-
   const ensureOpenAiToken = async (): Promise<string> => {
     if (openaiToken) return openaiToken;
 
@@ -108,23 +98,97 @@ const AdminConverterPdf = () => {
   };
 
   /**
-   * Envia o PDF em base64 para o ChatGPT e pede um CSV com ; como separador.
+   * Extrai o TEXTO do PDF usando pdfjs-dist, agrupando por linhas visuais.
+   * Rodamos o pdf.js SEM worker (disableWorker: true) para evitar problemas de worker no Vite.
    */
-  const askChatGptForCsv = async (base64Pdf: string, token: string): Promise<string> => {
+  const extractLinesFromPdf = async (pdfFile: File): Promise<string[]> => {
+    const arrayBuffer = await pdfFile.arrayBuffer();
+
+    const anyPdf = pdfjsLib as any;
+    const loadingTask = anyPdf.getDocument({
+      data: arrayBuffer,
+      disableWorker: true,
+    });
+    const pdf = await loadingTask.promise;
+
+    const allLines: string[] = [];
+    const numPages: number = pdf.numPages as number;
+
+    for (let pageNum = 1; pageNum <= numPages; pageNum += 1) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+
+      type TextItem = {
+        str?: string;
+        transform?: number[];
+      };
+
+      const items = (textContent.items as TextItem[]) || [];
+
+      const lineMap = new Map<number, string[]>();
+      const yTolerance = 3;
+
+      for (const item of items) {
+        const str = (item.str ?? "").trim();
+        if (!str) continue;
+
+        const transform = item.transform ?? [];
+        const y = typeof transform[5] === "number" ? transform[5] : null;
+
+        if (y == null) {
+          allLines.push(str);
+          continue;
+        }
+
+        let targetKey: number | undefined;
+        for (const key of lineMap.keys()) {
+          if (Math.abs(key - y) <= yTolerance) {
+            targetKey = key;
+            break;
+          }
+        }
+
+        if (targetKey === undefined) {
+          targetKey = y;
+          lineMap.set(targetKey, []);
+        }
+
+        lineMap.get(targetKey)!.push(str);
+      }
+
+      const pageLines = Array.from(lineMap.entries())
+        .sort((a, b) => b[0] - a[0])
+        .map(([, parts]) => parts.join(" ").trim())
+        .filter((line) => line.length > 0);
+
+      allLines.push(...pageLines, "");
+    }
+
+    return allLines;
+  };
+
+  /**
+   * Envia o TEXTO do PDF para o ChatGPT pedindo para transformar em CSV (;).
+   * Isso é muito menor do que mandar o PDF em base64, evitando estourar o contexto.
+   */
+  const askChatGptForCsvFromText = async (
+    text: string,
+    token: string,
+  ): Promise<string> => {
     const systemPrompt =
-      "Você é um assistente especializado em ler PDFs de relatórios financeiros, " +
+      "Você é um assistente especializado em ler textos extraídos de PDFs de relatórios, " +
       "extratos analíticos e tabelas (como relatórios de faturamento ou produção médica). " +
-      "Sua tarefa é receber o conteúdo de um arquivo PDF em base64 e devolver APENAS os dados " +
-      "em formato CSV, usando ponto e vírgula (;) como separador. " +
+      "Sua tarefa é receber o texto bruto (sem formatação) e devolver APENAS os dados " +
+      "em formato CSV, usando ponto e vírgula (;) como separador de colunas. " +
       "Sempre inclua uma linha de cabeçalho seguida pelas linhas de dados. " +
       "Não escreva nenhuma explicação, texto extra ou comentários fora do CSV.";
 
     const userPrompt =
-      "Aqui está o conteúdo base64 de um arquivo PDF com um relatório analítico. " +
-      "Decodifique o PDF, interprete as tabelas relevantes e devolva apenas um CSV com os dados, " +
-      "separando as colunas por ponto e vírgula (;). " +
-      "Não inclua texto fora do CSV.\n\n" +
-      base64Pdf;
+      "Abaixo está o texto bruto extraído de um arquivo PDF de relatório analítico. " +
+      "O texto está organizado linha a linha, mas sem a formatação original da tabela. " +
+      "Interprete esse texto e devolva apenas um CSV, com colunas separadas por ';'. " +
+      "Inclua cabeçalho e linhas de dados, e não escreva nada além do CSV.\n\n" +
+      text;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -145,7 +209,9 @@ const AdminConverterPdf = () => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-        `Erro ao chamar a API OpenAI (${response.status}): ${errText || "sem detalhes"}`,
+        `Erro ao chamar a API OpenAI (${response.status}): ${
+          errText || "sem detalhes"
+        }`,
       );
     }
 
@@ -174,12 +240,12 @@ const AdminConverterPdf = () => {
     const headerCols = headerLine.split(";").map((c) => c.trim());
     const bodyLines = lines.slice(1);
 
-    const rows: ParsedRow[] = bodyLines.map((line) =>
+    const rawRows: ParsedRow[] = bodyLines.map((line) =>
       line.split(";").map((c) => c.trim()),
     );
 
     const width = headerCols.length;
-    const normalizedRows = rows.map((row) => {
+    const normalizedRows = rawRows.map((row) => {
       if (row.length === width) return row;
       if (row.length > width) return row.slice(0, width);
       return [...row, ...Array(width - row.length).fill("")];
@@ -199,13 +265,26 @@ const AdminConverterPdf = () => {
 
     try {
       const token = await ensureOpenAiToken();
-      const base64 = await fileToBase64(file);
-      const csvText = await askChatGptForCsv(base64, token);
+
+      // 1) Extrai texto do PDF no navegador
+      const lines = await extractLinesFromPdf(file);
+      let text = lines.join("\n");
+
+      // Opcional: se o texto for enorme, corta um pouco para evitar chegar perto do limite
+      const MAX_CHARS = 100_000; // ~25k tokens aprox.
+      if (text.length > MAX_CHARS) {
+        text = text.slice(0, MAX_CHARS);
+      }
+
+      // 2) Pede para o ChatGPT transformar este texto em CSV
+      const csvText = await askChatGptForCsvFromText(text, token);
+
+      // 3) Converte o CSV em header + linhas para a tabela
       const { header: builtHeader, rows: builtRows } = parseCsvFromChatGpt(csvText);
 
       if (builtRows.length === 0) {
         showError(
-          "ChatGPT não conseguiu extrair dados tabulares deste PDF. Verifique o arquivo ou tente ajustar o modelo.",
+          "ChatGPT não conseguiu extrair dados tabulares deste texto. Verifique o arquivo ou tente ajustar o modelo.",
         );
         setRows([]);
         setHeader([]);
@@ -286,7 +365,7 @@ const AdminConverterPdf = () => {
                   Converter PDF (ChatGPT)
                 </h1>
                 <p className="text-xs text-slate-400 sm:text-sm">
-                  Envie um PDF, deixe o ChatGPT interpretar o documento e gerar um CSV tabular.
+                  Envie um PDF, o sistema extrai o texto e o ChatGPT gera um CSV tabular.
                 </p>
               </div>
             </div>
@@ -294,7 +373,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Conversão inteligente com ChatGPT (OpenAI)
+                Texto extraído localmente + análise de tabela com ChatGPT
               </span>
             </div>
           </header>
@@ -311,8 +390,8 @@ const AdminConverterPdf = () => {
                     <span>Upload de PDF</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Selecione o PDF que deseja converter. O ChatGPT irá ler o documento e
-                    devolver os dados em formato CSV.
+                    Selecione o PDF que deseja converter. O texto é extraído no navegador e
+                    enviado ao ChatGPT para montagem do CSV.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -327,7 +406,8 @@ const AdminConverterPdf = () => {
                       className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
                     />
                     <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      O PDF será enviado à API da OpenAI para interpretação e conversão em CSV.
+                      O conteúdo não formatado do PDF será enviado à API da OpenAI para
+                      interpretação em formato tabular.
                     </p>
                   </div>
 
@@ -377,7 +457,7 @@ const AdminConverterPdf = () => {
                           className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"
                         />
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Enviando o PDF para o ChatGPT e montando o CSV...
+                          Extraindo texto do PDF e pedindo para o ChatGPT montar o CSV...
                         </p>
                       </div>
                     )}
