@@ -5,6 +5,7 @@ import {
   KeyRound,
   FileSignature,
   Database,
+  FileType2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -146,35 +147,68 @@ const AdminConfiguracoes = () => {
                 </p>
               </section>
 
-              {/* Bloco para criação de dados de exemplo */}
-              <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
-                      <Database className="h-4 w-4" />
-                    </span>
-                    <span>Dados de exemplo</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Crie automaticamente clínicas, médicos e uma descrição cirúrgica aprovada para demonstrar o funcionamento do sistema.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-start justify-between gap-3 text-xs sm:flex-row sm:items-center sm:text-sm">
-                    <p className="max-w-xl text-slate-500 dark:text-slate-400">
-                      Este recurso cria registros apenas se as tabelas ainda estiverem vazias. Você pode utilizá-lo com segurança em ambiente de desenvolvimento para popular os cadastros com exemplos reais.
-                    </p>
-                    <Button
-                      type="button"
-                      className="h-9 rounded-full px-4 text-xs sm:text-sm"
-                      onClick={handleCriarDadosExemplo}
-                      disabled={criandoDemo}
-                    >
-                      {criandoDemo ? "Criando dados..." : "Criar dados de exemplo"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Submenu/atalhos de Configurações */}
+              <div className="grid gap-3 md:grid-cols-2">
+                {/* Bloco para criação de dados de exemplo */}
+                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                        <Database className="h-4 w-4" />
+                      </span>
+                      <span>Dados de exemplo</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Crie automaticamente clínicas, médicos e uma descrição cirúrgica aprovada para demonstrar o funcionamento do sistema.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-start justify-between gap-3 text-xs sm:flex-row sm:items-center sm:text-sm">
+                      <p className="max-w-xl text-slate-500 dark:text-slate-400">
+                        Este recurso cria registros apenas se as tabelas ainda estiverem vazias. Você pode utilizá-lo com segurança em ambiente de desenvolvimento para popular os cadastros com exemplos reais.
+                      </p>
+                      <Button
+                        type="button"
+                        className="h-9 rounded-full px-4 text-xs sm:text-sm"
+                        onClick={handleCriarDadosExemplo}
+                        disabled={criandoDemo}
+                      >
+                        {criandoDemo ? "Criando dados..." : "Criar dados de exemplo"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Novo card: Converter PDF */}
+                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-slate-50 dark:bg-slate-800">
+                        <FileType2 className="h-4 w-4" />
+                      </span>
+                      <span>Converter PDF</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Acesse a ferramenta de upload e conversão de PDFs em tabela de dados, preparada para uso com Docling ou outros motores de extração.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
+                      <p className="max-w-xs text-slate-500 dark:text-slate-400">
+                        Envie um arquivo PDF e visualize os dados estruturados em formato tabular na tela seguinte.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 rounded-full border-slate-200 px-4 text-xs sm:text-sm dark:border-slate-700"
+                        onClick={() => navigate("/admin/configuracoes/converter-pdf")}
+                      >
+                        Ir para Converter PDF
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
               <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader>

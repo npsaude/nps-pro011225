@@ -18,6 +18,7 @@ import ClinicasCadastro from "./pages/ClinicasCadastro";
 import MedicosCadastro from "./pages/MedicosCadastro";
 import DashboardMedico from "./pages/DashboardMedico";
 import AdminConfiguracoes from "./pages/AdminConfiguracoes";
+import AdminConverterPdf from "./pages/AdminConverterPdf";
 import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
 import MedicoUploadDescricaoCirurgica from "./pages/MedicoUploadDescricaoCirurgica";
 import MedicoDescricoesCirurgicas from "./pages/MedicoDescricoesCirurgicas";
@@ -81,6 +82,10 @@ const App = () => (
 
           {/* Configurações administrativas */}
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
+          <Route
+            path="/admin/configuracoes/converter-pdf"
+            element={<AdminConverterPdf />}
+          />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
