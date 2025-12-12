@@ -29,12 +29,11 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { showError, showSuccess } from "@/utils/toast";
-import { carregarAppSettings } from "@/services/app-settings-service";
+import { supabase } from "@/integrations/supabase/client";
 
 type ParsedRow = string[];
 
 const MAX_ROWS_PREVIEW = 200;
-const MAX_BASE64_LENGTH = 100_000;
 
 const AdminConverterPdf = () => {
   const navigate = useNavigate();
@@ -43,7 +42,6 @@ const AdminConverterPdf = () => {
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [header, setHeader] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  const [openaiToken, setOpenaiToken] = useState<string | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0];
@@ -82,132 +80,7 @@ const AdminConverterPdf = () => {
     step();
   };
 
-  const fileToBase64 = (f: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.includes(",") ? result.split(",")[1] : result;
-        resolve(base64);
-      };
-      reader.onerror = () => reject(reader.error || new Error("Erro ao ler o arquivo PDF."));
-      reader.readAsDataURL(f);
-    });
-
-  const ensureOpenAiToken = async (): Promise<string> => {
-    if (openaiToken) return openaiToken;
-
-    const settings = await carregarAppSettings();
-    const token = settings?.openaiApiToken?.trim();
-    if (!token) {
-      throw new Error(
-        "Token OpenAI não configurado. Acesse Configurações > Token OpenAI para informar a chave.",
-      );
-    }
-    setOpenaiToken(token);
-    return token;
-  };
-
-  /**
-   * Envia o PDF em base64 (possivelmente truncado) para o ChatGPT
-   * com regras rígidas para NÃO inventar dados, e pede que devolva APENAS um CSV com ';'.
-   */
-  const askChatGptForCsvFromPdfBase64 = async (
-    base64Pdf: string,
-    token: string,
-    truncated: boolean,
-  ): Promise<string> => {
-    const systemPrompt =
-      "Você é um assistente especializado em ler PDFs de relatórios analíticos de faturamento médico. " +
-      "Sua tarefa é receber o conteúdo de um arquivo PDF em base64 e devolver APENAS um arquivo CSV " +
-      "seguindo exatamente as regras descritas pelo usuário. " +
-      "É EXTREMAMENTE IMPORTANTE que você **NÃO INVENTE** dados, linhas, códigos de procedimento, valores ou datas. " +
-      "Se não tiver 100% de certeza de um valor ou campo, deixe o campo vazio em vez de adivinhar. " +
-      "Use sempre ponto e vírgula (;) como separador de coluna. " +
-      "Não escreva nenhuma explicação, texto extra ou comentários fora do CSV.";
-
-    const truncationNote = truncated
-      ? "ATENÇÃO IMPORTANTE: o conteúdo em base64 foi truncado para caber no limite do modelo. " +
-        "Você **NÃO** deve inventar linhas ou procedimentos que não estejam claramente presentes na parte visível do PDF. " +
-        "Se algum atendimento ou procedimento estiver cortado, ignore-o ou deixe os campos vazios, mas nunca crie linhas extras com suposições.\n\n"
-      : "";
-
-    const userPrompt =
-      truncationNote +
-      "Usando o PDF de relatório analítico em anexo (conteúdo em base64 abaixo) como referência, " +
-      "extraia os dados do PDF e crie um CSV com as seguintes instruções:\n\n" +
-      "1. Nome do médico: campo textual (ex.: Jose Airton Case Neto). Use exatamente o que está no PDF, sem alterar.\n" +
-      "2. Período: campo textual com o período do relatório (ex.: o período que aparece no cabeçalho do PDF). Use exatamente o texto do PDF.\n\n" +
-      "3. Para cada atendimento/paciente, devem existir uma ou mais linhas, com as seguintes colunas:\n" +
-      "   3.1 Nome do paciente\n" +
-      "   3.2 Data do Atendimento\n" +
-      "   3.3 Data do Pagamento\n" +
-      "   3.4 Pagante (ex.: AMIL)\n" +
-      "   3.5 Código do Procedimento\n" +
-      "   3.6 Descrição do Procedimento\n" +
-      "   3.7 Valor Base\n" +
-      "   3.8 Glosa\n" +
-      "   3.9 Desconto\n" +
-      "   3.10 Líquido\n\n" +
-      "   Podem haver outras linhas de procedimentos para o mesmo paciente/atendimento. " +
-      "   **Você só deve criar uma linha de procedimento se esse procedimento realmente existir no PDF. " +
-      "   Nunca crie códigos de procedimento, descrições ou valores que não apareçam claramente na tabela do PDF.**\n\n" +
-      "4. Total de repasse:\n" +
-      "   Para cada atendimento (ou bloco de linhas do mesmo paciente/atendimento), use exatamente o valor de Total de repasse " +
-      "   indicado no PDF para aquele atendimento. " +
-      "   O valor do repasse deve aparecer **APENAS NA ÚLTIMA LINHA** daquele atendimento/paciente na coluna TotalRepasse. " +
-      "   Nas demais linhas desse mesmo atendimento, deixe a coluna TotalRepasse **vazia**. " +
-      "   Se o PDF não trouxer explicitamente o Total de repasse para um atendimento, deixe a coluna TotalRepasse vazia (não invente).\n\n" +
-      "Regras adicionais MUITO IMPORTANTES (obrigatórias):\n" +
-      "- Use SEMPRE vírgula como separador decimal (ex.: 81,76), igual ao PDF.\n" +
-      "- Tenha muito cuidado com as casas decimais dos valores. Não arredonde, não some e não subtraia nada por conta própria. " +
-      "  Apenas copie os valores exatamente como aparecem no PDF para cada campo (Valor Base, Glosa, Desconto, Líquido, Total de repasse).\n" +
-      "- NÃO crie linhas extras de procedimentos apenas por inferência. Se um procedimento não estiver claramente visível (código, descrição e valores), não o inclua.\n" +
-      "- NÃO altere a descrição dos procedimentos. Use o texto exato do PDF (por exemplo, 'CONSULTA CONSULTORIO SADT').\n" +
-      "- Se estiver em dúvida sobre qualquer campo, deixe-o vazio em vez de tentar adivinhar.\n" +
-      "- O CSV deve ter uma linha de cabeçalho com as colunas na ordem abaixo, e depois uma linha para cada procedimento exatamente como lido do PDF:\n" +
-      "  NomeMedico;Periodo;NomePaciente;DataAtendimento;DataPagamento;Pagante;CodigoProcedimento;DescricaoProcedimento;ValorBase;Glosa;Desconto;Liquido;TotalRepasse\n\n" +
-      "Agora, gere APENAS o conteúdo CSV (sem texto extra, sem markdown, sem comentários). " +
-      "Segue o conteúdo base64 do PDF:\n\n" +
-      base64Pdf;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.1,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(
-        `Erro ao chamar a API OpenAI (${response.status}): ${
-          errText || "sem detalhes"
-        }`,
-      );
-    }
-
-    const data = (await response.json()) as any;
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content || typeof content !== "string") {
-      throw new Error("Resposta da OpenAI não contém texto CSV utilizável.");
-    }
-
-    return content.trim();
-  };
-
-  const parseCsvFromChatGpt = (
-    csvText: string,
-  ): { header: string[]; rows: ParsedRow[] } => {
+  const parseCsv = (csvText: string): { header: string[]; rows: ParsedRow[] } => {
     const lines = csvText
       .split(/\r?\n/)
       .map((l) => l.trim())
@@ -245,18 +118,57 @@ const AdminConverterPdf = () => {
     simulateProgress();
 
     try {
-      const token = await ensureOpenAiToken();
-      const base64 = await fileToBase64(file);
+      // 1) Upload do PDF para o bucket NPS-pro, pasta extrato_de_pagamento
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const timestamp = Date.now();
+      const path = `extrato_de_pagamento/${timestamp}-${safeName}`;
 
-      const truncated = base64.length > MAX_BASE64_LENGTH;
-      const base64ToSend = truncated ? base64.slice(0, MAX_BASE64_LENGTH) : base64;
+      const { error: uploadError } = await supabase.storage
+        .from("NPS-pro")
+        .upload(path, file, {
+          upsert: true,
+        });
 
-      const csvText = await askChatGptForCsvFromPdfBase64(base64ToSend, token, truncated);
-      const { header: builtHeader, rows: builtRows } = parseCsvFromChatGpt(csvText);
+      if (uploadError) {
+        throw new Error(
+          uploadError.message ||
+            "Não foi possível enviar o PDF para o storage do Supabase.",
+        );
+      }
+
+      // 2) Chamar a Edge Function process-extrato-pagamento passando o filePath
+      const functionUrl =
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-extrato-pagamento";
+
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filePath: path }),
+      });
+
+      const json = (await response.json()) as any;
+
+      if (!response.ok || json?.error) {
+        const msg =
+          json?.error ??
+          "Erro ao processar o PDF com o ChatGPT (Edge Function).";
+        throw new Error(msg);
+      }
+
+      const csvText: string | undefined = json?.csv;
+      if (!csvText || typeof csvText !== "string") {
+        throw new Error(
+          "A Edge Function não retornou um CSV válido. Verifique o processamento.",
+        );
+      }
+
+      const { header: builtHeader, rows: builtRows } = parseCsv(csvText);
 
       if (builtRows.length === 0) {
         showError(
-          "ChatGPT não conseguiu extrair dados tabulares deste PDF com o formato solicitado.",
+          "O CSV retornado pelo ChatGPT está vazio ou sem linhas de dados.",
         );
         setRows([]);
         setHeader([]);
@@ -266,13 +178,13 @@ const AdminConverterPdf = () => {
       setHeader(builtHeader);
       setRows(builtRows);
       showSuccess(
-        `PDF processado com sucesso via ChatGPT. ${builtRows.length} linha(s) de dados extraídas.`,
+        `PDF processado com sucesso. ${builtRows.length} linha(s) de dados extraídas.`,
       );
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível converter o PDF com ChatGPT.";
+          : "Não foi possível converter o PDF.";
       showError(message);
       setRows([]);
       setHeader([]);
@@ -303,7 +215,7 @@ const AdminConverterPdf = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
-    const nameBase = file?.name?.replace(/\.pdf$/i, "") || "dados_pdf";
+    const nameBase = file?.name?.replace(/\.pdf$/i, "") || "extrato_pagamento";
     link.href = url;
     link.setAttribute("download", `${nameBase}.csv`);
     document.body.appendChild(link);
@@ -334,10 +246,10 @@ const AdminConverterPdf = () => {
               </Button>
               <div className="flex flex-col">
                 <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
-                  Converter PDF (ChatGPT)
+                  Converter PDF (Extrato de Pagamento)
                 </h1>
                 <p className="text-xs text-slate-400 sm:text-sm">
-                  Envie um PDF; o ChatGPT usa um prompt rígido para montar um CSV fiel aos dados do relatório.
+                  O PDF é enviado para o Supabase e processado integralmente pelo ChatGPT via Edge Function.
                 </p>
               </div>
             </div>
@@ -345,7 +257,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Prompt mais rígido: não inventar procedimentos, valores ou repasses
+                PDF vai para NPS-pro/extrato_de_pagamento e é lido direto pelo ChatGPT
               </span>
             </div>
           </header>
@@ -362,7 +274,7 @@ const AdminConverterPdf = () => {
                     <span>Upload de PDF</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Selecione o PDF analítico (como o exemplo do médico Jose Airton) para gerar o CSV de repasse.
+                    O arquivo será salvo em <strong>NPS-pro/extrato_de_pagamento</strong> e processado pelo ChatGPT no backend.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -377,7 +289,7 @@ const AdminConverterPdf = () => {
                       className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
                     />
                     <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      O PDF é convertido para base64 e enviado à API da OpenAI com regras rígidas para não inventar dados.
+                      Use o extrato em PDF (como o analítico do médico) para gerar um CSV fiel aos dados.
                     </p>
                   </div>
 
@@ -427,7 +339,7 @@ const AdminConverterPdf = () => {
                           className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"
                         />
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Enviando o PDF (base64) para o ChatGPT com o prompt rígido de extração...
+                          Enviando o PDF para o Supabase e processando com o ChatGPT...
                         </p>
                       </div>
                     )}
