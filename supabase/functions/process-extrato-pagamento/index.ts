@@ -26,11 +26,11 @@ serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!supabaseUrl || !serviceKey) {
+    const msg =
+      "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados na Edge Function.";
+    console.error(msg);
     return new Response(
-      JSON.stringify({
-        error:
-          "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados na Edge Function.",
-      }),
+      JSON.stringify({ error: msg }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -44,9 +44,13 @@ serve(async (req) => {
   try {
     const raw = await req.text();
     body = JSON.parse(raw) as RequestBody;
-  } catch {
+  } catch (e) {
+    console.error("Body JSON inválido:", e);
     return new Response(
-      JSON.stringify({ error: "Body JSON inválido." }),
+      JSON.stringify({
+        error: "Body JSON inválido.",
+        details: e instanceof Error ? e.message : String(e),
+      }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -57,10 +61,11 @@ serve(async (req) => {
   const { filePath } = body;
 
   if (!filePath || typeof filePath !== "string") {
+    const msg =
+      "Parâmetro obrigatório: filePath (path do PDF no bucket NPS-pro).";
+    console.error(msg, "filePath recebido:", filePath);
     return new Response(
-      JSON.stringify({
-        error: "Parâmetro obrigatório: filePath (path do PDF no bucket NPS-pro).",
-      }),
+      JSON.stringify({ error: msg }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -80,6 +85,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Erro ao carregar configurações da aplicação (app_settings).",
+        details: settingsError.message,
       }),
       {
         status: 500,
@@ -92,11 +98,11 @@ serve(async (req) => {
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
 
   if (!openaiToken) {
+    const msg =
+      "Token da OpenAI não configurado em app_settings (campo openai_api_token).";
+    console.error(msg);
     return new Response(
-      JSON.stringify({
-        error:
-          "Token da OpenAI não configurado em app_settings (campo openai_api_token).",
-      }),
+      JSON.stringify({ error: msg }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -120,6 +126,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Não foi possível criar URL assinada para o PDF.",
+        details: signedError?.message ?? "URL assinada ausente",
       }),
       {
         status: 400,
@@ -131,7 +138,7 @@ serve(async (req) => {
   const signedUrl = signed.signedUrl;
   console.log("URL assinada do PDF:", signedUrl);
 
-  // 3) Baixar o PDF da URL assinada
+  // 3) Baixar o PDF da URL assinada e enviar à Files API
   let fileId: string | null = null;
 
   try {
@@ -144,6 +151,7 @@ serve(async (req) => {
         JSON.stringify({
           error:
             "Falha ao baixar o PDF do storage para enviar ao ChatGPT.",
+          details: txt,
         }),
         {
           status: 500,
@@ -157,7 +165,6 @@ serve(async (req) => {
       type: "application/pdf",
     });
 
-    // 4) Enviar o PDF para a OpenAI como arquivo (Files API)
     const formData = new FormData();
     formData.append("file", pdfBlob, "extrato_pagamento.pdf");
     formData.append("purpose", "assistants");
@@ -178,6 +185,7 @@ serve(async (req) => {
         JSON.stringify({
           error:
             "Não foi possível enviar o PDF para a OpenAI (Files API).",
+          details: errText,
         }),
         {
           status: 500,
@@ -195,6 +203,7 @@ serve(async (req) => {
         JSON.stringify({
           error:
             "A OpenAI não retornou um id de arquivo para o PDF enviado.",
+          details: JSON.stringify(uploadJson),
         }),
         {
           status: 500,
@@ -208,6 +217,7 @@ serve(async (req) => {
       JSON.stringify({
         error:
           "Erro inesperado ao enviar o PDF para a OpenAI. Verifique os logs.",
+        details: e instanceof Error ? e.message : String(e),
       }),
       {
         status: 500,
@@ -216,23 +226,23 @@ serve(async (req) => {
     );
   }
 
-  // 5) Prompt rígido para extrair o CSV de repasse exatamente como especificado
+  // 5) Prompt rígido para extrair o CSV de repasse
   const csvPrompt =
     "Usando o PDF de relatório analítico de repasse em anexo como referência, " +
     "extraia os dados do PDF e crie um CSV com as seguintes instruções detalhadas:\n\n" +
     "1. Nome do médico: campo textual (por exemplo: 'Jose Airton Case Neto'). Use exatamente o nome que estiver no PDF.\n" +
     "2. Período: campo textual com o período do relatório (por exemplo, o período que aparece no cabeçalho). Use o texto exato do PDF.\n\n" +
     "3. Para cada atendimento/paciente, devem existir uma ou mais linhas, com as seguintes colunas:\n" +
-    "   3.1 NomePaciente: nome do paciente (ex.: 'WALLACY FILIPE DA MOTA SILVA').\n" +
-    "   3.2 DataAtendimento: data do atendimento (ex.: 28/08/2025).\n" +
-    "   3.3 DataPagamento: data do pagamento (ex.: 03/10/2025).\n" +
-    "   3.4 Pagante: operadora/pagante (ex.: 'AMIL').\n" +
-    "   3.5 CodigoProcedimento: código do procedimento (ex.: 10101012).\n" +
-    "   3.6 DescricaoProcedimento: descrição do procedimento (ex.: 'CONSULTA CONSULTORIO SADT').\n" +
-    "   3.7 ValorBase: valor base do procedimento (ex.: 91,00).\n" +
-    "   3.8 Glosa: valor de glosa (ex.: 0,00).\n" +
-    "   3.9 Desconto: valor de desconto (ex.: 9,24).\n" +
-    "   3.10 Liquido: valor líquido (ex.: 81,76).\n\n" +
+    "   3.1 NomePaciente: nome do paciente.\n" +
+    "   3.2 DataAtendimento: data do atendimento.\n" +
+    "   3.3 DataPagamento: data do pagamento.\n" +
+    "   3.4 Pagante: operadora/pagante.\n" +
+    "   3.5 CodigoProcedimento: código do procedimento.\n" +
+    "   3.6 DescricaoProcedimento: descrição do procedimento.\n" +
+    "   3.7 ValorBase: valor base do procedimento.\n" +
+    "   3.8 Glosa: valor de glosa.\n" +
+    "   3.9 Desconto: valor de desconto.\n" +
+    "   3.10 Liquido: valor líquido.\n\n" +
     "   Podem existir várias linhas de procedimentos para o mesmo paciente/atendimento. " +
     "   Você só deve criar uma linha se o procedimento realmente existir na tabela do PDF, com código, descrição e valores claramente visíveis.\n\n" +
     "4. Total de repasse (TotalRepasse):\n" +
@@ -244,8 +254,8 @@ serve(async (req) => {
     "- NÃO invente procedimentos, códigos, pacientes, datas ou valores. " +
     "  Se não encontrar algo claramente no PDF, deixe o campo vazio.\n" +
     "- NÃO crie linhas extras apenas por inferência. Cada linha do CSV deve corresponder a um procedimento visível no PDF.\n" +
-    "- Use SEMPRE vírgula como separador decimal (ex.: 81,76), igual ao PDF.\n" +
-    "- Não arredonde, não some e não subtraia valores por conta própria; apenas copie os valores exatamente como aparecem no relatório.\n" +
+    "- Use SEMPRE vírgula como separador decimal, igual ao PDF.\n" +
+    "- Não arredonde, some ou subtraia valores por conta própria; apenas copie os valores exatamente como aparecem no relatório.\n" +
     "- Não altere a descrição dos procedimentos; use o texto exato do PDF.\n" +
     "- Se estiver em dúvida sobre qualquer campo, deixe-o vazio em vez de tentar adivinhar.\n\n" +
     "FORMATO DO CSV:\n" +
@@ -256,7 +266,7 @@ serve(async (req) => {
     "Retorne APENAS o conteúdo CSV, usando ponto e vírgula (;) como separador de colunas e vírgula como separador decimal nos valores monetários. " +
     "Não inclua comentários, explicações, markdown ou qualquer texto fora do CSV.";
 
-  // 6) Chamar a Responses API com file_search para o arquivo enviado
+  // 6) Chamar a Responses API com file_search
   try {
     console.log("Chamando OpenAI Responses API com file_search para extrato...");
 
@@ -315,6 +325,7 @@ serve(async (req) => {
         JSON.stringify({
           error:
             "A resposta da OpenAI não retornou nenhum CSV utilizável para o extrato.",
+          details: JSON.stringify(respJson),
         }),
         {
           status: 500,
@@ -323,7 +334,6 @@ serve(async (req) => {
       );
     }
 
-    // 7) Sucesso: devolve o CSV ao frontend
     return new Response(
       JSON.stringify({
         success: true,
@@ -343,6 +353,7 @@ serve(async (req) => {
       JSON.stringify({
         error:
           "Erro inesperado ao chamar a OpenAI para gerar o CSV de extrato.",
+        details: e instanceof Error ? e.message : String(e),
       }),
       {
         status: 500,
