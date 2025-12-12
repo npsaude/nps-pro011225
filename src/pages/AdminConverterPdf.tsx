@@ -34,8 +34,6 @@ import { carregarAppSettings } from "@/services/app-settings-service";
 type ParsedRow = string[];
 
 const MAX_ROWS_PREVIEW = 200;
-// Limite de caracteres de base64 que enviaremos ao ChatGPT para não explodir o contexto.
-// Isso é um compromisso: PDFs muito grandes podem ser truncados, mas evitamos estourar o limite.
 const MAX_BASE64_LENGTH = 100_000;
 
 const AdminConverterPdf = () => {
@@ -112,7 +110,7 @@ const AdminConverterPdf = () => {
 
   /**
    * Envia o PDF em base64 (possivelmente truncado) para o ChatGPT
-   * e pede que ele leia o documento e devolva APENAS um CSV com ;.
+   * usando o prompt específico em português, e pede que devolva APENAS um CSV com ';'.
    */
   const askChatGptForCsvFromPdfBase64 = async (
     base64Pdf: string,
@@ -120,23 +118,49 @@ const AdminConverterPdf = () => {
     truncated: boolean,
   ): Promise<string> => {
     const systemPrompt =
-      "Você é um assistente especializado em ler PDFs de relatórios financeiros, " +
-      "extratos analíticos e tabelas (por exemplo, relatórios de faturamento ou produção médica). " +
-      "Sua tarefa é receber o conteúdo de um arquivo PDF em base64 e devolver APENAS os dados " +
-      "em formato CSV, usando ponto e vírgula (;) como separador. " +
-      "Sempre inclua uma linha de cabeçalho seguida pelas linhas de dados. " +
+      "Você é um assistente especializado em ler PDFs de relatórios analíticos de faturamento médico. " +
+      "Sua tarefa é receber o conteúdo de um arquivo PDF em base64 e devolver APENAS um arquivo CSV " +
+      "seguindo exatamente as regras descritas pelo usuário. " +
+      "Use sempre ponto e vírgula (;) como separador de coluna. " +
       "Não escreva nenhuma explicação, texto extra ou comentários fora do CSV.";
 
     const truncationNote = truncated
-      ? "ATENÇÃO: o conteúdo em base64 foi truncado para caber no limite. Foque na tabela principal mais evidente no arquivo (normalmente a maior tabela com dados numéricos) e ignore partes incompletas.\n\n"
+      ? "ATENÇÃO IMPORTANTE: o conteúdo em base64 foi truncado para caber no limite do modelo. " +
+        "Priorize a extração da tabela principal de atendimentos e dos valores relacionados a cada atendimento. " +
+        "Se algum trecho estiver incompleto, faça a melhor inferência possível, mas nunca invente valores fora de contexto.\n\n"
       : "";
 
     const userPrompt =
       truncationNote +
-      "Aqui está o conteúdo base64 de um arquivo PDF de relatório analítico. " +
-      "Decodifique o PDF, interprete as tabelas relevantes e devolva apenas um CSV com os dados, " +
-      "separando as colunas por ponto e vírgula (;). " +
-      "Não inclua texto fora do CSV.\n\n" +
+      "Usando o PDF de relatório analítico em anexo (conteúdo em base64 abaixo) como referência, " +
+      "extraia os dados do PDF e crie um CSV com as seguintes instruções:\n\n" +
+      "1. Nome do médico: campo textual (ex.: Jose Airton Case Neto)\n" +
+      "2. Período: campo textual com o período do relatório (ex.: 'Novembro/2025' ou equivalente no PDF)\n\n" +
+      "3. Para cada atendimento/paciente, devem existir uma ou mais linhas, com as seguintes colunas:\n" +
+      "   3.1 Nome do paciente (ex.: WALLACY FILIPE DA MOTA SILVA)\n" +
+      "   3.2 Data do Atendimento (ex.: 28/08/2025)\n" +
+      "   3.3 Data do Pagamento (ex.: 03/10/2025)\n" +
+      "   3.4 Pagante (ex.: AMIL)\n" +
+      "   3.5 Código do Procedimento (ex.: 10101012)\n" +
+      "   3.6 Descrição do Procedimento (ex.: CONSULTA CONSULTORIO SADT)\n" +
+      "   3.7 Valor Base (ex.: 91,00)\n" +
+      "   3.8 Glosa (ex.: 0,00)\n" +
+      "   3.9 Desconto (ex.: 9,24)\n" +
+      "   3.10 Líquido (ex.: 81,76)\n\n" +
+      "   Podem haver outras linhas de procedimentos para o mesmo paciente/atendimento. " +
+      "   Se houver, todas as linhas devem ser trazidas no CSV com os respectivos valores.\n\n" +
+      "4. Total de repasse:\n" +
+      "   Para cada atendimento (ou bloco de linhas do mesmo paciente/atendimento), calcule o Total de repasse do médico " +
+      "   conforme indicado no PDF. O valor do repasse deve aparecer APENAS NA ÚLTIMA LINHA daquele atendimento/paciente. " +
+      "   Nas demais linhas desse mesmo atendimento, deixe a coluna de Total de repasse vazia.\n\n" +
+      "Regras adicionais IMPORTANTES:\n" +
+      "- Use SEMPRE vírgula como separador decimal (ex.: 81,76), igual ao PDF.\n" +
+      "- Tenha muito cuidado com as casas decimais dos valores. Não perca precisão e não misture separador de milhar com decimal.\n" +
+      "- Os valores devem refletir exatamente o que está no PDF.\n" +
+      "- O CSV deve ter uma linha de cabeçalho com as colunas na ordem abaixo, e depois uma linha para cada procedimento:\n" +
+      "  NomeMedico;Periodo;NomePaciente;DataAtendimento;DataPagamento;Pagante;CodigoProcedimento;DescricaoProcedimento;ValorBase;Glosa;Desconto;Liquido;TotalRepasse\n\n" +
+      "Agora, gere APENAS o conteúdo CSV (sem texto extra, sem markdown, sem comentários). " +
+      "Segue o conteúdo base64 do PDF:\n\n" +
       base64Pdf;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -224,7 +248,7 @@ const AdminConverterPdf = () => {
 
       if (builtRows.length === 0) {
         showError(
-          "ChatGPT não conseguiu extrair dados tabulares deste PDF. Verifique o arquivo ou tente ajustar o modelo.",
+          "ChatGPT não conseguiu extrair dados tabulares deste PDF com o formato solicitado.",
         );
         setRows([]);
         setHeader([]);
@@ -305,7 +329,7 @@ const AdminConverterPdf = () => {
                   Converter PDF (ChatGPT)
                 </h1>
                 <p className="text-xs text-slate-400 sm:text-sm">
-                  Envie um PDF, e o ChatGPT lerá o arquivo em base64 e montará um CSV tabular.
+                  Envie um PDF; o ChatGPT usa o prompt específico para montar um CSV com os campos de repasse.
                 </p>
               </div>
             </div>
@@ -313,7 +337,7 @@ const AdminConverterPdf = () => {
             <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:flex">
               <FileDown className="mr-1.5 h-4 w-4 text-slate-400" />
               <span className="text-slate-500 dark:text-slate-300">
-                Somente ChatGPT lendo o PDF (base64), sem bibliotecas de PDF locais
+                Prompt customizado de repasse (apenas ChatGPT, sem libs de PDF)
               </span>
             </div>
           </header>
@@ -330,8 +354,7 @@ const AdminConverterPdf = () => {
                     <span>Upload de PDF</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Selecione o PDF que deseja converter. O arquivo é enviado como base64 para
-                    o ChatGPT, que interpreta e devolve um CSV.
+                    Selecione o PDF analítico (como o exemplo do médico Jose Airton) para gerar o CSV de repasse.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-xs sm:text-sm">
@@ -346,8 +369,8 @@ const AdminConverterPdf = () => {
                       className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
                     />
                     <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      Para PDFs muito grandes, pode ser necessário truncar o conteúdo para não
-                      ultrapassar o limite de contexto do modelo.
+                      O PDF é convertido para base64 e enviado à API da OpenAI com um prompt específico
+                      para extrair dados de paciente, procedimentos e total de repasse.
                     </p>
                   </div>
 
@@ -397,7 +420,7 @@ const AdminConverterPdf = () => {
                           className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"
                         />
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Enviando o PDF (base64) para o ChatGPT e aguardando o CSV...
+                          Enviando o PDF (base64) para o ChatGPT com o prompt de repasse...
                         </p>
                       </div>
                     )}
@@ -415,8 +438,7 @@ const AdminConverterPdf = () => {
                     <span>Tabela extraída</span>
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Visualize os dados estruturados obtidos pelo ChatGPT. A pré-visualização
-                    mostra até {MAX_ROWS_PREVIEW} linhas.
+                    Visualize os dados estruturados (Nome do médico, período, paciente, procedimentos, total de repasse).
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="overflow-x-auto pt-1 text-xs sm:text-sm">
