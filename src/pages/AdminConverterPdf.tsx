@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 
 import * as pdfjsLib from "pdfjs-dist";
-import "pdfjs-dist/build/pdf.worker.entry";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import {
@@ -37,13 +36,16 @@ type ParsedRow = string[];
 
 const MAX_ROWS_PREVIEW = 200;
 
-// Garante que o worker do pdfjs está configurado (evita travar em alguns bundlers)
-if ((pdfjsLib as any).GlobalWorkerOptions) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  (pdfjsLib as any).GlobalWorkerOptions.workerSrc =
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    (pdfjsLib as any).GlobalWorkerOptions.workerSrc ||
-    `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjsLib as any).version || "3.11.174"}/pdf.worker.min.js`;
+// Configura o worker do pdfjs para carregar a partir de CDN.
+// Isso evita precisar importar arquivos internos como pdf.worker.entry.
+try {
+  const anyPdf = pdfjsLib as any;
+  if (anyPdf.GlobalWorkerOptions && !anyPdf.GlobalWorkerOptions.workerSrc) {
+    const version: string = anyPdf.version || "3.11.174";
+    anyPdf.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+  }
+} catch {
+  // Se não conseguir configurar, o pdfjs ainda tenta um fallback interno.
 }
 
 const AdminConverterPdf = () => {
@@ -92,28 +94,20 @@ const AdminConverterPdf = () => {
   };
 
   /**
-   * Extrai texto do PDF de forma estruturada usando pdfjs-dist.
-   * Em vez de ler os bytes brutos (que viram lixo), usamos o motor de PDF
-   * para ler o conteúdo de texto página a página e agrupamos por linhas.
+   * Extrai texto do PDF usando pdfjs-dist, agrupando itens por linha visual.
    */
   const extractLinesFromPdf = async (pdfFile: File): Promise<string[]> => {
     const arrayBuffer = await pdfFile.arrayBuffer();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const loadingTask = (pdfjsLib as any).getDocument({ data: arrayBuffer });
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const anyPdf = pdfjsLib as any;
+    const loadingTask = anyPdf.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
 
     const allLines: string[] = [];
-
-    // Percorre todas as páginas
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const numPages: number = pdf.numPages as number;
 
     for (let pageNum = 1; pageNum <= numPages; pageNum += 1) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const page = await pdf.getPage(pageNum);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const textContent = await page.getTextContent();
 
       type TextItem = {
@@ -123,9 +117,8 @@ const AdminConverterPdf = () => {
 
       const items = (textContent.items as TextItem[]) || [];
 
-      // Agrupa os itens por coordenada Y (linhas visuais)
       const lineMap = new Map<number, string[]>();
-      const yTolerance = 3; // tolerância para considerar a mesma linha
+      const yTolerance = 3;
 
       for (const item of items) {
         const str = (item.str ?? "").trim();
@@ -156,21 +149,18 @@ const AdminConverterPdf = () => {
       }
 
       const pageLines = Array.from(lineMap.entries())
-        // pdfjs usa origem no canto inferior; ordenar do topo para baixo
         .sort((a, b) => b[0] - a[0])
         .map(([, parts]) => parts.join(" ").trim())
         .filter((line) => line.length > 0);
 
-      allLines.push(...pageLines, ""); // separa páginas com linha em branco
+      allLines.push(...pageLines, "");
     }
 
     return allLines;
   };
 
   /**
-   * Recebe o texto extraído e tenta organizá-lo em linhas/colunas.
-   * - Se encontrar TAB ou ';', assume como delimitador de colunas.
-   * - Caso contrário, quebra em colunas por múltiplos espaços.
+   * Monta header + linhas em colunas a partir do texto extraído.
    */
   const buildRowsFromText = (
     text: string,
@@ -187,7 +177,6 @@ const AdminConverterPdf = () => {
     const detectDelimiter = (sample: string): "tab" | "semicolon" | "spaces" => {
       if (sample.includes("\t")) return "tab";
       if (sample.includes(";")) return "semicolon";
-      // múltiplos espaços seguidos
       if (/\s{2,}/.test(sample)) return "spaces";
       return "spaces";
     };
@@ -201,13 +190,11 @@ const AdminConverterPdf = () => {
       if (delimiter === "semicolon") {
         return line.split(";").map((c) => c.trim());
       }
-      // múltiplos espaços como separador
       return line.split(/\s{2,}/).map((c) => c.trim());
     };
 
     const parsed = rawLines.map(splitLine);
 
-    // Primeiro registro vira cabeçalho se parecer rótulo (sem números predominantes)
     const first = parsed[0];
     const hasNumeric = first.some((c) => /\d/.test(c));
     let localHeader: string[];
@@ -221,7 +208,6 @@ const AdminConverterPdf = () => {
       body = parsed;
     }
 
-    // Normaliza largura das linhas ao tamanho do cabeçalho
     const width = localHeader.length;
     const normalizedBody = body.map((row) => {
       if (row.length === width) return row;
