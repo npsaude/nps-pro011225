@@ -226,7 +226,6 @@ serve(async (req) => {
     );
   }
 
-  // 5) Prompt rígido para extrair o CSV de repasse
   const csvPrompt =
     "Usando o PDF de relatório analítico de repasse em anexo como referência, " +
     "extraia os dados do PDF e crie um CSV com as seguintes instruções detalhadas:\n\n" +
@@ -266,7 +265,7 @@ serve(async (req) => {
     "Retorne APENAS o conteúdo CSV, usando ponto e vírgula (;) como separador de colunas e vírgula como separador decimal nos valores monetários. " +
     "Não inclua comentários, explicações, markdown ou qualquer texto fora do CSV.";
 
-  // 6) Chamar a Responses API com file_search
+  // 6) Chamar a Responses API com file_search, agora com attachments dentro do input
   try {
     console.log("Chamando OpenAI Responses API com file_search para extrato...");
 
@@ -278,11 +277,21 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4.1-mini",
-        input: csvPrompt,
-        attachments: [
+        input: [
           {
-            file_id: fileId,
-            tools: [{ type: "file_search" }],
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: csvPrompt,
+              },
+            ],
+            attachments: [
+              {
+                file_id: fileId,
+                tools: [{ type: "file_search" }],
+              },
+            ],
           },
         ],
       }),
