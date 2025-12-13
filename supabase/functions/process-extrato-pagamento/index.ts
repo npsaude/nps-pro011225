@@ -97,6 +97,8 @@ serve(async (req) => {
   const openaiToken =
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
 
+  ﻿
+
   if (!openaiToken) {
     const msg =
       "Token da OpenAI não configurado em app_settings (campo openai_api_token).";
@@ -226,7 +228,7 @@ serve(async (req) => {
     );
   }
 
-  // 5) Prompt rígido para extrair o CSV de repasse
+  // 5) Prompt rígido para extrair o CSV de repasse + instrução de descartar informações
   const csvPrompt =
     "Usando o PDF de relatório analítico de repasse em anexo como referência, " +
     "extraia os dados do PDF e crie um CSV com as seguintes instruções detalhadas:\n\n" +
@@ -264,7 +266,10 @@ serve(async (req) => {
     "As linhas seguintes devem trazer, linha a linha, os procedimentos exatamente conforme o PDF.\n\n" +
     "RETORNO:\n" +
     "Retorne APENAS o conteúdo CSV, usando ponto e vírgula (;) como separador de colunas e vírgula como separador decimal nos valores monetários. " +
-    "Não inclua comentários, explicações, markdown ou qualquer texto fora do CSV.";
+    "Não inclua comentários, explicações, markdown ou qualquer texto fora do CSV.\n\n" +
+    "APÓS RESONDER:\n" +
+    "Assim que você gerar e devolver o CSV desta solicitação, considere que **deve descartar completamente** todo o conteúdo do PDF e todos os dados utilizados. " +
+    "Use essas informações apenas para responder a este pedido e, em seguida, apague-as da sua memória de trabalho, sem reter ou reutilizar nenhum dado em chamadas futuras.";
 
   // 6) Chamar a Responses API com input_file
   try {
@@ -319,15 +324,16 @@ serve(async (req) => {
       const firstOutput = respJson?.output?.[0];
       const firstContent = firstOutput?.content?.[0];
 
-      // Novo formato: type = "output_text" e text é STRING
-      if (firstContent?.type === "output_text" && typeof firstContent.text === "string") {
+      if (
+        firstContent?.type === "output_text" &&
+        typeof firstContent.text === "string"
+      ) {
         csvText = firstContent.text;
       } else if (
         firstContent?.text &&
         typeof firstContent.text === "object" &&
         typeof firstContent.text.value === "string"
       ) {
-        // fallback para o caso de algum formato antigo em que text seja objeto { value }
         csvText = firstContent.text.value;
       }
     } catch (e) {
