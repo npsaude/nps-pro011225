@@ -230,8 +230,9 @@ const AdminSidebar = ({
                     ? cadastroItemActive
                     : cadastroItemInactive
                 }
+                onClick={() => navigate("/admin/assinaturas/planos")}
               >
-                <span className="ml-7">Planos de Saúde</span>
+                <span className="ml-7">Planos de assinatura</span>
               </button>
             </div>
           </div>

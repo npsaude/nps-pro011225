@@ -27,6 +27,7 @@ import HospitaisCadastro from "./pages/HospitaisCadastro";
 import MedicoInicio from "./pages/MedicoInicio";
 import AdminFaturamento from "./pages/AdminFaturamento";
 import AdminFinancas from "./pages/AdminFinancas";
+import AdminSubscriptionPlans from "./pages/AdminSubscriptionPlans";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,10 @@ const App = () => (
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
+          <Route
+            path="/admin/assinaturas/planos"
+            element={<AdminSubscriptionPlans />}
+          />
 
           {/* Configurações administrativas */}
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />

@@ -2,7 +2,9 @@ import type { DbSystemUser } from "@/db/schema";
 import { supabase } from "@/integrations/supabase/client";
 import { salvarMedico } from "@/services/medicos-service";
 
-export type AllowedRole = "ADMIN" | "MEDICO";
+export type AllowedRole = "ADMIN" | "MEDICO" | "SUPER_ADMIN";
+
+export type RegisterRole = "ADMIN" | "MEDICO";
 
 export interface LoginResult {
   user: DbSystemUser | null;
@@ -63,7 +65,10 @@ export async function loginWithRole(params: {
   }
 
   // Garante que o papel do usuário é o permitido para essa área
-  if (typedUser.regra !== allowedRole) {
+  const allowedRoles =
+    allowedRole === "ADMIN" ? (["ADMIN", "SUPER_ADMIN"] as const) : ([allowedRole] as const);
+
+  if (!allowedRoles.includes(typedUser.regra as any)) {
     // Encerra sessão para evitar sessão ativa em área errada
     await supabase.auth.signOut();
 
@@ -96,7 +101,7 @@ export async function registerUser(params: {
   nome: string;
   email: string;
   password: string;
-  role: AllowedRole;
+  role: RegisterRole;
 }): Promise<DbSystemUser> {
   const { nome, email, password, role } = params;
 

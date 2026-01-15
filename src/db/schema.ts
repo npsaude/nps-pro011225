@@ -22,7 +22,7 @@ export interface DbSadt {
   updatedAt: string; // ISO datetime
 }
 
-export type DbUserRole = "MEDICO" | "ADMIN";
+export type DbUserRole = "MEDICO" | "ADMIN" | "SUPER_ADMIN";
 
 export interface DbAppUser {
   id: string;
@@ -226,6 +226,55 @@ export interface DbDescricaoCirurgica {
   // Pasta do Storage onde os arquivos desta descrição foram salvos
   storage_folder: string | null;
 
+  created_at: string;
+  updated_at: string;
+}
+
+export type DbBillingInterval = "DAY" | "WEEK" | "MONTH" | "YEAR";
+
+export interface DbSubscriptionPlan {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  billing_interval: DbBillingInterval;
+  interval_count: number;
+  external_plan_id: string | null;
+  setup_fee_cents: number;
+  trial_days: number;
+  metadata: unknown | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DbSubscriptionEnrollmentStatus =
+  | "PENDING"
+  | "TRIAL"
+  | "ACTIVE"
+  | "PAUSED"
+  | "CANCELED"
+  | "FAILED";
+
+export interface DbSubscriptionEnrollment {
+  id: string;
+  plan_id: string;
+  asaas_subscription_id: string | null;
+  asaas_customer_id: string | null;
+  user_name: string;
+  user_email: string;
+  user_phone: string | null;
+  status: DbSubscriptionEnrollmentStatus;
+  payment_method: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  last_payment_at: string | null;
+  metadata: unknown | null;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
