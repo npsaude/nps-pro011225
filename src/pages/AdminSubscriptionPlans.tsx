@@ -1,6 +1,6 @@
 import { BadgeDollarSign, Bell } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import SubscriptionPlansList from "../components/subscriptions/SubscriptionPlansList";
+import SubscriptionPlansList from "@/components/subscriptions/SubscriptionPlansList";
 
 export default function AdminSubscriptionPlans() {
   return (
