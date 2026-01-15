@@ -19,7 +19,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 
-import { carregarAppSettings, salvarTokenOpenAI } from "@/services/app-settings-service";
+import { carregarAppSettings, salvarTokenOpenAI, salvarTokenAsaas } from "@/services/app-settings-service";
 import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { criarDadosExemplo } from "@/services/demo-data-service";
@@ -27,8 +27,10 @@ import { criarDadosExemplo } from "@/services/demo-data-service";
 const AdminConfiguracoes = () => {
   const navigate = useNavigate();
   const [token, setToken] = useState("");
+  const [asaasToken, setAsaasToken] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [salvandoAsaas, setSalvandoAsaas] = useState(false);
   const [criandoDemo, setCriandoDemo] = useState(false);
 
   useEffect(() => {
@@ -38,6 +40,9 @@ const AdminConfiguracoes = () => {
         const settings = await carregarAppSettings();
         if (settings?.openaiApiToken) {
           setToken(settings.openaiApiToken);
+        }
+        if (settings?.asaasToken) {
+          setAsaasToken(settings.asaasToken);
         }
       } catch (err) {
         const message =
@@ -83,6 +88,23 @@ const AdminConfiguracoes = () => {
       showError(message);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const handleSalvarAsaas = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSalvandoAsaas(true);
+    try {
+      await salvarTokenAsaas(asaasToken.trim());
+      showSuccess("Token Asaas salvo com sucesso.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o Token Asaas.";
+      showError(message);
+    } finally {
+      setSalvandoAsaas(false);
     }
   };
 
@@ -143,7 +165,7 @@ const AdminConfiguracoes = () => {
                   <span>Integrações e chaves de API</span>
                 </h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Configure aqui o Token OpenAI utilizado pelos recursos de leitura automática de guias e documentos.
+                  Configure aqui os tokens utilizados pelas integrações do sistema (OpenAI e Asaas).
                 </p>
               </section>
 
@@ -210,53 +232,101 @@ const AdminConfiguracoes = () => {
                 </Card>
               </div>
 
-              <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
-                      <KeyRound className="h-4 w-4" />
-                    </span>
-                    <span>Token OpenAI</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Informe o token de API da OpenAI para habilitar a leitura automática de documentos (OCR inteligente das guias SADT).
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form
-                    className="space-y-4 text-xs sm:text-sm"
-                    onSubmit={handleSalvar}
-                  >
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        Token OpenAI
-                      </label>
-                      <Input
-                        type="password"
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                        placeholder="sk-..."
-                        className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
-                        disabled={carregando}
-                      />
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        Use um token com permissão para o modelo que será utilizado na leitura das guias.
-                        Guarde esta informação em local seguro. Apenas administradores devem ter acesso.
-                      </p>
-                    </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
+                        <KeyRound className="h-4 w-4" />
+                      </span>
+                      <span>Token OpenAI</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Token para habilitar a leitura automática de documentos.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      className="space-y-4 text-xs sm:text-sm"
+                      onSubmit={handleSalvar}
+                    >
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                          Token OpenAI
+                        </label>
+                        <Input
+                          type="password"
+                          value={token}
+                          onChange={(e) => setToken(e.target.value)}
+                          placeholder="sk-..."
+                          className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
+                          disabled={carregando}
+                        />
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          Apenas administradores devem ter acesso.
+                        </p>
+                      </div>
 
-                    <div className="flex justify-end pt-1">
-                      <Button
-                        type="submit"
-                        disabled={salvando || carregando}
-                        className="h-9 rounded-full px-5 text-xs sm:text-sm"
-                      >
-                        {salvando ? "Salvando..." : "Salvar configurações"}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          type="submit"
+                          disabled={salvando || carregando}
+                          className="h-9 rounded-full px-5 text-xs sm:text-sm"
+                        >
+                          {salvando ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                        <KeyRound className="h-4 w-4" />
+                      </span>
+                      <span>Token Asaas (Sandbox)</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Token do ambiente sandbox que será usado pelo motor de assinatura (Edge Functions).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      className="space-y-4 text-xs sm:text-sm"
+                      onSubmit={handleSalvarAsaas}
+                    >
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                          Token Asaas
+                        </label>
+                        <Input
+                          type="password"
+                          value={asaasToken}
+                          onChange={(e) => setAsaasToken(e.target.value)}
+                          placeholder="$aact_..."
+                          className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
+                          disabled={carregando}
+                        />
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          Este token não é exposto para o fluxo de assinatura no front-end; apenas a Edge Function usa.
+                        </p>
+                      </div>
+
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          type="submit"
+                          disabled={salvandoAsaas || carregando}
+                          className="h-9 rounded-full px-5 text-xs sm:text-sm"
+                        >
+                          {salvandoAsaas ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </main>
         </div>

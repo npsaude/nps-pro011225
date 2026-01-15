@@ -40,6 +40,7 @@ export interface DbAppUser {
 export interface DbAppSettings {
   id: string;
   openaiApiToken: string | null;
+  asaasToken: string | null;
   createdAt: string;
   updatedAt: string;
 }

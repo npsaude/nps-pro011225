@@ -22,10 +22,15 @@ export async function carregarAppSettings(): Promise<DbAppSettings | null> {
     id: (data as any).id,
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     createdAt:
-      (data as any).createdAt ?? (data as any).created_at ?? new Date().toISOString(),
+      (data as any).createdAt ??
+      (data as any).created_at ??
+      new Date().toISOString(),
     updatedAt:
-      (data as any).updatedAt ?? (data as any).updated_at ?? new Date().toISOString(),
+      (data as any).updatedAt ??
+      (data as any).updated_at ??
+      new Date().toISOString(),
   };
 
   return mapped;
@@ -60,6 +65,7 @@ export async function salvarTokenOpenAI(
       id: (data as any).id,
       openaiApiToken:
         (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+      asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
       createdAt:
         (data as any).createdAt ??
         (data as any).created_at ??
@@ -94,6 +100,79 @@ export async function salvarTokenOpenAI(
     id: (data as any).id,
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+    createdAt:
+      (data as any).createdAt ??
+      (data as any).created_at ??
+      new Date().toISOString(),
+    updatedAt:
+      (data as any).updatedAt ??
+      (data as any).updated_at ??
+      new Date().toISOString(),
+  };
+
+  return mapped;
+}
+
+export async function salvarTokenAsaas(
+  token: string,
+): Promise<DbAppSettings> {
+  const existente = await carregarAppSettings();
+
+  if (existente) {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .update({
+        asaas_token: token,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existente.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      throw new Error(
+        error.message || "Não foi possível salvar o Token da Asaas.",
+      );
+    }
+
+    const mapped: DbAppSettings = {
+      id: (data as any).id,
+      openaiApiToken:
+        (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+      asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+      createdAt:
+        (data as any).createdAt ??
+        (data as any).created_at ??
+        new Date().toISOString(),
+      updatedAt:
+        (data as any).updatedAt ??
+        (data as any).updated_at ??
+        new Date().toISOString(),
+    };
+
+    return mapped;
+  }
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .insert({
+      asaas_token: token,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message || "Não foi possível criar as configurações com Token Asaas.",
+    );
+  }
+
+  const mapped: DbAppSettings = {
+    id: (data as any).id,
+    openaiApiToken:
+      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
