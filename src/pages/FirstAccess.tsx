@@ -48,7 +48,7 @@ export default function FirstAccess() {
         <div className="rounded-[32px] bg-card p-6 ring-1 ring-border shadow-[0_24px_70px_rgba(0,0,0,0.55)] sm:p-8">
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/boas-vindas")}
             className="mb-4 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

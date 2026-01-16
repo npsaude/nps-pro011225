@@ -40,12 +40,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Boas-vindas */}
-          <Route path="/" element={<Welcome />} />
-
-          {/* Acesso */}
+          {/* Home do sistema: login */}
+          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/login-medico" element={<LoginMedico />} />
+
+          {/* Tela de boas-vindas */}
+          <Route path="/boas-vindas" element={<Welcome />} />
 
           {/* Primeiro acesso: envia link para cadastrar senha */}
           <Route path="/primeiro-acesso" element={<FirstAccess />} />
