@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { KeyRound, LogIn } from "lucide-react";
+import { Construction, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 const LOGO_URL =
   "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2ODU3Mzc4MCwiZXhwIjoxNzY5MTc4NTgwfQ.qi7ioLeitzVCihhcOXRpJD2MKKHn-vPOyD-yH776OKY";
 
-export default function Welcome() {
+export default function UnderConstruction() {
   const navigate = useNavigate();
 
   return (
@@ -15,7 +15,7 @@ export default function Welcome() {
 
       <div className="w-full max-w-lg px-4">
         <div className="rounded-[32px] bg-card p-6 ring-1 ring-border shadow-[0_24px_70px_rgba(0,0,0,0.55)] sm:p-8">
-          <header className="flex items-center gap-3">
+          <header className="flex items-start gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background ring-1 ring-border">
               <img
                 src={LOGO_URL}
@@ -23,44 +23,43 @@ export default function Welcome() {
                 className="h-8 w-8 object-contain"
               />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-base font-semibold leading-none sm:text-lg">
-                Bem-vindo ao NP Saúde Pró
+
+            <div className="flex-1">
+              <h1 className="flex items-center gap-2 text-base font-semibold sm:text-lg">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <Construction className="h-4 w-4" />
+                </span>
+                Plataforma em construção
               </h1>
               <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                Escolha como deseja continuar.
+                Estamos finalizando essa etapa. Em breve você poderá continuar
+                por aqui.
               </p>
             </div>
           </header>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Button
-              className="h-11 rounded-xl bg-primary text-primary-foreground hover:opacity-95"
-              onClick={() => navigate("/plataforma-em-construcao")}
-            >
-              <KeyRound className="mr-2 h-4 w-4" />
-              Primeiro acesso
-            </Button>
-
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
             <Button
               variant="secondary"
               className="h-11 rounded-xl"
-              onClick={() => navigate("/plataforma-em-construcao")}
+              onClick={() => navigate("/boas-vindas")}
             >
-              <LogIn className="mr-2 h-4 w-4" />
-              Acesso ao sistema
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+
+            <Button
+              className="h-11 rounded-xl bg-primary text-primary-foreground hover:opacity-95"
+              onClick={() => navigate("/login")}
+            >
+              Ir para login
             </Button>
           </div>
 
           <p className="mt-4 text-[11px] text-muted-foreground">
-            Se você recebeu um convite/cadastro prévio, use <b>Primeiro acesso</b>{" "}
-            para definir sua senha.
+            © {new Date().getFullYear()} NP Saúde Pró.
           </p>
         </div>
-
-        <p className="mt-5 text-center text-[10px] text-muted-foreground">
-          © {new Date().getFullYear()} NP Saúde Pró.
-        </p>
       </div>
     </div>
   );

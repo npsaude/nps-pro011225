@@ -30,6 +30,7 @@ import AdminFinancas from "./pages/AdminFinancas";
 import AdminSubscriptionPlans from "./pages/AdminSubscriptionPlans";
 import Welcome from "./pages/Welcome";
 import FirstAccess from "./pages/FirstAccess";
+import UnderConstruction from "./pages/UnderConstruction";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,12 @@ const App = () => (
 
           {/* Tela de boas-vindas */}
           <Route path="/boas-vindas" element={<Welcome />} />
+
+          {/* Plataforma em construção */}
+          <Route
+            path="/plataforma-em-construcao"
+            element={<UnderConstruction />}
+          />
 
           {/* Primeiro acesso: envia link para cadastrar senha */}
           <Route path="/primeiro-acesso" element={<FirstAccess />} />
