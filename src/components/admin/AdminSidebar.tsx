@@ -17,6 +17,9 @@ interface AdminSidebarProps {
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "planos";
 }
 
+const LOGO_URL =
+  "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2ODU3Mzc4MCwiZXhwIjoxNzY5MTc4NTgwfQ.qi7ioLeitzVCihhcOXRpJD2MKKHn-vPOyD-yH776OKY";
+
 const AdminSidebar = ({
   section,
   cadastroSubsection,
@@ -52,42 +55,41 @@ const AdminSidebar = ({
   const baseButton =
     "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all";
   const inactiveMain =
-    baseButton + " text-slate-200 hover:bg-slate-900/40";
+    baseButton + " text-sidebar-foreground/80 hover:bg-sidebar-accent/50";
   const activeMain =
-    baseButton +
-    " bg-[#1D4E77] text-white shadow-md shadow-slate-900/50";
+    baseButton + " bg-primary text-primary-foreground shadow-md";
 
   const iconWrapperActive =
-    "flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white";
+    "flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-primary-foreground";
   const iconWrapperInactive =
-    "flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/40 text-slate-100";
+    "flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent/60 text-sidebar-foreground";
 
   const cadastroContainer =
-    "mt-1 rounded-2xl bg-slate-900/40 p-2 text-xs text-slate-200 ring-1 ring-slate-800";
+    "mt-1 rounded-2xl bg-sidebar-accent/40 p-2 text-xs text-sidebar-foreground ring-1 ring-sidebar-border";
   const cadastroItemBase =
     "flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs transition-colors";
   const cadastroItemActive =
-    cadastroItemBase + " bg-slate-900 text-slate-100";
+    cadastroItemBase + " bg-sidebar-accent text-sidebar-foreground";
   const cadastroItemInactive =
-    cadastroItemBase + " text-slate-200 hover:bg-slate-900/60";
+    cadastroItemBase + " text-sidebar-foreground/80 hover:bg-sidebar-accent/60";
 
   return (
-    <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-[#0F2A43] p-4 text-slate-50 shadow-[0_18px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:flex">
+    <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-sidebar p-4 text-sidebar-foreground shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:flex">
       <div className="flex flex-col gap-8">
         {/* Logo */}
         <div className="flex items-center gap-3 px-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1D4E77]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sidebar-accent">
             <img
-              src="/logo.jpeg"
-              alt="Logo NP Saúde Pró"
-              className="h-8 w-8 rounded-xl object-cover"
+              src={LOGO_URL}
+              alt="Logo CONMEDIC"
+              className="h-8 w-8 rounded-xl object-contain"
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold leading-none text-slate-50">
+            <span className="text-sm font-semibold leading-none text-sidebar-foreground">
               NP Saúde Pró
             </span>
-            <span className="text-xs text-slate-300">
+            <span className="text-xs text-sidebar-foreground/70">
               Painel administrativo
             </span>
           </div>
@@ -190,10 +192,10 @@ const AdminSidebar = ({
           {/* Cadastro */}
           <div className={cadastroContainer}>
             <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-slate-100">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
                 <Users className="h-4 w-4" />
               </span>
-              <span className="text-xs font-semibold text-slate-50">
+              <span className="text-xs font-semibold text-sidebar-foreground">
                 Cadastro
               </span>
             </div>
@@ -223,7 +225,7 @@ const AdminSidebar = ({
                 <span className="ml-7">Médicos</span>
               </button>
 
-              {/* Planos de Saúde (placeholder de rota) */}
+              {/* Planos */}
               <button
                 className={
                   currentCadastroSub === "planos"
@@ -245,7 +247,7 @@ const AdminSidebar = ({
               </span>
               <span className="font-medium">Mensagens</span>
             </span>
-            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 text-[11px] font-semibold text-white">
+            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive text-[11px] font-semibold text-destructive-foreground">
               2
             </span>
           </button>
@@ -282,8 +284,8 @@ const AdminSidebar = ({
       </div>
 
       {/* Logout */}
-      <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-900/60">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/50 text-slate-100">
+      <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
           <HelpCircle className="h-4 w-4" />
         </span>
         <span>Sair</span>

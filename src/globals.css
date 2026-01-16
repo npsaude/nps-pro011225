@@ -4,96 +4,97 @@
 
 @layer base {
   :root {
-    /* Paleta baseada no styleguide */
+    /* ===== Nova paleta (Base Escura + Dourado CONMEDIC) ===== */
 
-    /* Fundos principais em tons claros (Cinza Titan / Azul Gelo) */
-    --background: 213 24% 97%; /* aprox #F5F7F9 (titan_gray) */
-    --foreground: 215 14% 20%; /* texto principal em cinza escuro/obsidiano */
+    /* Base escura */
+    --background: 0 0% 7%; /* #121212 */
+    --foreground: 0 0% 96%; /* #F5F5F5 */
 
-    --card: 214 46% 94%; /* aprox #E6EEF7 (ice_blue) */
-    --card-foreground: 215 14% 20%;
+    --card: 0 0% 10%; /* #1A1A1A */
+    --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 14% 20%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 96%;
 
-    /* Primárias: Azul Aço / Azul Carbônico */
-    --primary: 205 58% 29%; /* aprox #1D4E77 (steel_blue) */
-    --primary-foreground: 0 0% 100%;
+    /* Dourado (marca) */
+    --primary: 43 82% 46%; /* #D4A017 */
+    --primary-foreground: 0 0% 7%; /* texto escuro sobre dourado */
 
-    /* Secundário: Cobre Médico */
-    --secondary: 26 49% 52%; /* aprox #C17A47 (medical_copper) */
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary (Graphite) */
+    --secondary: 0 0% 14%; /* #242424 */
+    --secondary-foreground: 0 0% 96%;
 
-    /* Neutros / superfícies */
-    --muted: 214 21% 90%; /* entre titan_gray e light_graphite */
-    --muted-foreground: 217 15% 45%;
+    /* Muted */
+    --muted: 0 0% 18%; /* #2E2E2E */
+    --muted-foreground: 0 0% 54%; /* #8A8A8A */
 
-    --accent: 205 46% 92%; /* azul gelo mais claro para realces suaves */
-    --accent-foreground: 215 24% 26%;
+    /* Accent (usando dourado claro) */
+    --accent: 48 98% 73%; /* #FEE67A */
+    --accent-foreground: 0 0% 7%;
 
     /* Estados */
-    --destructive: 16 55% 47%; /* cobre mais escuro para erros/alertas fortes */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 6 78% 57%; /* #E74C3C */
+    --destructive-foreground: 0 0% 96%;
 
-    /* Bordas, inputs e anéis */
-    --border: 214 21% 84%; /* aprox #D9DEE3 (light_graphite) */
-    --input: 214 21% 84%;
-    --ring: 205 58% 29%; /* Azul Aço para foco */
+    /* Bordas/inputs/ring */
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 43 82% 46%; /* gold */
 
     --radius: 0.75rem;
 
-    /* Sidebar / navegação (desktop-first) usando Azul Carbônico e Obsidiano */
-    --sidebar-background: 211 63% 16%; /* aprox #0F2A43 (carbon_blue) */
-    --sidebar-foreground: 210 25% 96%; /* texto quase branco */
+    /* Sidebar no mesmo tema */
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 96%;
 
-    --sidebar-primary: 205 58% 29%; /* steel_blue */
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 43 82% 46%;
+    --sidebar-primary-foreground: 0 0% 7%;
 
-    --sidebar-accent: 26 49% 52%; /* medical_copper */
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 96%;
 
-    --sidebar-border: 210 26% 23%; /* linha em cinza/azul escuro */
-    --sidebar-ring: 205 58% 29%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 43 82% 46%;
   }
 
+  /* Mantém .dark compatível (mesma paleta, pois o sistema agora é base escura) */
   .dark {
-    /* Modo escuro inspirado em Azul Carbônico + Cinza Obsidiano */
-    --background: 210 14% 10%; /* fundo geral escuro */
-    --foreground: 210 40% 96%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 96%;
 
-    --card: 214 18% 16%;
-    --card-foreground: 210 40% 96%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 214 18% 16%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 205 58% 42%; /* steel_blue um pouco mais claro para contraste */
-    --primary-foreground: 0 0% 100%;
+    --primary: 43 82% 46%;
+    --primary-foreground: 0 0% 7%;
 
-    --secondary: 26 49% 52%; /* cobre médico mantém o contraste */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 215 19% 22%;
-    --muted-foreground: 215 20% 75%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 54%;
 
-    --accent: 205 45% 26%;
-    --accent-foreground: 210 40% 96%;
+    --accent: 48 98% 73%;
+    --accent-foreground: 0 0% 7%;
 
-    --destructive: 16 55% 47%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 6 78% 57%;
+    --destructive-foreground: 0 0% 96%;
 
-    --border: 215 19% 22%;
-    --input: 215 19% 22%;
-    --ring: 205 58% 42%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 43 82% 46%;
 
-    --sidebar-background: 210 14% 8%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 205 58% 42%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 26 49% 52%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 215 19% 22%;
-    --sidebar-ring: 205 58% 42%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 43 82% 46%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 43 82% 46%;
   }
 }
 

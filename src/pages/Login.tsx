@@ -5,7 +5,6 @@ import {
   Lock,
   ArrowRightCircle,
   Stethoscope,
-  UserPlus,
   ArrowLeft,
 } from "lucide-react";
 
@@ -18,6 +17,9 @@ import {
   registerUser,
   sendPasswordReset,
 } from "@/services/auth-service";
+
+const LOGO_URL =
+  "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2ODU3Mzc4MCwiZXhwIjoxNzY5MTc4NTgwfQ.qi7ioLeitzVCihhcOXRpJD2MKKHn-vPOyD-yH776OKY";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -176,56 +178,55 @@ const Login = () => {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[radial-gradient(circle_at_0%_0%,rgba(31,138,112,0.75)_0,rgba(6,78,59,0.95)_55%),radial-gradient(circle_at_100%_100%,rgba(34,197,94,0.6)_0,rgba(6,78,59,0.95)_55%)] text-slate-900">
-      {/* leve overlay para 60% de opacidade do verde cirúrgico premium */}
-      <div className="pointer-events-none absolute inset-0 bg-emerald-900/10" />
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-background text-foreground">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.18)_0,rgba(18,18,18,1)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(18,18,18,1)_55%)]" />
 
       <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
         {/* Logo / marca */}
         <div className="mb-6 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-[#0F2A43] shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-card shadow-[0_12px_30px_rgba(0,0,0,0.55)] ring-1 ring-border">
             <img
-              src="/logo.jpeg"
-              alt="Logo NP Saúde Pró"
-              className="h-10 w-10 rounded-2xl object-cover"
+              src={LOGO_URL}
+              alt="Logo CONMEDIC"
+              className="h-10 w-10 rounded-2xl object-contain"
             />
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-foreground">
               NP Saúde Pró
             </span>
-            <span className="text-[11px] font-medium tracking-[0.22em] text-white/80">
+            <span className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground">
               ACESSO ADMINISTRATIVO
             </span>
           </div>
         </div>
 
         {/* Card principal (login ou cadastro) */}
-        <div className="w-full rounded-[32px] bg-white/95 px-6 py-7 text-slate-900 shadow-[0_24px_70px_rgba(15,23,42,0.30)] ring-1 ring-emerald-50 backdrop-blur-md sm:px-8 sm:py-8">
+        <div className="w-full rounded-[32px] bg-card px-6 py-7 text-card-foreground shadow-[0_24px_70px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur-md sm:px-8 sm:py-8">
           {/* Header dinâmico */}
           {showRegister ? (
             <div className="mb-5 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => setShowRegister(false)}
-                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-600"
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Voltar ao login</span>
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-slate-900">
+                <h1 className="text-xl font-semibold text-foreground">
                   Criar conta
                 </h1>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Solicite seu acesso administrativo.
                 </p>
               </div>
             </div>
           ) : (
             <div className="mb-5">
-              <h1 className="text-2xl font-semibold text-slate-900">Entrar</h1>
-              <p className="mt-1 text-sm text-slate-500">
+              <h1 className="text-2xl font-semibold text-foreground">Entrar</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Bem-vindo de volta ao portal administrativo.
               </p>
             </div>
@@ -233,19 +234,18 @@ const Login = () => {
 
           {/* Separador OU CONTINUE COM + botões sociais (decorativos) */}
           <div className="mb-5">
-            <div className="mb-4 flex items-center gap-3 text-[11px] text-slate-300">
-              <span className="h-px flex-1 bg-slate-200" />
+            <div className="mb-4 flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
               <span className="whitespace-nowrap tracking-[0.22em]">
                 OU CONTINUE COM
               </span>
-              <span className="h-px flex-1 bg-slate-200" />
+              <span className="h-px flex-1 bg-border" />
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {/* Google */}
               <button
                 type="button"
                 aria-label="Continuar com Google"
-                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
+                className="flex h-10 items-center justify-center rounded-xl border border-border bg-background shadow-sm"
               >
                 <img
                   src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
@@ -254,24 +254,22 @@ const Login = () => {
                 />
               </button>
 
-              {/* Apple */}
               <button
                 type="button"
                 aria-label="Continuar com Apple"
-                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
+                className="flex h-10 items-center justify-center rounded-xl border border-border bg-background shadow-sm"
               >
                 <img
                   src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
                   alt="Apple"
-                  className="h-5 w-5"
+                  className="h-5 w-5 invert"
                 />
               </button>
 
-              {/* Microsoft */}
               <button
                 type="button"
                 aria-label="Continuar com Microsoft"
-                className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
+                className="flex h-10 items-center justify-center rounded-xl border border-border bg-background shadow-sm"
               >
                 <img
                   src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
@@ -282,22 +280,20 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Formulário principal: login ou cadastro */}
           {!showRegister ? (
             <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* E-mail */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-muted-foreground">
                   E-mail
                 </label>
-                <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#0F2A43]">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-500">
+                <div className="flex items-center rounded-xl bg-background ring-1 ring-border focus-within:ring-2 focus-within:ring-ring">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-border text-muted-foreground">
                     <Mail className="h-4 w-4" />
                   </span>
                   <Input
                     type="email"
                     placeholder="seu@email.com"
-                    className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+                    className="h-11 border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -305,29 +301,28 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Senha */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-muted-foreground">
                     Senha
                   </label>
                   <button
                     type="button"
                     onClick={handleForgotPassword}
                     disabled={resetLoading}
-                    className="text-[11px] font-medium text-slate-400 hover:text-[#0F2A43]"
+                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
                   >
                     {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
                   </button>
                 </div>
-                <div className="flex items-center rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-[#0F2A43]">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-slate-200 text-slate-500">
+                <div className="flex items-center rounded-xl bg-background ring-1 ring-border focus-within:ring-2 focus-within:ring-ring">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-border text-muted-foreground">
                     <Lock className="h-4 w-4" />
                   </span>
                   <Input
                     type="password"
                     placeholder="Sua senha"
-                    className="h-11 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-0"
+                    className="h-11 border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     required
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
@@ -335,31 +330,28 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Lembrar acesso */}
               <div className="flex items-center gap-2 pt-1">
                 <Checkbox className="h-3.5 w-3.5" />
-                <span className="text-xs text-slate-500">Lembrar acesso</span>
+                <span className="text-xs text-muted-foreground">Lembrar acesso</span>
               </div>
 
-              {/* Botão entrar */}
               <div className="pt-2">
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F2A43] text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,42,67,0.55)] transition-transform hover:translate-y-0.5 hover:bg-[#123557] disabled:cursor-not-allowed disabled:opacity-75"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-transform hover:translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-75"
                 >
                   <span>{isLoading ? "Acessando..." : "Acessar conta"}</span>
                   <ArrowRightCircle className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Link para cadastro */}
-              <p className="pt-1 text-center text-xs text-slate-500">
+              <p className="pt-1 text-center text-xs text-muted-foreground">
                 Não tem uma conta?{" "}
                 <button
                   type="button"
                   onClick={() => setShowRegister(true)}
-                  className="font-semibold text-[#0F2A43] hover:underline"
+                  className="font-semibold text-primary hover:underline"
                 >
                   Cadastre-se
                 </button>
@@ -367,9 +359,8 @@ const Login = () => {
             </form>
           ) : (
             <form className="space-y-4" onSubmit={handleCreateAccount}>
-              {/* Nome completo */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-muted-foreground">
                   Nome completo
                 </label>
                 <Input
@@ -377,13 +368,12 @@ const Login = () => {
                   placeholder="Seu nome"
                   value={registerNome}
                   onChange={(e) => setRegisterNome(e.target.value)}
-                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                  className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
 
-              {/* E-mail */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-muted-foreground">
                   E-mail
                 </label>
                 <Input
@@ -391,14 +381,13 @@ const Login = () => {
                   placeholder="seu@email.com"
                   value={registerEmail}
                   onChange={(e) => setRegisterEmail(e.target.value)}
-                  className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                  className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
 
-              {/* Senha / confirmar */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-muted-foreground">
                     Senha
                   </label>
                   <Input
@@ -406,38 +395,34 @@ const Login = () => {
                     placeholder="Mín. 6 caracteres"
                     value={registerSenha}
                     onChange={(e) => setRegisterSenha(e.target.value)}
-                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                    className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-muted-foreground">
                     Confirmar
                   </label>
                   <Input
                     type="password"
                     placeholder="Repita a senha"
                     value={registerSenhaConfirm}
-                    onChange={(e) =>
-                      setRegisterSenhaConfirm(e.target.value)
-                    }
-                    className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F2A43]"
+                    onChange={(e) => setRegisterSenhaConfirm(e.target.value)}
+                    className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               </div>
 
-              {/* Botão criar conta */}
               <div className="pt-2">
                 <Button
                   type="submit"
                   disabled={registerLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F2A43] text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,42,67,0.55)] transition-transform hover:translate-y-0.5 hover:bg-[#123557] disabled:cursor-not-allowed disabled:opacity-75"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-transform hover:translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-75"
                 >
                   {registerLoading ? "Criando conta..." : "Criar conta"}
                 </Button>
               </div>
 
-              {/* Termos / voltar login */}
-              <p className="text-[11px] leading-snug text-slate-400">
+              <p className="text-[11px] leading-snug text-muted-foreground">
                 Ao se cadastrar, você concorda com nossos Termos de Serviço e
                 Política de Privacidade.
               </p>
@@ -445,16 +430,15 @@ const Login = () => {
           )}
         </div>
 
-        {/* Acesso médico e rodapé de links */}
         <div className="mt-4 flex w-full max-w-md flex-col items-center gap-4">
-          <div className="text-center text-xs text-slate-900/80">
+          <div className="text-center text-xs text-muted-foreground">
             <p className="mb-2">
               Você é médico e deseja acompanhar suas cirurgias?
             </p>
             <Button
               type="button"
               variant="outline"
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border-white/60 bg-emerald-50/80 px-4 text-[11px] font-semibold text-[#0F2A43] shadow-sm hover:bg-emerald-100/90"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border-border bg-background px-4 text-[11px] font-semibold text-foreground shadow-sm hover:bg-secondary"
               onClick={() => navigate("/login-medico")}
             >
               <Stethoscope className="h-4 w-4" />
@@ -462,7 +446,7 @@ const Login = () => {
             </Button>
           </div>
 
-          <div className="mt-2 flex items-center justify-center gap-6 text-[11px] text-emerald-50/90">
+          <div className="mt-2 flex items-center justify-center gap-6 text-[11px] text-muted-foreground">
             <button type="button" className="hover:underline">
               Privacidade
             </button>
@@ -474,7 +458,7 @@ const Login = () => {
             </button>
           </div>
 
-          <p className="text-[10px] text-emerald-50/90">
+          <p className="text-[10px] text-muted-foreground">
             © 2025 NP Saúde Pró. Plataforma segura.
           </p>
         </div>

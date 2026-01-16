@@ -100,7 +100,6 @@ const LoginMedico = () => {
         role: "MEDICO",
       });
 
-      // Por enquanto CRM/WhatsApp são apenas coletados na UI.
       void registerCrmUf;
       void registerWhatsapp;
 
@@ -108,7 +107,6 @@ const LoginMedico = () => {
         "Usuário médico criado. Verifique seu e-mail e confirme o cadastro antes do primeiro acesso.",
       );
 
-      // Preenche o formulário de login com os dados recém-cadastrados
       setLoginEmail(registerEmail.trim());
       setLoginSenha(registerSenha);
       setMode("login");
@@ -169,7 +167,6 @@ const LoginMedico = () => {
     }
   };
 
-  // Login rápido de desenvolvimento: Ctrl + Shift + 2
   const handleMedicoShortcutLogin = async () => {
     if (isLoading) return;
 
@@ -213,32 +210,28 @@ const LoginMedico = () => {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#050B14] text-slate-50">
-      {/* Fundo gradiente suave */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#10B981_0,#050B14_60%),radial-gradient(circle_at_100%_100%,#1D4ED8_0,#020617_60%)] opacity-80" />
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-background text-foreground">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.14)_0,rgba(18,18,18,1)_60%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(18,18,18,1)_60%)]" />
 
       <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-8 sm:py-10">
-        {/* Título */}
         <div className="mb-7 flex flex-col items-center gap-1">
           <span className="text-lg font-semibold sm:text-xl">
             NP Saúde Pró
           </span>
-          <span className="text-xs text-slate-300 sm:text-[13px]">
+          <span className="text-xs text-muted-foreground sm:text-[13px]">
             Portal do Médico
           </span>
         </div>
 
-        {/* Card principal */}
-        <div className="w-full rounded-[32px] bg-[#0F172A] px-5 py-6 text-slate-50 shadow-[0_24px_80px_rgba(0,0,0,0.85)] ring-1 ring-emerald-500/15 sm:px-6 sm:py-7">
-          {/* Tabs Entrar / Criar conta */}
-          <div className="mb-6 flex rounded-2xl bg-slate-900/60 p-1 text-xs font-medium text-slate-200">
+        <div className="w-full rounded-[32px] bg-card px-5 py-6 text-card-foreground shadow-[0_24px_80px_rgba(0,0,0,0.70)] ring-1 ring-border sm:px-6 sm:py-7">
+          <div className="mb-6 flex rounded-2xl bg-secondary p-1 text-xs font-medium text-secondary-foreground">
             <button
               type="button"
               onClick={() => setMode("login")}
               className={`flex-1 rounded-xl px-3 py-2 transition ${
                 isLogin
-                  ? "bg-emerald-500 text-slate-950 shadow-[0_10px_30px_rgba(16,185,129,0.7)]"
-                  : "bg-transparent text-slate-300"
+                  ? "bg-primary text-primary-foreground shadow-[0_10px_30px_rgba(212,160,23,0.35)]"
+                  : "bg-transparent opacity-80"
               }`}
             >
               Entrar
@@ -248,30 +241,28 @@ const LoginMedico = () => {
               onClick={() => setMode("register")}
               className={`flex-1 rounded-xl px-3 py-2 transition ${
                 !isLogin
-                  ? "bg-emerald-500 text-slate-950 shadow-[0_10px_30px_rgba(16,185,129,0.7)]"
-                  : "bg-transparent text-slate-300"
+                  ? "bg-primary text-primary-foreground shadow-[0_10px_30px_rgba(212,160,23,0.35)]"
+                  : "bg-transparent opacity-80"
               }`}
             >
               Criar conta
             </button>
           </div>
 
-          {/* FORM LOGIN */}
           {isLogin && (
             <form className="space-y-4" onSubmit={handleLoginSubmit}>
-              {/* Campo e-mail */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   E-mail
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <Mail className="h-4 w-4" />
                   </span>
                   <Input
                     type="email"
                     placeholder="seuemail@exemplo.com"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     required
@@ -279,19 +270,18 @@ const LoginMedico = () => {
                 </div>
               </div>
 
-              {/* Campo senha */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   Senha
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <Lock className="h-4 w-4" />
                   </span>
                   <Input
                     type={loginPasswordVisible ? "text" : "password"}
                     placeholder="Digite sua senha"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={loginSenha}
                     onChange={(e) => setLoginSenha(e.target.value)}
                     required
@@ -301,7 +291,7 @@ const LoginMedico = () => {
                     onClick={() =>
                       setLoginPasswordVisible((visible) => !visible)
                     }
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300 hover:text-slate-100"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground hover:opacity-90"
                     aria-label={
                       loginPasswordVisible ? "Ocultar senha" : "Mostrar senha"
                     }
@@ -315,24 +305,22 @@ const LoginMedico = () => {
                 </div>
               </div>
 
-              {/* Esqueci a senha */}
               <div className="flex justify-end pt-1 text-[11px]">
                 <button
                   type="button"
                   onClick={handleForgotPassword}
                   disabled={resetLoading}
-                  className="font-semibold text-emerald-400 underline-offset-2 hover:underline disabled:opacity-60"
+                  className="font-semibold text-primary underline-offset-2 hover:underline disabled:opacity-60"
                 >
                   {resetLoading ? "Enviando..." : "Esqueci a senha"}
                 </button>
               </div>
 
-              {/* Botão de login */}
               <div className="pt-1">
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-sm font-semibold text-slate-950 shadow-[0_18px_45px_rgba(16,185,129,0.9)] hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-primary-foreground shadow-[0_18px_45px_rgba(0,0,0,0.40)] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <ArrowRightCircle className="h-4 w-4" />
                   <span>
@@ -341,19 +329,17 @@ const LoginMedico = () => {
                 </Button>
               </div>
 
-              {/* Separador social */}
-              <div className="mt-4 flex items-center gap-3 text-[11px] text-slate-400">
-                <div className="h-px flex-1 bg-slate-700" />
+              <div className="mt-4 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
                 <span>OU CONTINUE COM</span>
-                <div className="h-px flex-1 bg-slate-700" />
+                <div className="h-px flex-1 bg-border" />
               </div>
 
-              {/* Botões sociais */}
               <div className="mt-3 flex items-center justify-center gap-4">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin("google")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-slate-50 ring-1 ring-slate-700 hover:bg-slate-800"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
                   aria-label="Entrar com Google"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4">
@@ -379,7 +365,7 @@ const LoginMedico = () => {
                 <button
                   type="button"
                   onClick={() => handleSocialLogin("apple")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white ring-1 ring-black/60 hover:bg-[#111111]"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
                   aria-label="Entrar com Apple"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
@@ -390,7 +376,7 @@ const LoginMedico = () => {
                 <button
                   type="button"
                   onClick={() => handleSocialLogin("azure")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-slate-50 ring-1 ring-slate-700 hover:bg-slate-800"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
                   aria-label="Entrar com Microsoft"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4">
@@ -404,99 +390,92 @@ const LoginMedico = () => {
             </form>
           )}
 
-          {/* FORM CRIAÇÃO CONTA */}
           {!isLogin && (
             <form className="space-y-3.5" onSubmit={handleRegisterSubmit}>
-              {/* Nome completo */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   Nome Completo
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
-                    {/* Ícone de usuário simples usando letra D como placeholder */}
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <span className="text-[11px] font-semibold">Dr</span>
                   </span>
                   <Input
                     type="text"
                     placeholder="Ex: Dr. Adriano"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={registerNome}
                     onChange={(e) => setRegisterNome(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* CRM / UF */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   CRM / UF
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <Hash className="h-4 w-4" />
                   </span>
                   <Input
                     type="text"
                     placeholder="123456 / SP"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={registerCrmUf}
                     onChange={(e) => setRegisterCrmUf(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Telefone / WhatsApp */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   Telefone / WhatsApp
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <Phone className="h-4 w-4" />
                   </span>
                   <Input
                     type="tel"
                     placeholder="(11) 99999-9999"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={registerWhatsapp}
                     onChange={(e) => setRegisterWhatsapp(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* E-mail */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   E-mail
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <Mail className="h-4 w-4" />
                   </span>
                   <Input
                     type="email"
                     placeholder="seuemail@exemplo.com"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Senha */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-100">
+                <label className="block text-xs font-semibold text-foreground">
                   Senha
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl bg-slate-900/70 px-3 py-2 ring-1 ring-slate-700 focus-within:ring-emerald-500">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300">
+                <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2 ring-1 ring-border focus-within:ring-ring">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                     <Lock className="h-4 w-4" />
                   </span>
                   <Input
                     type={registerPasswordVisible ? "text" : "password"}
                     placeholder="Crie uma senha segura"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-slate-50 placeholder:text-slate-500 focus-visible:ring-0"
+                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
                     value={registerSenha}
                     onChange={(e) => setRegisterSenha(e.target.value)}
                   />
@@ -505,7 +484,7 @@ const LoginMedico = () => {
                     onClick={() =>
                       setRegisterPasswordVisible((visible) => !visible)
                     }
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-slate-300 hover:text-slate-100"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-secondary-foreground hover:opacity-90"
                     aria-label={
                       registerPasswordVisible
                         ? "Ocultar senha"
@@ -521,30 +500,27 @@ const LoginMedico = () => {
                 </div>
               </div>
 
-              {/* Botão Criar Conta */}
               <div className="pt-1">
                 <Button
                   type="submit"
                   disabled={registerLoading}
-                  className="flex h-11 w-full items-center justify-center rounded-2xl bg-emerald-500 text-sm font-semibold text-slate-950 shadow-[0_18px_45px_rgba(16,185,129,0.9)] hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex h-11 w-full items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_18px_45px_rgba(0,0,0,0.40)] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {registerLoading ? "Criando conta..." : "Criar Conta"}
                 </Button>
               </div>
 
-              {/* Separador social */}
-              <div className="mt-4 flex items-center gap-3 text-[11px] text-slate-400">
-                <div className="h-px flex-1 bg-slate-700" />
+              <div className="mt-4 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
                 <span>OU CONTINUE COM</span>
-                <div className="h-px flex-1 bg-slate-700" />
+                <div className="h-px flex-1 bg-border" />
               </div>
 
-              {/* Botões sociais */}
               <div className="mt-3 flex items-center justify-center gap-4">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin("google")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-slate-50 ring-1 ring-slate-700 hover:bg-slate-800"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
                   aria-label="Criar conta com Google"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4">
@@ -570,7 +546,7 @@ const LoginMedico = () => {
                 <button
                   type="button"
                   onClick={() => handleSocialLogin("apple")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white ring-1 ring-black/60 hover:bg-[#111111]"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
                   aria-label="Criar conta com Apple"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
@@ -581,7 +557,7 @@ const LoginMedico = () => {
                 <button
                   type="button"
                   onClick={() => handleSocialLogin("azure")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-slate-50 ring-1 ring-slate-700 hover:bg-slate-800"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
                   aria-label="Criar conta com Microsoft"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4">
@@ -596,8 +572,7 @@ const LoginMedico = () => {
           )}
         </div>
 
-        {/* Link opcional para admin, fora do card */}
-        <div className="mt-5 text-center text-[11px] text-slate-400">
+        <div className="mt-5 text-center text-[11px] text-muted-foreground">
           <button
             type="button"
             className="underline-offset-2 hover:underline"

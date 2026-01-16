@@ -88,11 +88,11 @@ export default {
         "soft-pulse": {
           "0%, 100%": {
             transform: "scale(1)",
-            boxShadow: "0 0 90px rgba(16,185,129,0.85)",
+            boxShadow: "0 0 90px rgba(212,160,23,0.45)",
           },
           "50%": {
             transform: "scale(1.03)",
-            boxShadow: "0 0 110px rgba(16,185,129,1)",
+            boxShadow: "0 0 110px rgba(212,160,23,0.65)",
           },
         },
       },
