@@ -28,6 +28,8 @@ import MedicoInicio from "./pages/MedicoInicio";
 import AdminFaturamento from "./pages/AdminFaturamento";
 import AdminFinancas from "./pages/AdminFinancas";
 import AdminSubscriptionPlans from "./pages/AdminSubscriptionPlans";
+import Welcome from "./pages/Welcome";
+import FirstAccess from "./pages/FirstAccess";
 
 const queryClient = new QueryClient();
 
@@ -38,10 +40,17 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Tela inicial agora é o Login administrativo */}
-          <Route path="/" element={<Login />} />
+          {/* Boas-vindas */}
+          <Route path="/" element={<Welcome />} />
+
+          {/* Acesso */}
           <Route path="/login" element={<Login />} />
           <Route path="/login-medico" element={<LoginMedico />} />
+
+          {/* Primeiro acesso: envia link para cadastrar senha */}
+          <Route path="/primeiro-acesso" element={<FirstAccess />} />
+
+          {/* Cadastro/definição de senha (via link recebido por e-mail) */}
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
@@ -54,7 +63,10 @@ const App = () => (
           <Route path="/admin/financas" element={<AdminFinancas />} />
 
           {/* Nova tela de Descrição Cirúrgica (admin) */}
-          <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
+          <Route
+            path="/descricao-cirurgica"
+            element={<DescricaoCirurgicaPage />}
+          />
           <Route
             path="/descricao-cirurgica/:id/arquivos"
             element={<DescricaoCirurgicaArquivosPage />}
