@@ -11,12 +11,6 @@ export interface LoginResult {
   role: AllowedRole | null;
 }
 
-function normalizeRole(role: unknown): AllowedRole | null {
-  const r = String(role ?? "").toUpperCase();
-  if (r === "ADMIN" || r === "MEDICO" || r === "SUPER_ADMIN") return r;
-  return null;
-}
-
 /**
  * Login via Supabase Auth (email/senha).
  * Depois de autenticar, tenta carregar o registro em usuarios_sistema
@@ -50,12 +44,10 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  const safeEmail = email.trim();
-
   const { data: systemUser, error: systemUserError } = await supabase
     .from("usuarios_sistema")
     .select("*")
-    .ilike("email", safeEmail)
+    .eq("email", email)
     .maybeSingle();
 
   if (systemUserError) {
@@ -72,15 +64,11 @@ export async function loginWithRole(params: {
     );
   }
 
-  const role = normalizeRole((typedUser as any).regra);
-
   // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles =
-    allowedRole === "ADMIN"
-      ? (["ADMIN", "SUPER_ADMIN"] as const)
-      : ([allowedRole] as const);
+    allowedRole === "ADMIN" ? (["ADMIN", "SUPER_ADMIN"] as const) : ([allowedRole] as const);
 
-  if (!role || !allowedRoles.includes(role as any)) {
+  if (!allowedRoles.includes(typedUser.regra as any)) {
     // Encerra sessão para evitar sessão ativa em área errada
     await supabase.auth.signOut();
 
@@ -97,7 +85,7 @@ export async function loginWithRole(params: {
 
   return {
     user: typedUser,
-    role,
+    role: typedUser.regra ?? null,
   };
 }
 
@@ -178,12 +166,10 @@ export async function registerUser(params: {
     });
   }
 
-  const safeEmail = email.trim();
-
   // 2) Garante cadastro em usuarios_sistema (create/update por e-mail)
   const insertPayload = {
     nome,
-    email: safeEmail,
+    email,
     celular: null as string | null,
     regra: role,
     ativo: true,
@@ -193,13 +179,13 @@ export async function registerUser(params: {
   const { data: existing, error: selectError } = await supabase
     .from("usuarios_sistema")
     .select("*")
-    .ilike("email", safeEmail)
+    .eq("email", email)
     .maybeSingle();
 
   if (selectError) {
     // eslint-disable-next-line no-console
     console.error("Erro ao verificar usuarios_sistema:", {
-      email: safeEmail,
+      email,
       selectError,
     });
   }
@@ -211,14 +197,14 @@ export async function registerUser(params: {
     const { data: updated, error: updateError } = await supabase
       .from("usuarios_sistema")
       .update(insertPayload)
-      .eq("email", (existing as any).email)
+      .eq("email", email)
       .select("*")
       .maybeSingle();
 
     if (updateError) {
       // eslint-disable-next-line no-console
       console.error("Erro ao atualizar usuarios_sistema:", {
-        email: safeEmail,
+        email,
         insertPayload,
         updateError,
       });

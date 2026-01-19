@@ -10,14 +10,11 @@ import {
   FileSignature,
   LineChart,
   Wallet,
-  CreditCard,
-  BarChart3,
 } from "lucide-react";
 
 interface AdminSidebarProps {
-  section?: "home" | "descricao" | "faturamento" | "financas" | "cadastro" | "config" | "assinaturas";
+  section?: "home" | "descricao" | "faturamento" | "financas" | "cadastro" | "config";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "planos";
-  assinaturasSubsection?: "dashboard" | "assinantes" | "planos";
 }
 
 const LOGO_URL =
@@ -26,7 +23,6 @@ const LOGO_URL =
 const AdminSidebar = ({
   section,
   cadastroSubsection,
-  assinaturasSubsection,
 }: AdminSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,7 +30,6 @@ const AdminSidebar = ({
   const currentSection: AdminSidebarProps["section"] = useMemo(() => {
     if (section) return section;
     const path = location.pathname;
-    if (path.startsWith("/admin/assinaturas")) return "assinaturas";
     if (path.startsWith("/descricao-cirurgica")) return "descricao";
     if (path.startsWith("/admin/faturamento")) return "faturamento";
     if (path.startsWith("/admin/financas")) return "financas";
@@ -56,16 +51,6 @@ const AdminSidebar = ({
       if (path.includes("planos")) return "planos";
       return undefined;
     }, [location.pathname, cadastroSubsection]);
-
-  const currentAssinaturasSub: AdminSidebarProps["assinaturasSubsection"] =
-    useMemo(() => {
-      if (assinaturasSubsection) return assinaturasSubsection;
-      const path = location.pathname;
-      if (path.startsWith("/admin/assinaturas/dashboard")) return "dashboard";
-      if (path.startsWith("/admin/assinaturas/assinantes")) return "assinantes";
-      if (path.startsWith("/admin/assinaturas/planos")) return "planos";
-      return undefined;
-    }, [location.pathname, assinaturasSubsection]);
 
   const baseButton =
     "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all";
@@ -112,56 +97,6 @@ const AdminSidebar = ({
 
         {/* Menu principal */}
         <nav className="flex flex-col gap-1 text-sm">
-          {/* Gestão de Assinaturas (no topo) */}
-          <div className={cadastroContainer}>
-            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-                <CreditCard className="h-4 w-4" />
-              </span>
-              <span className="text-xs font-semibold text-sidebar-foreground">
-                Gestão de Assinaturas
-              </span>
-            </div>
-
-            <div className="mt-1 space-y-1">
-              <button
-                className={
-                  currentAssinaturasSub === "dashboard"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/dashboard")}
-              >
-                <span className="ml-7 inline-flex items-center gap-2">
-                  <BarChart3 className="h-3.5 w-3.5 opacity-80" />
-                  Dashboard
-                </span>
-              </button>
-
-              <button
-                className={
-                  currentAssinaturasSub === "assinantes"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/assinantes")}
-              >
-                <span className="ml-7">Assinantes</span>
-              </button>
-
-              <button
-                className={
-                  currentAssinaturasSub === "planos"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/planos")}
-              >
-                <span className="ml-7">Planos</span>
-              </button>
-            </div>
-          </div>
-
           {/* Home */}
           <button
             className={currentSection === "home" ? activeMain : inactiveMain}
@@ -288,6 +223,18 @@ const AdminSidebar = ({
                 onClick={() => navigate("/cadastro/medicos")}
               >
                 <span className="ml-7">Médicos</span>
+              </button>
+
+              {/* Planos */}
+              <button
+                className={
+                  currentCadastroSub === "planos"
+                    ? cadastroItemActive
+                    : cadastroItemInactive
+                }
+                onClick={() => navigate("/admin/assinaturas/planos")}
+              >
+                <span className="ml-7">Planos de assinatura</span>
               </button>
             </div>
           </div>

@@ -31,8 +31,6 @@ import AdminSubscriptionPlans from "./pages/AdminSubscriptionPlans";
 import Welcome from "./pages/Welcome";
 import FirstAccess from "./pages/FirstAccess";
 import UnderConstruction from "./pages/UnderConstruction";
-import AdminSubscribers from "./pages/AdminSubscribers";
-import AdminSubscriptionsDashboard from "./pages/AdminSubscriptionsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -72,20 +70,6 @@ const App = () => (
           <Route path="/admin/faturamento" element={<AdminFaturamento />} />
           <Route path="/admin/financas" element={<AdminFinancas />} />
 
-          {/* Gestão de Assinaturas (super_admin) */}
-          <Route
-            path="/admin/assinaturas/dashboard"
-            element={<AdminSubscriptionsDashboard />}
-          />
-          <Route
-            path="/admin/assinaturas/assinantes"
-            element={<AdminSubscribers />}
-          />
-          <Route
-            path="/admin/assinaturas/planos"
-            element={<AdminSubscriptionPlans />}
-          />
-
           {/* Nova tela de Descrição Cirúrgica (admin) */}
           <Route
             path="/descricao-cirurgica"
@@ -116,6 +100,10 @@ const App = () => (
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
+          <Route
+            path="/admin/assinaturas/planos"
+            element={<AdminSubscriptionPlans />}
+          />
 
           {/* Configurações administrativas */}
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
