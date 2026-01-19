@@ -44,14 +44,19 @@ const Login = () => {
     }
     setIsLoading(true);
     try {
-      await loginWithRole({
+      const result = await loginWithRole({
         email: email.trim(),
         password: senha,
         allowedRole: "ADMIN",
       });
 
       showSuccess("Login realizado com sucesso.");
-      navigate("/admin/dashboard");
+
+      if (result.role === "SUPER_ADMIN") {
+        navigate("/admin/assinaturas/dashboard");
+      } else {
+        navigate("/admin/dashboard");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -146,14 +151,19 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await loginWithRole({
+      const result = await loginWithRole({
         email: shortcutEmail,
         password: shortcutSenha,
         allowedRole: "ADMIN",
       });
 
       showSuccess("Login rápido (admin) realizado com sucesso.");
-      navigate("/admin/dashboard");
+
+      if (result.role === "SUPER_ADMIN") {
+        navigate("/admin/assinaturas/dashboard");
+      } else {
+        navigate("/admin/dashboard");
+      }
     } catch (err) {
       const message =
         err instanceof Error

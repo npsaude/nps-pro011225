@@ -112,6 +112,56 @@ const AdminSidebar = ({
 
         {/* Menu principal */}
         <nav className="flex flex-col gap-1 text-sm">
+          {/* Gestão de Assinaturas (no topo) */}
+          <div className={cadastroContainer}>
+            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                <CreditCard className="h-4 w-4" />
+              </span>
+              <span className="text-xs font-semibold text-sidebar-foreground">
+                Gestão de Assinaturas
+              </span>
+            </div>
+
+            <div className="mt-1 space-y-1">
+              <button
+                className={
+                  currentAssinaturasSub === "dashboard"
+                    ? cadastroItemActive
+                    : cadastroItemInactive
+                }
+                onClick={() => navigate("/admin/assinaturas/dashboard")}
+              >
+                <span className="ml-7 inline-flex items-center gap-2">
+                  <BarChart3 className="h-3.5 w-3.5 opacity-80" />
+                  Dashboard
+                </span>
+              </button>
+
+              <button
+                className={
+                  currentAssinaturasSub === "assinantes"
+                    ? cadastroItemActive
+                    : cadastroItemInactive
+                }
+                onClick={() => navigate("/admin/assinaturas/assinantes")}
+              >
+                <span className="ml-7">Assinantes</span>
+              </button>
+
+              <button
+                className={
+                  currentAssinaturasSub === "planos"
+                    ? cadastroItemActive
+                    : cadastroItemInactive
+                }
+                onClick={() => navigate("/admin/assinaturas/planos")}
+              >
+                <span className="ml-7">Planos</span>
+              </button>
+            </div>
+          </div>
+
           {/* Home */}
           <button
             className={currentSection === "home" ? activeMain : inactiveMain}
@@ -203,56 +253,6 @@ const AdminSidebar = ({
               <span className="font-medium">Recursos</span>
             </span>
           </button>
-
-          {/* Gestão de Assinaturas */}
-          <div className={cadastroContainer}>
-            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-                <CreditCard className="h-4 w-4" />
-              </span>
-              <span className="text-xs font-semibold text-sidebar-foreground">
-                Gestão de Assinaturas
-              </span>
-            </div>
-
-            <div className="mt-1 space-y-1">
-              <button
-                className={
-                  currentAssinaturasSub === "dashboard"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/dashboard")}
-              >
-                <span className="ml-7 inline-flex items-center gap-2">
-                  <BarChart3 className="h-3.5 w-3.5 opacity-80" />
-                  Dashboard
-                </span>
-              </button>
-
-              <button
-                className={
-                  currentAssinaturasSub === "assinantes"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/assinantes")}
-              >
-                <span className="ml-7">Assinantes</span>
-              </button>
-
-              <button
-                className={
-                  currentAssinaturasSub === "planos"
-                    ? cadastroItemActive
-                    : cadastroItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/planos")}
-              >
-                <span className="ml-7">Planos</span>
-              </button>
-            </div>
-          </div>
 
           {/* Cadastro */}
           <div className={cadastroContainer}>
