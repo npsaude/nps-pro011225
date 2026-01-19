@@ -44,14 +44,19 @@ const Login = () => {
     }
     setIsLoading(true);
     try {
-      await loginWithRole({
+      const result = await loginWithRole({
         email: email.trim(),
         password: senha,
         allowedRole: "ADMIN",
       });
 
       showSuccess("Login realizado com sucesso.");
-      navigate("/admin/dashboard");
+
+      if (result.role === "SUPER_ADMIN") {
+        navigate("/admin/assinaturas/dashboard");
+      } else {
+        navigate("/admin/dashboard");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -134,7 +139,6 @@ const Login = () => {
     }
   };
 
-  // Login rápido de desenvolvimento: Ctrl + Shift + 2
   const handleAdminShortcutLogin = async () => {
     if (isLoading) return;
 
@@ -146,14 +150,19 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await loginWithRole({
+      const result = await loginWithRole({
         email: shortcutEmail,
         password: shortcutSenha,
         allowedRole: "ADMIN",
       });
 
       showSuccess("Login rápido (admin) realizado com sucesso.");
-      navigate("/admin/dashboard");
+
+      if (result.role === "SUPER_ADMIN") {
+        navigate("/admin/assinaturas/dashboard");
+      } else {
+        navigate("/admin/dashboard");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -182,7 +191,6 @@ const Login = () => {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.18)_0,rgba(18,18,18,1)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(18,18,18,1)_55%)]" />
 
       <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
-        {/* Logo / marca */}
         <div className="mb-6 flex flex-col items-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-card shadow-[0_12px_30px_rgba(0,0,0,0.55)] ring-1 ring-border">
             <img
@@ -201,9 +209,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Card principal (login ou cadastro) */}
         <div className="w-full rounded-[32px] bg-card px-6 py-7 text-card-foreground shadow-[0_24px_70px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur-md sm:px-8 sm:py-8">
-          {/* Header dinâmico */}
           {showRegister ? (
             <div className="mb-5 flex flex-col gap-3">
               <button
@@ -232,7 +238,6 @@ const Login = () => {
             </div>
           )}
 
-          {/* Separador OU CONTINUE COM + botões sociais (decorativos) */}
           <div className="mb-5">
             <div className="mb-4 flex items-center gap-3 text-[11px] text-muted-foreground">
               <span className="h-px flex-1 bg-border" />
@@ -332,7 +337,9 @@ const Login = () => {
 
               <div className="flex items-center gap-2 pt-1">
                 <Checkbox className="h-3.5 w-3.5" />
-                <span className="text-xs text-muted-foreground">Lembrar acesso</span>
+                <span className="text-xs text-muted-foreground">
+                  Lembrar acesso
+                </span>
               </div>
 
               <div className="pt-2">

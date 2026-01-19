@@ -32,6 +32,8 @@ import Welcome from "./pages/Welcome";
 import FirstAccess from "./pages/FirstAccess";
 import UnderConstruction from "./pages/UnderConstruction";
 import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
+import AdminSubscriptionsDashboard from "./pages/AdminSubscriptionsDashboard";
+import AdminSubscribers from "./pages/AdminSubscribers";
 
 const queryClient = new QueryClient();
 
@@ -42,24 +44,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Home do sistema: login */}
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/login-medico" element={<LoginMedico />} />
 
-          {/* Tela de boas-vindas */}
           <Route path="/boas-vindas" element={<Welcome />} />
-
-          {/* Plataforma em construção */}
-          <Route
-            path="/plataforma-em-construcao"
-            element={<UnderConstruction />}
-          />
-
-          {/* Primeiro acesso: envia link para cadastrar senha */}
+          <Route path="/plataforma-em-construcao" element={<UnderConstruction />} />
           <Route path="/primeiro-acesso" element={<FirstAccess />} />
-
-          {/* Cadastro/definição de senha (via link recebido por e-mail) */}
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
@@ -67,41 +58,40 @@ const App = () => (
           <Route path="/sadt/cadastro" element={<SadtCadastro />} />
           <Route path="/sadt/nova" element={<SadtNova />} />
           <Route path="/sadt/editar/:id" element={<SadtEditar />} />
+
           <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/admin/faturamento" element={<AdminFaturamento />} />
           <Route path="/admin/financas" element={<AdminFinancas />} />
 
-          {/* Nova tela de Descrição Cirúrgica (admin) */}
-          <Route
-            path="/descricao-cirurgica"
-            element={<DescricaoCirurgicaPage />}
-          />
-          <Route
-            path="/descricao-cirurgica/:id/arquivos"
-            element={<DescricaoCirurgicaArquivosPage />}
-          />
+          <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
+          <Route path="/descricao-cirurgica/:id/arquivos" element={<DescricaoCirurgicaArquivosPage />} />
 
-          {/* Dashboard específico para médico */}
           <Route path="/medico/dashboard" element={<MedicoInicio />} />
           <Route path="/medico/informacoes" element={<DashboardMedico />} />
+          <Route path="/medico/descricao-cirurgica/enviar" element={<MedicoUploadDescricaoCirurgica />} />
+          <Route path="/medico/descricao-cirurgica" element={<MedicoDescricoesCirurgicas />} />
 
-          {/* Envio de arquivos da descrição cirúrgica pelo médico */}
-          <Route
-            path="/medico/descricao-cirurgica/enviar"
-            element={<MedicoUploadDescricaoCirurgica />}
-          />
-
-          {/* Acompanhamento das descrições cirúrgicas pelo médico */}
-          <Route
-            path="/medico/descricao-cirurgica"
-            element={<MedicoDescricoesCirurgicas />}
-          />
-
-          {/* Cadastros administrativos */}
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
 
+          {/* Gestão de Assinaturas (super_admin) */}
+          <Route
+            path="/admin/assinaturas/dashboard"
+            element={
+              <SuperAdminGuard>
+                <AdminSubscriptionsDashboard />
+              </SuperAdminGuard>
+            }
+          />
+          <Route
+            path="/admin/assinaturas/assinantes"
+            element={
+              <SuperAdminGuard>
+                <AdminSubscribers />
+              </SuperAdminGuard>
+            }
+          />
           <Route
             path="/admin/assinaturas/planos"
             element={
@@ -111,14 +101,9 @@ const App = () => (
             }
           />
 
-          {/* Configurações administrativas */}
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
-          <Route
-            path="/admin/configuracoes/converter-pdf"
-            element={<AdminConverterPdf />}
-          />
+          <Route path="/admin/configuracoes/converter-pdf" element={<AdminConverterPdf />} />
 
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
