@@ -16,8 +16,7 @@ type StateDoctorData = {
   doctors?: number; // undefined = sem dados
 };
 
-const geoUrl =
-  "https://raw.githubusercontent.com/deldersveld/topojson/master/countries/brazil/brazil-states.json";
+const geoUrl = "/maps/brazil-states.json";
 
 // Dados de exemplo – ajuste os números conforme tiver dados reais
 const statesData: StateDoctorData[] = [
@@ -133,7 +132,6 @@ const RegionBubbleMap = () => {
           height={600}
           style={{ width: "100%", height: "100%" }}
         >
-          {/* Sombra das bolhas */}
           <defs>
             <filter id="bubbleShadow" x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow
