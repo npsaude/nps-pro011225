@@ -11,10 +11,34 @@ export interface LoginResult {
   role: AllowedRole | null;
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+async function loadSystemUserByEmail(email: string): Promise<DbSystemUser | null> {
+  const normalized = normalizeEmail(email);
+
+  // Tenta via RPC PostgREST case-insensitive usando ilike.
+  // Observação: em PostgREST, ilike é case-insensitive.
+  const { data, error } = await supabase
+    .from("usuarios_sistema")
+    .select("*")
+    .ilike("email", normalized)
+    .maybeSingle();
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("Erro ao carregar usuarios_sistema por email (ilike):", error);
+    return null;
+  }
+
+  return (data as DbSystemUser | null) ?? null;
+}
+
 /**
  * Login via Supabase Auth (email/senha).
- * Depois de autenticar, tenta carregar o registro em usuarios_sistema
- * usando o e-mail. Não bloqueia o login se não existir/der erro.
+ * Depois de autenticar, carrega o registro em usuarios_sistema
+ * usando o e-mail (case-insensitive).
  */
 export async function loginWithRole(params: {
   email: string;
@@ -23,8 +47,10 @@ export async function loginWithRole(params: {
 }): Promise<LoginResult> {
   const { email, password, allowedRole } = params;
 
+  const normalizedEmail = normalizeEmail(email);
+
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: normalizedEmail,
     password,
   });
 
@@ -44,21 +70,10 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  const { data: systemUser, error: systemUserError } = await supabase
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (systemUserError) {
-    // eslint-disable-next-line no-console
-    console.error("Erro ao carregar usuarios_sistema:", systemUserError);
-  }
-
-  const typedUser = systemUser as DbSystemUser | null;
+  const systemUser = await loadSystemUserByEmail(normalizedEmail);
 
   // Garante que exista um registro em usuarios_sistema
-  if (!typedUser) {
+  if (!systemUser) {
     throw new Error(
       "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
     );
@@ -66,9 +81,11 @@ export async function loginWithRole(params: {
 
   // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles =
-    allowedRole === "ADMIN" ? (["ADMIN", "SUPER_ADMIN"] as const) : ([allowedRole] as const);
+    allowedRole === "ADMIN"
+      ? (["ADMIN", "SUPER_ADMIN"] as const)
+      : ([allowedRole] as const);
 
-  if (!allowedRoles.includes(typedUser.regra as any)) {
+  if (!allowedRoles.includes(systemUser.regra as any)) {
     // Encerra sessão para evitar sessão ativa em área errada
     await supabase.auth.signOut();
 
@@ -84,8 +101,8 @@ export async function loginWithRole(params: {
   }
 
   return {
-    user: typedUser,
-    role: typedUser.regra ?? null,
+    user: systemUser,
+    role: systemUser.regra ?? null,
   };
 }
 
@@ -105,9 +122,11 @@ export async function registerUser(params: {
 }): Promise<DbSystemUser> {
   const { nome, email, password, role } = params;
 
+  const normalizedEmail = normalizeEmail(email);
+
   // 1) Tenta criar no Auth
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email,
+    email: normalizedEmail,
     password,
     options: {
       data: {
@@ -124,7 +143,7 @@ export async function registerUser(params: {
     // Se já existir no Auth, validamos a senha com signIn e seguimos.
     if (msg.includes("user already registered")) {
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
@@ -142,7 +161,7 @@ export async function registerUser(params: {
     } else {
       // eslint-disable-next-line no-console
       console.error("Erro no signUp do Supabase Auth:", {
-        email,
+        email: normalizedEmail,
         signUpError,
       });
 
@@ -169,42 +188,30 @@ export async function registerUser(params: {
   // 2) Garante cadastro em usuarios_sistema (create/update por e-mail)
   const insertPayload = {
     nome,
-    email,
+    email: normalizedEmail,
     celular: null as string | null,
     regra: role,
     ativo: true,
   };
 
-  // Primeiro, verifica se já existe
-  const { data: existing, error: selectError } = await supabase
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (selectError) {
-    // eslint-disable-next-line no-console
-    console.error("Erro ao verificar usuarios_sistema:", {
-      email,
-      selectError,
-    });
-  }
+  // Primeiro, verifica se já existe (case-insensitive)
+  const existing = await loadSystemUserByEmail(normalizedEmail);
 
   let upsertResult: DbSystemUser | null = null;
 
   if (existing) {
-    // Atualiza registro existente
+    // Atualiza registro existente (igualando por email ilike)
     const { data: updated, error: updateError } = await supabase
       .from("usuarios_sistema")
       .update(insertPayload)
-      .eq("email", email)
+      .ilike("email", normalizedEmail)
       .select("*")
       .maybeSingle();
 
     if (updateError) {
       // eslint-disable-next-line no-console
       console.error("Erro ao atualizar usuarios_sistema:", {
-        email,
+        email: normalizedEmail,
         insertPayload,
         updateError,
       });
@@ -287,7 +294,9 @@ export async function registerUser(params: {
  * Inicia fluxo de recuperação de senha via e-mail do Supabase.
  */
 export async function sendPasswordReset(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const normalizedEmail = normalizeEmail(email);
+
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
     redirectTo: window.location.origin + "/reset-password",
   });
 
