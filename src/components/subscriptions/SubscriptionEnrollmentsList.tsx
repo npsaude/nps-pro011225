@@ -40,12 +40,48 @@ import {
   type SubscriptionPlan,
 } from "@/services/subscription-plans-service";
 
+function normalizeStatusKey(status: string) {
+  const s = (status ?? "").trim().toLowerCase();
+  if (s === "active") return "ACTIVE";
+  if (s === "trial") return "TRIAL";
+  if (s === "pending") return "PENDING";
+  if (s === "paused") return "PAUSED";
+  if (s === "canceled" || s === "cancelled") return "CANCELED";
+  if (s === "failed") return "FAILED";
+
+  // Caso a base já esteja em PT-BR (ex.: "Ativo"), não normalizamos
+  return null;
+}
+
+function statusLabel(status: string) {
+  const key = normalizeStatusKey(status);
+  if (!key) return status; // já vem como está na base
+
+  if (key === "ACTIVE") return "Ativo";
+  if (key === "TRIAL") return "Trial";
+  if (key === "PENDING") return "Pendente";
+  if (key === "PAUSED") return "Pausado";
+  if (key === "CANCELED") return "Cancelado";
+  if (key === "FAILED") return "Falhou";
+  return status;
+}
+
 function statusBadge(status: string) {
-  if (status === "ACTIVE") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-  if (status === "TRIAL") return "bg-sky-50 text-sky-700 ring-sky-200";
-  if (status === "PENDING") return "bg-amber-50 text-amber-700 ring-amber-200";
-  if (status === "PAUSED") return "bg-slate-100 text-slate-700 ring-slate-200";
-  if (status === "CANCELED") return "bg-rose-50 text-rose-700 ring-rose-200";
+  const key = normalizeStatusKey(status) ?? status.trim().toUpperCase();
+
+  if (key === "ACTIVE" || key === "ATIVO")
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  if (key === "TRIAL")
+    return "bg-sky-50 text-sky-700 ring-sky-200";
+  if (key === "PENDING" || key === "PENDENTE")
+    return "bg-amber-50 text-amber-700 ring-amber-200";
+  if (key === "PAUSED" || key === "PAUSADO")
+    return "bg-slate-100 text-slate-700 ring-slate-200";
+  if (key === "CANCELED" || key === "CANCELADO")
+    return "bg-rose-50 text-rose-700 ring-rose-200";
+  if (key === "FAILED" || key === "FALHOU")
+    return "bg-slate-100 text-slate-700 ring-slate-200";
+
   return "bg-slate-100 text-slate-700 ring-slate-200";
 }
 
@@ -255,7 +291,7 @@ export default function SubscriptionEnrollmentsList() {
                               e.status,
                             )} dark:bg-opacity-20 dark:text-slate-100`}
                           >
-                            {e.status}
+                            {statusLabel(e.status)}
                           </span>
                         </TableCell>
 
