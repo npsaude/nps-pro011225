@@ -76,3 +76,10 @@ export async function atualizarSubscriptionPlan(
 
   return data as SubscriptionPlan;
 }
+
+export async function excluirSubscriptionPlan(id: string): Promise<void> {
+  const { error } = await supabase.from("subscription_plans").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message || "Não foi possível excluir o plano.");
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BadgeDollarSign, Pencil, Plus, Search } from "lucide-react";
+import { BadgeDollarSign, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import {
   Card,
@@ -25,12 +25,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { showError, showSuccess } from "@/utils/toast";
 import SubscriptionPlanForm from "./SubscriptionPlanForm";
 import {
   atualizarSubscriptionPlan,
   criarSubscriptionPlan,
+  excluirSubscriptionPlan,
   listarSubscriptionPlans,
   type SubscriptionPlan,
   type SubscriptionPlanInput,
@@ -75,6 +86,10 @@ export default function SubscriptionPlansList() {
   const [editing, setEditing] = useState<SubscriptionPlan | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState<SubscriptionPlan | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -103,6 +118,30 @@ export default function SubscriptionPlansList() {
   const openEdit = (plan: SubscriptionPlan) => {
     setEditing(plan);
     setDialogOpen(true);
+  };
+
+  const openDelete = (plan: SubscriptionPlan) => {
+    setDeleting(plan);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+
+    setDeleteLoading(true);
+    try {
+      await excluirSubscriptionPlan(deleting.id);
+      setPlans((prev) => prev.filter((p) => p.id !== deleting.id));
+      showSuccess("Plano excluído com sucesso.");
+      setDeleteOpen(false);
+      setDeleting(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Não foi possível excluir o plano.";
+      showError(message);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleSubmit = async (payload: SubscriptionPlanInput) => {
@@ -241,15 +280,27 @@ export default function SubscriptionPlansList() {
                         </span>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
-                          onClick={() => openEdit(p)}
-                          title="Editar"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+                            onClick={() => openEdit(p)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-slate-500 hover:bg-rose-50 hover:text-rose-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-rose-300"
+                            onClick={() => openDelete(p)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -284,6 +335,43 @@ export default function SubscriptionPlansList() {
           />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleting(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir plano</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting
+                ? `Tem certeza que deseja excluir o plano "${deleting.name}"?`
+                : "Tem certeza que deseja excluir este plano?"}
+              <span className="mt-2 block text-[11px] text-slate-500">
+                Atenção: se houver assinantes vinculados, o banco pode bloquear a exclusão.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDelete();
+              }}
+              disabled={deleteLoading}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              {deleteLoading ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
