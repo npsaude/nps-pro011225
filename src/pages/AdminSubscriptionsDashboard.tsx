@@ -8,6 +8,10 @@ import {
   XAxis,
   YAxis,
   BarChart,
+  Pie,
+  PieChart,
+  Cell,
+  Legend,
 } from "recharts";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
@@ -17,6 +21,15 @@ import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
 
 type MonthlyPoint = { month: string; cumulative: number };
+
+type PiePoint = { name: string; value: number; color: string };
+
+const PIE_COLORS: Record<string, string> = {
+  "Básico": "#22c55e",
+  "Intermediário": "#0ea5e9",
+  "Avançado": "#a855f7",
+  Outros: "#94a3b8",
+};
 
 function formatBRLFromCents(cents: number) {
   const value = (cents ?? 0) / 100;
@@ -47,6 +60,22 @@ function buildLastMonthsKeys(total: number) {
   return keys;
 }
 
+function normalizeText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+}
+
+function bucketPlanName(nameOrCode: string) {
+  const t = normalizeText(nameOrCode);
+  if (t.includes("basic") || t.includes("basico")) return "Básico";
+  if (t.includes("intermediario") || t.includes("intermediate")) return "Intermediário";
+  if (t.includes("avancado") || t.includes("advanced")) return "Avançado";
+  return "Outros";
+}
+
 export default function AdminSubscriptionsDashboard() {
   const { loading: userLoading, systemUser, error: userError } = useSystemUser();
   const blocked =
@@ -58,6 +87,7 @@ export default function AdminSubscriptionsDashboard() {
   const [totalRevenueCents, setTotalRevenueCents] = useState<number>(0);
   const [cancellations, setCancellations] = useState<number>(0);
   const [chartData, setChartData] = useState<MonthlyPoint[]>([]);
+  const [planPieData, setPlanPieData] = useState<PiePoint[]>([]);
 
   const monthsKeys = useMemo(() => buildLastMonthsKeys(12), []);
 
@@ -79,7 +109,7 @@ export default function AdminSubscriptionsDashboard() {
         const { data: enrollments, error: enrollmentsError } = await supabase
           .from("subscription_enrollments")
           .select(
-            "id,status,created_at,started_at,plan:subscription_plans(price_cents)",
+            "id,status,created_at,started_at,plan:subscription_plans(price_cents,name,code)",
           );
 
         if (enrollmentsError) throw enrollmentsError;
@@ -89,35 +119,38 @@ export default function AdminSubscriptionsDashboard() {
           status: string;
           created_at: string | null;
           started_at: string | null;
-          plan: { price_cents: number }[] | { price_cents: number } | null;
+          plan:
+            | { price_cents: number; name: string; code: string }
+            | { price_cents: number; name: string; code: string }[]
+            | null;
         };
 
         const rows = (enrollments ?? []) as unknown as Row[];
 
-        const planPriceCents = (plan: Row["plan"]) => {
-          if (!plan) return 0;
-          if (Array.isArray(plan)) return plan[0]?.price_cents ?? 0;
-          return plan.price_cents ?? 0;
+        const getPlan = (plan: Row["plan"]) => {
+          if (!plan) return null;
+          if (Array.isArray(plan)) return plan[0] ?? null;
+          return plan;
         };
 
-        const activeSum = rows
-          .filter((r) => r.status === "ACTIVE")
-          .reduce((acc, r) => acc + planPriceCents(r.plan), 0);
+        const activeRows = rows.filter((r) => r.status === "ACTIVE");
+
+        const activeSum = activeRows.reduce((acc, r) => {
+          const plan = getPlan(r.plan);
+          return acc + (plan?.price_cents ?? 0);
+        }, 0);
 
         setTotalRevenueCents(activeSum);
-
         setCancellations(rows.filter((r) => r.status === "CANCELED").length);
 
         const countsByMonth = new Map<string, number>();
-        rows
-          .filter((r) => r.status === "ACTIVE")
-          .forEach((r) => {
-            const raw = r.started_at ?? r.created_at;
-            if (!raw) return;
-            const dt = new Date(raw);
-            const key = monthKey(new Date(dt.getFullYear(), dt.getMonth(), 1));
-            countsByMonth.set(key, (countsByMonth.get(key) ?? 0) + 1);
-          });
+        activeRows.forEach((r) => {
+          const raw = r.started_at ?? r.created_at;
+          if (!raw) return;
+          const dt = new Date(raw);
+          const key = monthKey(new Date(dt.getFullYear(), dt.getMonth(), 1));
+          countsByMonth.set(key, (countsByMonth.get(key) ?? 0) + 1);
+        });
 
         let cumulative = 0;
         const points: MonthlyPoint[] = monthsKeys.map((key) => {
@@ -126,6 +159,31 @@ export default function AdminSubscriptionsDashboard() {
         });
 
         setChartData(points);
+
+        const byPlan = new Map<string, number>();
+        activeRows.forEach((r) => {
+          const plan = getPlan(r.plan);
+          const rawName = plan?.name ?? plan?.code ?? "";
+          const bucket = bucketPlanName(rawName);
+          byPlan.set(bucket, (byPlan.get(bucket) ?? 0) + 1);
+        });
+
+        const ordered: Array<keyof typeof PIE_COLORS> = [
+          "Básico",
+          "Intermediário",
+          "Avançado",
+          "Outros",
+        ];
+
+        const pie: PiePoint[] = ordered
+          .map((name) => ({
+            name,
+            value: byPlan.get(name) ?? 0,
+            color: PIE_COLORS[name],
+          }))
+          .filter((p) => p.value > 0);
+
+        setPlanPieData(pie);
       } catch (err) {
         const message =
           err instanceof Error
@@ -239,7 +297,7 @@ export default function AdminSubscriptionsDashboard() {
                 </Card>
               </section>
 
-              <section>
+              <section className="grid gap-4 lg:grid-cols-2">
                 <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -285,6 +343,55 @@ export default function AdminSubscriptionsDashboard() {
                         />
                       </BarChart>
                     </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      Assinaturas por plano
+                    </CardTitle>
+                    <p className="text-xs text-slate-400">
+                      Quantidade de assinaturas ACTIVE por categoria de plano (Básico/Intermediário/Avançado).
+                    </p>
+                  </CardHeader>
+                  <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
+                    {planPieData.length === 0 ? (
+                      <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                        Nenhuma assinatura ativa encontrada para exibir.
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <RechartsTooltip
+                            contentStyle={{
+                              borderRadius: 12,
+                              borderColor: "#E2E8F0",
+                              fontSize: 11,
+                            }}
+                          />
+                          <Legend
+                            verticalAlign="bottom"
+                            height={36}
+                            wrapperStyle={{ fontSize: 11, color: "#64748B" }}
+                          />
+                          <Pie
+                            data={planPieData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="45%"
+                            outerRadius={92}
+                            innerRadius={52}
+                            paddingAngle={2}
+                          >
+                            {planPieData.map((entry) => (
+                              <Cell key={entry.name} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                   </CardContent>
                 </Card>
               </section>
