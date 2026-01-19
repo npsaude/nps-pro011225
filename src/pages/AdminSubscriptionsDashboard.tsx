@@ -84,30 +84,17 @@ export default function AdminSubscriptionsDashboard() {
 
         if (enrollmentsError) throw enrollmentsError;
 
-        // Define a broader type that encompasses what Supabase might return
-        type Row = {
+        const rows = (enrollments ?? []) as Array<{
           id: string;
           status: string;
           created_at: string | null;
           started_at: string | null;
-          // plan can be an array if it's a join, or a single object, or null
-          plan: { price_cents: number }[] | { price_cents: number } | null;
-        };
-
-        // Cast with unknown first to satisfy TS
-        const rows = (enrollments ?? []) as unknown as Row[];
-
-        const planPriceCents = (plan: Row["plan"]) => {
-          if (!plan) return 0;
-          if (Array.isArray(plan)) {
-            return plan[0]?.price_cents ?? 0;
-          }
-          return (plan as { price_cents: number }).price_cents ?? 0;
-        };
+          plan: { price_cents: number } | null;
+        }>;
 
         const activeSum = rows
           .filter((r) => r.status === "ACTIVE")
-          .reduce((acc, r) => acc + planPriceCents(r.plan), 0);
+          .reduce((acc, r) => acc + (r.plan?.price_cents ?? 0), 0);
 
         setTotalRevenueCents(activeSum);
 
