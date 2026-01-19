@@ -76,6 +76,30 @@ function bucketPlanName(nameOrCode: string) {
   return "Outros";
 }
 
+function renderPieValueLabel(props: any) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
+
+  if (!value || value <= 0) return null;
+
+  const RADIAN = Math.PI / 180;
+  const r = innerRadius + (outerRadius - innerRadius) * 0.62;
+  const x = cx + r * Math.cos(-midAngle * RADIAN);
+  const y = cy + r * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#0f172a"
+      textAnchor="middle"
+      dominantBaseline="central"
+      className="select-none text-[11px] font-semibold"
+    >
+      {value}
+    </text>
+  );
+}
+
 export default function AdminSubscriptionsDashboard() {
   const { loading: userLoading, systemUser, error: userError } = useSystemUser();
   const blocked =
@@ -384,6 +408,8 @@ export default function AdminSubscriptionsDashboard() {
                             outerRadius={92}
                             innerRadius={52}
                             paddingAngle={2}
+                            labelLine={false}
+                            label={renderPieValueLabel}
                           >
                             {planPieData.map((entry) => (
                               <Cell key={entry.name} fill={entry.color} />
