@@ -41,11 +41,11 @@ function monthLabel(key: string) {
   return new Date(y, m - 1, 1).toLocaleString("pt-BR", { month: "short" }).replace(".", "");
 }
 
-function lastMonths(count: number) {
+function nextMonths(count: number) {
   const now = new Date();
   const first = new Date(now.getFullYear(), now.getMonth(), 1);
   return Array.from({ length: count }).map((_, i) => {
-    const d = new Date(first.getFullYear(), first.getMonth() - (count - 1 - i), 1);
+    const d = new Date(first.getFullYear(), first.getMonth() + i, 1);
     return monthKey(d);
   });
 }
@@ -67,15 +67,15 @@ export default function AdminSubscriptionsDashboard() {
   const [cancels, setCancels] = useState(0);
   const [barData, setBarData] = useState<MonthlyPoint[]>([]);
   const [pieData, setPieData] = useState<PiePoint[]>([]);
-  const months = useMemo(() => lastMonths(12), []);
+  const months = useMemo(() => nextMonths(12), []);
 
   useEffect(() => {
     if (blocked) return;
 
     const load = async () => {
       const { data: enrollments, error: enrollmentsError } = await supabase
-        .from("subscription_enrollments")
-        .select<Row>("status,created_at,started_at,plan:subscription_plans(price_cents,code)");
+        .from<"subscription_enrollments", Row>("subscription_enrollments")
+        .select("status,created_at,started_at,plan:subscription_plans(price_cents,code)");
       if (enrollmentsError) throw enrollmentsError;
 
       type Row = {
