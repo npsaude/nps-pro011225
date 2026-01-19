@@ -84,17 +84,25 @@ export default function AdminSubscriptionsDashboard() {
 
         if (enrollmentsError) throw enrollmentsError;
 
-        const rows = (enrollments ?? []) as Array<{
+        type Row = {
           id: string;
           status: string;
           created_at: string | null;
           started_at: string | null;
-          plan: { price_cents: number } | null;
-        }>;
+          plan: { price_cents: number }[] | { price_cents: number } | null;
+        };
+
+        const rows = (enrollments ?? []) as unknown as Row[];
+
+        const planPriceCents = (plan: Row["plan"]) => {
+          if (!plan) return 0;
+          if (Array.isArray(plan)) return plan[0]?.price_cents ?? 0;
+          return plan.price_cents ?? 0;
+        };
 
         const activeSum = rows
           .filter((r) => r.status === "ACTIVE")
-          .reduce((acc, r) => acc + (r.plan?.price_cents ?? 0), 0);
+          .reduce((acc, r) => acc + planPriceCents(r.plan), 0);
 
         setTotalRevenueCents(activeSum);
 
