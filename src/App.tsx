@@ -31,6 +31,7 @@ import AdminSubscriptionPlans from "./pages/AdminSubscriptionPlans";
 import Welcome from "./pages/Welcome";
 import FirstAccess from "./pages/FirstAccess";
 import UnderConstruction from "./pages/UnderConstruction";
+import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
 
 const queryClient = new QueryClient();
 
@@ -100,9 +101,14 @@ const App = () => (
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
+
           <Route
             path="/admin/assinaturas/planos"
-            element={<AdminSubscriptionPlans />}
+            element={
+              <SuperAdminGuard>
+                <AdminSubscriptionPlans />
+              </SuperAdminGuard>
+            }
           />
 
           {/* Configurações administrativas */}
