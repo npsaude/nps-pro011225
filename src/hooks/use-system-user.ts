@@ -53,8 +53,28 @@ export function useSystemUser() {
         }
       }
 
+      // 3) carrega avatar salvo no banco (user_avatars)
+      const { data: avatarRow, error: avatarError } = await supabase
+        .from("user_avatars")
+        .select("avatar_path")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      if (avatarError) {
+        if (!cancelled) setState({ loading: false, systemUser: null, error: avatarError });
+        return;
+      }
+
+      const avatarPath = (avatarRow as any)?.avatar_path ?? null;
+
       if (!cancelled) {
-        setState({ loading: false, systemUser, error: null });
+        setState({
+          loading: false,
+          systemUser: systemUser
+            ? ({ ...systemUser, avatar_url: avatarPath ?? (systemUser as any)?.avatar_url ?? null } as DbSystemUser)
+            : systemUser,
+          error: null,
+        });
       }
     };
 
