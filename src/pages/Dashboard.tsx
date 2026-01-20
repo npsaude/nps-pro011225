@@ -3,7 +3,6 @@ import {
   Activity,
   CheckCircle2,
   MessageCircle,
-  Bell,
   Search,
   ArrowUpRight,
 } from "lucide-react";
@@ -231,14 +230,8 @@ const Dashboard = () => {
                   className="h-7 w-40 bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none dark:text-slate-50 sm:w-52 sm:text-sm"
                 />
               </div>
-              <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#E6EEF7] text-slate-600 shadow-sm ring-1 ring-[#D9DEE3]/70 transition-colors hover:bg-[#D9DEE3] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                {pendingDescricoes > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[10px] font-semibold text-white">
-                    {pendingDescricoes > 9 ? "9+" : pendingDescricoes}
-                  </span>
-                )}
-                <Bell className="h-4 w-4" />
-              </button>
+
+              <AdminHeaderActions notificationsCount={pendingDescricoes} />
             </div>
           </header>
 

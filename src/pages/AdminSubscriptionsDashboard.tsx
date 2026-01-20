@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BarChart3, DollarSign, UserCheck, UserX } from "lucide-react";
+import { BarChart3, DollarSign, UserCheck, UserX } from "lucide-react";
 import {
   Bar,
   CartesianGrid,
@@ -246,16 +246,9 @@ export default function AdminSubscriptionsDashboard() {
               </p>
             </div>
 
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-border transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Notificações"
-            >
-              <Bell className="h-4 w-4" />
-            </button>
+            {/* Sino + perfil */}
+            <AdminHeaderActions />
           </header>
-
-          <AdminHeaderActions />
 
           {userError ? (
             <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive-foreground">
