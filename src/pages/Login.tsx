@@ -201,7 +201,7 @@ const Login = () => {
           </div>
           <div className="flex flex-col items-center">
             <span className="text-sm font-semibold text-foreground">
-              NP Saúde Pró
+              CONMEDIC
             </span>
             <span className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground">
               ACESSO ADMINISTRATIVO
