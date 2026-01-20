@@ -15,6 +15,24 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeRole(role: unknown): AllowedRole {
+  const normalized = String(role ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/-+/g, "_")
+    .replace(/_+/g, "_");
+
+  if (normalized === "ADMIN") return "ADMIN";
+  if (normalized === "MEDICO") return "MEDICO";
+  if (normalized === "SUPER_ADMIN") return "SUPER_ADMIN";
+
+  // fallback (mantém erro mais claro em caso de valor inesperado)
+  return normalized as AllowedRole;
+}
+
 async function loadSystemUserByEmail(email: string): Promise<DbSystemUser | null> {
   const normalized = normalizeEmail(email);
 
@@ -79,9 +97,7 @@ export async function loginWithRole(params: {
     );
   }
 
-  const userRole = String((systemUser as any)?.regra ?? "")
-    .trim()
-    .toUpperCase() as AllowedRole;
+  const userRole = normalizeRole((systemUser as any)?.regra);
 
   // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles: AllowedRole[] =
