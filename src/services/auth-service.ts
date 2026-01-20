@@ -34,49 +34,30 @@ function normalizeRole(role: unknown): AllowedRole {
   return normalized as AllowedRole;
 }
 
-async function fetchSystemUsersByEmailPattern(
-  pattern: string,
-): Promise<DbSystemUser[]> {
+async function loadSystemUsersByEmail(email: string): Promise<DbSystemUser[]> {
+  const normalized = normalizeEmail(email);
+
   const { data, error } = await supabase
     .from("usuarios_sistema")
     .select("*")
-    .ilike("email", pattern)
+    // Busca tolerante: se houver espaços antes/depois no banco, ainda retorna
+    .ilike("email", `%${normalized}%`)
     .limit(25);
 
   if (error) {
     // eslint-disable-next-line no-console
-    console.error("Erro ao carregar usuarios_sistema por email (ilike):", {
-      pattern,
-      error,
-    });
+    console.error("Erro ao carregar usuarios_sistema por email (ilike):", error);
     return [];
   }
 
-  return (data as DbSystemUser[] | null) ?? [];
-}
+  const rows = ((data ?? []) as DbSystemUser[]).map((r) => ({
+    ...r,
+    email: typeof (r as any).email === "string" ? (r as any).email : "",
+  }));
 
-async function loadSystemUsersByEmail(email: string): Promise<DbSystemUser[]> {
-  const normalized = normalizeEmail(email);
-
-  // 1) match "exato" case-insensitive
-  let users = await fetchSystemUsersByEmailPattern(normalized);
-
-  // 2) tolera espaços no final no banco
-  if (users.length === 0) {
-    users = await fetchSystemUsersByEmailPattern(`${normalized}%`);
-  }
-
-  // 3) tolera espaços/inconsistências no meio (último recurso)
-  if (users.length === 0) {
-    users = await fetchSystemUsersByEmailPattern(`%${normalized}%`);
-  }
-
-  return users;
-}
-
-async function loadSystemUserByEmail(email: string): Promise<DbSystemUser | null> {
-  const users = await loadSystemUsersByEmail(email);
-  return users[0] ?? null;
+  // Preferência: match exato após normalização (trim + lowercase)
+  const exact = rows.filter((r) => normalizeEmail(r.email) === normalized);
+  return exact.length ? exact : rows;
 }
 
 function pickBestSystemUser(
@@ -93,15 +74,21 @@ function pickBestSystemUser(
     role: normalizeRole((u as any)?.regra),
   }));
 
-  const prefer = (roles: AllowedRole[]) =>
+  const pick = (roles: AllowedRole[]) =>
     roles
       .map((r) => withRole.find((x) => x.role === r)?.user ?? null)
       .find((u) => u !== null) ?? null;
 
-  if (allowedRole === "MEDICO") return prefer(["MEDICO"]);
-  if (allowedRole === "SUPER_ADMIN") return prefer(["SUPER_ADMIN"]);
-  // ADMIN portal: prefer SUPER_ADMIN, depois ADMIN
-  return prefer(["SUPER_ADMIN", "ADMIN"]);
+  if (allowedRole === "MEDICO") return pick(["MEDICO"]);
+  if (allowedRole === "SUPER_ADMIN") return pick(["SUPER_ADMIN"]);
+
+  // Portal admin: permite apenas ADMIN/SUPER_ADMIN e prefere SUPER_ADMIN
+  return pick(["SUPER_ADMIN", "ADMIN"]);
+}
+
+async function loadSystemUserByEmail(email: string): Promise<DbSystemUser | null> {
+  const users = await loadSystemUsersByEmail(email);
+  return users[0] ?? null;
 }
 
 /**
