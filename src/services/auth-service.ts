@@ -127,76 +127,30 @@ export async function loginWithRole(params: {
   }
 
   const authUid = data.user.id;
-  const authEmail = normalizeEmail(data.user.email ?? normalizedEmail);
 
-  // 1) Tenta carregar pelo vínculo correto (id_user = auth.uid)
-  const { data: byUid, error: byUidError } = await supabase
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("id_user", authUid)
-    .maybeSingle();
+  const systemUsers = await loadSystemUsersByEmail(normalizedEmail);
+  let systemUser = pickBestSystemUser(systemUsers, allowedRole);
 
-  if (byUidError) {
-    throw new Error(
-      byUidError.message ||
-        "Falha ao validar seu cadastro no sistema (usuarios_sistema por id_user).",
-    );
-  }
+  // Se achou por e-mail mas id_user está incorreto, tenta corrigir (evita falhas nas telas que usam auth.uid())
+  if (systemUser && (systemUser as any).id_user !== authUid) {
+    const { data: fixed, error: fixError } = await supabase
+      .from("usuarios_sistema")
+      .update({ id_user: authUid, email: normalizedEmail })
+      .eq("email", (systemUser as any).email)
+      .select("*")
+      .maybeSingle();
 
-  let systemUser = (byUid as DbSystemUser | null) ?? null;
-
-  // 2) Fallback por e-mail; se achar, tenta vincular esse registro ao auth uid
-  if (!systemUser) {
-    const systemUsers = await loadSystemUsersByEmail(authEmail);
-    const byEmailPicked = pickBestSystemUser(systemUsers, allowedRole);
-
-    if (!byEmailPicked) {
+    if (fixError) {
       throw new Error(
-        "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
+        fixError.message ||
+          "Encontramos seu cadastro, mas não foi possível vinculá-lo ao seu usuário de autenticação.",
       );
     }
 
-    if ((byEmailPicked as any)?.ativo === false) {
-      await supabase.auth.signOut();
-      throw new Error("Seu acesso está desativado. Entre em contato com o administrador.");
-    }
-
-    // Se o registro existe mas está com id_user diferente do auth uid, tenta corrigir
-    if ((byEmailPicked as any)?.id_user !== authUid) {
-      const { error: linkError } = await supabase
-        .from("usuarios_sistema")
-        .update({ id_user: authUid })
-        .eq("id_user", (byEmailPicked as any).id_user);
-
-      if (linkError) {
-        // Se não puder atualizar por RLS, seguimos usando o registro encontrado por e-mail,
-        // mas o fluxo pode falhar em outras telas; o erro fica explícito aqui.
-        throw new Error(
-          linkError.message ||
-            "Encontramos seu cadastro, mas não foi possível vinculá-lo ao seu usuário de autenticação.",
-        );
-      }
-
-      // Rebusca já no formato esperado pelo app
-      const { data: byUidAfter, error: byUidAfterError } = await supabase
-        .from("usuarios_sistema")
-        .select("*")
-        .eq("id_user", authUid)
-        .maybeSingle();
-
-      if (byUidAfterError) {
-        throw new Error(
-          byUidAfterError.message ||
-            "Falha ao validar seu cadastro no sistema após vincular (usuarios_sistema).",
-        );
-      }
-
-      systemUser = (byUidAfter as DbSystemUser | null) ?? byEmailPicked;
-    } else {
-      systemUser = byEmailPicked;
-    }
+    if (fixed) systemUser = fixed as DbSystemUser;
   }
 
+  // Garante que exista um registro em usuarios_sistema
   if (!systemUser) {
     throw new Error(
       "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
@@ -205,17 +159,21 @@ export async function loginWithRole(params: {
 
   if ((systemUser as any)?.ativo === false) {
     await supabase.auth.signOut();
-    throw new Error("Seu acesso está desativado. Entre em contato com o administrador.");
+    throw new Error(
+      "Seu acesso está desativado. Entre em contato com o administrador.",
+    );
   }
 
   const userRole = normalizeRole((systemUser as any)?.regra);
 
+  // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles: AllowedRole[] =
     allowedRole === "ADMIN"
       ? (["ADMIN", "SUPER_ADMIN"] as AllowedRole[])
       : ([allowedRole] as AllowedRole[]);
 
   if (!allowedRoles.includes(userRole)) {
+    // Encerra sessão para evitar sessão ativa em área errada
     await supabase.auth.signOut();
 
     if (allowedRole === "MEDICO") {
@@ -253,6 +211,8 @@ export async function registerUser(params: {
 
   const normalizedEmail = normalizeEmail(email);
 
+  let authUserId: string | null = null;
+
   // 1) Tenta criar no Auth
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -271,10 +231,11 @@ export async function registerUser(params: {
 
     // Se já existir no Auth, validamos a senha com signIn e seguimos.
     if (msg.includes("user already registered")) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
-      });
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
 
       if (signInError) {
         throw new Error(
@@ -282,6 +243,12 @@ export async function registerUser(params: {
             "Este e-mail já está cadastrado e a senha informada não confere.",
         );
       }
+
+      if (!signInData.user) {
+        throw new Error("Usuário não retornado pelo provedor de autenticação.");
+      }
+
+      authUserId = signInData.user.id;
 
       // eslint-disable-next-line no-console
       console.log(
@@ -306,6 +273,8 @@ export async function registerUser(params: {
       );
     }
 
+    authUserId = signUpData.user.id;
+
     // eslint-disable-next-line no-console
     console.log("Usuário criado no Auth com sucesso:", {
       authUserId: signUpData.user.id,
@@ -314,8 +283,13 @@ export async function registerUser(params: {
     });
   }
 
+  if (!authUserId) {
+    throw new Error("Não foi possível obter o ID do usuário autenticado.");
+  }
+
   // 2) Garante cadastro em usuarios_sistema (create/update por e-mail)
   const insertPayload = {
+    id_user: authUserId,
     nome,
     email: normalizedEmail,
     celular: null as string | null,
@@ -355,7 +329,7 @@ export async function registerUser(params: {
     // eslint-disable-next-line no-console
     console.log("Registro atualizado em usuarios_sistema:", upsertResult);
   } else {
-    // Cria novo registro
+    // Cria novo registro (AGORA com id_user correto)
     const { data: inserted, error: insertError } = await supabase
       .from("usuarios_sistema")
       .insert(insertPayload)
