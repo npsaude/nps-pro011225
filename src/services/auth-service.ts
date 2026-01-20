@@ -79,13 +79,17 @@ export async function loginWithRole(params: {
     );
   }
 
-  // Garante que o papel do usuário é o permitido para essa área
-  const allowedRoles =
-    allowedRole === "ADMIN"
-      ? (["ADMIN", "SUPER_ADMIN", "MEDICO"] as const)
-      : ([allowedRole] as const);
+  const userRole = String((systemUser as any)?.regra ?? "")
+    .trim()
+    .toUpperCase() as AllowedRole;
 
-  if (!allowedRoles.includes(systemUser.regra as any)) {
+  // Garante que o papel do usuário é o permitido para essa área
+  const allowedRoles: AllowedRole[] =
+    allowedRole === "ADMIN"
+      ? (["ADMIN", "SUPER_ADMIN", "MEDICO"] as AllowedRole[])
+      : ([allowedRole] as AllowedRole[]);
+
+  if (!allowedRoles.includes(userRole)) {
     // Encerra sessão para evitar sessão ativa em área errada
     await supabase.auth.signOut();
 
@@ -102,7 +106,7 @@ export async function loginWithRole(params: {
 
   return {
     user: systemUser,
-    role: systemUser.regra ?? null,
+    role: userRole ?? null,
   };
 }
 
