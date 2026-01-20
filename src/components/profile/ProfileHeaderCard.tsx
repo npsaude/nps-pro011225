@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemUser } from "@/hooks/use-system-user";
 import { showError, showSuccess } from "@/utils/toast";
-import { atualizarMeuUsuarioSistema, uploadAvatar } from "@/services/system-user-profile-service";
+import { emitAvatarUpdated } from "@/utils/avatar-events";
+import AvatarCropDialog from "@/components/profile/AvatarCropDialog";
+import { setUserAvatar } from "@/services/user-avatar-service";
+import { atualizarMeuUsuarioSistema } from "@/services/system-user-profile-service";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -29,11 +32,26 @@ type Props = {
 export default function ProfileHeaderCard({ planLabel }: Props) {
   const { systemUser } = useSystemUser();
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [cropOpen, setCropOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";
   }, [systemUser?.email, systemUser?.nome]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
+
+  useEffect(() => {
+    // se o usuário mudar (login/logout), limpa preview local
+    setAvatarPreviewUrl(null);
+  }, [systemUser?.id_user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,18 +84,37 @@ export default function ProfileHeaderCard({ planLabel }: Props) {
     };
   }, [systemUser]);
 
-  const handleAvatarChange = async (file: File | null) => {
+  const handleAvatarPicked = (file: File | null) => {
     if (!file || !systemUser) return;
+    setSelectedFile(file);
+    setCropOpen(true);
+  };
+
+  const handleAvatarCropped = async (blob: Blob) => {
+    if (!systemUser) return;
+
+    const nextPreview = URL.createObjectURL(blob);
+    setAvatarPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return nextPreview;
+    });
+    emitAvatarUpdated(nextPreview);
 
     setSaving(true);
     try {
-      const path = await uploadAvatar({ file, userId: systemUser.id_user });
+      const { path, signedUrl } = await setUserAvatar({ userId: systemUser.id_user, blob });
       await atualizarMeuUsuarioSistema({ avatar_url: path });
+
+      setAvatarSignedUrl(signedUrl);
+      emitAvatarUpdated(signedUrl);
+
       showSuccess("Foto atualizada.");
     } catch (e) {
+      emitAvatarUpdated(avatarSignedUrl);
       showError(e instanceof Error ? e.message : "Não foi possível enviar a foto.");
     } finally {
       setSaving(false);
+      setSelectedFile(null);
     }
   };
 
@@ -87,7 +124,7 @@ export default function ProfileHeaderCard({ planLabel }: Props) {
         <div className="flex items-center gap-4">
           <div className="relative">
             <Avatar className="h-20 w-20 ring-2 ring-border shadow-sm">
-              <AvatarImage src={avatarSignedUrl ?? undefined} alt={displayName} />
+              <AvatarImage src={(avatarPreviewUrl ?? avatarSignedUrl) ?? undefined} alt={displayName} />
               <AvatarFallback className="bg-secondary text-lg text-foreground">
                 {initials(displayName)}
               </AvatarFallback>
@@ -99,7 +136,7 @@ export default function ProfileHeaderCard({ planLabel }: Props) {
                 accept="image/*"
                 className="hidden"
                 disabled={saving}
-                onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)}
+                onChange={(e) => handleAvatarPicked(e.target.files?.[0] ?? null)}
               />
               <Button
                 type="button"
@@ -148,6 +185,16 @@ export default function ProfileHeaderCard({ planLabel }: Props) {
           <div className="h-10 w-10 rounded-full bg-secondary/60" />
         </div>
       </div>
+
+      <AvatarCropDialog
+        open={cropOpen}
+        file={selectedFile}
+        onOpenChange={(open) => {
+          setCropOpen(open);
+          if (!open) setSelectedFile(null);
+        }}
+        onConfirm={(blob) => void handleAvatarCropped(blob)}
+      />
     </Card>
   );
 }

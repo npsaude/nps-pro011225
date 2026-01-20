@@ -22,6 +22,9 @@ import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { emitAvatarUpdated } from "@/utils/avatar-events";
+import AvatarCropDialog from "@/components/profile/AvatarCropDialog";
+import { setUserAvatar } from "@/services/user-avatar-service";
 import { useSystemUser } from "@/hooks/use-system-user";
 import {
   atualizarMeuUsuarioSistema,
@@ -117,6 +120,9 @@ export default function AdminProfile() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("info");
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";
@@ -159,6 +165,16 @@ export default function AdminProfile() {
     };
     void loadLastSignIn();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
+
+  useEffect(() => {
+    setAvatarPreviewUrl(null);
+  }, [systemUser?.id_user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -293,18 +309,37 @@ export default function AdminProfile() {
     };
   }, [currentEnrollment?.id]);
 
-  const handleAvatarChange = async (file: File | null) => {
+  const handleAvatarPicked = (file: File | null) => {
     if (!file || !systemUser) return;
+    setSelectedFile(file);
+    setCropOpen(true);
+  };
+
+  const handleAvatarCropped = async (blob: Blob) => {
+    if (!systemUser) return;
+
+    const nextPreview = URL.createObjectURL(blob);
+    setAvatarPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return nextPreview;
+    });
+    emitAvatarUpdated(nextPreview);
 
     setSaving(true);
     try {
-      const path = await uploadAvatar({ file, userId: systemUser.id_user });
+      const { path, signedUrl } = await setUserAvatar({ userId: systemUser.id_user, blob });
       await atualizarMeuUsuarioSistema({ avatar_url: path });
+
+      setAvatarSignedUrl(signedUrl);
+      emitAvatarUpdated(signedUrl);
+
       showSuccess("Foto atualizada.");
     } catch (e) {
+      emitAvatarUpdated(avatarSignedUrl);
       showError(e instanceof Error ? e.message : "Não foi possível atualizar a foto.");
     } finally {
       setSaving(false);
+      setSelectedFile(null);
     }
   };
 
@@ -414,7 +449,7 @@ export default function AdminProfile() {
                 <div className="relative group">
                   <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-primary/15 shadow-xl">
                     <img
-                      src={avatarSignedUrl ?? "/perfil.jpeg"}
+                      src={(avatarPreviewUrl ?? avatarSignedUrl) ?? "/perfil.jpeg"}
                       alt="Profile"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -429,7 +464,7 @@ export default function AdminProfile() {
                       accept="image/*"
                       className="hidden"
                       disabled={saving}
-                      onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)}
+                      onChange={(e) => handleAvatarPicked(e.target.files?.[0] ?? null)}
                     />
                     <Camera size={16} />
                   </label>
@@ -487,6 +522,16 @@ export default function AdminProfile() {
                   </button>
                 </div>
               </div>
+
+              <AvatarCropDialog
+                open={cropOpen}
+                file={selectedFile}
+                onOpenChange={(open) => {
+                  setCropOpen(open);
+                  if (!open) setSelectedFile(null);
+                }}
+                onConfirm={(blob) => void handleAvatarCropped(blob)}
+              />
             </div>
 
             {activeTab === "info" ? (
@@ -865,7 +910,7 @@ export default function AdminProfile() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Gerenciar assinatura</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Você pode cancelar sua assinatura. Isso acionará o Asaas e o status ficará como “CANCELED” no sistema.
+                        Você pode cancelar sua assinatura. Isso acionará o Asaas e o status ficará como "CANCELED" no sistema.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

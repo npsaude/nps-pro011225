@@ -10,9 +10,11 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemUser } from "@/hooks/use-system-user";
 import { showError, showSuccess } from "@/utils/toast";
+import { emitAvatarUpdated } from "@/utils/avatar-events";
+import AvatarCropDialog from "@/components/profile/AvatarCropDialog";
+import { setUserAvatar } from "@/services/user-avatar-service";
 import {
   atualizarMeuUsuarioSistema,
-  uploadAvatar,
 } from "@/services/system-user-profile-service";
 
 function initials(name: string) {
@@ -29,6 +31,10 @@ export default function UserProfileForm() {
   const [saving, setSaving] = useState(false);
 
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const avatarPath = (systemUser as any)?.avatar_url as string | null | undefined;
 
   const displayName = useMemo(() => {
@@ -40,6 +46,17 @@ export default function UserProfileForm() {
     setNome(systemUser.nome ?? "");
     setCelular(systemUser.celular ?? "");
   }, [systemUser]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
+
+  useEffect(() => {
+    // se o usuário mudar (login/logout), limpa preview local
+    setAvatarPreviewUrl(null);
+  }, [systemUser?.id_user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,18 +104,40 @@ export default function UserProfileForm() {
     }
   };
 
-  const handleAvatarChange = async (file: File | null) => {
+  const handleAvatarPicked = (file: File | null) => {
     if (!file || !systemUser) return;
+    setSelectedFile(file);
+    setCropOpen(true);
+  };
+
+  const handleAvatarCropped = async (blob: Blob) => {
+    if (!systemUser) return;
+
+    const nextPreview = URL.createObjectURL(blob);
+    setAvatarPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return nextPreview;
+    });
+    emitAvatarUpdated(nextPreview);
 
     setSaving(true);
     try {
-      const path = await uploadAvatar({ file, userId: systemUser.id_user });
+      const { path, signedUrl } = await setUserAvatar({ userId: systemUser.id_user, blob });
+
+      // mantém compatibilidade com telas que ainda leem usuarios_sistema.avatar_url
       await atualizarMeuUsuarioSistema({ avatar_url: path });
+
+      setAvatarSignedUrl(signedUrl);
+      emitAvatarUpdated(signedUrl);
+
       showSuccess("Foto atualizada.");
     } catch (e) {
+      // fallback: volta para o avatar salvo (ou nenhum)
+      emitAvatarUpdated(avatarSignedUrl);
       showError(e instanceof Error ? e.message : "Não foi possível enviar a foto.");
     } finally {
       setSaving(false);
+      setSelectedFile(null);
     }
   };
 
@@ -112,7 +151,7 @@ export default function UserProfileForm() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Avatar className="h-16 w-16 ring-1 ring-border">
-              <AvatarImage src={avatarSignedUrl ?? undefined} alt={displayName} />
+              <AvatarImage src={(avatarPreviewUrl ?? avatarSignedUrl) ?? undefined} alt={displayName} />
               <AvatarFallback className="bg-secondary text-lg text-foreground">
                 {initials(displayName)}
               </AvatarFallback>
@@ -141,10 +180,20 @@ export default function UserProfileForm() {
               accept="image/*"
               className="hidden"
               disabled={saving}
-              onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)}
+              onChange={(e) => handleAvatarPicked(e.target.files?.[0] ?? null)}
             />
           </div>
         </div>
+
+        <AvatarCropDialog
+          open={cropOpen}
+          file={selectedFile}
+          onOpenChange={(open) => {
+            setCropOpen(open);
+            if (!open) setSelectedFile(null);
+          }}
+          onConfirm={(blob) => void handleAvatarCropped(blob)}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">

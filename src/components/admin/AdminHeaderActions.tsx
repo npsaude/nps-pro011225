@@ -5,6 +5,7 @@ import { Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemUser } from "@/hooks/use-system-user";
 import { showError, showSuccess } from "@/utils/toast";
+import { subscribeAvatarUpdated } from "@/utils/avatar-events";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -32,6 +33,14 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";
   }, [systemUser?.email, systemUser?.nome]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeAvatarUpdated((url) => {
+      setAvatarUrl(url);
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
