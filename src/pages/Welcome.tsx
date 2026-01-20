@@ -36,7 +36,7 @@ export default function Welcome() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <Button
               className="h-11 rounded-xl bg-primary text-primary-foreground hover:opacity-95"
-              onClick={() => navigate("/plataforma-em-construcao")}
+              onClick={() => navigate("/primeiro-acesso")}
             >
               <KeyRound className="mr-2 h-4 w-4" />
               Primeiro acesso
