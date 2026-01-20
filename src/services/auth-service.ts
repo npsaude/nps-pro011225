@@ -127,30 +127,50 @@ export async function loginWithRole(params: {
   }
 
   const authUid = data.user.id;
+  const authEmail = normalizeEmail(data.user.email ?? normalizedEmail);
 
-  const systemUsers = await loadSystemUsersByEmail(normalizedEmail);
-  let systemUser = pickBestSystemUser(systemUsers, allowedRole);
+  // 1) Caminho correto: busca por id_user = auth.uid()
+  const { data: byUid, error: byUidError } = await supabase
+    .from("usuarios_sistema")
+    .select("*")
+    .eq("id_user", authUid)
+    .maybeSingle();
 
-  // Se achou por e-mail mas id_user está incorreto, tenta corrigir (evita falhas nas telas que usam auth.uid())
-  if (systemUser && (systemUser as any).id_user !== authUid) {
-    const { data: fixed, error: fixError } = await supabase
-      .from("usuarios_sistema")
-      .update({ id_user: authUid, email: normalizedEmail })
-      .eq("email", (systemUser as any).email)
-      .select("*")
-      .maybeSingle();
-
-    if (fixError) {
-      throw new Error(
-        fixError.message ||
-          "Encontramos seu cadastro, mas não foi possível vinculá-lo ao seu usuário de autenticação.",
-      );
-    }
-
-    if (fixed) systemUser = fixed as DbSystemUser;
+  if (byUidError) {
+    throw new Error(
+      byUidError.message ||
+        "Não foi possível validar seu cadastro no sistema (usuarios_sistema).",
+    );
   }
 
-  // Garante que exista um registro em usuarios_sistema
+  let systemUser = (byUid as DbSystemUser | null) ?? null;
+
+  // 2) Fallback por e-mail (para cenários ainda não sincronizados)
+  if (!systemUser) {
+    const systemUsers = await loadSystemUsersByEmail(authEmail);
+    systemUser = pickBestSystemUser(systemUsers, allowedRole);
+
+    // Se achou por e-mail mas id_user está incorreto, tenta corrigir (se o banco permitir)
+    if (systemUser && (systemUser as any).id_user !== authUid) {
+      const { data: fixed, error: fixError } = await supabase
+        .from("usuarios_sistema")
+        .update({ id_user: authUid, email: authEmail })
+        .ilike("email", authEmail)
+        .select("*")
+        .maybeSingle();
+
+      if (fixError) {
+        // Se falhar aqui, o trigger do banco (auth.users -> usuarios_sistema) é quem deve corrigir.
+        // Mantém mensagem clara para o usuário.
+        throw new Error(
+          "Seu usuário ainda está sendo sincronizado. Aguarde alguns segundos e tente novamente.",
+        );
+      }
+
+      if (fixed) systemUser = fixed as DbSystemUser;
+    }
+  }
+
   if (!systemUser) {
     throw new Error(
       "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
