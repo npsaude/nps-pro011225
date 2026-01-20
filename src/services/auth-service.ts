@@ -34,24 +34,74 @@ function normalizeRole(role: unknown): AllowedRole {
   return normalized as AllowedRole;
 }
 
-async function loadSystemUserByEmail(email: string): Promise<DbSystemUser | null> {
-  const normalized = normalizeEmail(email);
-
-  // Tenta via RPC PostgREST case-insensitive usando ilike.
-  // Observação: em PostgREST, ilike é case-insensitive.
+async function fetchSystemUsersByEmailPattern(
+  pattern: string,
+): Promise<DbSystemUser[]> {
   const { data, error } = await supabase
     .from("usuarios_sistema")
     .select("*")
-    .ilike("email", normalized)
-    .maybeSingle();
+    .ilike("email", pattern)
+    .limit(25);
 
   if (error) {
     // eslint-disable-next-line no-console
-    console.error("Erro ao carregar usuarios_sistema por email (ilike):", error);
-    return null;
+    console.error("Erro ao carregar usuarios_sistema por email (ilike):", {
+      pattern,
+      error,
+    });
+    return [];
   }
 
-  return (data as DbSystemUser | null) ?? null;
+  return (data as DbSystemUser[] | null) ?? [];
+}
+
+async function loadSystemUsersByEmail(email: string): Promise<DbSystemUser[]> {
+  const normalized = normalizeEmail(email);
+
+  // 1) match "exato" case-insensitive
+  let users = await fetchSystemUsersByEmailPattern(normalized);
+
+  // 2) tolera espaços no final no banco
+  if (users.length === 0) {
+    users = await fetchSystemUsersByEmailPattern(`${normalized}%`);
+  }
+
+  // 3) tolera espaços/inconsistências no meio (último recurso)
+  if (users.length === 0) {
+    users = await fetchSystemUsersByEmailPattern(`%${normalized}%`);
+  }
+
+  return users;
+}
+
+async function loadSystemUserByEmail(email: string): Promise<DbSystemUser | null> {
+  const users = await loadSystemUsersByEmail(email);
+  return users[0] ?? null;
+}
+
+function pickBestSystemUser(
+  users: DbSystemUser[],
+  allowedRole: AllowedRole,
+): DbSystemUser | null {
+  if (!users.length) return null;
+
+  const active = users.filter((u) => (u as any)?.ativo === true);
+  const pool = active.length ? active : users;
+
+  const withRole = pool.map((u) => ({
+    user: u,
+    role: normalizeRole((u as any)?.regra),
+  }));
+
+  const prefer = (roles: AllowedRole[]) =>
+    roles
+      .map((r) => withRole.find((x) => x.role === r)?.user ?? null)
+      .find((u) => u !== null) ?? null;
+
+  if (allowedRole === "MEDICO") return prefer(["MEDICO"]);
+  if (allowedRole === "SUPER_ADMIN") return prefer(["SUPER_ADMIN"]);
+  // ADMIN portal: prefer SUPER_ADMIN, depois ADMIN
+  return prefer(["SUPER_ADMIN", "ADMIN"]);
 }
 
 /**
@@ -89,7 +139,8 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  const systemUser = await loadSystemUserByEmail(normalizedEmail);
+  const systemUsers = await loadSystemUsersByEmail(normalizedEmail);
+  const systemUser = pickBestSystemUser(systemUsers, allowedRole);
 
   // Garante que exista um registro em usuarios_sistema
   if (!systemUser) {
@@ -98,12 +149,19 @@ export async function loginWithRole(params: {
     );
   }
 
+  if ((systemUser as any)?.ativo === false) {
+    await supabase.auth.signOut();
+    throw new Error(
+      "Seu acesso está desativado. Entre em contato com o administrador.",
+    );
+  }
+
   const userRole = normalizeRole((systemUser as any)?.regra);
 
   // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles: AllowedRole[] =
     allowedRole === "ADMIN"
-      ? (["ADMIN", "SUPER_ADMIN", "MEDICO"] as AllowedRole[])
+      ? (["ADMIN", "SUPER_ADMIN"] as AllowedRole[])
       : ([allowedRole] as AllowedRole[]);
 
   if (!allowedRoles.includes(userRole)) {
