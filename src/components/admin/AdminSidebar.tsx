@@ -13,6 +13,8 @@ import {
   CreditCard,
   BarChart3,
 } from "lucide-react";
+import { logout } from "@/services/auth-service";
+import { showError, showSuccess } from "@/utils/toast";
 
 interface AdminSidebarProps {
   section?:
@@ -37,6 +39,19 @@ const AdminSidebar = ({
 }: AdminSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    void logout()
+      .then(() => {
+        showSuccess("Sessão encerrada.");
+        navigate("/login");
+      })
+      .catch((err) => {
+        const message =
+          err instanceof Error ? err.message : "Erro ao encerrar sessão.";
+        showError(message);
+      });
+  };
 
   const currentSection: AdminSidebarProps["section"] = useMemo(() => {
     if (section) return section;
@@ -297,7 +312,12 @@ const AdminSidebar = ({
         </nav>
       </div>
 
-      <button className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60">
+      {/* Logout */}
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60"
+      >
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
           <HelpCircle className="h-4 w-4" />
         </span>
