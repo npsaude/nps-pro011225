@@ -25,9 +25,10 @@ function normalizeRole(role: unknown): AllowedRole {
     .replace(/-+/g, "_")
     .replace(/_+/g, "_");
 
-  if (normalized === "ADMIN") return "ADMIN";
-  if (normalized === "MEDICO") return "MEDICO";
-  if (normalized === "SUPER_ADMIN") return "SUPER_ADMIN";
+  // mapeia variações (ex.: "médico(a)", "medico", "SUPER ADMIN", etc.)
+  if (normalized.includes("SUPER")) return "SUPER_ADMIN";
+  if (normalized.includes("MEDIC")) return "MEDICO";
+  if (normalized.includes("ADMIN")) return "ADMIN";
 
   // fallback (mantém erro mais claro em caso de valor inesperado)
   return normalized as AllowedRole;
