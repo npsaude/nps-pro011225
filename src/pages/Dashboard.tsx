@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { contarDescricoesCirurgicasPorStatus } from "@/services/descricao-cirurgica-service";
 import {
   Avatar,

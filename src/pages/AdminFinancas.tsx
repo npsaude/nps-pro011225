@@ -10,6 +10,7 @@ import {
   Activity,
 } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import {
   Card,
   CardHeader,
@@ -59,12 +60,7 @@ const AdminFinancas = () => {
               </div>
 
               <div className="flex items-center justify-end gap-3">
-                <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#E6EEF7] text-slate-600 shadow-sm ring-1 ring-[#D9DEE3]/70 transition-colors hover:bg-[#D9DEE3] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[10px] font-semibold text-white">
-                    1
-                  </span>
-                  <Bell className="h-4 w-4" />
-                </button>
+                <AdminHeaderActions notificationsCount={1} />
 
                 <div className="flex rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-300">
                   {periodOptions.map((opt) => (

@@ -15,6 +15,7 @@ import {
 } from "recharts";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
@@ -254,6 +255,8 @@ export default function AdminSubscriptionsDashboard() {
             </button>
           </header>
 
+          <AdminHeaderActions />
+
           {userError ? (
             <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive-foreground">
               Erro ao validar permissões: {userError.message}
@@ -318,7 +321,7 @@ export default function AdminSubscriptionsDashboard() {
                       {loading ? "—" : cancelations}
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      Status “CANCELED/Cancelado” (dependendo do banco)
+                      Status "CANCELED/Cancelado" (dependendo do banco)
                     </p>
                   </CardContent>
                 </Card>

@@ -1,4 +1,5 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import {
   Card,
   CardHeader,
@@ -178,13 +179,8 @@ const AdminFaturamento = () => {
                   className="w-40 bg-transparent text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none dark:text-slate-100"
                 />
               </div>
-              <button
-                type="button"
-                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-              </button>
+
+              <AdminHeaderActions notificationsCount={1} />
             </div>
           </header>
 

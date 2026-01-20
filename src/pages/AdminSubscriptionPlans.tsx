@@ -1,6 +1,7 @@
 import { BadgeDollarSign, Bell } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import SubscriptionPlansList from "@/components/subscriptions/SubscriptionPlansList";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 
 export default function AdminSubscriptionPlans() {
   return (
@@ -22,9 +23,7 @@ export default function AdminSubscriptionPlans() {
               </p>
             </div>
 
-            <button className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-sm ring-1 ring-border transition-colors hover:bg-muted">
-              <Bell className="h-4 w-4" />
-            </button>
+            <AdminHeaderActions />
           </header>
 
           <main className="flex-1">
