@@ -104,6 +104,9 @@ export interface DbSystemUser {
   regra: DbUserRole; // 'ADMIN' | 'MEDICO'
   ativo: boolean;
   criado_em: string; // ISO datetime (timestamptz)
+  avatar_url?: string | null;
+  crm?: string | null;
+  empresa_clinica_base?: string | null;
 }
 
 export type DbDescricaoCirurgicaStatus =

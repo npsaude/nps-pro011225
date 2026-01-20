@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { DbSystemUser } from "@/db/schema";
 
 export type SystemUserProfileUpdate = Partial<
-  Pick<DbSystemUser, "nome" | "celular">
+  Pick<DbSystemUser, "nome" | "celular" | "crm" | "empresa_clinica_base">
 > & {
   avatar_url?: string | null;
 };
@@ -50,6 +50,9 @@ export async function atualizarMeuUsuarioSistema(
   const payload: Record<string, unknown> = {};
   if (typeof updates.nome === "string") payload.nome = updates.nome;
   if (typeof updates.celular !== "undefined") payload.celular = updates.celular;
+  if (typeof updates.crm !== "undefined") payload.crm = updates.crm;
+  if (typeof updates.empresa_clinica_base !== "undefined")
+    payload.empresa_clinica_base = updates.empresa_clinica_base;
   if (typeof updates.avatar_url !== "undefined") payload.avatar_url = updates.avatar_url;
 
   const { data, error } = await supabase
