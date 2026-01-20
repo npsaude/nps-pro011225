@@ -122,7 +122,7 @@ export default function UserProfileForm() {
 
     setSaving(true);
     try {
-      const { path, signedUrl } = await setUserAvatar({ userId: systemUser.id_user, blob });
+      const { path, signedUrl } = await setUserAvatar({ blob });
 
       // mantém compatibilidade com telas que ainda leem usuarios_sistema.avatar_url
       await atualizarMeuUsuarioSistema({ avatar_url: path });

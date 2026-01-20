@@ -3,6 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 const AVATAR_BUCKET = "NPS-pro";
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
+async function getAuthUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+
+  const uid = data.user?.id ?? null;
+  if (!uid) throw new Error("Sessão expirada. Faça login novamente.");
+
+  return uid;
+}
+
 export async function uploadUserAvatar(params: { userId: string; blob: Blob }): Promise<string> {
   const { userId, blob } = params;
 
@@ -50,16 +60,16 @@ export async function createAvatarSignedUrl(path: string): Promise<string> {
 }
 
 export async function setUserAvatar(params: {
-  userId: string;
   blob: Blob;
-}): Promise<{ path: string; signedUrl: string }> {
-  const { userId, blob } = params;
+}): Promise<{ userId: string; path: string; signedUrl: string }> {
+  const { blob } = params;
 
+  const userId = await getAuthUserId();
   const path = await uploadUserAvatar({ userId, blob });
   await saveUserAvatarPath({ userId, path });
   const signedUrl = await createAvatarSignedUrl(path);
 
-  return { path, signedUrl };
+  return { userId, path, signedUrl };
 }
 
 export async function getUserAvatarPath(userId: string): Promise<string | null> {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Cropper from "react-easy-crop";
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
@@ -61,6 +61,9 @@ export default function AvatarCropDialog({ open, file, onOpenChange, onConfirm }
       <DialogContent className="w-[calc(100vw-24px)] max-w-lg rounded-3xl border border-border bg-background p-0">
         <DialogHeader className="px-5 pb-2 pt-5">
           <DialogTitle className="text-base">Ajustar foto</DialogTitle>
+          <DialogDescription className="sr-only">
+            Recorte e ajuste a foto para caber no avatar do perfil.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="px-5 pb-5">

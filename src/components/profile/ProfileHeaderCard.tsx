@@ -102,7 +102,7 @@ export default function ProfileHeaderCard({ planLabel }: Props) {
 
     setSaving(true);
     try {
-      const { path, signedUrl } = await setUserAvatar({ userId: systemUser.id_user, blob });
+      const { path, signedUrl } = await setUserAvatar({ blob });
       await atualizarMeuUsuarioSistema({ avatar_url: path });
 
       setAvatarSignedUrl(signedUrl);
