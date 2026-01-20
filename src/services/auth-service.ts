@@ -82,7 +82,7 @@ export async function loginWithRole(params: {
   // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles =
     allowedRole === "ADMIN"
-      ? (["ADMIN", "SUPER_ADMIN"] as const)
+      ? (["ADMIN", "SUPER_ADMIN", "MEDICO"] as const)
       : ([allowedRole] as const);
 
   if (!allowedRoles.includes(systemUser.regra as any)) {
