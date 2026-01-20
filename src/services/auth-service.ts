@@ -126,10 +126,77 @@ export async function loginWithRole(params: {
     throw new Error("Usuário não retornado pelo provedor de autenticação.");
   }
 
-  const systemUsers = await loadSystemUsersByEmail(normalizedEmail);
-  const systemUser = pickBestSystemUser(systemUsers, allowedRole);
+  const authUid = data.user.id;
+  const authEmail = normalizeEmail(data.user.email ?? normalizedEmail);
 
-  // Garante que exista um registro em usuarios_sistema
+  // 1) Tenta carregar pelo vínculo correto (id_user = auth.uid)
+  const { data: byUid, error: byUidError } = await supabase
+    .from("usuarios_sistema")
+    .select("*")
+    .eq("id_user", authUid)
+    .maybeSingle();
+
+  if (byUidError) {
+    throw new Error(
+      byUidError.message ||
+        "Falha ao validar seu cadastro no sistema (usuarios_sistema por id_user).",
+    );
+  }
+
+  let systemUser = (byUid as DbSystemUser | null) ?? null;
+
+  // 2) Fallback por e-mail; se achar, tenta vincular esse registro ao auth uid
+  if (!systemUser) {
+    const systemUsers = await loadSystemUsersByEmail(authEmail);
+    const byEmailPicked = pickBestSystemUser(systemUsers, allowedRole);
+
+    if (!byEmailPicked) {
+      throw new Error(
+        "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
+      );
+    }
+
+    if ((byEmailPicked as any)?.ativo === false) {
+      await supabase.auth.signOut();
+      throw new Error("Seu acesso está desativado. Entre em contato com o administrador.");
+    }
+
+    // Se o registro existe mas está com id_user diferente do auth uid, tenta corrigir
+    if ((byEmailPicked as any)?.id_user !== authUid) {
+      const { error: linkError } = await supabase
+        .from("usuarios_sistema")
+        .update({ id_user: authUid })
+        .eq("id_user", (byEmailPicked as any).id_user);
+
+      if (linkError) {
+        // Se não puder atualizar por RLS, seguimos usando o registro encontrado por e-mail,
+        // mas o fluxo pode falhar em outras telas; o erro fica explícito aqui.
+        throw new Error(
+          linkError.message ||
+            "Encontramos seu cadastro, mas não foi possível vinculá-lo ao seu usuário de autenticação.",
+        );
+      }
+
+      // Rebusca já no formato esperado pelo app
+      const { data: byUidAfter, error: byUidAfterError } = await supabase
+        .from("usuarios_sistema")
+        .select("*")
+        .eq("id_user", authUid)
+        .maybeSingle();
+
+      if (byUidAfterError) {
+        throw new Error(
+          byUidAfterError.message ||
+            "Falha ao validar seu cadastro no sistema após vincular (usuarios_sistema).",
+        );
+      }
+
+      systemUser = (byUidAfter as DbSystemUser | null) ?? byEmailPicked;
+    } else {
+      systemUser = byEmailPicked;
+    }
+  }
+
   if (!systemUser) {
     throw new Error(
       "Seu usuário não está vinculado corretamente ao sistema. Entre em contato com o administrador.",
@@ -138,21 +205,17 @@ export async function loginWithRole(params: {
 
   if ((systemUser as any)?.ativo === false) {
     await supabase.auth.signOut();
-    throw new Error(
-      "Seu acesso está desativado. Entre em contato com o administrador.",
-    );
+    throw new Error("Seu acesso está desativado. Entre em contato com o administrador.");
   }
 
   const userRole = normalizeRole((systemUser as any)?.regra);
 
-  // Garante que o papel do usuário é o permitido para essa área
   const allowedRoles: AllowedRole[] =
     allowedRole === "ADMIN"
       ? (["ADMIN", "SUPER_ADMIN"] as AllowedRole[])
       : ([allowedRole] as AllowedRole[]);
 
   if (!allowedRoles.includes(userRole)) {
-    // Encerra sessão para evitar sessão ativa em área errada
     await supabase.auth.signOut();
 
     if (allowedRole === "MEDICO") {
