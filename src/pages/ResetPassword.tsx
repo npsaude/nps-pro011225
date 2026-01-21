@@ -49,10 +49,20 @@ const ResetPassword = () => {
         navigate("/login");
       }, 1200);
     } catch (err) {
-      const message =
+      let message =
         err instanceof Error
           ? err.message
           : "Não foi possível atualizar a senha. Tente novamente.";
+
+      // Traduz mensagens comuns do Supabase Auth
+      if (message.toLowerCase().includes("different from the old password")) {
+        message = "A nova senha deve ser diferente da senha atual.";
+      } else if (message.toLowerCase().includes("password should be at least")) {
+        message = "A senha deve ter pelo menos 6 caracteres.";
+      } else if (message.toLowerCase().includes("session expired") || message.toLowerCase().includes("invalid session")) {
+        message = "Sessão expirada. Solicite um novo link de recuperação.";
+      }
+
       showError(message);
     } finally {
       setIsLoading(false);
