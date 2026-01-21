@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
 import { updatePassword } from "@/services/auth-service";
+import { useRecoverySession } from "@/hooks/use-recovery-session";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -13,8 +14,21 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  const { ready, checking, error: recoveryError } = useRecoverySession();
+
+  useEffect(() => {
+    if (recoveryError) showError(recoveryError);
+  }, [recoveryError]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!ready) {
+      showError(
+        "Aguarde a validação do link de recuperação para salvar a nova senha.",
+      );
+      return;
+    }
 
     if (senha.length < 6) {
       showError("A senha deve ter pelo menos 6 caracteres.");
@@ -89,6 +103,16 @@ const ResetPassword = () => {
               Digite a nova senha que deseja utilizar para acessar o sistema.
             </p>
 
+            {checking ? (
+              <div className="mb-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800">
+                Validando link de recuperação...
+              </div>
+            ) : recoveryError ? (
+              <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-xs text-red-700 ring-1 ring-red-200 dark:bg-red-500/10 dark:text-red-200 dark:ring-red-500/20">
+                {recoveryError}
+              </div>
+            ) : null}
+
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-200">
@@ -105,6 +129,7 @@ const ResetPassword = () => {
                     required
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
+                    disabled={!ready || isLoading}
                   />
                 </div>
               </div>
@@ -120,18 +145,30 @@ const ResetPassword = () => {
                   required
                   value={confirmacao}
                   onChange={(e) => setConfirmacao(e.target.value)}
+                  disabled={!ready || isLoading}
                 />
               </div>
 
               <div className="pt-1">
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !ready}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#135bec] text-sm font-semibold text-white shadow-sm shadow-blue-500/40 hover:bg-[#135bec]/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isLoading ? "Salvando..." : "Salvar nova senha"}
                 </Button>
               </div>
+
+              {!ready ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 w-full rounded-xl"
+                  onClick={() => navigate("/primeiro-acesso")}
+                >
+                  Solicitar novo link
+                </Button>
+              ) : null}
             </form>
           </>
         )}
