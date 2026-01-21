@@ -35,6 +35,7 @@ import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
 import AdminSubscriptionsDashboard from "./pages/AdminSubscriptionsDashboard";
 import AdminSubscribers from "./pages/AdminSubscribers";
 import AdminProfile from "./pages/AdminProfile";
+import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthUrlRouter />
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
