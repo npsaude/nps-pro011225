@@ -9,6 +9,31 @@
       type="image/png"
       href="https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2ODU3Mzc4MCwiZXhwIjoxNzY5MTc4NTgwfQ.qi7ioLeitzVCihhcOXRpJD2MKKHn-vPOyD-yH776OKY"
     />
+
+    <script>
+      (function () {
+        try {
+          var hash = window.location.hash || "";
+          if (!hash) return;
+
+          var raw = hash.charAt(0) === "#" ? hash.slice(1) : hash;
+          var params = new URLSearchParams(raw);
+
+          // Quando o Supabase redireciona o recovery para "/" ele inclui type=recovery no hash.
+          // Precisamos ir para /reset-password ANTES do Supabase limpar o hash.
+          if (
+            params.get("type") === "recovery" &&
+            window.location.pathname !== "/reset-password"
+          ) {
+            window.location.replace(
+              "/reset-password" + window.location.search + window.location.hash,
+            );
+          }
+        } catch (e) {
+          // noop
+        }
+      })();
+    </script>
   </head>
 
   <body>
