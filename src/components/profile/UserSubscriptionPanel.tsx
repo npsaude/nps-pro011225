@@ -19,14 +19,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Plan = {
-  id: string;
-  name: string;
-  code: string;
-  price_cents: number;
-  features?: unknown;
-};
-
 type CurrentEnrollment = {
   id: string;
   plan_id: string;
@@ -85,7 +77,6 @@ function toFeaturesList(raw: unknown): string[] {
 export default function UserSubscriptionPanel() {
   const [loading, setLoading] = useState(true);
   const [enrollment, setEnrollment] = useState<CurrentEnrollment | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [canceling, setCanceling] = useState(false);
 
@@ -111,7 +102,6 @@ export default function UserSubscriptionPanel() {
         if (!authData.user?.email) {
           console.warn("[UserSubscriptionPanel] Usuário não autenticado ou sem email");
           setEnrollment(null);
-          setPlans([]);
           setLoading(false);
           return;
         }
@@ -149,20 +139,6 @@ export default function UserSubscriptionPanel() {
           console.log("[UserSubscriptionPanel] Dados retornados:", enrollmentData);
         }
 
-        // Buscar planos ativos
-        const { data: plansData, error: plansError } = await supabase
-          .from("subscription_plans")
-          .select("id,name,code,price_cents,features")
-          .eq("active", true)
-          .order("price_cents", { ascending: true });
-
-        if (plansError) {
-          console.error("[UserSubscriptionPanel] Erro ao buscar planos:", plansError);
-          showError("Erro ao carregar planos: " + plansError.message);
-        } else {
-          console.log("[UserSubscriptionPanel] Planos encontrados:", plansData?.length ?? 0);
-        }
-
         // Processar dados da assinatura
         if (enrollmentData) {
           // O Supabase pode retornar plan como array, então pegamos o primeiro elemento
@@ -187,16 +163,6 @@ export default function UserSubscriptionPanel() {
         } else {
           setEnrollment(null);
         }
-
-        setPlans(
-          ((plansData ?? []) as any[]).map((p) => ({
-            id: p.id,
-            name: p.name,
-            code: p.code,
-            price_cents: p.price_cents,
-            features: p.features,
-          })),
-        );
       } catch (error) {
         console.error("[UserSubscriptionPanel] Erro inesperado:", error);
         showError("Erro inesperado ao carregar dados de assinatura");
@@ -231,10 +197,6 @@ export default function UserSubscriptionPanel() {
     }
   };
 
-  const handleRequestChangePlan = () => {
-    showSuccess("Para alterar o plano, entre em contato com o suporte.");
-  };
-
   if (loading) {
     return (
       <div className="rounded-3xl border border-border bg-card/60 p-6 text-sm text-muted-foreground">
@@ -243,7 +205,6 @@ export default function UserSubscriptionPanel() {
     );
   }
 
-  const currentPlanId = enrollment?.plan?.id ?? null;
   const currentFeatures = toFeaturesList(enrollment?.plan?.features);
 
   return (
@@ -318,80 +279,6 @@ export default function UserSubscriptionPanel() {
           </div>
         </CardContent>
       </Card>
-
-      <div className="flex items-center gap-3">
-        <span className="h-6 w-1 rounded-full bg-primary" />
-        <div className="text-base font-semibold text-foreground">
-          Alterar seu Plano
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {plans.map((p) => {
-          const isCurrent = currentPlanId && p.id === currentPlanId;
-          const features = toFeaturesList(p.features);
-          return (
-            <Card
-              key={p.id}
-              className={`rounded-3xl border ${
-                isCurrent
-                  ? "border-primary ring-1 ring-primary/30"
-                  : "border-border"
-              } bg-card/80`}
-            >
-              <CardContent className="space-y-3 p-5">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-foreground">
-                    {p.name}
-                  </div>
-                  {isCurrent ? (
-                    <span className="rounded-full bg-primary/15 px-3 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/20">
-                      Atual
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="text-2xl font-semibold text-foreground">
-                  {formatBRLFromCents(p.price_cents)}
-                  <span className="ml-1 text-xs font-medium text-muted-foreground">
-                    / mês
-                  </span>
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  {(features.length
-                    ? features
-                    : ["Benefício do plano", "Benefício do plano", "Benefício do plano"]
-                  ).map((f) => (
-                    <div
-                      key={f}
-                      className="flex items-center gap-2 text-xs text-muted-foreground"
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/15">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      </span>
-                      <span>{f}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  type="button"
-                  className={`mt-2 h-11 w-full rounded-2xl ${
-                    isCurrent
-                      ? "bg-secondary text-secondary-foreground ring-1 ring-border"
-                      : "bg-primary text-primary-foreground"
-                  }`}
-                  onClick={isCurrent ? undefined : handleRequestChangePlan}
-                  disabled={isCurrent}
-                >
-                  {isCurrent ? "Plano Atual" : "Selecionar Plano"}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
