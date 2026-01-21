@@ -158,8 +158,11 @@ const Login = () => {
 
       showSuccess("Login rápido (admin) realizado com sucesso.");
 
+      // Redireciona conforme o role do usuário
       if (result.role === "SUPER_ADMIN") {
         navigate("/admin/assinaturas/dashboard");
+      } else if (result.role === "MEDICO") {
+        navigate("/medico/dashboard");
       } else {
         navigate("/admin/dashboard");
       }

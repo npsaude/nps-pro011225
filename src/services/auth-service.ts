@@ -186,11 +186,20 @@ export async function loginWithRole(params: {
 
   const userRole = normalizeRole((systemUser as any)?.regra);
 
-  // Garante que o papel do usuário é o permitido para essa área
-  const allowedRoles: AllowedRole[] =
-    allowedRole === "ADMIN"
-      ? (["ADMIN", "SUPER_ADMIN"] as AllowedRole[])
-      : ([allowedRole] as AllowedRole[]);
+  // Nova lógica de permissões:
+  // - allowedRole === "ADMIN" → aceita ADMIN, SUPER_ADMIN e MEDICO (a página decide o redirect)
+  // - allowedRole === "MEDICO" → aceita apenas MEDICO
+  // - allowedRole === "SUPER_ADMIN" → aceita apenas SUPER_ADMIN
+  let allowedRoles: AllowedRole[];
+
+  if (allowedRole === "ADMIN") {
+    // Portal admin aceita todos os roles (médico será redirecionado para área correta)
+    allowedRoles = ["ADMIN", "SUPER_ADMIN", "MEDICO"];
+  } else if (allowedRole === "MEDICO") {
+    allowedRoles = ["MEDICO"];
+  } else {
+    allowedRoles = [allowedRole];
+  }
 
   if (!allowedRoles.includes(userRole)) {
     // Encerra sessão para evitar sessão ativa em área errada
@@ -203,7 +212,7 @@ export async function loginWithRole(params: {
     }
 
     throw new Error(
-      "Esta área é exclusiva para administradores. Utilize o acesso do médico ou peça ao administrador para ajustar seu perfil.",
+      "Você não tem permissão para acessar esta área. Entre em contato com o administrador.",
     );
   }
 
