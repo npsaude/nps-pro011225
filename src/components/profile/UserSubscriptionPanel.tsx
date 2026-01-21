@@ -51,7 +51,6 @@ function formatBRLFromCents(cents?: number | null) {
 function toFeaturesList(raw: unknown): string[] {
   if (!raw) return [];
 
-  // Se for string JSON, tenta parsear
   let arr: unknown[] = [];
   if (typeof raw === "string") {
     try {
@@ -73,10 +72,8 @@ function toFeaturesList(raw: unknown): string[] {
       if (typeof item === "string") return item;
       if (item && typeof item === "object") {
         const obj = item as Record<string, unknown>;
-        // Suporta { text: "..." }, { label: "..." }, { name: "..." }
         const picked = obj.text ?? obj.label ?? obj.name ?? obj.title ?? obj.description;
         if (typeof picked === "string") return picked;
-        // Fallback: se for objeto sem campo conhecido, ignora
         return "";
       }
       return "";
@@ -101,85 +98,107 @@ export default function UserSubscriptionPanel() {
     const load = async () => {
       setLoading(true);
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        showError(authError.message);
-        setLoading(false);
-        return;
-      }
+      try {
+        // Verificar se o usuário está autenticado
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("[UserSubscriptionPanel] Erro ao obter usuário:", authError);
+          showError("Erro ao verificar autenticação: " + authError.message);
+          setLoading(false);
+          return;
+        }
 
-      const email = authData.user?.email?.trim();
-      if (!email) {
-        setEnrollment(null);
-        setPlans([]);
-        setLoading(false);
-        return;
-      }
+        if (!authData.user) {
+          console.warn("[UserSubscriptionPanel] Usuário não autenticado");
+          setEnrollment(null);
+          setPlans([]);
+          setLoading(false);
+          return;
+        }
 
-      const [
-        { data: enrollmentData, error: enrollmentError },
-        { data: plansData, error: plansError },
-      ] = await Promise.all([
-        // IMPORTANTE: sem filtro por email; o RLS já limita para "minhas inscrições"
-        supabase
+        console.log("[UserSubscriptionPanel] Usuário autenticado:", authData.user.email);
+
+        // Buscar assinatura do usuário (RLS filtra automaticamente)
+        const { data: enrollmentData, error: enrollmentError } = await supabase
           .from("subscription_enrollments")
           .select(
             "id,plan_id,status,user_email,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features)",
           )
           .order("created_at", { ascending: false })
           .limit(1)
-          .maybeSingle(),
-        supabase
+          .maybeSingle();
+
+        if (enrollmentError) {
+          console.error("[UserSubscriptionPanel] Erro ao buscar assinatura:", enrollmentError);
+          showError("Erro ao carregar assinatura: " + enrollmentError.message);
+        } else {
+          console.log("[UserSubscriptionPanel] Assinatura encontrada:", enrollmentData);
+        }
+
+        // Buscar planos disponíveis (RLS permite ver planos ativos)
+        const { data: plansData, error: plansError } = await supabase
           .from("subscription_plans")
           .select("id,name,code,price_cents,features,active")
           .eq("active", true)
-          .order("price_cents", { ascending: true }),
-      ]);
+          .order("price_cents", { ascending: true });
 
-      if (enrollmentError) showError(enrollmentError.message);
-      if (plansError) showError(plansError.message);
+        if (plansError) {
+          console.error("[UserSubscriptionPanel] Erro ao buscar planos:", plansError);
+          showError("Erro ao carregar planos: " + plansError.message);
+        } else {
+          console.log("[UserSubscriptionPanel] Planos encontrados:", plansData?.length ?? 0);
+        }
 
-      const row = (enrollmentData as any) ?? null;
-      let plan =
-        Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
+        const row = (enrollmentData as any) ?? null;
+        let plan = Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
 
-      // Fallback: se o join não vier (por RLS/plan inativo), tenta buscar o plano pelo plan_id.
-      if (row?.plan_id && !plan) {
-        const { data: planRow, error: planErr } = await supabase
-          .from("subscription_plans")
-          .select("id,name,code,price_cents,features")
-          .eq("id", row.plan_id)
-          .maybeSingle();
+        // Fallback: se o join não vier, tenta buscar o plano pelo plan_id
+        if (row?.plan_id && !plan) {
+          console.log("[UserSubscriptionPanel] Buscando plano por ID:", row.plan_id);
+          const { data: planRow, error: planErr } = await supabase
+            .from("subscription_plans")
+            .select("id,name,code,price_cents,features")
+            .eq("id", row.plan_id)
+            .maybeSingle();
 
-        if (planErr) showError(planErr.message);
-        plan = (planRow as any) ?? null;
+          if (planErr) {
+            console.error("[UserSubscriptionPanel] Erro ao buscar plano por ID:", planErr);
+            showError("Erro ao carregar detalhes do plano: " + planErr.message);
+          } else {
+            console.log("[UserSubscriptionPanel] Plano encontrado por ID:", planRow);
+            plan = (planRow as any) ?? null;
+          }
+        }
+
+        setEnrollment(
+          row
+            ? {
+                id: row.id,
+                plan_id: row.plan_id,
+                status: row.status ?? null,
+                user_email: row.user_email,
+                asaas_subscription_id: row.asaas_subscription_id ?? null,
+                current_period_end: row.current_period_end ?? null,
+                plan,
+              }
+            : null,
+        );
+
+        setPlans(
+          ((plansData ?? []) as any[]).map((p) => ({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+            price_cents: p.price_cents,
+            features: p.features,
+          })),
+        );
+      } catch (error) {
+        console.error("[UserSubscriptionPanel] Erro inesperado:", error);
+        showError("Erro inesperado ao carregar dados de assinatura");
+      } finally {
+        setLoading(false);
       }
-
-      setEnrollment(
-        row
-          ? {
-              id: row.id,
-              plan_id: row.plan_id,
-              status: row.status ?? null,
-              user_email: row.user_email,
-              asaas_subscription_id: row.asaas_subscription_id ?? null,
-              current_period_end: row.current_period_end ?? null,
-              plan,
-            }
-          : null,
-      );
-
-      setPlans(
-        ((plansData ?? []) as any[]).map((p) => ({
-          id: p.id,
-          name: p.name,
-          code: p.code,
-          price_cents: p.price_cents,
-          features: p.features,
-        })),
-      );
-
-      setLoading(false);
     };
 
     void load();

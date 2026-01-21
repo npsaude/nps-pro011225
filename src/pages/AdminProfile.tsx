@@ -28,7 +28,6 @@ import { setUserAvatar } from "@/services/user-avatar-service";
 import { useSystemUser } from "@/hooks/use-system-user";
 import {
   atualizarMeuUsuarioSistema,
-  uploadAvatar,
 } from "@/services/system-user-profile-service";
 import { sendPasswordReset } from "@/services/auth-service";
 import { cancelarAssinatura } from "@/services/subscription-cancel-service";
@@ -75,13 +74,6 @@ type Plan = {
   interval_count?: number | null;
   features?: unknown;
 };
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "U";
-  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function formatBRLFromCents(cents?: number | null) {
   const value = (cents ?? 0) / 100;
@@ -213,70 +205,90 @@ export default function AdminProfile() {
     const loadSubscription = async () => {
       setLoadingSubscription(true);
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        showError(authError.message);
-        setLoadingSubscription(false);
-        return;
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("[AdminProfile] Erro ao obter usuário:", authError);
+          showError("Erro ao verificar autenticação: " + authError.message);
+          setLoadingSubscription(false);
+          return;
+        }
+
+        if (!authData.user) {
+          console.warn("[AdminProfile] Usuário não autenticado");
+          setLoadingSubscription(false);
+          return;
+        }
+
+        console.log("[AdminProfile] Usuário autenticado:", authData.user.email);
+
+        // Buscar assinatura (RLS filtra automaticamente)
+        const { data: enrollmentData, error: enrollmentError } = await supabase
+          .from("subscription_enrollments")
+          .select(
+            "id,status,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features,billing_interval,interval_count)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (enrollmentError) {
+          console.error("[AdminProfile] Erro ao buscar assinatura:", enrollmentError);
+          showError("Erro ao carregar assinatura: " + enrollmentError.message);
+        } else {
+          console.log("[AdminProfile] Assinatura encontrada:", enrollmentData);
+        }
+
+        // Buscar planos disponíveis (RLS permite ver planos ativos)
+        const { data: plansData, error: plansError } = await supabase
+          .from("subscription_plans")
+          .select("id,name,code,price_cents,features,billing_interval,interval_count,active")
+          .eq("active", true)
+          .order("price_cents", { ascending: true });
+
+        if (plansError) {
+          console.error("[AdminProfile] Erro ao buscar planos:", plansError);
+          showError("Erro ao carregar planos: " + plansError.message);
+        } else {
+          console.log("[AdminProfile] Planos encontrados:", plansData?.length ?? 0);
+        }
+
+        const row = (enrollmentData as any) ?? null;
+        const plan = Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
+
+        if (!cancelled) {
+          setCurrentEnrollment(
+            row
+              ? {
+                  id: row.id,
+                  status: row.status ?? null,
+                  asaas_subscription_id: row.asaas_subscription_id ?? null,
+                  current_period_end: row.current_period_end ?? null,
+                  plan,
+                }
+              : null,
+          );
+
+          setPlans(
+            ((plansData ?? []) as any[]).map((p) => ({
+              id: p.id,
+              name: p.name,
+              code: p.code,
+              price_cents: p.price_cents,
+              billing_interval: p.billing_interval ?? null,
+              interval_count: p.interval_count ?? null,
+              features: p.features ?? null,
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("[AdminProfile] Erro inesperado:", error);
+        showError("Erro inesperado ao carregar dados de assinatura");
+      } finally {
+        if (!cancelled) {
+          setLoadingSubscription(false);
+        }
       }
-
-      const email = authData.user?.email?.trim();
-      if (!email) {
-        setLoadingSubscription(false);
-        return;
-      }
-
-      const [{ data: enrollmentData, error: enrollmentError }, { data: plansData, error: plansError }] =
-        await Promise.all([
-          supabase
-            .from("subscription_enrollments")
-            .select(
-              "id,status,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features,billing_interval,interval_count)",
-            )
-            .ilike("user_email", email)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from("subscription_plans")
-            .select("id,name,code,price_cents,features,billing_interval,interval_count,active")
-            .eq("active", true)
-            .order("price_cents", { ascending: true }),
-        ]);
-
-      if (enrollmentError) showError(enrollmentError.message);
-      if (plansError) showError(plansError.message);
-
-      const row = (enrollmentData as any) ?? null;
-      const plan = Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
-
-      if (!cancelled) {
-        setCurrentEnrollment(
-          row
-            ? {
-                id: row.id,
-                status: row.status ?? null,
-                asaas_subscription_id: row.asaas_subscription_id ?? null,
-                current_period_end: row.current_period_end ?? null,
-                plan,
-              }
-            : null,
-        );
-
-        setPlans(
-          ((plansData ?? []) as any[]).map((p) => ({
-            id: p.id,
-            name: p.name,
-            code: p.code,
-            price_cents: p.price_cents,
-            billing_interval: p.billing_interval ?? null,
-            interval_count: p.interval_count ?? null,
-            features: p.features ?? null,
-          })),
-        );
-      }
-
-      setLoadingSubscription(false);
     };
 
     void loadSubscription();
