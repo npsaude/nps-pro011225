@@ -8,11 +8,26 @@ type RecoveryState =
 
 function clearUrlAuthParams() {
   const url = new URL(window.location.href);
+
+  // Remove PKCE code
   if (url.searchParams.has("code")) {
     url.searchParams.delete("code");
-    window.history.replaceState({}, document.title, url.pathname + url.search);
   }
 
+  // Remove OTP params sometimes forwarded to redirect URL
+  if (url.searchParams.has("token")) {
+    url.searchParams.delete("token");
+  }
+  if (url.searchParams.has("token_hash")) {
+    url.searchParams.delete("token_hash");
+  }
+  if (url.searchParams.has("type")) {
+    url.searchParams.delete("type");
+  }
+
+  window.history.replaceState({}, document.title, url.pathname + url.search);
+
+  // Remove implicit flow hash tokens
   if (window.location.hash) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
@@ -27,6 +42,10 @@ export function useRecoverySession() {
   useEffect(() => {
     let cancelled = false;
 
+    const setErr = (message: string) => {
+      if (!cancelled) setState({ status: "error", error: message });
+    };
+
     const run = async () => {
       const { data: initial } = await supabase.auth.getSession();
       if (initial.session) {
@@ -35,59 +54,73 @@ export function useRecoverySession() {
       }
 
       const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
 
+      // 1) PKCE flow: ?code=...
+      const code = url.searchParams.get("code");
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          if (!cancelled)
-            setState({
-              status: "error",
-              error:
-                error.message ||
-                "Link de recuperação inválido ou expirado. Solicite um novo.",
-            });
+          setErr(
+            error.message ||
+              "Link de recuperação inválido ou expirado. Solicite um novo.",
+          );
           return;
         }
-
         clearUrlAuthParams();
       } else {
-        const hash = window.location.hash.startsWith("#")
-          ? window.location.hash.slice(1)
-          : "";
-        const params = new URLSearchParams(hash);
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
+        // 2) OTP forwarded to redirect: ?token_hash=...&type=recovery (or token=...)
+        const type = url.searchParams.get("type");
+        const tokenHash =
+          url.searchParams.get("token_hash") ?? url.searchParams.get("token");
 
-        if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
+        if (type === "recovery" && tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({
+            type: "recovery",
+            token_hash: tokenHash,
           });
 
           if (error) {
-            if (!cancelled)
-              setState({
-                status: "error",
-                error:
-                  error.message ||
-                  "Link de recuperação inválido ou expirado. Solicite um novo.",
-              });
+            setErr(
+              error.message ||
+                "Link de recuperação inválido ou expirado. Solicite um novo.",
+            );
             return;
           }
 
           clearUrlAuthParams();
+        } else {
+          // 3) Implicit flow: #access_token=...&refresh_token=...
+          const hash = window.location.hash.startsWith("#")
+            ? window.location.hash.slice(1)
+            : "";
+          const params = new URLSearchParams(hash);
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+
+          if (access_token && refresh_token) {
+            const { error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+
+            if (error) {
+              setErr(
+                error.message ||
+                  "Link de recuperação inválido ou expirado. Solicite um novo.",
+              );
+              return;
+            }
+
+            clearUrlAuthParams();
+          }
         }
       }
 
       const { data: after } = await supabase.auth.getSession();
       if (!after.session) {
-        if (!cancelled)
-          setState({
-            status: "error",
-            error:
-              "Não foi possível validar o link de recuperação. Solicite um novo e-mail de cadastro/recuperação.",
-          });
+        setErr(
+          "Não foi possível validar o link de recuperação. Solicite um novo e-mail de cadastro/recuperação.",
+        );
         return;
       }
 
