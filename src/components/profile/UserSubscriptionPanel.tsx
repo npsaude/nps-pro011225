@@ -43,15 +43,22 @@ function formatBRLFromCents(cents?: number | null) {
 
 function toFeaturesList(raw: unknown): string[] {
   if (!raw) return [];
-  if (!Array.isArray(raw)) return [];
 
-  return raw
+  const arr = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as any).items)
+      ? ((raw as any).items as unknown[])
+      : [];
+
+  if (!arr.length) return [];
+
+  return arr
     .map((item) => {
       if (typeof item === "string") return item;
       if (item && typeof item === "object") {
-        // Suporta { text: "..." }, { label: "..." } ou { name: "..." }
         const obj = item as Record<string, unknown>;
-        return String(obj.text ?? obj.label ?? obj.name ?? "");
+        const picked = obj.text ?? obj.label ?? obj.name;
+        return typeof picked === "string" ? picked : "";
       }
       return "";
     })
@@ -86,6 +93,8 @@ export default function UserSubscriptionPanel() {
         return;
       }
 
+      const emailPattern = `%${email.trim()}%`;
+
       const [{ data: enrollmentData, error: enrollmentError }, { data: plansData, error: plansError }] =
         await Promise.all([
           supabase
@@ -93,7 +102,7 @@ export default function UserSubscriptionPanel() {
             .select(
               "id,status,user_email,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features)",
             )
-            .ilike("user_email", email)
+            .ilike("user_email", emailPattern)
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
