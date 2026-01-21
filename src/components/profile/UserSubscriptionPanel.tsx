@@ -43,8 +43,20 @@ function formatBRLFromCents(cents?: number | null) {
 
 function toFeaturesList(raw: unknown): string[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw.map((x) => String(x)).filter(Boolean).slice(0, 3);
-  return [];
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        // Suporta { text: "..." }, { label: "..." } ou { name: "..." }
+        const obj = item as Record<string, unknown>;
+        return String(obj.text ?? obj.label ?? obj.name ?? "");
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .slice(0, 5);
 }
 
 export default function UserSubscriptionPanel() {
