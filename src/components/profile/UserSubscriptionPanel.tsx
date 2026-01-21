@@ -51,11 +51,20 @@ function formatBRLFromCents(cents?: number | null) {
 function toFeaturesList(raw: unknown): string[] {
   if (!raw) return [];
 
-  const arr = Array.isArray(raw)
-    ? raw
-    : raw && typeof raw === "object" && Array.isArray((raw as any).items)
-      ? ((raw as any).items as unknown[])
-      : [];
+  // Se for string JSON, tenta parsear
+  let arr: unknown[] = [];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      arr = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  } else if (Array.isArray(raw)) {
+    arr = raw;
+  } else if (raw && typeof raw === "object" && Array.isArray((raw as any).items)) {
+    arr = (raw as any).items;
+  }
 
   if (!arr.length) return [];
 
@@ -64,8 +73,11 @@ function toFeaturesList(raw: unknown): string[] {
       if (typeof item === "string") return item;
       if (item && typeof item === "object") {
         const obj = item as Record<string, unknown>;
-        const picked = obj.text ?? obj.label ?? obj.name;
-        return typeof picked === "string" ? picked : "";
+        // Suporta { text: "..." }, { label: "..." }, { name: "..." }
+        const picked = obj.text ?? obj.label ?? obj.name ?? obj.title ?? obj.description;
+        if (typeof picked === "string") return picked;
+        // Fallback: se for objeto sem campo conhecido, ignora
+        return "";
       }
       return "";
     })
