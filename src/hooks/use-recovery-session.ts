@@ -25,12 +25,27 @@ function clearUrlAuthParams() {
     url.searchParams.delete("type");
   }
 
+  // Remove implicit flow hash tokens (and any trailing "#")
   window.history.replaceState({}, document.title, url.pathname + url.search);
+}
 
-  // Remove implicit flow hash tokens
-  if (window.location.hash) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
+function urlHasRecoveryArtifacts(url: URL) {
+  const hasQueryArtifacts =
+    url.searchParams.has("code") ||
+    url.searchParams.has("token") ||
+    url.searchParams.has("token_hash") ||
+    url.searchParams.has("type");
+
+  const hash = window.location.hash || "";
+  const hasHashArtifacts =
+    hash === "#" ||
+    hash.includes("access_token=") ||
+    hash.includes("refresh_token=") ||
+    hash.includes("error=") ||
+    hash.includes("error_description=") ||
+    hash.includes("type=recovery");
+
+  return hasQueryArtifacts || hasHashArtifacts;
 }
 
 export function useRecoverySession() {
@@ -47,13 +62,16 @@ export function useRecoverySession() {
     };
 
     const run = async () => {
+      const url = new URL(window.location.href);
+
       const { data: initial } = await supabase.auth.getSession();
       if (initial.session) {
+        // Se o Supabase já criou a sessão a partir da URL, ainda assim garantimos
+        // que não vai sobrar "/reset-password#" na barra.
+        if (urlHasRecoveryArtifacts(url)) clearUrlAuthParams();
         if (!cancelled) setState({ status: "ready", error: null });
         return;
       }
-
-      const url = new URL(window.location.href);
 
       // 1) PKCE flow: ?code=...
       const code = url.searchParams.get("code");
