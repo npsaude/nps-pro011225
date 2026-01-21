@@ -29,11 +29,18 @@ type Plan = {
 
 type CurrentEnrollment = {
   id: string;
+  plan_id: string;
   status: string | null;
   user_email: string;
   asaas_subscription_id: string | null;
   current_period_end: string | null;
-  plan: { id?: string; name: string | null; code: string | null; price_cents: number | null; features?: unknown } | null;
+  plan: {
+    id?: string;
+    name: string | null;
+    code: string | null;
+    price_cents: number | null;
+    features?: unknown;
+  } | null;
 };
 
 function formatBRLFromCents(cents?: number | null) {
@@ -73,7 +80,10 @@ export default function UserSubscriptionPanel() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [canceling, setCanceling] = useState(false);
 
-  const statusLabel = useMemo(() => enrollment?.status ?? "-", [enrollment?.status]);
+  const statusLabel = useMemo(
+    () => enrollment?.status ?? "-",
+    [enrollment?.status],
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -89,45 +99,55 @@ export default function UserSubscriptionPanel() {
       const email = authData.user?.email?.trim();
       if (!email) {
         setEnrollment(null);
+        setPlans([]);
         setLoading(false);
         return;
       }
 
-      const emailPattern = `%${email.trim()}%`;
+      const [
+        { data: enrollmentData, error: enrollmentError },
+        { data: plansData, error: plansError },
+      ] = await Promise.all([
+        // IMPORTANTE: sem filtro por email; o RLS já limita para "minhas inscrições"
+        supabase
+          .from("subscription_enrollments")
+          .select(
+            "id,plan_id,status,user_email,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("subscription_plans")
+          .select("id,name,code,price_cents,features,active")
+          .eq("active", true)
+          .order("price_cents", { ascending: true }),
+      ]);
 
-      const [{ data: enrollmentData, error: enrollmentError }, { data: plansData, error: plansError }] =
-        await Promise.all([
-          supabase
-            .from("subscription_enrollments")
-            .select(
-              "id,status,user_email,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features)",
-            )
-            .ilike("user_email", emailPattern)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from("subscription_plans")
-            .select("id,name,code,price_cents,features,active")
-            .eq("active", true)
-            .order("price_cents", { ascending: true }),
-        ]);
-
-      if (enrollmentError) {
-        showError(enrollmentError.message);
-      }
-
-      if (plansError) {
-        showError(plansError.message);
-      }
+      if (enrollmentError) showError(enrollmentError.message);
+      if (plansError) showError(plansError.message);
 
       const row = (enrollmentData as any) ?? null;
-      const plan = Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
+      let plan =
+        Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
+
+      // Fallback: se o join não vier (por RLS/plan inativo), tenta buscar o plano pelo plan_id.
+      if (row?.plan_id && !plan) {
+        const { data: planRow, error: planErr } = await supabase
+          .from("subscription_plans")
+          .select("id,name,code,price_cents,features")
+          .eq("id", row.plan_id)
+          .maybeSingle();
+
+        if (planErr) showError(planErr.message);
+        plan = (planRow as any) ?? null;
+      }
 
       setEnrollment(
         row
           ? {
               id: row.id,
+              plan_id: row.plan_id,
               status: row.status ?? null,
               user_email: row.user_email,
               asaas_subscription_id: row.asaas_subscription_id ?? null,
@@ -137,13 +157,15 @@ export default function UserSubscriptionPanel() {
           : null,
       );
 
-      setPlans(((plansData ?? []) as any[]).map((p) => ({
-        id: p.id,
-        name: p.name,
-        code: p.code,
-        price_cents: p.price_cents,
-        features: p.features,
-      })));
+      setPlans(
+        ((plansData ?? []) as any[]).map((p) => ({
+          id: p.id,
+          name: p.name,
+          code: p.code,
+          price_cents: p.price_cents,
+          features: p.features,
+        })),
+      );
 
       setLoading(false);
     };
@@ -155,7 +177,9 @@ export default function UserSubscriptionPanel() {
     if (!enrollment) return;
 
     if (!enrollment.asaas_subscription_id) {
-      showError("Esta assinatura não possui vínculo com o Asaas (asaas_subscription_id vazio).");
+      showError(
+        "Esta assinatura não possui vínculo com o Asaas (asaas_subscription_id vazio).",
+      );
       return;
     }
 
@@ -189,7 +213,6 @@ export default function UserSubscriptionPanel() {
 
   return (
     <div className="space-y-4">
-      {/* Plano Atual */}
       <Card className="rounded-3xl border border-border bg-gradient-to-br from-[#112a66] via-[#10224f] to-[#0b1633] text-foreground shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
@@ -199,7 +222,7 @@ export default function UserSubscriptionPanel() {
             </div>
 
             <div className="text-2xl font-semibold text-foreground">
-              {enrollment?.plan?.name ?? "Sem plano"}
+              {enrollment?.plan?.name ?? (enrollment ? "Plano não encontrado" : "Sem plano")}
             </div>
 
             <div className="text-xs text-muted-foreground">
@@ -207,7 +230,9 @@ export default function UserSubscriptionPanel() {
                 <>
                   Vigência até{" "}
                   <span className="font-semibold text-foreground">
-                    {new Date(enrollment.current_period_end).toLocaleDateString("pt-BR")}
+                    {new Date(enrollment.current_period_end).toLocaleDateString(
+                      "pt-BR",
+                    )}
                   </span>
                 </>
               ) : (
@@ -216,17 +241,18 @@ export default function UserSubscriptionPanel() {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
-              {(currentFeatures.length ? currentFeatures : ["Suporte 24/7", "Acesso completo", "Gestão inteligente"]).map(
-                (f) => (
-                  <span
-                    key={f}
-                    className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-foreground ring-1 ring-white/10"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                    {f}
-                  </span>
-                ),
-              )}
+              {(currentFeatures.length
+                ? currentFeatures
+                : ["Suporte 24/7", "Acesso completo", "Gestão inteligente"]
+              ).map((f) => (
+                <span
+                  key={f}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-foreground ring-1 ring-white/10"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  {f}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -243,7 +269,9 @@ export default function UserSubscriptionPanel() {
                 type="button"
                 className="h-11 rounded-2xl bg-white px-5 text-xs font-semibold text-slate-900 hover:bg-white/90"
                 onClick={() => setConfirmOpen(true)}
-                disabled={canceling || statusLabel.toUpperCase().includes("CANCEL")}
+                disabled={
+                  canceling || statusLabel.toUpperCase().includes("CANCEL")
+                }
               >
                 Gerenciar assinatura
               </Button>
@@ -256,10 +284,11 @@ export default function UserSubscriptionPanel() {
         </CardContent>
       </Card>
 
-      {/* Alterar seu Plano */}
       <div className="flex items-center gap-3">
         <span className="h-6 w-1 rounded-full bg-primary" />
-        <div className="text-base font-semibold text-foreground">Alterar seu Plano</div>
+        <div className="text-base font-semibold text-foreground">
+          Alterar seu Plano
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -270,12 +299,16 @@ export default function UserSubscriptionPanel() {
             <Card
               key={p.id}
               className={`rounded-3xl border ${
-                isCurrent ? "border-primary ring-1 ring-primary/30" : "border-border"
+                isCurrent
+                  ? "border-primary ring-1 ring-primary/30"
+                  : "border-border"
               } bg-card/80`}
             >
               <CardContent className="space-y-3 p-5">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-foreground">{p.name}</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {p.name}
+                  </div>
                   {isCurrent ? (
                     <span className="rounded-full bg-primary/15 px-3 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/20">
                       Atual
@@ -285,20 +318,26 @@ export default function UserSubscriptionPanel() {
 
                 <div className="text-2xl font-semibold text-foreground">
                   {formatBRLFromCents(p.price_cents)}
-                  <span className="ml-1 text-xs font-medium text-muted-foreground">/ mês</span>
+                  <span className="ml-1 text-xs font-medium text-muted-foreground">
+                    / mês
+                  </span>
                 </div>
 
                 <div className="space-y-2 pt-1">
-                  {(features.length ? features : ["Benefício do plano", "Benefício do plano", "Benefício do plano"]).map(
-                    (f) => (
-                      <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/15">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </span>
-                        <span>{f}</span>
-                      </div>
-                    ),
-                  )}
+                  {(features.length
+                    ? features
+                    : ["Benefício do plano", "Benefício do plano", "Benefício do plano"]
+                  ).map((f) => (
+                    <div
+                      key={f}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/15">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </span>
+                      <span>{f}</span>
+                    </div>
+                  ))}
                 </div>
 
                 <Button
@@ -327,7 +366,8 @@ export default function UserSubscriptionPanel() {
               Confirmar cancelamento
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Este cancelamento será enviado ao Asaas e a assinatura ficará com status "CANCELED" no sistema.
+              Este cancelamento será enviado ao Asaas e a assinatura ficará com
+              status "CANCELED" no sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
