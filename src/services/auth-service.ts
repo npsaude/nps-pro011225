@@ -419,8 +419,10 @@ export async function registerUser(params: {
 export async function sendPasswordReset(email: string): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
 
+  // IMPORTANTE: o redirectTo DEVE apontar para /reset-password
+  // para que o Supabase redirecione diretamente para a tela correta.
   const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-    redirectTo: window.location.origin + "/reset-password",
+    redirectTo: `${window.location.origin}/reset-password`,
   });
 
   if (error) {
