@@ -56,9 +56,9 @@ type Enrollment = {
   current_period_end: string | null;
   plan: {
     id: string;
-    name: string | null;
-    code: string | null;
-    price_cents: number | null;
+    name: string;
+    code: string;
+    price_cents: number;
     features?: unknown;
     billing_interval?: string | null;
     interval_count?: number | null;
@@ -214,20 +214,34 @@ export default function AdminProfile() {
           return;
         }
 
-        if (!authData.user) {
-          console.warn("[AdminProfile] Usuário não autenticado");
+        if (!authData.user?.email) {
+          console.warn("[AdminProfile] Usuário não autenticado ou sem email");
           setLoadingSubscription(false);
           return;
         }
 
-        console.log("[AdminProfile] Usuário autenticado:", authData.user.email);
+        const userEmail = authData.user.email.trim().toLowerCase();
+        console.log("[AdminProfile] Buscando assinatura para:", userEmail);
 
-        // Buscar assinatura (RLS filtra automaticamente)
+        // Buscar assinatura usando a mesma lógica da query SQL que funciona
         const { data: enrollmentData, error: enrollmentError } = await supabase
           .from("subscription_enrollments")
-          .select(
-            "id,status,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features,billing_interval,interval_count)",
-          )
+          .select(`
+            id,
+            status,
+            asaas_subscription_id,
+            current_period_end,
+            plan:plan_id (
+              id,
+              name,
+              code,
+              price_cents,
+              features,
+              billing_interval,
+              interval_count
+            )
+          `)
+          .ilike("user_email", userEmail)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -236,13 +250,13 @@ export default function AdminProfile() {
           console.error("[AdminProfile] Erro ao buscar assinatura:", enrollmentError);
           showError("Erro ao carregar assinatura: " + enrollmentError.message);
         } else {
-          console.log("[AdminProfile] Assinatura encontrada:", enrollmentData);
+          console.log("[AdminProfile] Dados retornados:", enrollmentData);
         }
 
-        // Buscar planos disponíveis (RLS permite ver planos ativos)
+        // Buscar planos disponíveis
         const { data: plansData, error: plansError } = await supabase
           .from("subscription_plans")
-          .select("id,name,code,price_cents,features,billing_interval,interval_count,active")
+          .select("id,name,code,price_cents,features,billing_interval,interval_count")
           .eq("active", true)
           .order("price_cents", { ascending: true });
 
@@ -253,21 +267,31 @@ export default function AdminProfile() {
           console.log("[AdminProfile] Planos encontrados:", plansData?.length ?? 0);
         }
 
-        const row = (enrollmentData as any) ?? null;
-        const plan = Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
-
         if (!cancelled) {
-          setCurrentEnrollment(
-            row
-              ? {
-                  id: row.id,
-                  status: row.status ?? null,
-                  asaas_subscription_id: row.asaas_subscription_id ?? null,
-                  current_period_end: row.current_period_end ?? null,
-                  plan,
-                }
-              : null,
-          );
+          // Processar dados da assinatura
+          if (enrollmentData) {
+            // O Supabase pode retornar plan como array, então pegamos o primeiro elemento
+            const rawPlan = enrollmentData.plan;
+            const planData = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan;
+            
+            setCurrentEnrollment({
+              id: enrollmentData.id,
+              status: enrollmentData.status ?? null,
+              asaas_subscription_id: enrollmentData.asaas_subscription_id ?? null,
+              current_period_end: enrollmentData.current_period_end ?? null,
+              plan: planData ? {
+                id: planData.id,
+                name: planData.name,
+                code: planData.code,
+                price_cents: planData.price_cents,
+                features: planData.features,
+                billing_interval: planData.billing_interval ?? null,
+                interval_count: planData.interval_count ?? null,
+              } : null,
+            });
+          } else {
+            setCurrentEnrollment(null);
+          }
 
           setPlans(
             ((plansData ?? []) as any[]).map((p) => ({

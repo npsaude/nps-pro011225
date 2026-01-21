@@ -35,10 +35,10 @@ type CurrentEnrollment = {
   asaas_subscription_id: string | null;
   current_period_end: string | null;
   plan: {
-    id?: string;
-    name: string | null;
-    code: string | null;
-    price_cents: number | null;
+    id: string;
+    name: string;
+    code: string;
+    price_cents: number;
     features?: unknown;
   } | null;
 };
@@ -99,7 +99,7 @@ export default function UserSubscriptionPanel() {
       setLoading(true);
 
       try {
-        // Verificar se o usuário está autenticado
+        // Verificar autenticação
         const { data: authData, error: authError } = await supabase.auth.getUser();
         if (authError) {
           console.error("[UserSubscriptionPanel] Erro ao obter usuário:", authError);
@@ -108,22 +108,36 @@ export default function UserSubscriptionPanel() {
           return;
         }
 
-        if (!authData.user) {
-          console.warn("[UserSubscriptionPanel] Usuário não autenticado");
+        if (!authData.user?.email) {
+          console.warn("[UserSubscriptionPanel] Usuário não autenticado ou sem email");
           setEnrollment(null);
           setPlans([]);
           setLoading(false);
           return;
         }
 
-        console.log("[UserSubscriptionPanel] Usuário autenticado:", authData.user.email);
+        const userEmail = authData.user.email.trim().toLowerCase();
+        console.log("[UserSubscriptionPanel] Buscando assinatura para:", userEmail);
 
-        // Buscar assinatura do usuário (RLS filtra automaticamente)
+        // Buscar assinatura usando a mesma lógica da query SQL que funciona
         const { data: enrollmentData, error: enrollmentError } = await supabase
           .from("subscription_enrollments")
-          .select(
-            "id,plan_id,status,user_email,asaas_subscription_id,current_period_end,plan:subscription_plans(id,name,code,price_cents,features)",
-          )
+          .select(`
+            id,
+            plan_id,
+            status,
+            user_email,
+            asaas_subscription_id,
+            current_period_end,
+            plan:plan_id (
+              id,
+              name,
+              code,
+              price_cents,
+              features
+            )
+          `)
+          .ilike("user_email", userEmail)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -132,13 +146,13 @@ export default function UserSubscriptionPanel() {
           console.error("[UserSubscriptionPanel] Erro ao buscar assinatura:", enrollmentError);
           showError("Erro ao carregar assinatura: " + enrollmentError.message);
         } else {
-          console.log("[UserSubscriptionPanel] Assinatura encontrada:", enrollmentData);
+          console.log("[UserSubscriptionPanel] Dados retornados:", enrollmentData);
         }
 
-        // Buscar planos disponíveis (RLS permite ver planos ativos)
+        // Buscar planos ativos
         const { data: plansData, error: plansError } = await supabase
           .from("subscription_plans")
-          .select("id,name,code,price_cents,features,active")
+          .select("id,name,code,price_cents,features")
           .eq("active", true)
           .order("price_cents", { ascending: true });
 
@@ -149,40 +163,30 @@ export default function UserSubscriptionPanel() {
           console.log("[UserSubscriptionPanel] Planos encontrados:", plansData?.length ?? 0);
         }
 
-        const row = (enrollmentData as any) ?? null;
-        let plan = Array.isArray(row?.plan) ? row.plan[0] ?? null : row?.plan ?? null;
-
-        // Fallback: se o join não vier, tenta buscar o plano pelo plan_id
-        if (row?.plan_id && !plan) {
-          console.log("[UserSubscriptionPanel] Buscando plano por ID:", row.plan_id);
-          const { data: planRow, error: planErr } = await supabase
-            .from("subscription_plans")
-            .select("id,name,code,price_cents,features")
-            .eq("id", row.plan_id)
-            .maybeSingle();
-
-          if (planErr) {
-            console.error("[UserSubscriptionPanel] Erro ao buscar plano por ID:", planErr);
-            showError("Erro ao carregar detalhes do plano: " + planErr.message);
-          } else {
-            console.log("[UserSubscriptionPanel] Plano encontrado por ID:", planRow);
-            plan = (planRow as any) ?? null;
-          }
+        // Processar dados da assinatura
+        if (enrollmentData) {
+          // O Supabase pode retornar plan como array, então pegamos o primeiro elemento
+          const rawPlan = enrollmentData.plan;
+          const planData = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan;
+          
+          setEnrollment({
+            id: enrollmentData.id,
+            plan_id: enrollmentData.plan_id,
+            status: enrollmentData.status ?? null,
+            user_email: enrollmentData.user_email,
+            asaas_subscription_id: enrollmentData.asaas_subscription_id ?? null,
+            current_period_end: enrollmentData.current_period_end ?? null,
+            plan: planData ? {
+              id: planData.id,
+              name: planData.name,
+              code: planData.code,
+              price_cents: planData.price_cents,
+              features: planData.features,
+            } : null,
+          });
+        } else {
+          setEnrollment(null);
         }
-
-        setEnrollment(
-          row
-            ? {
-                id: row.id,
-                plan_id: row.plan_id,
-                status: row.status ?? null,
-                user_email: row.user_email,
-                asaas_subscription_id: row.asaas_subscription_id ?? null,
-                current_period_end: row.current_period_end ?? null,
-                plan,
-              }
-            : null,
-        );
 
         setPlans(
           ((plansData ?? []) as any[]).map((p) => ({
