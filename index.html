@@ -10,27 +10,41 @@
       href="https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2ODU3Mzc4MCwiZXhwIjoxNzY5MTc4NTgwfQ.qi7ioLeitzVCihhcOXRpJD2MKKHn-vPOyD-yH776OKY"
     />
 
+    <!--
+      Redirecionamento síncrono para /reset-password quando o Supabase
+      envia tokens de recovery no hash (ex.: #access_token=...&type=recovery).
+      Precisa rodar ANTES de qualquer JS assíncrono ou do Supabase client.
+    -->
     <script>
       (function () {
         try {
+          var path = window.location.pathname;
           var hash = window.location.hash || "";
-          if (!hash) return;
+          var search = window.location.search || "";
 
-          var raw = hash.charAt(0) === "#" ? hash.slice(1) : hash;
-          var params = new URLSearchParams(raw);
+          // Já está em /reset-password? Não faz nada.
+          if (path === "/reset-password") return;
 
-          // Quando o Supabase redireciona o recovery para "/" ele inclui type=recovery no hash.
-          // Precisamos ir para /reset-password ANTES do Supabase limpar o hash.
-          if (
-            params.get("type") === "recovery" &&
-            window.location.pathname !== "/reset-password"
-          ) {
-            window.location.replace(
-              "/reset-password" + window.location.search + window.location.hash,
-            );
+          // Checa hash (implicit flow)
+          if (hash && hash.length > 1) {
+            var raw = hash.charAt(0) === "#" ? hash.slice(1) : hash;
+            var params = new URLSearchParams(raw);
+            if (params.get("type") === "recovery") {
+              window.location.replace("/reset-password" + search + hash);
+              return;
+            }
+          }
+
+          // Checa query string (PKCE / OTP)
+          if (search) {
+            var qp = new URLSearchParams(search);
+            if (qp.get("type") === "recovery") {
+              window.location.replace("/reset-password" + search + hash);
+              return;
+            }
           }
         } catch (e) {
-          // noop
+          // silencia erros para não travar a página
         }
       })();
     </script>
