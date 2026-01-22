@@ -1,6 +1,7 @@
 import type { DbSystemUser } from "@/db/schema";
 import { supabase } from "@/integrations/supabase/client";
 import { salvarMedico } from "@/services/medicos-service";
+import { ensureCurrentUserSubscriptionValid } from "@/services/subscription-validity-service";
 
 export type AllowedRole = "ADMIN" | "MEDICO" | "SUPER_ADMIN";
 
@@ -214,6 +215,11 @@ export async function loginWithRole(params: {
     throw new Error(
       "Você não tem permissão para acessar esta área. Entre em contato com o administrador.",
     );
+  }
+
+  // Verificação de assinatura (exceto SUPER_ADMIN)
+  if (userRole !== "SUPER_ADMIN") {
+    await ensureCurrentUserSubscriptionValid();
   }
 
   return {

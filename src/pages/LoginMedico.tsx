@@ -19,12 +19,16 @@ import {
   sendPasswordReset,
 } from "@/services/auth-service";
 import { supabase } from "@/integrations/supabase/client";
+import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
+import { SUBSCRIPTION_EXPIRED_CODE } from "@/services/subscription-validity-service";
 
 type Mode = "login" | "register";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("login");
+
+  const [subscriptionExpiredOpen, setSubscriptionExpiredOpen] = useState(false);
 
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -63,6 +67,12 @@ const LoginMedico = () => {
       showSuccess("Login realizado com sucesso.");
       navigate("/medico/dashboard");
     } catch (err) {
+      const code = (err as any)?.code as string | undefined;
+      if (code === SUBSCRIPTION_EXPIRED_CODE) {
+        setSubscriptionExpiredOpen(true);
+        return;
+      }
+
       const message =
         err instanceof Error
           ? err.message
@@ -187,6 +197,12 @@ const LoginMedico = () => {
       showSuccess("Login rápido (médico) realizado com sucesso.");
       navigate("/medico/dashboard");
     } catch (err) {
+      const code = (err as any)?.code as string | undefined;
+      if (code === SUBSCRIPTION_EXPIRED_CODE) {
+        setSubscriptionExpiredOpen(true);
+        return;
+      }
+
       const message =
         err instanceof Error
           ? err.message
@@ -211,6 +227,10 @@ const LoginMedico = () => {
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-background text-foreground">
+      <SubscriptionExpiredDialog
+        open={subscriptionExpiredOpen}
+        onOpenChange={setSubscriptionExpiredOpen}
+      />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.14)_0,rgba(18,18,18,1)_60%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(18,18,18,1)_60%)]" />
 
       <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-8 sm:py-10">
