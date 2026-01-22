@@ -7,6 +7,8 @@
 # deploy 20.1.26 5
 # deploy 20.1.26 6
 # deploy 21.1.26 1
+# deploy 21.1.26 2
+
 
 
 
