@@ -5,6 +5,7 @@ export const SUBSCRIPTION_EXPIRED_CODE = "SUBSCRIPTION_EXPIRED";
 type SubscriptionEnrollmentRow = {
   current_period_end: string | null;
   cancelado?: boolean | null;
+  status?: string | null;
   user_email?: string | null;
 };
 
@@ -40,13 +41,15 @@ export async function ensureCurrentUserSubscriptionValid(): Promise<void> {
     throw createSubscriptionExpiredError(null);
   }
 
+  // Importante: não confiar apenas em "a mais recente".
+  // Usuário pode ter mais de uma inscrição (renovação), então a válida é
+  // QUALQUER uma não-cancelada cuja vigência (current_period_end) esteja no futuro.
   const { data, error } = await supabase
     .from("subscription_enrollments")
-    .select("user_email,current_period_end,cancelado")
-    // busca tolerante (caso existam espaços no banco); filtramos exato no client
+    .select("user_email,current_period_end,cancelado,status")
+    // busca tolerante; normalizamos/filtramos exato no client
     .ilike("user_email", `%${userEmail}%`)
-    .order("current_period_end", { ascending: false })
-    .limit(25);
+    .limit(250);
 
   if (error) {
     throw new Error(
@@ -56,32 +59,40 @@ export async function ensureCurrentUserSubscriptionValid(): Promise<void> {
 
   const rows = ((data ?? []) as SubscriptionEnrollmentRow[])
     .filter((r) => normalizeEmail(r.user_email ?? "") === userEmail)
-    .filter((r) => !Boolean(r.cancelado));
+    .filter((r) => !Boolean(r.cancelado))
+    .filter((r) => String(r.status ?? "").toUpperCase() !== "CANCELED");
 
   if (!rows.length) {
     await supabase.auth.signOut();
     throw createSubscriptionExpiredError(null);
   }
 
-  // Escolhe a maior vigência (current_period_end) dentre as não canceladas
+  const nowMs = Date.now();
+
   let bestEndIso: string | null = null;
   let bestEndMs = -Infinity;
 
   for (const r of rows) {
-    if (!r.current_period_end) continue;
-    const ms = new Date(r.current_period_end).getTime();
-    if (Number.isFinite(ms) && ms > bestEndMs) {
-      bestEndMs = ms;
-      bestEndIso = r.current_period_end;
+    const endIso = r.current_period_end;
+    if (!endIso) continue;
+
+    const endMs = new Date(endIso).getTime();
+    if (!Number.isFinite(endMs)) continue;
+
+    if (endMs > bestEndMs) {
+      bestEndMs = endMs;
+      bestEndIso = endIso;
     }
   }
 
+  // Se nenhuma inscrição trouxe current_period_end válido, consideramos expirada
+  // (o sistema depende desse campo para controlar acesso).
   if (!bestEndIso || !Number.isFinite(bestEndMs)) {
     await supabase.auth.signOut();
     throw createSubscriptionExpiredError(null);
   }
 
-  if (bestEndMs < Date.now()) {
+  if (bestEndMs < nowMs) {
     await supabase.auth.signOut();
     throw createSubscriptionExpiredError(bestEndIso);
   }
