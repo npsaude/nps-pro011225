@@ -7,13 +7,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function normalizeEmail(email: string) {
+  return String(email ?? "").trim().toLowerCase();
+}
+
+const ASAAS_BASE_URL = "https://api-sandbox.asaas.com/v3";
+
 async function asaasCancel(params: { token: string; subscriptionId: string }) {
   const res = await fetch(
-    `https://sandbox.asaas.com/api/v3/subscriptions/${params.subscriptionId}`,
+    `${ASAAS_BASE_URL}/subscriptions/${params.subscriptionId}`,
     {
       method: "DELETE",
       headers: {
-        "Content-Type": "application/json",
+        accept: "application/json",
         access_token: params.token,
       },
     },
@@ -83,10 +89,10 @@ serve(async (req) => {
   }
 
   const authUser = userData.user;
-  const authEmail = (authUser.email ?? "").trim().toLowerCase();
+  const authEmail = normalizeEmail(authUser.email ?? "");
 
   const body = await req.json().catch(() => null);
-  const enrollment_id = body?.enrollment_id as string | undefined;
+  const enrollment_id = (body?.enrollment_id as string | undefined) ?? undefined;
 
   if (!enrollment_id) {
     return new Response(JSON.stringify({ error: "Campo obrigatório: enrollment_id" }), {
@@ -121,11 +127,32 @@ serve(async (req) => {
     });
   }
 
-  const { data: enrollment, error: enrollmentError } = await adminClient
-    .from("subscription_enrollments")
-    .select("*")
-    .eq("id", enrollment_id)
-    .maybeSingle();
+  const { data: enrollment, error: enrollmentError } = enrollment_id
+    ? await adminClient
+        .from("subscription_enrollments")
+        .select("*")
+        .eq("id", enrollment_id)
+        .maybeSingle()
+    : await adminClient
+        .from("subscription_enrollments")
+        .select("*")
+        .ilike("user_email", `%${authEmail}%`)
+        .order("created_at", { ascending: false })
+        .limit(25)
+        .then(({ data, error }) => {
+          if (error) return { data: null, error };
+          const list = (data ?? []) as any[];
+          const picked =
+            list.find(
+              (r) =>
+                normalizeEmail(r.user_email) === authEmail &&
+                !Boolean(r.cancelado) &&
+                String(r.status ?? "").toUpperCase() !== "CANCELED" &&
+                Boolean(r.asaas_subscription_id),
+            ) ?? null;
+
+          return { data: picked, error: null };
+        });
 
   if (enrollmentError) {
     console.error("[cancel-subscription] Failed to load enrollment", {
@@ -144,9 +171,7 @@ serve(async (req) => {
     });
   }
 
-  const enrollmentEmail = String((enrollment as any).user_email ?? "")
-    .trim()
-    .toLowerCase();
+  const enrollmentEmail = normalizeEmail((enrollment as any).user_email ?? "");
 
   if (!enrollmentEmail || enrollmentEmail !== authEmail) {
     return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -155,22 +180,33 @@ serve(async (req) => {
     });
   }
 
+  // Se já estiver cancelada no sistema, não tenta cancelar novamente no Asaas
+  const alreadyCanceled =
+    Boolean((enrollment as any).cancelado) ||
+    String((enrollment as any).status ?? "").toUpperCase() === "CANCELED";
+
   const asaasSubscriptionId = (enrollment as any)
     ?.asaas_subscription_id as string | null;
 
   if (!asaasSubscriptionId) {
-    return new Response(JSON.stringify({ error: "Enrollment without asaas_subscription_id" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Enrollment without asaas_subscription_id" }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
   console.log("[cancel-subscription] Canceling Asaas subscription", {
-    enrollment_id,
+    enrollment_id: (enrollment as any).id,
     asaasSubscriptionId,
+    alreadyCanceled,
   });
 
-  await asaasCancel({ token: asaasToken, subscriptionId: asaasSubscriptionId });
+  if (!alreadyCanceled) {
+    await asaasCancel({ token: asaasToken, subscriptionId: asaasSubscriptionId });
+  }
 
   const { data: updated, error: updateError } = await adminClient
     .from("subscription_enrollments")
@@ -180,7 +216,7 @@ serve(async (req) => {
       ended_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", enrollment_id)
+    .eq("id", (enrollment as any).id)
     .select("*")
     .maybeSingle();
 

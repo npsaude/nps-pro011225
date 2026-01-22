@@ -97,10 +97,7 @@ serve(async (req) => {
   }
 
   const all = (rows ?? []) as EnrollmentRow[];
-  const mine = all
-    .filter((r) => normalizeEmail(r.user_email) === authEmail)
-    .filter((r) => !Boolean(r.cancelado))
-    .filter((r) => String(r.status ?? "").toUpperCase() !== "CANCELED");
+  const mine = all.filter((r) => normalizeEmail(r.user_email) === authEmail);
 
   console.log("[check-subscription] Loaded enrollments for user", {
     authEmail,
@@ -151,6 +148,8 @@ serve(async (req) => {
         reason: "EXPIRED",
         current_period_end: best.current_period_end,
         enrollment_id: best.id,
+        status: best.status,
+        cancelado: best.cancelado,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
@@ -161,6 +160,8 @@ serve(async (req) => {
       valid: true,
       enrollment_id: best.id,
       current_period_end: best.current_period_end,
+      status: best.status,
+      cancelado: best.cancelado,
     }),
     { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );

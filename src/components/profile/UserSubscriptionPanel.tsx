@@ -175,20 +175,24 @@ export default function UserSubscriptionPanel() {
   }, []);
 
   const handleCancel = async () => {
-    if (!enrollment) return;
-
-    if (!enrollment.asaas_subscription_id) {
-      showError(
-        "Esta assinatura não possui vínculo com o Asaas (asaas_subscription_id vazio).",
-      );
-      return;
-    }
-
     setCanceling(true);
     try {
-      await cancelarAssinatura(enrollment.id);
+      const result = await cancelarAssinatura(enrollment?.id);
       showSuccess("Assinatura cancelada com sucesso.");
+
+      // Se tivermos inscrição carregada, atualiza status local; caso contrário, mantém UI e apenas fecha.
       setEnrollment((prev) => (prev ? { ...prev, status: "CANCELED" } : prev));
+
+      // Se o backend retornou a inscrição atualizada, tenta refletir também
+      const updated = (result as any)?.enrollment as any | undefined;
+      if (updated?.id) {
+        setEnrollment((prev) =>
+          prev
+            ? { ...prev, status: updated.status ?? "CANCELED" }
+            : prev,
+        );
+      }
+
       setConfirmOpen(false);
     } catch (e) {
       showError(e instanceof Error ? e.message : "Não foi possível cancelar.");
