@@ -12,7 +12,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 };
 
-const PLANS_URL = "https://site.conmedic.com.br/planos";
+const PLANS_URL = "https://site.conmedic.com.br/";
 
 export default function SubscriptionExpiredDialog({
   open,
