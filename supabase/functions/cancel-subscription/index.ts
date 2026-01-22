@@ -175,6 +175,7 @@ serve(async (req) => {
   const { data: updated, error: updateError } = await adminClient
     .from("subscription_enrollments")
     .update({
+      cancelado: true,
       status: "CANCELED",
       ended_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

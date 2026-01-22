@@ -28,6 +28,8 @@ export default function UserProfileForm() {
   const { loading, systemUser } = useSystemUser();
   const [nome, setNome] = useState("");
   const [celular, setCelular] = useState("");
+  const [crm, setCrm] = useState("");
+  const [empresaClinicaBase, setEmpresaClinicaBase] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
@@ -45,6 +47,8 @@ export default function UserProfileForm() {
     if (!systemUser) return;
     setNome(systemUser.nome ?? "");
     setCelular(systemUser.celular ?? "");
+    setCrm(systemUser.crm ?? "");
+    setEmpresaClinicaBase(systemUser.empresa_clinica_base ?? "");
   }, [systemUser]);
 
   useEffect(() => {
@@ -95,6 +99,8 @@ export default function UserProfileForm() {
       await atualizarMeuUsuarioSistema({
         nome: nome.trim(),
         celular: celular.trim() || null,
+        crm: crm.trim() || null,
+        empresa_clinica_base: empresaClinicaBase.trim() || null,
       });
       showSuccess("Perfil atualizado.");
     } catch (e) {
@@ -214,6 +220,30 @@ export default function UserProfileForm() {
               disabled={loading || saving}
               className="h-10"
               placeholder="(11) 99999-9999"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">CRM</Label>
+            <Input
+              value={crm}
+              onChange={(e) => setCrm(e.target.value)}
+              disabled={loading || saving}
+              className="h-10"
+              placeholder="Ex.: 12345-SP"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              Empresa / clínica base
+            </Label>
+            <Input
+              value={empresaClinicaBase}
+              onChange={(e) => setEmpresaClinicaBase(e.target.value)}
+              disabled={loading || saving}
+              className="h-10"
+              placeholder="Ex.: Clínica XPTO"
             />
           </div>
         </div>

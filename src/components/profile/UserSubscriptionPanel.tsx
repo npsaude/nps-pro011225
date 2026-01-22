@@ -269,7 +269,7 @@ export default function UserSubscriptionPanel() {
                   canceling || statusLabel.toUpperCase().includes("CANCEL")
                 }
               >
-                Gerenciar assinatura
+                Cancelar inscrição
               </Button>
             </div>
 
@@ -288,8 +288,8 @@ export default function UserSubscriptionPanel() {
               Confirmar cancelamento
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Este cancelamento será enviado ao Asaas e a assinatura ficará com
-              status "CANCELED" no sistema.
+              Este cancelamento será enviado ao Asaas e sua inscrição ficará
+              marcada como cancelada no sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -303,7 +303,7 @@ export default function UserSubscriptionPanel() {
               className="bg-destructive hover:bg-destructive/90"
             >
               <Ban className="mr-2 h-4 w-4" />
-              {canceling ? "Cancelando..." : "Cancelar assinatura"}
+              {canceling ? "Cancelando..." : "Cancelar inscrição"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

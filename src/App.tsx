@@ -35,6 +35,7 @@ import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
 import AdminSubscriptionsDashboard from "./pages/AdminSubscriptionsDashboard";
 import AdminSubscribers from "./pages/AdminSubscribers";
 import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,8 @@ const App = () => (
           <Route path="/plataforma-em-construcao" element={<UnderConstruction />} />
           <Route path="/primeiro-acesso" element={<FirstAccess />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          <Route path="/perfil" element={<Profile />} />
 
           <Route path="/sadt/enviar" element={<SadtEnviar />} />
           <Route path="/sadt/sucesso" element={<SadtSucesso />} />
