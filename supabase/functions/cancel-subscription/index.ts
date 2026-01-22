@@ -92,14 +92,10 @@ serve(async (req) => {
   const authEmail = normalizeEmail(authUser.email ?? "");
 
   const body = await req.json().catch(() => null);
-  const enrollment_id = (body?.enrollment_id as string | undefined) ?? undefined;
-
-  if (!enrollment_id) {
-    return new Response(JSON.stringify({ error: "Campo obrigatório: enrollment_id" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const enrollment_id =
+    typeof body?.enrollment_id === "string" && body.enrollment_id.trim()
+      ? body.enrollment_id.trim()
+      : undefined;
 
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 

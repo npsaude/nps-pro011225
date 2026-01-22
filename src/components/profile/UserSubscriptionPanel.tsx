@@ -177,19 +177,15 @@ export default function UserSubscriptionPanel() {
   const handleCancel = async () => {
     setCanceling(true);
     try {
-      const result = await cancelarAssinatura(enrollment?.id);
+      const result = await cancelarAssinatura(enrollment?.id ?? null);
       showSuccess("Assinatura cancelada com sucesso.");
 
-      // Se tivermos inscrição carregada, atualiza status local; caso contrário, mantém UI e apenas fecha.
       setEnrollment((prev) => (prev ? { ...prev, status: "CANCELED" } : prev));
 
-      // Se o backend retornou a inscrição atualizada, tenta refletir também
       const updated = (result as any)?.enrollment as any | undefined;
       if (updated?.id) {
         setEnrollment((prev) =>
-          prev
-            ? { ...prev, status: updated.status ?? "CANCELED" }
-            : prev,
+          prev ? { ...prev, status: updated.status ?? "CANCELED" } : prev,
         );
       }
 
