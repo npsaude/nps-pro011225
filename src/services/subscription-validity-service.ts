@@ -25,31 +25,14 @@ function createSubscriptionExpiredError(currentPeriodEnd: string | null) {
 }
 
 /**
- * Valida a assinatura do usuário logado consultando subscription_enrollments.current_period_end.
- * - Se não existir inscrição, trata como expirada.
- * - Se houver mais de uma inscrição, considera válida a que tiver MAIOR current_period_end
- *   dentre as NÃO canceladas.
- * - Se a maior current_period_end < agora, trata como expirada.
+ * Valida a assinatura do usuário logado.
+ * Implementação via Edge Function porque o client pode não conseguir ler
+ * subscription_enrollments por RLS (retornando [] mesmo com assinatura existente).
  */
 export async function ensureCurrentUserSubscriptionValid(): Promise<void> {
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-
-  const userEmail = normalizeEmail(authData.user?.email ?? "");
-  if (!userEmail) {
-    await supabase.auth.signOut();
-    throw createSubscriptionExpiredError(null);
-  }
-
-  // Importante: não confiar apenas em "a mais recente".
-  // Usuário pode ter mais de uma inscrição (renovação), então a válida é
-  // QUALQUER uma não-cancelada cuja vigência (current_period_end) esteja no futuro.
-  const { data, error } = await supabase
-    .from("subscription_enrollments")
-    .select("user_email,current_period_end,cancelado,status")
-    // busca tolerante; normalizamos/filtramos exato no client
-    .ilike("user_email", `%${userEmail}%`)
-    .limit(250);
+  const { data, error } = await supabase.functions.invoke("check-subscription", {
+    body: {},
+  });
 
   if (error) {
     throw new Error(
@@ -57,43 +40,14 @@ export async function ensureCurrentUserSubscriptionValid(): Promise<void> {
     );
   }
 
-  const rows = ((data ?? []) as SubscriptionEnrollmentRow[])
-    .filter((r) => normalizeEmail(r.user_email ?? "") === userEmail)
-    .filter((r) => !Boolean(r.cancelado))
-    .filter((r) => String(r.status ?? "").toUpperCase() !== "CANCELED");
+  const valid = Boolean((data as any)?.valid);
 
-  if (!rows.length) {
-    await supabase.auth.signOut();
-    throw createSubscriptionExpiredError(null);
-  }
+  if (valid) return;
 
-  const nowMs = Date.now();
+  const currentPeriodEnd = ((data as any)?.current_period_end ?? null) as
+    | string
+    | null;
 
-  let bestEndIso: string | null = null;
-  let bestEndMs = -Infinity;
-
-  for (const r of rows) {
-    const endIso = r.current_period_end;
-    if (!endIso) continue;
-
-    const endMs = new Date(endIso).getTime();
-    if (!Number.isFinite(endMs)) continue;
-
-    if (endMs > bestEndMs) {
-      bestEndMs = endMs;
-      bestEndIso = endIso;
-    }
-  }
-
-  // Se nenhuma inscrição trouxe current_period_end válido, consideramos expirada
-  // (o sistema depende desse campo para controlar acesso).
-  if (!bestEndIso || !Number.isFinite(bestEndMs)) {
-    await supabase.auth.signOut();
-    throw createSubscriptionExpiredError(null);
-  }
-
-  if (bestEndMs < nowMs) {
-    await supabase.auth.signOut();
-    throw createSubscriptionExpiredError(bestEndIso);
-  }
+  await supabase.auth.signOut();
+  throw createSubscriptionExpiredError(currentPeriodEnd);
 }
