@@ -34,7 +34,6 @@ import UnderConstruction from "./pages/UnderConstruction";
 import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
 import AdminSubscriptionsDashboard from "./pages/AdminSubscriptionsDashboard";
 import AdminSubscribers from "./pages/AdminSubscribers";
-import AdminProfile from "./pages/AdminProfile";
 import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
 
 const queryClient = new QueryClient();
@@ -106,7 +105,6 @@ const App = () => (
 
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
           <Route path="/admin/configuracoes/converter-pdf" element={<AdminConverterPdf />} />
-          <Route path="/admin/perfil" element={<AdminProfile />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

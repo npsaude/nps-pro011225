@@ -113,10 +113,6 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="text-xs">{displayName}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => navigate("/admin/perfil")}>
-            Meu perfil
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
