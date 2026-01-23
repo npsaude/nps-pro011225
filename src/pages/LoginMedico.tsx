@@ -236,7 +236,7 @@ const LoginMedico = () => {
       <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-8 sm:py-10">
         <div className="mb-7 flex flex-col items-center gap-1">
           <span className="text-lg font-semibold sm:text-xl">
-            NP Saúde Pró
+            CONMEDIC
           </span>
           <span className="text-xs text-muted-foreground sm:text-[13px]">
             Portal do Médico

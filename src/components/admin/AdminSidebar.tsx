@@ -128,7 +128,7 @@ const AdminSidebar = ({
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold leading-none text-sidebar-foreground">
-              NP Saúde Pró
+              CONMEDIC
             </span>
             <span className="text-xs text-sidebar-foreground/70">
               Painel administrativo

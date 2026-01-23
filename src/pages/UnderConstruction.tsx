@@ -57,7 +57,7 @@ export default function UnderConstruction() {
           </div>
 
           <p className="mt-4 text-[11px] text-muted-foreground">
-            © {new Date().getFullYear()} NP Saúde Pró.
+            © {new Date().getFullYear()} CONMEDIC.
           </p>
         </div>
       </div>

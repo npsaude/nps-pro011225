@@ -17,13 +17,13 @@ const Index = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#135bec] shadow-md shadow-blue-500/40">
               <img
                 src="/logo.jpeg"
-                alt="Logo NP Saúde Pró"
+                alt="Logo CONMEDIC"
                 className="h-8 w-8 rounded-xl object-cover"
               />
             </div>
             <div className="flex flex-col">
               <h2 className="text-sm font-semibold leading-none text-slate-900 dark:text-slate-50 sm:text-base">
-                NP Saúde Pró
+                CONMEDIC
               </h2>
               <p className="text-xs text-slate-400">
                 Portal de envio de SADT e área administrativa
@@ -78,7 +78,7 @@ const Index = () => {
 
               <p className="mt-3 text-[11px] text-slate-400 sm:text-xs">
                 Ao continuar, você concorda com os termos de uso e política de
-                privacidade da NP Saúde Pró.
+                privacidade da CONMEDIC.
               </p>
             </div>
 
@@ -117,7 +117,7 @@ const Index = () => {
             </button>
           </div>
           <p>
-            © {new Date().getFullYear()} NP Saúde Pró. Todos os direitos
+            © {new Date().getFullYear()} CONMEDIC. Todos os direitos
             reservados.
           </p>
         </footer>

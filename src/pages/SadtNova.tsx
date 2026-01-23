@@ -43,13 +43,13 @@ const SadtNova: React.FC = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#135bec]">
                 <img
                   src="/logo.jpeg"
-                  alt="Logo NP Saúde Pró"
+                  alt="Logo CONMEDIC"
                   className="h-8 w-8 rounded-xl object-cover"
                 />
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold leading-none text-slate-900 dark:text-slate-50">
-                  NP Saúde Pró
+                  CONMEDIC
                 </span>
                 <span className="text-xs text-slate-400">
                   Painel administrativo

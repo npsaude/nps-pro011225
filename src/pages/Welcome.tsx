@@ -25,7 +25,7 @@ export default function Welcome() {
             </div>
             <div className="flex flex-col">
               <h1 className="text-base font-semibold leading-none sm:text-lg">
-                Bem-vindo ao NP Saúde Pró
+                Bem-vindo ao CONMEDIC
               </h1>
               <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
                 Escolha como deseja continuar.
@@ -59,7 +59,7 @@ export default function Welcome() {
         </div>
 
         <p className="mt-5 text-center text-[10px] text-muted-foreground">
-          © {new Date().getFullYear()} NP Saúde Pró.
+          © {new Date().getFullYear()} CONMEDIC.
         </p>
       </div>
     </div>

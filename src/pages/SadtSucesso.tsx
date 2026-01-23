@@ -29,13 +29,13 @@ const SadtSucesso = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#135bec] shadow-md shadow-blue-500/40">
               <img
                 src="/logo.jpeg"
-                alt="Logo NP Saúde Pró"
+                alt="Logo CONMEDIC"
                 className="h-7 w-7 rounded-lg object-cover"
               />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
-                NP Saúde Pró
+                CONMEDIC
               </span>
               <span className="text-[11px] text-slate-400">
                 Envio de SADT concluído
@@ -91,8 +91,7 @@ const SadtSucesso = () => {
             </div>
 
             <p className="mt-4 text-[11px] text-slate-400">
-              Em caso de dúvidas, entre em contato com o suporte da NP Saúde
-              Pró.
+              Em caso de dúvidas, entre em contato com o suporte da CONMEDIC.
             </p>
           </div>
         </main>
