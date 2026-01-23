@@ -22,6 +22,9 @@ export function useSystemUser() {
       setState({ loading: true, systemUser: null, error: null });
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData?.user) {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("conmedic_role");
+        }
         if (!cancelled) setState({ loading: false, systemUser: null, error: null });
         return;
       }
@@ -53,28 +56,49 @@ export function useSystemUser() {
         }
       }
 
-      // 3) carrega avatar salvo no banco (user_avatars)
+      // Cache do role para UI mais rápida (ex.: sidebar)
+      if (typeof window !== "undefined") {
+        const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+        if (role) window.localStorage.setItem("conmedic_role", role);
+      }
+
+      // ✅ Importante: libera o usuário imediatamente (não espera avatar)
+      if (!cancelled) {
+        setState({
+          loading: false,
+          systemUser: systemUser,
+          error: null,
+        });
+      }
+
+      // 3) carrega avatar salvo no banco (user_avatars) em background (não bloqueia UI)
       const { data: avatarRow, error: avatarError } = await supabase
         .from("user_avatars")
         .select("avatar_path")
         .eq("user_id", uid)
         .maybeSingle();
 
+      if (cancelled) return;
+
       if (avatarError) {
-        if (!cancelled) setState({ loading: false, systemUser: null, error: avatarError });
+        // Não bloqueia a UI por causa de avatar
+        // eslint-disable-next-line no-console
+        console.warn("[useSystemUser] Falha ao carregar avatar:", avatarError);
         return;
       }
 
       const avatarPath = (avatarRow as any)?.avatar_path ?? null;
 
-      if (!cancelled) {
-        setState({
-          loading: false,
-          systemUser: systemUser
-            ? ({ ...systemUser, avatar_url: avatarPath ?? (systemUser as any)?.avatar_url ?? null } as DbSystemUser)
-            : systemUser,
-          error: null,
-        });
+      if (avatarPath) {
+        setState((prev) => ({
+          ...prev,
+          systemUser: prev.systemUser
+            ? ({
+                ...prev.systemUser,
+                avatar_url: avatarPath ?? (prev.systemUser as any)?.avatar_url ?? null,
+              } as DbSystemUser)
+            : prev.systemUser,
+        }));
       }
     };
 

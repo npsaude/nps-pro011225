@@ -42,7 +42,10 @@ const AdminSidebar = ({
   const navigate = useNavigate();
   const { systemUser } = useSystemUser();
 
-  const role = String((systemUser as any)?.regra ?? "")
+  const cachedRole =
+    typeof window !== "undefined" ? window.localStorage.getItem("conmedic_role") : null;
+
+  const role = String((systemUser as any)?.regra ?? cachedRole ?? "")
     .trim()
     .toUpperCase();
 

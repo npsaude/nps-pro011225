@@ -187,6 +187,11 @@ export async function loginWithRole(params: {
 
   const userRole = normalizeRole((systemUser as any)?.regra);
 
+  // Cache do role (melhora performance do menu/sidebar)
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("conmedic_role", String(userRole ?? "").trim().toUpperCase());
+  }
+
   // Nova lógica de permissões:
   // - allowedRole === "ADMIN" → aceita ADMIN, SUPER_ADMIN e MEDICO (a página decide o redirect)
   // - allowedRole === "MEDICO" → aceita apenas MEDICO
@@ -468,6 +473,9 @@ export async function updatePassword(newPassword: string): Promise<void> {
  */
 export async function logout() {
   const { error } = await supabase.auth.signOut();
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem("conmedic_role");
+  }
   if (error) {
     throw new Error(error.message || "Erro ao encerrar sessão.");
   }
