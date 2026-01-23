@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemUser } from "@/hooks/use-system-user";
+import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import { showError, showSuccess } from "@/utils/toast";
 import { subscribeAvatarUpdated } from "@/utils/avatar-events";
 
@@ -16,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -28,6 +30,7 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
   const { notificationsCount = 0 } = props;
   const navigate = useNavigate();
   const { systemUser } = useSystemUser();
+  const { status: subscriptionStatus } = useSubscriptionStatus();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const displayName = useMemo(() => {
@@ -97,7 +100,11 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary ring-1 ring-border transition-colors hover:bg-muted"
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-full bg-secondary ring-1 ring-border transition-colors hover:bg-muted",
+              String(subscriptionStatus ?? "").toUpperCase() === "CANCELED" &&
+                "ring-2 ring-yellow-400 ring-offset-2 ring-offset-background",
+            )}
             aria-label="Menu do usuário"
             type="button"
           >
