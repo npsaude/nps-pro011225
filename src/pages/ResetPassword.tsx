@@ -190,7 +190,7 @@ const ResetPassword = () => {
                   <Button
                     type="submit"
                     disabled={!canSubmit}
-                    className="h-11 w-full rounded-2xl bg-indigo-600 text-sm font-semibold text-white shadow-sm shadow-indigo-500/30 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="h-11 w-full rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-black/30 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {isLoading ? "Salvando..." : "Salvar nova senha"}
                   </Button>
