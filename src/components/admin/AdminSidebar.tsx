@@ -27,7 +27,7 @@ interface AdminSidebarProps {
     | "config"
     | "assinaturas";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos";
-  assinaturasSubsection?: "dashboard" | "assinantes" | "planos";
+  assinaturasSubsection?: "dashboard" | "assinantes" | "planos" | "formulario-site";
 }
 
 const LOGO_URL =
@@ -49,7 +49,7 @@ const AdminSidebar = ({
     .trim()
     .toUpperCase();
 
-  const canSeeSubscriptionsMenu = role === "ADMIN" || role === "SUPER_ADMIN";
+  const canSeeSubscriptionsMenu = role === "SUPER_ADMIN";
 
   const handleLogout = () => {
     void logout()
@@ -95,6 +95,7 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/assinaturas/dashboard")) return "dashboard";
     if (path.startsWith("/admin/assinaturas/assinantes")) return "assinantes";
     if (path.startsWith("/admin/assinaturas/planos")) return "planos";
+    if (path.startsWith("/admin/assinaturas/formulario-site")) return "formulario-site";
     return undefined;
   }, [location.pathname, assinaturasSubsection]);
 
@@ -140,7 +141,7 @@ const AdminSidebar = ({
         </div>
 
         <nav className="flex flex-col gap-1 text-sm">
-          {/* Gestão de Assinaturas (somente ADMIN/SUPER_ADMIN) */}
+          {/* Gestão de Assinaturas (somente SUPER_ADMIN) */}
           {canSeeSubscriptionsMenu ? (
             <div className={blockContainer}>
               <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
@@ -187,6 +188,20 @@ const AdminSidebar = ({
                   onClick={() => navigate("/admin/assinaturas/planos")}
                 >
                   <span className="ml-7">Planos</span>
+                </button>
+
+                <button
+                  className={
+                    currentAssinaturasSub === "formulario-site"
+                      ? blockItemActive
+                      : blockItemInactive
+                  }
+                  onClick={() => navigate("/admin/assinaturas/formulario-site")}
+                >
+                  <span className="ml-7 inline-flex items-center gap-2">
+                    <MessageCircle className="h-3.5 w-3.5 opacity-80" />
+                    Formulário do Site
+                  </span>
                 </button>
               </div>
             </div>

@@ -37,6 +37,7 @@ import AdminSubscribers from "./pages/AdminSubscribers";
 import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
 import InactivityLogout from "@/components/auth/InactivityLogout";
 import Profile from "./pages/Profile";
+import AdminSiteContactMessages from "./pages/AdminSiteContactMessages";
 
 const queryClient = new QueryClient();
 
@@ -104,6 +105,14 @@ const App = () => (
             element={
               <SuperAdminGuard>
                 <AdminSubscriptionPlans />
+              </SuperAdminGuard>
+            }
+          />
+          <Route
+            path="/admin/assinaturas/formulario-site"
+            element={
+              <SuperAdminGuard>
+                <AdminSiteContactMessages />
               </SuperAdminGuard>
             }
           />
