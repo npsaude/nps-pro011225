@@ -24,7 +24,6 @@ const LOGO_URL =
   "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2OTE4NTA3OSwiZXhwIjoxNzcwMDQ5MDc5fQ.jSiOZo0BFqGup9t3gAzfohZbOwBKpvHRUCGrb_1Fbeg";
 
 const YOUTUBE_VIDEO_ID = "5w1NdK6GtEE";
-const YOUTUBE_EMBED_URL = `https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${YOUTUBE_VIDEO_ID}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3`;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -42,6 +41,8 @@ const Login = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
 
   const [resetLoading, setResetLoading] = useState(false);
+
+  const youtubeEmbedUrl = `https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${YOUTUBE_VIDEO_ID}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1`;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -216,22 +217,23 @@ const Login = () => {
       />
 
       {/* Background video */}
-      <div className="pointer-events-none absolute inset-0 -z-20 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <iframe
           className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
-          src={YOUTUBE_EMBED_URL}
+          src={youtubeEmbedUrl}
           title="CONMEDIC background"
-          allow="autoplay; encrypted-media"
-          referrerPolicy="strict-origin-when-cross-origin"
-          loading="lazy"
+          frameBorder={0}
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen
+          tabIndex={-1}
         />
       </div>
 
-      {/* Overlay for readability (keeps the new design feel) */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-black/55" />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.18)_0,rgba(0,0,0,0.9)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(0,0,0,0.9)_55%)]" />
+      {/* Overlay for readability */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-black/55" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.18)_0,rgba(0,0,0,0.9)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(0,0,0,0.9)_55%)]" />
 
-      <div className="relative z-10 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
+      <div className="relative z-20 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
         <div className="mb-6 flex flex-col items-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-card shadow-[0_12px_30px_rgba(0,0,0,0.55)] ring-1 ring-border">
             <img
