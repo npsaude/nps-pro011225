@@ -8,6 +8,9 @@ import { showError, showSuccess } from "@/utils/toast";
 import { updatePassword } from "@/services/auth-service";
 import { useRecoverySession } from "@/hooks/use-recovery-session";
 
+const LOGO_URL =
+  "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2OTIwNDM1NCwiZXhwIjoyMDg0NTY0MzU0fQ.y5UC4nwVw4JpRIEJgL9oZTAWV7oMij0kT5Fvm8bMm8o";
+
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [senha, setSenha] = useState("");
@@ -86,7 +89,7 @@ const ResetPassword = () => {
           <div className="flex items-center gap-3 rounded-3xl bg-white/80 px-4 py-3 shadow-sm ring-1 ring-slate-200 backdrop-blur dark:bg-slate-900/70 dark:ring-slate-800">
             <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
               <img
-                src="/logo-conmedic.svg"
+                src={LOGO_URL}
                 alt="Logo CONMEDIC"
                 className="h-8 w-8 object-contain"
               />
