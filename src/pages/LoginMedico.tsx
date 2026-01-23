@@ -154,29 +154,6 @@ const LoginMedico = () => {
     }
   };
 
-  const handleSocialLogin = async (
-    provider: "google" | "apple" | "azure",
-  ) => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/medico/dashboard`,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível iniciar o login social.";
-      showError(message);
-    }
-  };
-
   const handleMedicoShortcutLogin = async () => {
     if (isLoading) return;
 
@@ -348,65 +325,6 @@ const LoginMedico = () => {
                   </span>
                 </Button>
               </div>
-
-              <div className="mt-4 flex items-center gap-3 text-[11px] text-muted-foreground">
-                <div className="h-px flex-1 bg-border" />
-                <span>OU CONTINUE COM</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              <div className="mt-3 flex items-center justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin("google")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
-                  aria-label="Entrar com Google"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4">
-                    <path
-                      fill="#EA4335"
-                      d="M12 10.2v3.9h5.4c-.2 1.2-.9 2.3-1.9 3.1l3.1 2.4C20.7 18.3 22 15.6 22 12.5 22 11.7 21.9 11 21.8 10.2H12z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M6.5 14.3l-.8.7-2.5 1.9C4.4 19.9 8 22 12 22c2.7 0 5-.9 6.7-2.4l-3.1-2.4c-.9.6-2 1-3.6 1-2.8 0-5.2-1.9-6.1-4.5z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M3.2 7.9C2.4 9.4 2 11.1 2 12.8c0 1.7.4 3.4 1.2 4.9l3.3-2.6C6.2 14.3 6 13.6 6 12.8c0-.7.1-1.4.4-2.1L3.2 7.9z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M12 6.1c1.5 0 2.8.5 3.9 1.6l2.9-2.9C17 2.9 14.7 2 12 2 8 2 4.4 4.1 3.2 7.9l3.2 2.8C7.8 8 9.2 6.1 12 6.1z"
-                    />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin("apple")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
-                  aria-label="Entrar com Apple"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-                    <path d="M16.365 2c-.978.067-2.14.692-2.828 1.508-.616.729-1.143 1.9-.999 3.01 1.077.083 2.192-.548 2.853-1.372.646-.81 1.111-1.945.974-3.146zM19.42 8.352c-1.553-.097-2.872.878-3.616.878-.762 0-1.927-.857-3.176-.833-1.634.024-3.144.948-3.978 2.415-1.697 2.94-.434 7.283 1.213 9.666.803 1.155 1.757 2.45 3.02 2.403 1.22-.048 1.676-.776 3.15-.776 1.457 0 1.875.776 3.15.748 1.305-.021 2.13-1.155 2.93-2.316.914-1.335 1.291-2.63 1.309-2.697-.027-.01-2.52-.967-2.547-3.842-.021-2.405 1.966-3.536 2.056-3.597-1.125-1.651-2.86-1.836-3.534-1.874z" />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin("azure")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
-                  aria-label="Entrar com Microsoft"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4">
-                    <rect x="2" y="2" width="9" height="9" fill="#F35325" />
-                    <rect x="13" y="2" width="9" height="9" fill="#81BC06" />
-                    <rect x="2" y="13" width="9" height="9" fill="#05A6F0" />
-                    <rect x="13" y="13" width="9" height="9" fill="#FFBA08" />
-                  </svg>
-                </button>
-              </div>
             </form>
           )}
 
@@ -528,65 +446,6 @@ const LoginMedico = () => {
                 >
                   {registerLoading ? "Criando conta..." : "Criar Conta"}
                 </Button>
-              </div>
-
-              <div className="mt-4 flex items-center gap-3 text-[11px] text-muted-foreground">
-                <div className="h-px flex-1 bg-border" />
-                <span>OU CONTINUE COM</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              <div className="mt-3 flex items-center justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin("google")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
-                  aria-label="Criar conta com Google"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4">
-                    <path
-                      fill="#EA4335"
-                      d="M12 10.2v3.9h5.4c-.2 1.2-.9 2.3-1.9 3.1l3.1 2.4C20.7 18.3 22 15.6 22 12.5 22 11.7 21.9 11 21.8 10.2H12z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M6.5 14.3l-.8.7-2.5 1.9C4.4 19.9 8 22 12 22c2.7 0 5-.9 6.7-2.4l-3.1-2.4c-.9.6-2 1-3.6 1-2.8 0-5.2-1.9-6.1-4.5z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M3.2 7.9C2.4 9.4 2 11.1 2 12.8c0 1.7.4 3.4 1.2 4.9l3.3-2.6C6.2 14.3 6 13.6 6 12.8c0-.7.1-1.4.4-2.1L3.2 7.9z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M12 6.1c1.5 0 2.8.5 3.9 1.6l2.9-2.9C17 2.9 14.7 2 12 2 8 2 4.4 4.1 3.2 7.9l3.2 2.8C7.8 8 9.2 6.1 12 6.1z"
-                    />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin("apple")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
-                  aria-label="Criar conta com Apple"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-                    <path d="M16.365 2c-.978.067-2.14.692-2.828 1.508-.616.729-1.143 1.9-.999 3.01 1.077.083 2.192-.548 2.853-1.372.646-.81 1.111-1.945.974-3.146zM19.42 8.352c-1.553-.097-2.872.878-3.616.878-.762 0-1.927-.857-3.176-.833-1.634.024-3.144.948-3.978 2.415-1.697 2.94-.434 7.283 1.213 9.666.803 1.155 1.757 2.45 3.02 2.403 1.22-.048 1.676-.776 3.15-.776 1.457 0 1.875.776 3.15.748 1.305-.021 2.13-1.155 2.93-2.316.914-1.335 1.291-2.63 1.309-2.697-.027-.01-2.52-.967-2.547-3.842-.021-2.405 1.966-3.536 2.056-3.597-1.125-1.651-2.86-1.836-3.534-1.874z" />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin("azure")}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground ring-1 ring-border hover:opacity-90"
-                  aria-label="Criar conta com Microsoft"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4">
-                    <rect x="2" y="2" width="9" height="9" fill="#F35325" />
-                    <rect x="13" y="2" width="9" height="9" fill="#81BC06" />
-                    <rect x="2" y="13" width="9" height="9" fill="#05A6F0" />
-                    <rect x="13" y="13" width="9" height="9" fill="#FFBA08" />
-                  </svg>
-                </button>
               </div>
             </form>
           )}

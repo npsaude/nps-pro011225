@@ -269,43 +269,6 @@ const Login = () => {
               </span>
               <span className="h-px flex-1 bg-border" />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                aria-label="Continuar com Google"
-                className="flex h-10 items-center justify-center rounded-xl border border-border bg-background shadow-sm"
-              >
-                <img
-                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                  alt="Google"
-                  className="h-5 w-5"
-                />
-              </button>
-
-              <button
-                type="button"
-                aria-label="Continuar com Apple"
-                className="flex h-10 items-center justify-center rounded-xl border border-border bg-background shadow-sm"
-              >
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
-                  alt="Apple"
-                  className="h-5 w-5 invert"
-                />
-              </button>
-
-              <button
-                type="button"
-                aria-label="Continuar com Microsoft"
-                className="flex h-10 items-center justify-center rounded-xl border border-border bg-background shadow-sm"
-              >
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
-                  alt="Microsoft"
-                  className="h-5 w-5"
-                />
-              </button>
-            </div>
           </div>
 
           {!showRegister ? (
