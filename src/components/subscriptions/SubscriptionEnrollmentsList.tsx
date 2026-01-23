@@ -138,12 +138,12 @@ export default function SubscriptionEnrollmentsList() {
   };
 
   return (
-    <Card className="h-full rounded-3xl border border-border bg-card/90 shadow-sm">
-      <CardHeader className="border-b border-border bg-secondary/30 pb-3">
+    <Card className="h-full rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/80 pb-3 dark:border-slate-800 dark:bg-slate-900/80">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold sm:text-base">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
                 <Users className="h-4 w-4" />
               </span>
               <span>Assinantes</span>
@@ -151,18 +151,21 @@ export default function SubscriptionEnrollmentsList() {
             <CardDescription className="text-xs sm:text-sm">
               Base: subscription_enrollments
             </CardDescription>
-            <p className="text-[11px] text-muted-foreground">
-              Total: <span className="font-medium text-foreground">{rows.length}</span>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              Total:{" "}
+              <span className="font-medium text-slate-600 dark:text-slate-300">
+                {rows.length}
+              </span>
             </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="w-full min-w-[220px] sm:w-80">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   placeholder="Buscar por nome, e-mail, telefone ou status..."
-                  className="h-9 rounded-full pl-9 text-xs"
+                  className="h-9 rounded-full border-slate-200 bg-white pl-9 text-xs shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:placeholder:text-slate-500"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -172,7 +175,7 @@ export default function SubscriptionEnrollmentsList() {
             <Button
               type="button"
               size="sm"
-              className="rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground hover:opacity-95"
+              className="rounded-full bg-indigo-600 px-4 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
               onClick={openNew}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -182,16 +185,16 @@ export default function SubscriptionEnrollmentsList() {
         </div>
       </CardHeader>
 
-      <CardContent className="mt-1 overflow-hidden rounded-b-2xl">
+      <CardContent className="mt-1 overflow-hidden rounded-b-2xl bg-white/90 dark:bg-slate-900/80">
         {loading ? (
-          <p className="px-4 py-6 text-xs text-muted-foreground">
+          <p className="px-4 py-6 text-xs text-slate-500 dark:text-slate-400">
             Carregando assinantes...
           </p>
         ) : (
           <div className="max-h-[560px] overflow-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-border text-xs text-muted-foreground">
+                <TableRow className="border-b border-slate-100 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   <TableHead className="px-4 py-3">Assinante</TableHead>
                   <TableHead className="px-4 py-3">Plano</TableHead>
                   <TableHead className="px-4 py-3">Status</TableHead>
@@ -204,7 +207,7 @@ export default function SubscriptionEnrollmentsList() {
                   <TableRow>
                     <TableCell
                       colSpan={5}
-                      className="px-4 py-6 text-center text-xs text-muted-foreground"
+                      className="px-4 py-6 text-center text-xs text-slate-400"
                     >
                       Nenhum assinante encontrado.
                     </TableCell>
@@ -219,37 +222,36 @@ export default function SubscriptionEnrollmentsList() {
                     return (
                       <TableRow
                         key={r.id}
-                        className="border-b border-border/50 text-xs hover:bg-secondary/30"
+                        className="border-b border-slate-50 text-xs hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/60"
                       >
                         <TableCell className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium text-slate-900 dark:text-slate-50">
                               {r.user_name}
                             </span>
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500">
                               {r.user_email}
                               {r.user_phone ? ` • ${r.user_phone}` : ""}
                             </span>
                           </div>
                         </TableCell>
 
-                        <TableCell className="px-4 py-3 text-muted-foreground">
+                        <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
                           {plan?.name ?? "—"}
                           {plan?.code ? (
-                            <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                            <span className="mt-0.5 block text-[11px] text-slate-400">
                               {plan.code}
                             </span>
                           ) : null}
                         </TableCell>
 
-                        {/* IMPORTANTE: status exatamente como vem do banco */}
                         <TableCell className="px-4 py-3">
-                          <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground ring-1 ring-border">
+                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
                             {String(r.status ?? "")}
                           </span>
                         </TableCell>
 
-                        <TableCell className="px-4 py-3 text-muted-foreground">
+                        <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
                           {createdAt}
                         </TableCell>
 
@@ -257,7 +259,7 @@ export default function SubscriptionEnrollmentsList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
                             onClick={() => openEdit(r)}
                             title="Editar"
                           >
