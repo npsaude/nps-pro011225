@@ -229,9 +229,9 @@ const Login = () => {
         />
       </div>
 
-      {/* Overlay for readability (mais leve) */}
-      <div className="pointer-events-none absolute inset-0 z-10 bg-black/15" />
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.14)_0,rgba(0,0,0,0.45)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.08)_0,rgba(0,0,0,0.45)_55%)]" />
+      {/* Overlay for readability (ainda mais leve) */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-black/5" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.10)_0,rgba(0,0,0,0.25)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.06)_0,rgba(0,0,0,0.25)_55%)]" />
 
       <div className="relative z-20 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
         <div className="mb-6 flex flex-col items-center">
