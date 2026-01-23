@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemUser } from "@/hooks/use-system-user";
@@ -8,7 +7,6 @@ import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import { showError, showSuccess } from "@/utils/toast";
 import { subscribeAvatarUpdated } from "@/utils/avatar-events";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,14 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "U";
-  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
+import BellButton from "@/components/admin/BellButton";
+import UserAvatarButton from "@/components/admin/UserAvatarButton";
 
 export default function AdminHeaderActions(props: { notificationsCount?: number }) {
   const { notificationsCount = 0 } = props;
@@ -36,6 +28,9 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";
   }, [systemUser?.email, systemUser?.nome]);
+
+  const subscriptionCanceled =
+    String(subscriptionStatus ?? "").toUpperCase() === "CANCELED";
 
   useEffect(() => {
     const unsubscribe = subscribeAvatarUpdated((url) => {
@@ -88,33 +83,17 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
 
   return (
     <div className="flex items-center gap-2">
-      <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-sm ring-1 ring-border transition-colors hover:bg-muted hover:text-foreground">
-        {notificationsCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-destructive px-0.5 text-[10px] font-semibold text-destructive-foreground">
-            {notificationsCount > 9 ? "9+" : notificationsCount}
-          </span>
-        ) : null}
-        <Bell className="h-4 w-4" />
-      </button>
+      <BellButton count={notificationsCount} onClick={() => {}} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full bg-secondary ring-1 ring-border transition-colors hover:bg-muted",
-              String(subscriptionStatus ?? "").toUpperCase() === "CANCELED" &&
-                "ring-2 ring-yellow-400 ring-offset-2 ring-offset-background",
-            )}
-            aria-label="Menu do usuário"
-            type="button"
-          >
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-              <AvatarFallback className="bg-secondary text-xs text-foreground">
-                {initials(displayName)}
-              </AvatarFallback>
-            </Avatar>
-          </button>
+          <span>
+            <UserAvatarButton
+              displayName={displayName}
+              avatarUrl={avatarUrl}
+              subscriptionCanceled={subscriptionCanceled}
+            />
+          </span>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
