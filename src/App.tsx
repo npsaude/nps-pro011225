@@ -35,6 +35,7 @@ import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
 import AdminSubscriptionsDashboard from "./pages/AdminSubscriptionsDashboard";
 import AdminSubscribers from "./pages/AdminSubscribers";
 import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
+import InactivityLogout from "@/components/auth/InactivityLogout";
 import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthUrlRouter />
+        <InactivityLogout timeoutMinutes={60} />
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
