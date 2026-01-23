@@ -261,16 +261,6 @@ const Login = () => {
             </div>
           )}
 
-          <div className="mb-5">
-            <div className="mb-4 flex items-center gap-3 text-[11px] text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              <span className="whitespace-nowrap tracking-[0.22em]">
-                OU CONTINUE COM
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-          </div>
-
           {!showRegister ? (
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-1.5">
