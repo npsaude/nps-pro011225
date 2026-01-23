@@ -217,7 +217,7 @@ const Login = () => {
       />
 
       {/* Background video */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <iframe
           className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
           src={youtubeEmbedUrl}
@@ -229,9 +229,9 @@ const Login = () => {
         />
       </div>
 
-      {/* Overlay for readability */}
-      <div className="pointer-events-none absolute inset-0 z-10 bg-black/55" />
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.18)_0,rgba(0,0,0,0.9)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(0,0,0,0.9)_55%)]" />
+      {/* Overlay for readability (deixando o vídeo visível) */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-black/30" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.18)_0,rgba(0,0,0,0.65)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(0,0,0,0.65)_55%)]" />
 
       <div className="relative z-20 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
         <div className="mb-6 flex flex-col items-center">
