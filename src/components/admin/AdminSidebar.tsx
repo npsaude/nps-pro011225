@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
+import { useSystemUser } from "@/hooks/use-system-user";
 
 interface AdminSidebarProps {
   section?:
@@ -39,6 +40,13 @@ const AdminSidebar = ({
 }: AdminSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { systemUser } = useSystemUser();
+
+  const role = String((systemUser as any)?.regra ?? "")
+    .trim()
+    .toUpperCase();
+
+  const canSeeSubscriptionsMenu = role === "ADMIN" || role === "SUPER_ADMIN";
 
   const handleLogout = () => {
     void logout()
@@ -129,55 +137,57 @@ const AdminSidebar = ({
         </div>
 
         <nav className="flex flex-col gap-1 text-sm">
-          {/* Gestão de Assinaturas (no topo) */}
-          <div className={blockContainer}>
-            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-                <CreditCard className="h-4 w-4" />
-              </span>
-              <span className="text-xs font-semibold text-sidebar-foreground">
-                Gestão de Assinaturas
-              </span>
-            </div>
-
-            <div className="mt-1 space-y-1">
-              <button
-                className={
-                  currentAssinaturasSub === "dashboard"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/dashboard")}
-              >
-                <span className="ml-7 inline-flex items-center gap-2">
-                  <BarChart3 className="h-3.5 w-3.5 opacity-80" />
-                  Dashboard
+          {/* Gestão de Assinaturas (somente ADMIN/SUPER_ADMIN) */}
+          {canSeeSubscriptionsMenu ? (
+            <div className={blockContainer}>
+              <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                  <CreditCard className="h-4 w-4" />
                 </span>
-              </button>
+                <span className="text-xs font-semibold text-sidebar-foreground">
+                  Gestão de Assinaturas
+                </span>
+              </div>
 
-              <button
-                className={
-                  currentAssinaturasSub === "assinantes"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/assinantes")}
-              >
-                <span className="ml-7">Assinantes</span>
-              </button>
+              <div className="mt-1 space-y-1">
+                <button
+                  className={
+                    currentAssinaturasSub === "dashboard"
+                      ? blockItemActive
+                      : blockItemInactive
+                  }
+                  onClick={() => navigate("/admin/assinaturas/dashboard")}
+                >
+                  <span className="ml-7 inline-flex items-center gap-2">
+                    <BarChart3 className="h-3.5 w-3.5 opacity-80" />
+                    Dashboard
+                  </span>
+                </button>
 
-              <button
-                className={
-                  currentAssinaturasSub === "planos"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/admin/assinaturas/planos")}
-              >
-                <span className="ml-7">Planos</span>
-              </button>
+                <button
+                  className={
+                    currentAssinaturasSub === "assinantes"
+                      ? blockItemActive
+                      : blockItemInactive
+                  }
+                  onClick={() => navigate("/admin/assinaturas/assinantes")}
+                >
+                  <span className="ml-7">Assinantes</span>
+                </button>
+
+                <button
+                  className={
+                    currentAssinaturasSub === "planos"
+                      ? blockItemActive
+                      : blockItemInactive
+                  }
+                  onClick={() => navigate("/admin/assinaturas/planos")}
+                >
+                  <span className="ml-7">Planos</span>
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Home */}
           <button
