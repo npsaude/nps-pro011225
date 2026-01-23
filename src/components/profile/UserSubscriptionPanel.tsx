@@ -35,6 +35,33 @@ type CurrentEnrollment = {
   } | null;
 };
 
+function normalizeEmail(email: string) {
+  return String(email ?? "").trim().toLowerCase();
+}
+
+function pickBestEnrollment(rows: any[], userEmail: string) {
+  const mine = (rows ?? []).filter(
+    (r) => normalizeEmail(r?.user_email) === normalizeEmail(userEmail),
+  );
+
+  let best: any | null = null;
+  let bestEndMs = -Infinity;
+
+  for (const r of mine) {
+    const end = r?.current_period_end;
+    if (!end) continue;
+    const endMs = new Date(end).getTime();
+    if (!Number.isFinite(endMs)) continue;
+
+    if (endMs > bestEndMs) {
+      bestEndMs = endMs;
+      best = r;
+    }
+  }
+
+  return best ?? (mine[0] ?? null);
+}
+
 function formatBRLFromCents(cents?: number | null) {
   const value = (cents ?? 0) / 100;
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -90,7 +117,6 @@ export default function UserSubscriptionPanel() {
       setLoading(true);
 
       try {
-        // Verificar autenticação
         const { data: authData, error: authError } = await supabase.auth.getUser();
         if (authError) {
           console.error("[UserSubscriptionPanel] Erro ao obter usuário:", authError);
@@ -106,11 +132,10 @@ export default function UserSubscriptionPanel() {
           return;
         }
 
-        const userEmail = authData.user.email.trim().toLowerCase();
+        const userEmail = normalizeEmail(authData.user.email);
         console.log("[UserSubscriptionPanel] Buscando assinatura para:", userEmail);
 
-        // Buscar assinatura usando a mesma lógica da query SQL que funciona
-        const { data: enrollmentData, error: enrollmentError } = await supabase
+        const { data: rows, error: enrollmentError } = await supabase
           .from("subscription_enrollments")
           .select(`
             id,
@@ -119,6 +144,7 @@ export default function UserSubscriptionPanel() {
             user_email,
             asaas_subscription_id,
             current_period_end,
+            created_at,
             plan:plan_id (
               id,
               name,
@@ -127,38 +153,40 @@ export default function UserSubscriptionPanel() {
               features
             )
           `)
-          .ilike("user_email", userEmail)
+          .ilike("user_email", `%${userEmail}%`)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(25);
 
         if (enrollmentError) {
           console.error("[UserSubscriptionPanel] Erro ao buscar assinatura:", enrollmentError);
           showError("Erro ao carregar assinatura: " + enrollmentError.message);
-        } else {
-          console.log("[UserSubscriptionPanel] Dados retornados:", enrollmentData);
+          setEnrollment(null);
+          setLoading(false);
+          return;
         }
 
-        // Processar dados da assinatura
-        if (enrollmentData) {
-          // O Supabase pode retornar plan como array, então pegamos o primeiro elemento
-          const rawPlan = enrollmentData.plan;
+        const best = pickBestEnrollment((rows ?? []) as any[], userEmail);
+
+        if (best) {
+          const rawPlan = best.plan;
           const planData = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan;
-          
+
           setEnrollment({
-            id: enrollmentData.id,
-            plan_id: enrollmentData.plan_id,
-            status: enrollmentData.status ?? null,
-            user_email: enrollmentData.user_email,
-            asaas_subscription_id: enrollmentData.asaas_subscription_id ?? null,
-            current_period_end: enrollmentData.current_period_end ?? null,
-            plan: planData ? {
-              id: planData.id,
-              name: planData.name,
-              code: planData.code,
-              price_cents: planData.price_cents,
-              features: planData.features,
-            } : null,
+            id: best.id,
+            plan_id: best.plan_id,
+            status: best.status ?? null,
+            user_email: best.user_email,
+            asaas_subscription_id: best.asaas_subscription_id ?? null,
+            current_period_end: best.current_period_end ?? null,
+            plan: planData
+              ? {
+                  id: planData.id,
+                  name: planData.name,
+                  code: planData.code,
+                  price_cents: planData.price_cents,
+                  features: planData.features,
+                }
+              : null,
           });
         } else {
           setEnrollment(null);
