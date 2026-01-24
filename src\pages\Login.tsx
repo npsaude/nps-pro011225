@@ -305,7 +305,7 @@ const Login = () => {
                     </div>
                     <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-foreground">CONMEDIC
-                                        </span>
+                                                                    </span>
                         <span
                             className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground">ACESSO ADMINISTRATIVO</span>
                     </div>
@@ -322,19 +322,19 @@ const Login = () => {
                         </button>
                         <div>
                             <h1 className="text-xl font-semibold text-foreground">Criar conta
-                                                </h1>
+                                                                                </h1>
                             <p className="mt-1 text-xs text-muted-foreground">Solicite seu acesso administrativo.
-                                                </p>
+                                                                                </p>
                         </div>
                     </div>) : (<div className="mb-5">
                         <h1 className="text-2xl font-semibold text-foreground">Entrar</h1>
                         <p className="mt-1 text-sm text-muted-foreground">Bem-vindo de volta ao portal administrativo.
-                                          </p>
+                                                                      </p>
                     </div>)}
                     {!showRegister ? (<form className="space-y-4" onSubmit={handleSubmit}>
                         <div className="space-y-1.5">
                             <label className="block text-xs font-medium text-muted-foreground">E-mail
-                                                </label>
+                                                                                </label>
                             <div
                                 className="flex items-center rounded-xl bg-background ring-1 ring-border focus-within:ring-2 focus-within:ring-ring">
                                 <span
@@ -353,7 +353,7 @@ const Login = () => {
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                                 <label className="block text-xs font-medium text-muted-foreground">Senha
-                                                      </label>
+                                                                                          </label>
                                 <button
                                     type="button"
                                     onClick={handleForgotPassword}
@@ -380,7 +380,7 @@ const Login = () => {
                         <div className="flex items-center gap-2 pt-1">
                             <Checkbox className="h-3.5 w-3.5" />
                             <span className="text-xs text-muted-foreground">Lembrar acesso
-                                                </span>
+                                                                                </span>
                         </div>
                         <div className="pt-2">
                             <Button
@@ -396,12 +396,12 @@ const Login = () => {
                                 type="button"
                                 onClick={() => setShowRegister(true)}
                                 className="font-semibold text-primary hover:underline">Cadastre-se
-                                                </button>
+                                                                                </button>
                         </p>
                     </form>) : (<form className="space-y-4" onSubmit={handleCreateAccount}>
                         <div className="space-y-1.5">
                             <label className="block text-xs font-medium text-muted-foreground">Nome completo
-                                                </label>
+                                                                                </label>
                             <Input
                                 type="text"
                                 placeholder="Seu nome"
@@ -411,7 +411,7 @@ const Login = () => {
                         </div>
                         <div className="space-y-1.5">
                             <label className="block text-xs font-medium text-muted-foreground">E-mail
-                                                </label>
+                                                                                </label>
                             <Input
                                 type="email"
                                 placeholder="seu@email.com"
@@ -422,7 +422,7 @@ const Login = () => {
                         <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-medium text-muted-foreground">Senha
-                                                      </label>
+                                                                                          </label>
                                 <Input
                                     type="password"
                                     placeholder="Mín. 6 caracteres"
@@ -432,7 +432,7 @@ const Login = () => {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-medium text-muted-foreground">Confirmar
-                                                      </label>
+                                                                                          </label>
                                 <Input
                                     type="password"
                                     placeholder="Repita a senha"
@@ -450,14 +450,14 @@ const Login = () => {
                             </Button>
                         </div>
                         <p className="text-[11px] leading-snug text-muted-foreground">Ao se cadastrar, você concorda com nossos Termos de Serviço e
-                                            Política de Privacidade.
-                                          </p>
+                                                                        Política de Privacidade.
+                                                                      </p>
                     </form>)}
                 </div>
                 <div className="mt-4 flex w-full max-w-md flex-col items-center gap-4">
                     <div className="text-center text-xs text-muted-foreground">
                         <p className="mb-2">Você é médico e deseja acompanhar suas cirurgias?
-                                        </p>
+                                                                    </p>
                         <Button
                             type="button"
                             variant="outline"
@@ -470,11 +470,11 @@ const Login = () => {
                     <div
                         className="mt-2 flex items-center justify-center gap-6 text-[11px] text-muted-foreground">
                         <button type="button" className="hover:underline">Privacidade
-                                        </button>
+                                                                    </button>
                         <button type="button" className="hover:underline">Termos
-                                        </button>
+                                                                    </button>
                         <button type="button" className="hover:underline">Ajuda
-                                        </button>
+                                                                    </button>
                     </div>
                     <p className="text-[10px] text-muted-foreground">© 2025 NP Saúde Pró. Plataforma segura.</p>
                 </div>
