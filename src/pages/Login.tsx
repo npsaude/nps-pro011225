@@ -289,9 +289,9 @@ const Login = () => {
         onOpenChange={setSubscriptionExpiredOpen}
       />
 
-      {/* Background video (configurado em public.app_settings.video_youtube) */}
+      {/* Background video (z-0) - com pointer-events-none no container */}
       {youtubeEmbedUrl ? (
-        <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <iframe
             className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
             src={youtubeEmbedUrl}
@@ -304,7 +304,10 @@ const Login = () => {
         </div>
       ) : null}
 
-      {/* Overlay for readability (ainda mais leve) */}
+      {/* Máscara transparente (z-10) - redundância de bloqueio */}
+      <div className="absolute inset-0 z-10 h-full w-full bg-transparent" />
+
+      {/* Overlay visual (z-10) */}
       <div className="pointer-events-none absolute inset-0 z-10 bg-black/5" />
       <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.10)_0,rgba(0,0,0,0.25)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.06)_0,rgba(0,0,0,0.25)_55%)]" />
 
