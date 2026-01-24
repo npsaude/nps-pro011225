@@ -8,7 +8,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { sendPasswordReset } from "@/services/auth-service";
 
 const LOGO_URL =
-  "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2ODU3Mzc4MCwiZXhwIjoxNzY5MTc4NTgwfQ.qi7ioLeitzVCihhcOXRpJD2MKKHn-vPOyD-yH776OKY";
+  "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2OTIwNDM1NCwiZXhwIjoyMDg0NTY0MzU0fQ.y5UC4nwVw4JpRIEJgL9oZTAWV7oMij0kT5Fvm8bMm8o";
 
 export default function FirstAccess() {
   const navigate = useNavigate();
