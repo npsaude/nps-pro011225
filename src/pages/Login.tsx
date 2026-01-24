@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -19,11 +19,50 @@ import {
 } from "@/services/auth-service";
 import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
 import { SUBSCRIPTION_EXPIRED_CODE } from "@/services/subscription-validity-service";
+import { carregarAppSettings } from "@/services/app-settings-service";
 
 const LOGO_URL =
   "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc2OTE4NTA3OSwiZXhwIjoxNzcwMDQ5MDc5fQ.jSiOZo0BFqGup9t3gAzfohZbOwBKpvHRUCGrb_1Fbeg";
 
-const YOUTUBE_VIDEO_ID = "5w1NdK6GtEE";
+const FALLBACK_YOUTUBE_VIDEO_ID = "5w1NdK6GtEE";
+
+function extractYouTubeId(input: string | null | undefined): string | null {
+  const raw = String(input ?? "").trim();
+  if (!raw) return null;
+
+  // Already an ID?
+  if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) return raw;
+
+  // Try parsing URL
+  try {
+    const url = new URL(raw);
+
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.replace("/", "").trim();
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+
+    if (url.hostname.includes("youtube.com")) {
+      // /watch?v=...
+      const v = url.searchParams.get("v");
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+
+      // /embed/ID
+      const embedMatch = url.pathname.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+      if (embedMatch?.[1]) return embedMatch[1];
+
+      // /shorts/ID
+      const shortsMatch = url.pathname.match(
+        /\/shorts\/([a-zA-Z0-9_-]{11})/,
+      );
+      if (shortsMatch?.[1]) return shortsMatch[1];
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
+}
 
 const Login = () => {
   const navigate = useNavigate();
@@ -42,7 +81,41 @@ const Login = () => {
 
   const [resetLoading, setResetLoading] = useState(false);
 
-  const youtubeEmbedUrl = `https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${YOUTUBE_VIDEO_ID}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1`;
+  const [youtubeSetting, setYoutubeSetting] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      try {
+        const settings = await carregarAppSettings();
+        if (!alive) return;
+        setYoutubeSetting(settings?.videoYoutube ?? null);
+      } catch {
+        // Silencioso: login não depende disso.
+        if (!alive) return;
+        setYoutubeSetting(null);
+      }
+    };
+
+    void load();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const videoId = useMemo(() => {
+    return (
+      extractYouTubeId(youtubeSetting) ??
+      extractYouTubeId(FALLBACK_YOUTUBE_VIDEO_ID)
+    );
+  }, [youtubeSetting]);
+
+  const youtubeEmbedUrl = useMemo(() => {
+    if (!videoId) return null;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1`;
+  }, [videoId]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -216,18 +289,20 @@ const Login = () => {
         onOpenChange={setSubscriptionExpiredOpen}
       />
 
-      {/* Background video */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <iframe
-          className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
-          src={youtubeEmbedUrl}
-          title="CONMEDIC background"
-          frameBorder={0}
-          allow="autoplay; encrypted-media; picture-in-picture"
-          allowFullScreen
-          tabIndex={-1}
-        />
-      </div>
+      {/* Background video (configurado em public.app_settings.video_youtube) */}
+      {youtubeEmbedUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <iframe
+            className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
+            src={youtubeEmbedUrl}
+            title="CONMEDIC background"
+            frameBorder={0}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            tabIndex={-1}
+          />
+        </div>
+      ) : null}
 
       {/* Overlay for readability (ainda mais leve) */}
       <div className="pointer-events-none absolute inset-0 z-10 bg-black/5" />

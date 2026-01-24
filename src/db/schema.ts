@@ -35,12 +35,12 @@ export interface DbAppUser {
 
 /**
  * Tabela de configurações gerais (app_settings).
- * Inclui o campo "Token OpenAI".
  */
 export interface DbAppSettings {
   id: string;
   openaiApiToken: string | null;
   asaasToken: string | null;
+  videoYoutube: string | null;
   createdAt: string;
   updatedAt: string;
 }

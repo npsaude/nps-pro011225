@@ -23,6 +23,8 @@ export async function carregarAppSettings(): Promise<DbAppSettings | null> {
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+    videoYoutube:
+      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
@@ -66,6 +68,8 @@ export async function salvarTokenOpenAI(
       openaiApiToken:
         (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
       asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+      videoYoutube:
+        (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
       createdAt:
         (data as any).createdAt ??
         (data as any).created_at ??
@@ -101,6 +105,8 @@ export async function salvarTokenOpenAI(
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+    videoYoutube:
+      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
@@ -141,6 +147,8 @@ export async function salvarTokenAsaas(
       openaiApiToken:
         (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
       asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+      videoYoutube:
+        (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
       createdAt:
         (data as any).createdAt ??
         (data as any).created_at ??
@@ -173,6 +181,8 @@ export async function salvarTokenAsaas(
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+    videoYoutube:
+      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
