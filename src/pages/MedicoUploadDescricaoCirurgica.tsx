@@ -647,11 +647,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   {saudacao}
                 </p>
                 <h1 className="text-xl font-semibold text-[#F5F5F5] sm:text-2xl">
-                  Nova Descrição Cirúrgica
+                  Novo Faturamento
                 </h1>
                 <p className="mt-3 max-w-xs text-sm text-[#9CA3AF]">
-                  Vamos começar o envio da sua Descrição Cirúrgica. É rápido e
-                  seguro.
+                  Vamos iniciar o processo de Acompanhamento de Faturamento
                 </p>
 
                 <button
