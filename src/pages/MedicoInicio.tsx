@@ -67,12 +67,13 @@ const MedicoInicio: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold sm:text-base">
-                  Nova Descrição Cirúrgica
+                  Novo Faturamento
                 </span>
                 <span className="text-[11px] text-black/80">
-                  Enviar documentos e gerar descrição
+                  Faça o upload dos documentos.
                 </span>
               </div>
+
             </div>
           </button>
 
