@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileHeart, RefreshCw } from "lucide-react";
+import { ArrowLeft, FileHeart, RefreshCw, Stethoscope } from "lucide-react";
 
 import MedicoDescricaoCirurgicaList from "@/components/descricao-cirurgica/MedicoDescricaoCirurgicaList";
 import {
@@ -36,39 +36,45 @@ const MedicoDescricoesCirurgicas: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
-      {/* Fundo em gradiente médico, mobile-first */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#0f766e_0,#020617_55%),radial-gradient(circle_at_100%_100%,#22c55e_0,#020617_50%)] opacity-90" />
+    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
-      <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
         {/* Topo */}
-        <header className="mb-5 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur"
-            onClick={() => navigate("/medico/dashboard")}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Voltar</span>
-          </button>
+        <header className="sticky top-0 z-40 -mx-4 mb-5 border-b border-[#D4A017]/20 bg-black/70 px-4 py-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.35)]">
+                <Stethoscope className="h-6 w-6 text-black" />
+              </div>
+              <span className="text-lg font-bold bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent">
+                CONMEDIC
+              </span>
+            </div>
 
-          <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span>Acompanhamento · Descrição Cirúrgica</span>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
+              onClick={() => navigate("/medico/dashboard")}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Voltar</span>
+            </button>
           </div>
         </header>
 
         {/* Cabeçalho da página */}
         <section className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 shadow-md shadow-emerald-400/40">
-              <FileHeart className="h-6 w-6 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] shadow-[0_0_20px_rgba(212,160,23,0.25)]">
+              <FileHeart className="h-6 w-6 text-black" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-lg font-semibold leading-tight text-slate-50 sm:text-xl">
+              <h1 className="text-lg font-semibold leading-tight sm:text-xl">
                 Minhas descrições cirúrgicas
               </h1>
-              <p className="text-[11px] text-emerald-100/80 sm:text-xs">
+              <p className="text-[11px] text-[#9CA3AF] sm:text-xs">
                 Acompanhe as descrições geradas pela IA a partir dos documentos
                 que você enviou.
               </p>
@@ -81,7 +87,7 @@ const MedicoDescricoesCirurgicas: React.FC = () => {
             variant="outline"
             onClick={() => void carregarDescricoes()}
             disabled={isLoading}
-            className="hidden items-center gap-1.5 rounded-full border-emerald-500/40 bg-slate-950/70 text-[11px] text-emerald-100 hover:bg-emerald-500/20 sm:inline-flex"
+            className="hidden items-center gap-1.5 rounded-lg border-[#D4A017]/30 bg-black/40 text-[11px] text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700] sm:inline-flex"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             {isLoading ? "Atualizando..." : "Atualizar"}
@@ -97,7 +103,7 @@ const MedicoDescricoesCirurgicas: React.FC = () => {
               variant="outline"
               onClick={() => void carregarDescricoes()}
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-1.5 rounded-full border-emerald-500/40 bg-slate-950/70 text-[11px] text-emerald-100 hover:bg-emerald-500/20"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border-[#D4A017]/30 bg-black/40 text-[11px] text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               {isLoading ? "Atualizando..." : "Atualizar lista"}

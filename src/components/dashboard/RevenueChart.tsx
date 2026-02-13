@@ -52,7 +52,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
           margin={{ top: 10, right: 8, left: -20, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="#1f2937"
+            stroke="#262626"
             vertical={false}
             strokeDasharray="3 3"
           />
@@ -60,25 +60,25 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             dataKey="name"
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#64748b", fontSize: 11 }}
+            tick={{ fill: "#6B7280", fontSize: 11 }}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#64748b", fontSize: 11 }}
+            tick={{ fill: "#6B7280", fontSize: 11 }}
             tickFormatter={(value) => `k${value}`}
           />
           <Tooltip
-            cursor={{ fill: "rgba(148, 163, 184, 0.12)" }}
+            cursor={{ fill: "rgba(212, 160, 23, 0.10)" }}
             contentStyle={{
-              backgroundColor: "#020617",
+              backgroundColor: "#0b0b0b",
               borderRadius: 12,
-              border: "1px solid #1e293b",
+              border: "1px solid rgba(212,160,23,0.20)",
               padding: "8px 10px",
               fontSize: 12,
             }}
-            labelStyle={{ color: "#e2e8f0" }}
-            itemStyle={{ color: "#e2e8f0" }}
+            labelStyle={{ color: "#F5F5F5" }}
+            itemStyle={{ color: "#F5F5F5" }}
             formatter={(value: number, key: string) => {
               if (key === "value") return [`R$ ${value.toFixed(0)}k`, "Faturado"];
               if (key === "line") return [`R$ ${value.toFixed(0)}k`, "Glosa"];
@@ -89,7 +89,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             {data.map((entry) => (
               <Cell
                 key={entry.name}
-                fill={entry.highlight ? "#10B981" : "#1f2937"}
+                fill={entry.highlight ? "#D4A017" : "rgba(245,245,245,0.10)"}
               />
             ))}
           </Bar>

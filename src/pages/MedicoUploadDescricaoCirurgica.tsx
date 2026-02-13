@@ -14,6 +14,7 @@ import {
   Signature,
   Send,
   Mail,
+  Stethoscope,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -572,20 +573,22 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full bg-slate-950 text-slate-50">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_50%)] opacity-95" />
+    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+      {/* Fundo premium */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
-      <div className="flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
         {(view === "upload" || view === "success") && (
           <>
-            <p className="mb-3 text-sm font-semibold text-emerald-100 sm:text-base">
+            <p className="mb-3 text-sm font-semibold text-[#D4A017] sm:text-base">
               {saudacao}
             </p>
 
             <header className="mb-5 flex items-center justify-between gap-3">
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur"
+                className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
                 onClick={
                   view === "upload"
                     ? () => {
@@ -599,8 +602,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <span>Voltar</span>
               </button>
 
-              <div className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-[11px] text-emerald-100/80 shadow-sm ring-1 ring-emerald-500/30 backdrop-blur">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+                <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
                 <span>
                   {view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}
                 </span>
@@ -611,9 +614,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         {/* Barra de progresso do fluxo sempre no topo */}
         <div className="mb-5 w-full max-w-md self-center">
-          <div className="h-1 w-full rounded-full bg-slate-800">
+          <div className="h-1 w-full rounded-full bg-black/40 border border-[#D4A017]/10">
             <div
-              className="h-1 rounded-full bg-emerald-500 transition-all"
+              className="h-1 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] transition-all duration-300"
               style={{ width: `${(currentStep / totalSteps) * 100}%` }}
             />
           </div>
@@ -625,13 +628,22 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {view === "start" && (
             <div className="flex w-full flex-1 items-center justify-center">
               <div className="flex w-full max-w-sm flex-col items-center text-center">
-                <p className="mb-2 text-sm font-semibold text-emerald-300">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.4)]">
+                    <Stethoscope className="h-6 w-6 text-black" />
+                  </div>
+                  <span className="text-lg font-bold bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent">
+                    CONMEDIC
+                  </span>
+                </div>
+
+                <p className="mb-2 text-sm font-semibold text-[#D4A017]">
                   {saudacao}
                 </p>
-                <h1 className="text-xl font-semibold text-slate-50 sm:text-2xl">
+                <h1 className="text-xl font-semibold text-[#F5F5F5] sm:text-2xl">
                   Nova Descrição Cirúrgica
                 </h1>
-                <p className="mt-3 max-w-xs text-sm text-slate-200">
+                <p className="mt-3 max-w-xs text-sm text-[#9CA3AF]">
                   Vamos começar o envio da sua Descrição Cirúrgica. É rápido e
                   seguro.
                 </p>
@@ -639,10 +651,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleIniciarFluxo}
-                  className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-emerald-500 text-center text-slate-50 shadow-[0_0_90px_rgba(16,185,129,0.85)] ring-8 ring-emerald-500/40 transition-transform hover:translate-y-0.5 sm:h-56 sm:w-56 motion-safe:animate-soft-pulse"
+                  className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] text-center text-black shadow-[0_0_60px_rgba(212,160,23,0.35)] ring-8 ring-[#D4A017]/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_90px_rgba(212,160,23,0.45)] sm:h-56 sm:w-56"
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600/95 text-slate-50 shadow-inner shadow-emerald-700/80">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-black shadow-inner">
                       <ShieldCheck className="h-5 w-5" />
                     </div>
                     <span className="text-[15px] font-semibold">
@@ -651,7 +663,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </div>
                 </button>
 
-                <p className="mt-8 text-[11px] text-slate-400">
+                <p className="mt-8 text-[11px] text-[#6B7280]">
                   Seus dados são criptografados ponta a ponta.
                 </p>
               </div>
@@ -662,20 +674,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {view === "hospital" && (
             <div className="flex w-full flex-1 items-end justify-center pb-5">
               {hospitalStepView === "selector" ? (
-                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-50">
+                      <p className="text-sm font-semibold text-[#F5F5F5]">
                         {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
                       </p>
-                      <p className="mt-1 text-xs text-slate-300">
+                      <p className="mt-1 text-xs text-[#9CA3AF]">
                         Escolha qual o hospital a cirurgia foi realizada.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleFecharSelecaoHospital}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -688,14 +700,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       loadingHospitais ||
                       (!hospitaisMedico.length && !selectedHospitalId)
                     }
-                    className="flex w-full items-center justify-between rounded-2xl border border-emerald-500/40 bg-slate-900 px-4 py-3 text-left text-slate-50"
+                    className="flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] hover:border-[#D4A017]/50 transition-colors disabled:opacity-60"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
                         <Building2 className="h-4 w-4" />
                       </span>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
                           Hospital selecionado
                         </span>
                         <span className="text-sm font-semibold">
@@ -708,29 +720,29 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-300" />
+                    <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
                   </button>
 
                   <button
                     type="button"
                     onClick={handleContinuarAposHospital}
                     disabled={!selectedHospitalId}
-                    className={`mt-6 w-full rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                    className={`mt-6 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ${
                       selectedHospitalId
-                        ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                        : "cursor-not-allowed bg-slate-800 text-slate-400"
+                        ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)] hover:shadow-[0_0_30px_rgba(212,160,23,0.55)] hover:scale-[1.01]"
+                        : "cursor-not-allowed bg-black/50 text-[#6B7280] border border-[#D4A017]/10"
                     }`}
                   >
                     Continuar
                   </button>
                 </div>
               ) : (
-                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-5 py-5 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
                   <div className="mb-5 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={handleVoltarListaParaSelector}
-                      className="flex items-center gap-2 text-xs text-slate-300 hover:text-slate-100"
+                      className="flex items-center gap-2 text-xs text-[#9CA3AF] hover:text-[#D4A017]"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       <span>Voltar</span>
@@ -738,7 +750,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleFecharSelecaoHospital}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -746,7 +758,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
                   <div className="space-y-3">
                     {loadingHospitais && (
-                      <p className="text-xs text-slate-300">
+                      <p className="text-xs text-[#9CA3AF]">
                         Carregando hospitais onde você atua...
                       </p>
                     )}
@@ -757,9 +769,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                           key={h.id}
                           type="button"
                           onClick={() => handleSelecionarHospital(h)}
-                          className="flex w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left text-slate-50 hover:bg-slate-800"
+                          className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
                         >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
                             <Building2 className="h-4 w-4" />
                           </span>
                           <span className="text-sm font-medium">
@@ -769,7 +781,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       ))}
 
                     {!loadingHospitais && !hospitaisMedico.length && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-[#6B7280]">
                         Não encontramos hospitais vinculados ao seu cadastro.
                         Entre em contato com o administrador.
                       </p>
@@ -794,10 +806,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               />
 
               <div className="mb-6">
-                <h1 className="text-lg font-semibold text-slate-50 sm:text-xl">
+                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
                   {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
                 </h1>
-                <p className="mt-1 text-xs text-slate-300 sm:text-sm">
+                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
                   {selectedHospitalName
                     ? `Hospital ${selectedHospitalName}. ${
                         files.length === 0
@@ -814,26 +826,26 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <>
                   <label
                     htmlFor="files-upload"
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-400/70 bg-slate-950/80 px-6 py-10 text-center text-xs text-emerald-100/90 transition-colors hover:bg-slate-900"
+                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
                   >
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
-                      <Upload className="h-6 w-6" />
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
+                        <Upload className="h-8 w-8 text-black" />
+                      </div>
+                      <p className="text-[#F5F5F5] font-medium">
+                        Adicionar Arquivos
+                      </p>
+                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
+                      <p className="text-[#6B7280] text-[11px]">
+                        Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
+                      </p>
                     </div>
-                    <p className="text-sm font-semibold text-emerald-50">
-                      Adicionar Arquivos
-                    </p>
-                    <p className="mt-1 text-[11px] text-emerald-100/80">
-                      Câmera ou Galeria
-                    </p>
-                    <p className="mt-3 text-[10px] text-emerald-100/70">
-                      Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
-                    </p>
                   </label>
 
                   <Button
                     type="button"
                     disabled
-                    className="mt-8 h-11 w-full rounded-full bg-slate-900 text-xs font-semibold text-slate-400"
+                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
                   >
                     Selecione arquivos acima
                   </Button>
@@ -841,14 +853,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               ) : (
                 <>
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-slate-200">
+                    <p className="text-xs font-semibold text-[#F5F5F5]">
                       Seus Arquivos ({arquivosLabel})
                     </p>
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-7 rounded-full border-emerald-500/60 bg-slate-950 text-[11px] font-semibold text-emerald-200 hover:bg-slate-900"
+                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
                       onClick={handleAdicionarMais}
                     >
                       + Adicionar mais
@@ -859,10 +871,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     {files.map((file, index) => (
                       <div
                         key={file.name + file.lastModified + index}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-slate-950/90 px-4 py-3 text-xs text-slate-100 ring-1 ring-slate-800"
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
                             {isImage(file) ? (
                               <ImageIcon className="h-4 w-4" />
                             ) : (
@@ -873,7 +885,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                             <p className="truncate text-[11px] sm:text-xs">
                               {file.name}
                             </p>
-                            <p className="mt-0.5 text-[10px] text-slate-400">
+                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
                               {(file.size / 1024 / 1024).toFixed(2)} MB
                             </p>
                           </div>
@@ -881,7 +893,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoverArquivo(index)}
-                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -891,7 +903,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
                   <Button
                     type="button"
-                    className="mt-8 h-11 w-full rounded-full bg-emerald-500 text-sm font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-70"
+                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
                     disabled={isUploading || files.length === 0}
                     onClick={handleAbrirClinicaSelector}
                   >
@@ -901,7 +913,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="mt-3 text-xs text-emerald-100 hover:bg-transparent hover:text-emerald-300"
+                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
                     onClick={handleNovaDescricao}
                     disabled={isUploading}
                   >
@@ -916,20 +928,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {view === "clinica" && (
             <div className="flex w-full flex-1 items-end justify-center pb-5">
               {clinicaStepView === "selector" ? (
-                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-50">
+                      <p className="text-sm font-semibold text-[#F5F5F5]">
                         {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
                       </p>
-                      <p className="mt-1 text-xs text-slate-300">
+                      <p className="mt-1 text-xs text-[#9CA3AF]">
                         Por qual Clínica/Hospital o serviço será faturado?
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleFecharSelecaoClinica}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -942,14 +954,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       loadingClinicas ||
                       (!clinicasMedico.length && !selectedClinicaId)
                     }
-                    className="flex w-full items-center justify-between rounded-2xl border border-emerald-500/40 bg-slate-900 px-4 py-3 text-left text-slate-50"
+                    className="flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] hover:border-[#D4A017]/50 transition-colors disabled:opacity-60"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
                         <CircleDollarSign className="h-4 w-4" />
                       </span>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
                           Faturamento por
                         </span>
                         <span className="text-sm font-semibold">
@@ -962,29 +974,29 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-300" />
+                    <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
                   </button>
 
                   <button
                     type="button"
                     onClick={handleContinuarAposClinica}
                     disabled={!selectedClinicaId || isUploading}
-                    className={`mt-6 w-full rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                    className={`mt-6 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ${
                       selectedClinicaId && !isUploading
-                        ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                        : "cursor-not-allowed bg-slate-800 text-slate-400"
+                        ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)] hover:shadow-[0_0_30px_rgba(212,160,23,0.55)] hover:scale-[1.01]"
+                        : "cursor-not-allowed bg-black/50 text-[#6B7280] border border-[#D4A017]/10"
                     }`}
                   >
                     {isUploading ? "Enviando..." : "Continuar"}
                   </button>
                 </div>
               ) : (
-                <div className="w-full max-w-sm rounded-[1.75rem] bg-slate-950/95 px-5 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.9)] ring-1 ring-slate-800">
+                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-5 py-5 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
                   <div className="mb-5 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={handleVoltarListaClinicasParaSelector}
-                      className="flex items-center gap-2 text-xs text-slate-300 hover:text-slate-100"
+                      className="flex items-center gap-2 text-xs text-[#9CA3AF] hover:text-[#D4A017]"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       <span>Voltar</span>
@@ -992,7 +1004,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleFecharSelecaoClinica}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1000,7 +1012,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
                   <div className="space-y-3">
                     {loadingClinicas && (
-                      <p className="text-xs text-slate-300">
+                      <p className="text-xs text-[#9CA3AF]">
                         Carregando clínicas onde você atua...
                       </p>
                     )}
@@ -1011,9 +1023,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                           key={c.id}
                           type="button"
                           onClick={() => handleSelecionarClinica(c)}
-                          className="flex w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left text-slate-50 hover:bg-slate-800"
+                          className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
                         >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
                             <Building2 className="h-4 w-4" />
                           </span>
                           <span className="text-sm font-medium">
@@ -1023,7 +1035,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       ))}
 
                     {!loadingClinicas && !clinicasMedico.length && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-[#6B7280]">
                         Não encontramos clínicas vinculadas ao seu cadastro.
                         Entre em contato com o administrador.
                       </p>
@@ -1037,18 +1049,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {/* TELA 5 - SUCESSO GERAL (final do processo) */}
           {view === "success" && (
             <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
-              <Card className="rounded-3xl border-0 bg-slate-900/95 text-center shadow-[0_26px_70px_rgba(15,23,42,0.9)]">
+              <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
                 <CardContent className="space-y-6 px-6 py-8">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_40px_rgba(16,185,129,0.8)]">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
                     <CheckCircle2 className="h-8 w-8" />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-lg font-semibold text-slate-50 sm:text-xl">
+                    <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
                       {medicoNome
                         ? `Tudo certo, Dr. ${medicoNome}!`
                         : "Tudo certo!"}
                     </h2>
-                    <p className="text-xs text-slate-200 sm:text-sm">
+                    <p className="text-xs text-[#9CA3AF] sm:text-sm">
                       A descrição cirúrgica e os documentos foram enviados com
                       sucesso.
                     </p>
@@ -1056,7 +1068,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <div className="flex flex-col gap-3 pt-2">
                     <Button
                       type="button"
-                      className="h-11 w-full rounded-2xl bg-emerald-500 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
                       onClick={handleNovaDescricao}
                     >
                       Enviar Nova Descrição Cirúrgica
@@ -1064,7 +1076,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 w-full rounded-2xl border-0 bg-slate-800 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+                      className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
                       onClick={() => navigate("/medico/dashboard")}
                     >
                       Início
@@ -1079,14 +1091,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Modal de Preenchimento Automático de Honorários */}
       <Dialog open={autoFillDialogOpen} onOpenChange={setAutoFillDialogOpen}>
-        <DialogContent className="w-[88%] max-w-sm rounded-3xl border-0 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600/15 text-blue-400">
+        <DialogContent className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 backdrop-blur-xl px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
             <FileText className="h-6 w-6" />
           </div>
-          <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+          <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
             Preenchimento Automático
           </h2>
-          <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+          <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
             Você quer que o sistema preencha o formulário de honorários para
             você?
           </p>
@@ -1094,7 +1106,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           <div className="mt-6 space-y-3">
             <Button
               type="button"
-              className="h-11 w-full rounded-2xl bg-blue-600 text-[13px] font-semibold text-slate-50 hover:bg-blue-500"
+              className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
               disabled={isUploading}
               onClick={() => {
                 setAutoFillDialogOpen(false);
@@ -1107,7 +1119,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full rounded-2xl border-slate-700 bg-slate-900/90 text-[13px] font-semibold text-slate-100 hover:bg-slate-800"
+              className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
               disabled={isUploading}
               onClick={() => {
                 setAutoFillDialogOpen(false);
@@ -1123,21 +1135,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela de Assinatura Digital do formulário de honorários */}
       <Dialog open={signatureDialogOpen} onOpenChange={setSignatureDialogOpen}>
-        <DialogContent className="w-[88%] max-w-sm rounded-3xl border-0 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+        <DialogContent className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 backdrop-blur-xl px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
             <Signature className="h-6 w-6" />
           </div>
-          <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+          <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
             Assinatura Digital
           </h2>
-          <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+          <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
             Vamos realizar a assinatura digital do formulário de honorários.
             Toque em &quot;Assinar&quot; para confirmar.
           </p>
           <div className="mt-6">
             <Button
               type="button"
-              className="h-11 w-full rounded-2xl bg-emerald-500 text-[13px] font-semibold text-slate-950 hover:bg-emerald-400"
+              className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
               disabled={isUploading}
               onClick={() => {
                 setSignatureDialogOpen(false);
@@ -1152,18 +1164,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela de progresso de preenchimento do formulário de honorários */}
       {showFillingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-[88%] max-w-sm rounded-3xl border border-slate-800 bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
-            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
+          <div className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
               Preenchendo Formulário...
             </h2>
             <div className="mt-5">
-              <Progress
-                value={fillingProgress}
-                className="h-2.5 rounded-full bg-slate-900"
-              />
+              <Progress value={fillingProgress} className="h-2.5 rounded-full" />
             </div>
-            <p className="mt-3 text-xs text-slate-300 sm:text-sm">
+            <p className="mt-3 text-xs text-[#9CA3AF] sm:text-sm">
               Aguarde um momento.
             </p>
           </div>
@@ -1172,21 +1181,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela "Assinando..." */}
       {showSigningScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-[88%] max-w-sm rounded-3xl bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
+          <div className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
               <Signature className="h-6 w-6" />
             </div>
-            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
               Assinando...
             </h2>
-            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+            <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
               Aplicando sua assinatura digital segura nos documentos.
             </p>
             <div className="mt-5 flex items-center justify-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="h-2 w-2 rounded-full bg-emerald-500/70 animate-pulse [animation-delay:150ms]" />
-              <span className="h-2 w-2 rounded-full bg-emerald-500/40 animate-pulse [animation-delay:300ms]" />
+              <span className="h-2 w-2 rounded-full bg-[#D4A017] animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-[#D4A017]/70 animate-pulse [animation-delay:150ms]" />
+              <span className="h-2 w-2 rounded-full bg-[#D4A017]/40 animate-pulse [animation-delay:300ms]" />
             </div>
           </div>
         </div>
@@ -1194,22 +1203,22 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela "Documento Assinado" (pergunta se deseja enviar para faturamento) */}
       {showSignedScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-[88%] max-w-sm rounded-3xl bg-slate-950/95 px-6 py-7 text-center shadow-[0_28px_80px_rgba(15,23,42,0.95)]">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-slate-950">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
+          <div className="w-[88%] max-w-sm rounded-2xl bg-black/80 px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)]">
               <CheckCircle2 className="h-6 w-6" />
             </div>
-            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
               Documento Assinado
             </h2>
-            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+            <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
               A assinatura foi aplicada. Deseja enviar os documentos para
               faturamento agora?
             </p>
             <div className="mt-6">
               <Button
                 type="button"
-                className="h-11 w-full rounded-2xl bg-emerald-500 text-[13px] font-semibold text-slate-950 hover:bg-emerald-400"
+                className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
                 disabled={isUploading}
                 onClick={() => {
                   setShowSignedScreen(false);
@@ -1229,46 +1238,46 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {/* Tela "Enviando" com ícones de envelope */}
       {showSendingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
           <div className="flex w-full max-w-sm flex-col items-center px-6 py-10 text-center">
             {/* Orb animado ao estilo macOS */}
-            <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-emerald-500 via-cyan-400 to-sky-500 shadow-[0_0_80px_rgba(56,189,248,0.85)]">
-              <div className="absolute inset-1 rounded-[26px] bg-slate-950/70 backdrop-blur-xl" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900/80 shadow-[0_10px_40px_rgba(15,23,42,0.85)]">
-                <Mail className="h-8 w-8 text-emerald-300" />
+            <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_60px_rgba(212,160,23,0.35)]">
+              <div className="absolute inset-1 rounded-[26px] bg-black/60 backdrop-blur-xl" />
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#121212] border border-[#D4A017]/20 shadow-[0_10px_40px_rgba(0,0,0,0.65)]">
+                <Mail className="h-8 w-8 text-[#D4A017]" />
                 {/* "Pacotes" de e-mail orbitando */}
-                <span className="pointer-events-none absolute -left-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-slate-900/90 text-slate-200 shadow-[0_10px_25px_rgba(15,23,42,0.85)] ring-1 ring-slate-800/80 animate-bounce">
+                <span className="pointer-events-none absolute -left-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-[#121212] text-[#F5F5F5] border border-[#D4A017]/15 shadow-[0_10px_25px_rgba(0,0,0,0.6)] animate-bounce">
                   <Mail className="mx-auto mt-[7px] h-4 w-4" />
                 </span>
-                <span className="pointer-events-none absolute -right-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-slate-900/90 text-slate-200 shadow-[0_10px_25px_rgba(15,23,42,0.85)] ring-1 ring-slate-800/80 animate-bounce [animation-delay:220ms]">
+                <span className="pointer-events-none absolute -right-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-[#121212] text-[#F5F5F5] border border-[#D4A017]/15 shadow-[0_10px_25px_rgba(0,0,0,0.6)] animate-bounce [animation-delay:220ms]">
                   <Mail className="mx-auto mt-[7px] h-4 w-4" />
                 </span>
               </div>
             </div>
 
-            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">
+            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
               Sincronizando com o faturamento
             </h2>
-            <p className="mt-2 text-[11px] text-slate-300 sm:text-xs">
+            <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs">
               Estamos transmitindo seus documentos de forma segura para os
               e-mails de faturamento.
             </p>
 
             {/* Barra de "progresso" com brilho suave */}
-            <div className="mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-900">
-              <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-500 animate-[pulse_1.8s_ease-in-out_infinite]" />
+            <div className="mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-black/50 border border-[#D4A017]/10">
+              <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] animate-[pulse_1.8s_ease-in-out_infinite]" />
             </div>
 
-            <div className="mt-5 w-full max-w-xs rounded-2xl border border-slate-800/80 bg-slate-950/95 p-4 text-left text-[11px] text-slate-300 shadow-[0_18px_50px_rgba(15,23,42,0.95)] sm:text-xs">
+            <div className="mt-5 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
               {isSameBillingLocation ? (
                 <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-1 text-[10px] text-emerald-200 ring-1 ring-emerald-500/40">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1 text-[10px] text-[#D4A017] border border-[#D4A017]/25">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] animate-pulse" />
                     <span>1 e-mail de faturamento em envio</span>
                   </div>
-                  <p className="mt-1 font-medium text-emerald-100/90">
+                  <p className="mt-1 font-medium text-[#F5F5F5]">
                     Avisando a clinica{" "}
-                    <span className="font-semibold text-emerald-200">
+                    <span className="font-semibold text-[#D4A017]">
                       {selectedClinicaName || "selecionada"}
                     </span>{" "}
                     que esse serviço será faturado.
@@ -1276,23 +1285,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-1 text-[10px] text-emerald-200 ring-1 ring-emerald-500/40">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1 text-[10px] text-[#D4A017] border border-[#D4A017]/25">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] animate-pulse" />
                     <span>2 e-mails sendo enviados em sequência</span>
                   </div>
 
                   <div className="relative space-y-2 pl-4">
                     {/* Linha vertical estilo timeline */}
-                    <span className="pointer-events-none absolute left-1 top-1 h-full w-px bg-gradient-to-b from-emerald-500/60 via-emerald-500/10 to-transparent" />
+                    <span className="pointer-events-none absolute left-1 top-1 h-full w-px bg-gradient-to-b from-[#D4A017]/60 via-[#D4A017]/10 to-transparent" />
 
                     <p
                       className={
                         sendingStep === 1
-                          ? "font-medium text-emerald-100 animate-pulse"
-                          : "font-medium text-slate-300"
+                          ? "font-medium text-[#F5F5F5] animate-pulse"
+                          : "font-medium text-[#9CA3AF]"
                       }
                     >
-                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] text-emerald-300 ring-1 ring-emerald-500/40">
+                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D4A017]/10 text-[10px] text-[#D4A017] border border-[#D4A017]/25">
                         1
                       </span>
                       Avisando o hospital{" "}
@@ -1305,11 +1314,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <p
                       className={
                         sendingStep === 2
-                          ? "font-medium text-emerald-100 animate-pulse"
-                          : "font-medium text-slate-500"
+                          ? "font-medium text-[#F5F5F5] animate-pulse"
+                          : "font-medium text-[#6B7280]"
                       }
                     >
-                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/5 text-[10px] text-emerald-200 ring-1 ring-emerald-500/25">
+                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D4A017]/5 text-[10px] text-[#D4A017]/90 border border-[#D4A017]/15">
                         2
                       </span>
                       Avisando a clinica{" "}

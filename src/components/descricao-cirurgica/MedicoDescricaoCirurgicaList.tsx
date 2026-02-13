@@ -34,11 +34,11 @@ const statusBadgeClass: Record<string, string> = {
   AGUARDANDO:
     "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
   CONFIRMADO:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300",
+    "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/30",
   EM_FATURAMENTO:
     "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300",
   PAGO:
-    "bg-emerald-200 text-emerald-900 dark:bg-emerald-500/30 dark:text-emerald-100",
+    "bg-[#D4A017]/15 text-[#FFD700] border border-[#D4A017]/30",
   EM_GLOSA:
     "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300",
 };
@@ -48,19 +48,19 @@ const MedicoDescricaoCirurgicaList: React.FC<Props> = ({
   isLoading,
 }) => {
   return (
-    <Card className="h-full rounded-3xl border border-slate-800/40 bg-slate-950/80 text-slate-50 shadow-[0_18px_50px_rgba(15,118,110,0.4)]">
-      <CardHeader className="border-b border-emerald-500/20 bg-slate-950/70 pb-3">
+    <Card className="h-full rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-[#F5F5F5] shadow-lg">
+      <CardHeader className="border-b border-[#D4A017]/15 bg-black/60 pb-3">
         <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-0.5">
             <CardTitle className="text-sm font-semibold sm:text-base">
               Minhas descrições cirúrgicas
             </CardTitle>
-            <CardDescription className="text-[11px] text-emerald-100/80 sm:text-xs">
+            <CardDescription className="text-[11px] text-[#9CA3AF] sm:text-xs">
               Lista das descrições geradas a partir dos documentos enviados.
             </CardDescription>
-            <p className="text-[11px] text-emerald-100/70">
+            <p className="text-[11px] text-[#9CA3AF]">
               Total:{" "}
-              <span className="font-semibold text-emerald-200">
+              <span className="font-semibold text-[#D4A017]">
                 {items.length}
               </span>{" "}
               registro(s)
@@ -69,11 +69,11 @@ const MedicoDescricaoCirurgicaList: React.FC<Props> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="mt-1 overflow-hidden rounded-b-2xl bg-slate-950/80">
+      <CardContent className="mt-1 overflow-hidden rounded-b-2xl bg-black/50">
         <div className="max-h-[520px] overflow-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-emerald-500/20 text-[11px] uppercase tracking-[0.12em] text-emerald-200/80">
+              <TableRow className="border-b border-[#D4A017]/15 text-[11px] uppercase tracking-[0.12em] text-[#D4A017]/85">
                 <TableHead className="whitespace-nowrap px-3 py-2">
                   Nome do médico
                 </TableHead>
@@ -96,7 +96,7 @@ const MedicoDescricaoCirurgicaList: React.FC<Props> = ({
                 <TableRow>
                   <TableCell
                     colSpan={5}
-                    className="px-3 py-5 text-center text-xs text-emerald-100/80"
+                    className="px-3 py-5 text-center text-xs text-[#9CA3AF]"
                   >
                     Carregando descrições cirúrgicas...
                   </TableCell>
@@ -105,7 +105,7 @@ const MedicoDescricaoCirurgicaList: React.FC<Props> = ({
                 <TableRow>
                   <TableCell
                     colSpan={5}
-                    className="px-3 py-5 text-center text-xs text-emerald-100/80"
+                    className="px-3 py-5 text-center text-xs text-[#9CA3AF]"
                   >
                     Nenhuma descrição cirúrgica encontrada para seu usuário.
                   </TableCell>
@@ -116,12 +116,12 @@ const MedicoDescricaoCirurgicaList: React.FC<Props> = ({
                   const label = statusLabel[statusKey] ?? statusKey;
                   const badgeClass =
                     statusBadgeClass[statusKey] ??
-                    "bg-slate-800 text-slate-100";
+                    "bg-black/40 text-[#F5F5F5] border border-[#D4A017]/15";
 
                   return (
                     <TableRow
                       key={item.id}
-                      className="border-b border-slate-800/70 text-xs text-emerald-50 hover:bg-emerald-900/20"
+                      className="border-b border-[#D4A017]/10 text-xs text-[#F5F5F5] hover:bg-[#D4A017]/5"
                     >
                       <TableCell className="px-3 py-2 font-medium">
                         {item.nomeMedico || "-"}

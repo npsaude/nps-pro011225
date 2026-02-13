@@ -41,7 +41,7 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
         <path
           d="M 16 60 A 44 44 0 0 1 104 60"
           fill="none"
-          stroke="rgba(15,23,42,0.85)"
+          stroke="rgba(245,245,245,0.10)"
           strokeWidth={10}
           strokeLinecap="round"
         />
@@ -65,9 +65,9 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
             x2="100%"
             y2="0%"
           >
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="50%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#4ade80" />
+            <stop offset="0%" stopColor="#FFD700" />
+            <stop offset="50%" stopColor="#D4A017" />
+            <stop offset="100%" stopColor="#B8860B" />
           </linearGradient>
         </defs>
 
@@ -77,7 +77,7 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           y1={centerY}
           x2={pointerX}
           y2={pointerY}
-          stroke="#22c55e"
+          stroke="#D4A017"
           strokeWidth={3}
           strokeLinecap="round"
         />
@@ -85,8 +85,8 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           cx={centerX}
           cy={centerY}
           r={4}
-          fill="#22c55e"
-          stroke="#022c22"
+          fill="#D4A017"
+          stroke="#0b0b0b"
           strokeWidth={2}
         />
 
@@ -97,18 +97,13 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           fontSize="14"
           fontWeight="700"
           textAnchor="middle"
-          fill="#f9fafb"
+          fill="#F5F5F5"
         >
           {roundedPercent}%
         </text>
 
         {/* Marcadores 0% e 100% */}
-        <text
-          x={20}
-          y={68}
-          fontSize="8"
-          fill="rgba(148, 163, 184, 0.9)"
-        >
+        <text x={20} y={68} fontSize="8" fill="rgba(156, 163, 175, 0.9)">
           0%
         </text>
         <text
@@ -116,7 +111,7 @@ const GlosaGauge = ({ value, max = 100 }: GlosaGaugeProps) => {
           y={68}
           fontSize="8"
           textAnchor="end"
-          fill="rgba(148, 163, 184, 0.9)"
+          fill="rgba(156, 163, 175, 0.9)"
         >
           100%
         </text>

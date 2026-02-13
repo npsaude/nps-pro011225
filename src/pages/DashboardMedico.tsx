@@ -1,11 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Upload,
-  FileText,
-  ClipboardList,
-} from "lucide-react";
+import { ArrowLeft, FileHeart, Upload, FileText, ClipboardList } from "lucide-react";
 
 import GlosaGauge from "../components/dashboard/GlosaGauge";
 import RevenueChart from "../components/dashboard/RevenueChart";
@@ -138,15 +133,15 @@ const DashboardMedico: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-[#020617] text-slate-50">
+    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
       {/* Modal de seleção de hospital */}
       <Dialog open={hospitalModalOpen} onOpenChange={setHospitalModalOpen}>
-        <DialogContent className="border-slate-800 bg-slate-950 text-slate-50">
+        <DialogContent className="border border-[#D4A017]/20 bg-black/80 backdrop-blur-xl text-[#F5F5F5] shadow-[0_0_40px_rgba(212,160,23,0.12)]">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg">
               Selecione o hospital
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-300 sm:text-sm">
+            <DialogDescription className="text-xs text-[#9CA3AF] sm:text-sm">
               Escolha o hospital onde a cirurgia será realizada para continuar
               com o envio da descrição cirúrgica.
             </DialogDescription>
@@ -154,11 +149,11 @@ const DashboardMedico: React.FC = () => {
 
           <div className="mt-3 space-y-2">
             {loadingHospitais ? (
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-[#9CA3AF]">
                 Carregando hospitais onde você atua...
               </p>
             ) : hospitaisMedico.length === 0 ? (
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-[#9CA3AF]">
                 Não encontramos hospitais vinculados ao seu cadastro. Entre em
                 contato com o administrador do sistema.
               </p>
@@ -166,7 +161,7 @@ const DashboardMedico: React.FC = () => {
               <div className="space-y-2">
                 <Label
                   htmlFor="hospital"
-                  className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-200/80"
+                  className="text-xs font-medium uppercase tracking-[0.18em] text-[#D4A017]/90"
                 >
                   Hospital
                 </Label>
@@ -176,11 +171,11 @@ const DashboardMedico: React.FC = () => {
                 >
                   <SelectTrigger
                     id="hospital"
-                    className="border-emerald-500/40 bg-slate-900 text-slate-50 placeholder:text-slate-400 focus:ring-emerald-500"
+                    className="border-[#D4A017]/30 bg-[#121212] text-[#F5F5F5] placeholder:text-[#6B7280] focus:ring-[#D4A017]"
                   >
                     <SelectValue placeholder="Selecione o hospital" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 text-slate-50">
+                  <SelectContent className="bg-[#121212] text-[#F5F5F5] border border-[#D4A017]/20">
                     {hospitaisMedico.map((h) => (
                       <SelectItem key={h.id} value={h.id}>
                         {h.nome_fantasia}
@@ -196,6 +191,7 @@ const DashboardMedico: React.FC = () => {
             <Button
               type="button"
               variant="ghost"
+              className="text-[#9CA3AF] hover:text-[#D4A017] hover:bg-[#D4A017]/10"
               onClick={() => setHospitalModalOpen(false)}
             >
               Cancelar
@@ -208,6 +204,7 @@ const DashboardMedico: React.FC = () => {
                 !selectedHospitalId
               }
               onClick={handleContinuarEnvio}
+              className="bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.35)] hover:shadow-[0_0_30px_rgba(212,160,23,0.55)] transition-shadow"
             >
               Continuar
             </Button>
@@ -215,44 +212,45 @@ const DashboardMedico: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Fundo gradiente */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,#1F8A70_0,#020617_55%),radial-gradient(circle_at_100%_100%,#1D4E77_0,#020617_60%)]" />
+      {/* Fundo premium */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
-      <div className="relative z-10 flex w-full max-w-sm flex-col px-4 py-5 sm:px-5 sm:py-6">
-        {/* Topo com voltar e status */}
+      <div className="relative z-10 mx-auto flex w-full max-w-sm flex-col px-4 py-5 sm:px-5 sm:py-6">
+        {/* Topo */}
         <header className="mb-4 flex items-center justify-between gap-3">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-2xl bg-slate-950/70 px-3 py-2 text-xs text-emerald-100 shadow-sm ring-1 ring-slate-800 backdrop-blur"
+            className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
             onClick={() => navigate("/medico/dashboard")}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Voltar</span>
           </button>
 
-          <div className="flex items-center gap-2 rounded-2xl bg-slate-950/80 px-3 py-2 text-[11px] text-emerald-100/90 shadow-sm ring-1 ring-emerald-500/40 backdrop-blur">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+            <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
             <span>Portal do Médico</span>
           </div>
         </header>
 
         {/* Card de saudação */}
         <section className="mb-4">
-          <div className="flex items-center justify-between rounded-3xl bg-slate-950/90 px-4 py-3.5 text-sm shadow-[0_18px_40px_rgba(0,0,0,0.7)] ring-1 ring-slate-900/70 backdrop-blur">
+          <div className="flex items-center justify-between rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-3.5 text-sm border border-[#D4A017]/20 shadow-lg">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-200/90">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#D4A017]/90">
                 Bem-vindo
               </span>
-              <p className="text-sm font-semibold text-slate-50">
+              <p className="text-sm font-semibold text-[#F5F5F5]">
                 Olá, Dr. Adriano.
               </p>
-              <p className="text-[11px] text-emerald-100/85">
+              <p className="text-[11px] text-[#9CA3AF]">
                 Acompanhe suas Descrições Cirúrgicas,
                 <br />
                 valores pagos e glosas em um só lugar.
               </p>
             </div>
-            <div className="ml-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-semibold text-slate-950 shadow-[0_0_22px_rgba(16,185,129,0.8)]">
+            <div className="ml-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-base font-semibold text-black shadow-[0_0_22px_rgba(212,160,23,0.45)]">
               AD
             </div>
           </div>
@@ -263,9 +261,9 @@ const DashboardMedico: React.FC = () => {
           <button
             type="button"
             onClick={handleAbrirModalHospitais}
-            className="flex h-24 min-w-0 flex-1 flex-col justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-400 px-4 py-3 text-left text-slate-50 shadow-[0_22px_55px_rgba(16,185,129,0.8)]"
+            className="flex h-24 min-w-0 flex-1 flex-col justify-center rounded-2xl bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-3 text-left text-black shadow-[0_0_30px_rgba(212,160,23,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(212,160,23,0.2)]"
           >
-            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-600/95 text-slate-50 shadow-inner">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-black/20 text-black shadow-inner">
               <Upload className="h-4.5 w-4.5" />
             </div>
             <span className="text-sm font-semibold">Enviar Descrição</span>
@@ -274,9 +272,9 @@ const DashboardMedico: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate("/medico/descricao-cirurgica")}
-            className="flex h-24 min-w-0 flex-1 flex-col justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-indigo-400 px-4 py-3 text-left text-slate-50 shadow-[0_22px_55px_rgba(79,70,229,0.75)]"
+            className="flex h-24 min-w-0 flex-1 flex-col justify-center rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/20 shadow-lg hover:border-[#D4A017]/40 transition-colors"
           >
-            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-600/95 text-slate-50 shadow-inner">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
               <FileText className="h-4.5 w-4.5" />
             </div>
             <span className="text-sm font-semibold">
@@ -287,14 +285,14 @@ const DashboardMedico: React.FC = () => {
 
         {/* Filtro de período */}
         <section className="mb-4">
-          <div className="flex rounded-3xl bg-slate-950/90 p-1 text-[11px] text-slate-300 ring-1 ring-slate-800">
+          <div className="flex rounded-2xl bg-black/60 p-1 text-[11px] text-[#9CA3AF] border border-[#D4A017]/15">
             <button
               type="button"
               onClick={() => handleChangePeriod("mes")}
-              className={`flex-1 rounded-2xl px-3 py-2 transition ${
+              className={`flex-1 rounded-xl px-3 py-2 transition-all duration-300 ${
                 period === "mes"
-                  ? "bg-slate-200 text-slate-900"
-                  : "bg-transparent text-slate-300"
+                  ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.3)]"
+                  : "bg-transparent hover:text-[#F5F5F5]"
               }`}
             >
               Mês
@@ -302,10 +300,10 @@ const DashboardMedico: React.FC = () => {
             <button
               type="button"
               onClick={() => handleChangePeriod("trimestre")}
-              className={`flex-1 rounded-2xl px-3 py-2 transition ${
+              className={`flex-1 rounded-xl px-3 py-2 transition-all duration-300 ${
                 period === "trimestre"
-                  ? "bg-slate-200 text-slate-900"
-                  : "bg-transparent text-slate-300"
+                  ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.3)]"
+                  : "bg-transparent hover:text-[#F5F5F5]"
               }`}
             >
               Trimestre
@@ -313,10 +311,10 @@ const DashboardMedico: React.FC = () => {
             <button
               type="button"
               onClick={() => handleChangePeriod("ano")}
-              className={`flex-1 rounded-2xl px-3 py-2 transition ${
+              className={`flex-1 rounded-xl px-3 py-2 transition-all duration-300 ${
                 period === "ano"
-                  ? "bg-slate-200 text-slate-900"
-                  : "bg-transparent text-slate-300"
+                  ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.3)]"
+                  : "bg-transparent hover:text-[#F5F5F5]"
               }`}
             >
               Ano
@@ -325,61 +323,61 @@ const DashboardMedico: React.FC = () => {
         </section>
 
         {/* Receita do período */}
-        <section className="mb-4 rounded-3xl bg-slate-950/95 px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.7)] ring-1 ring-slate-900/80">
+        <section className="mb-4 rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-4 shadow-lg border border-[#D4A017]/20">
           <div className="mb-3">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300/90">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D4A017]/90">
               Faturamento
             </span>
-            <h2 className="text-sm font-semibold text-slate-50">
+            <h2 className="text-sm font-semibold text-[#F5F5F5]">
               Receita do Período
             </h2>
           </div>
           <RevenueChart period={period} />
         </section>
 
-        {/* Cards de faturamento e glosa */}
+        {/* Cards */}
         <section className="mb-4 space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-3xl bg-slate-950/95 px-4 py-3.5 shadow-md ring-1 ring-slate-900/80">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+            <div className="rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-3.5 shadow-lg border border-[#D4A017]/15">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
                 Faturado
               </span>
-              <p className="mt-1 text-base font-semibold text-emerald-100">
+              <p className="mt-1 text-base font-semibold bg-gradient-to-r from-[#FFD700] to-[#D4A017] bg-clip-text text-transparent">
                 {faturado}
               </p>
             </div>
-            <div className="rounded-3xl bg-slate-950/95 px-4 py-3.5 shadow-md ring-1 ring-emerald-600/70">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            <div className="rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-3.5 shadow-lg border border-[#D4A017]/25">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D4A017]/90">
                 Recebido
               </span>
-              <p className="mt-1 text-base font-semibold text-emerald-100">
+              <p className="mt-1 text-base font-semibold bg-gradient-to-r from-[#FFD700] to-[#D4A017] bg-clip-text text-transparent">
                 {recebido}
               </p>
             </div>
           </div>
 
-          <div className="rounded-3xl bg-slate-950/95 px-4 py-3.5 shadow-md ring-1 ring-slate-900/80">
+          <div className="rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-3.5 shadow-lg border border-[#D4A017]/15">
             <div className="mb-2 flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
                   Total a Receber
                 </span>
-                <p className="mt-1 text-lg font-semibold text-emerald-100">
+                <p className="mt-1 text-lg font-semibold bg-gradient-to-r from-[#FFD700] to-[#D4A017] bg-clip-text text-transparent">
                   {totalAReceber}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-800 text-emerald-300">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
                 <ClipboardList className="h-5 w-5" />
               </div>
             </div>
           </div>
 
-          <div className="rounded-3xl bg-slate-950/95 px-4 py-4 shadow-md ring-1 ring-emerald-500/60">
+          <div className="rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-4 shadow-lg border border-[#D4A017]/25">
             <div className="mb-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300/90">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D4A017]/90">
                 % de Glosa Recuperado
               </span>
-              <p className="mt-1 text-[11px] text-slate-200">
+              <p className="mt-1 text-[11px] text-[#9CA3AF]">
                 Percentual do valor glosado que já foi revertido em pagamento.
               </p>
             </div>
@@ -387,24 +385,23 @@ const DashboardMedico: React.FC = () => {
           </div>
         </section>
 
-        {/* Ranking por hospital/clínica */}
-        <section className="mb-4 rounded-3xl bg-slate-950/95 px-4 py-4 shadow-md ring-1 ring-slate-900/80">
+        {/* Ranking */}
+        <section className="mb-4 rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-4 shadow-lg border border-[#D4A017]/15">
           <div className="mb-3">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300/90">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D4A017]/90">
               Ranking
             </span>
-            <h2 className="text-sm font-semibold text-slate-50">
+            <h2 className="text-sm font-semibold text-[#F5F5F5]">
               Faturamento por Hospital/Clínica
             </h2>
-            <p className="mt-1 text-[11px] text-slate-300">
+            <p className="mt-1 text-[11px] text-[#9CA3AF]">
               Instituições com maior volume de descrições.
             </p>
           </div>
           <HospitalRankingChart />
         </section>
 
-        {/* Rodapé explicativo */}
-        <section className="border-t border-slate-800 pt-3 text-[11px] text-slate-400">
+        <section className="border-t border-[#D4A017]/15 pt-3 text-[11px] text-[#6B7280]">
           <p>
             Este painel é um resumo das suas Descrições Cirúrgicas e valores do
             ano.
