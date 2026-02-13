@@ -651,7 +651,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {view === "hospital" && (
             <div className="flex w-full flex-1 items-end justify-center pb-5">
               {hospitalStepView === "selector" ? (
-                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
+                <div className="w-full max-w-sm -mt-6 rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
+
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#F5F5F5]">
