@@ -115,44 +115,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         return;
       }
 
-      const email = authData.user.email;
-      if (!email) {
-        showError(
-          "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
-        );
-        return;
-      }
-
-      const { data: medico, error: medicoError } = await supabase
-        .from("medicos")
-        .select("hospitais_ids")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (medicoError) {
-        throw new Error(
-          medicoError.message ||
-            "Não foi possível carregar os hospitais vinculados ao seu cadastro.",
-        );
-      }
-
-      const hospitaisIds: string[] = (medico?.hospitais_ids as string[]) ?? [];
-
-      if (!hospitaisIds.length) {
-        setHospitaisMedico([]);
-        return;
-      }
-
+      // Lista de hospitais vem de public.clinicas (tipo_unidade = HOSPITAL)
       const { data: hospitaisData, error: hospitaisError } = await supabase
-        .from("hospitais")
+        .from("clinicas")
         .select("id, nome_fantasia")
-        .in("id", hospitaisIds)
+        .eq("tipo_unidade", "HOSPITAL")
         .order("nome_fantasia", { ascending: true });
 
       if (hospitaisError) {
         throw new Error(
-          hospitaisError.message ||
-            "Não foi possível carregar a lista de hospitais.",
+          hospitaisError.message || "Não foi possível carregar a lista de hospitais.",
         );
       }
 
@@ -175,7 +147,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível carregar os hospitais vinculados ao seu cadastro.";
+          : "Não foi possível carregar a lista de hospitais.";
       showError(message);
     } finally {
       setLoadingHospitais(false);
