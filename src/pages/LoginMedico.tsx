@@ -8,7 +8,6 @@ import {
   EyeOff,
   Phone,
   Hash,
-  Stethoscope,
   ShieldCheck,
 } from "lucide-react";
 
@@ -22,6 +21,7 @@ import {
 } from "@/services/auth-service";
 import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
 import { SUBSCRIPTION_EXPIRED_CODE } from "@/services/subscription-validity-service";
+import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 
 type Mode = "login" | "register";
 
@@ -220,7 +220,12 @@ const LoginMedico = () => {
         <div className="mb-7 flex flex-col items-center">
           <div className="mb-3 flex items-center gap-3">
             <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.4)]">
-              <Stethoscope className="h-6 w-6 text-black" />
+              <img
+                src={MEDICO_LOGO_URL}
+                alt="Logo Conmedic"
+                className="h-7 w-7 object-contain"
+                loading="eager"
+              />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent">
               CONMEDIC

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileHeart, RefreshCw, Stethoscope } from "lucide-react";
+import { ArrowLeft, FileHeart, RefreshCw } from "lucide-react";
 
 import MedicoDescricaoCirurgicaList from "@/components/descricao-cirurgica/MedicoDescricaoCirurgicaList";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/services/descricao-cirurgica-service";
 import { Button } from "@/components/ui/button";
 import { showError } from "@/utils/toast";
+import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 
 const MedicoDescricoesCirurgicas: React.FC = () => {
   const navigate = useNavigate();
@@ -46,7 +47,12 @@ const MedicoDescricoesCirurgicas: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.35)]">
-                <Stethoscope className="h-6 w-6 text-black" />
+                <img
+                  src={MEDICO_LOGO_URL}
+                  alt="Logo Conmedic"
+                  className="h-6 w-6 object-contain"
+                  loading="eager"
+                />
               </div>
               <span className="text-lg font-bold bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent">
                 CONMEDIC

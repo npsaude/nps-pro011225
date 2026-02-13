@@ -14,10 +14,11 @@ import {
   Signature,
   Send,
   Mail,
-  Stethoscope,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -630,7 +631,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <div className="flex w-full max-w-sm flex-col items-center text-center">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.4)]">
-                    <Stethoscope className="h-6 w-6 text-black" />
+                    <img
+                      src={MEDICO_LOGO_URL}
+                      alt="Logo Conmedic"
+                      className="h-7 w-7 object-contain"
+                      loading="eager"
+                    />
                   </div>
                   <span className="text-lg font-bold bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent">
                     CONMEDIC
