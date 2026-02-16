@@ -64,6 +64,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showAnalyzingScreen, setShowAnalyzingScreen] = useState(false);
   const [analyzingProgress, setAnalyzingProgress] = useState(0);
   const [analyzingStep, setAnalyzingStep] = useState<"uploading" | "analyzing" | "saving">("uploading");
+  const [analyzingDocType, setAnalyzingDocType] = useState<"guia" | "descricao">("guia");
 
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
@@ -345,6 +346,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setShowAnalyzingScreen(true);
     setAnalyzingProgress(0);
     setAnalyzingStep("uploading");
+    setAnalyzingDocType("guia");
 
     const uploadedFilePaths: string[] = [];
 
@@ -489,6 +491,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setShowAnalyzingScreen(true);
     setAnalyzingProgress(0);
     setAnalyzingStep("uploading");
+    setAnalyzingDocType("descricao");
 
     const uploadedFilePaths: string[] = [];
 
@@ -546,9 +549,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         },
         body: JSON.stringify({
           userId,
+          faturamentoId,
           files: uploadedFilePaths.map((path) => ({ path })),
-          hospitalId: selectedHospitalId,
-          clinicaId: selectedClinicaId,
         }),
       });
 
@@ -843,7 +845,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   view === "hospital"
                     ? () => {
                         setView("start");
-                        setStep(0);
+                        setStep(1);
                       }
                     : view === "upload_guia"
                     ? () => {
@@ -1548,9 +1550,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </h2>
             <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs max-w-xs">
               {analyzingStep === "uploading"
-                ? "Fazendo upload das imagens da guia de autorização."
+                ? analyzingDocType === "guia"
+                  ? "Fazendo upload das imagens da guia de autorização."
+                  : "Fazendo upload das imagens da descrição cirúrgica."
                 : analyzingStep === "analyzing"
-                  ? "A inteligência artificial está extraindo as informações da guia."
+                  ? analyzingDocType === "guia"
+                    ? "A inteligência artificial está extraindo as informações da guia."
+                    : "A inteligência artificial está extraindo as informações da descrição cirúrgica."
                   : "Gravando os dados extraídos no sistema."}
             </p>
 
@@ -1562,8 +1568,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </p>
             </div>
 
+            {/* Título do documento sendo processado */}
+            <p className="mt-4 text-[10px] text-[#D4A017] font-medium">
+              {analyzingDocType === "guia"
+                ? "Guia de Autorização de Cirurgia"
+                : "Descrição Cirúrgica"}
+            </p>
+
             {/* Etapas do processo */}
-            <div className="mt-5 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
+            <div className="mt-4 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <span

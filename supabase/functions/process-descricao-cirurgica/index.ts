@@ -1,6 +1,4 @@
-// Disable TypeScript checking for this Deno Edge Function file, since it uses Deno-specific imports/globals.
 // @ts-nocheck
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -12,7 +10,7 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-// Helpers para normalizar datas/horas vindas da OpenAI (formato brasileiro -> ISO/Postgres)
+// Helpers para normalizar datas vindas da OpenAI (formato brasileiro -> ISO/Postgres)
 function normalizeDate(value: unknown): string | null {
   if (!value) return null;
   const s = String(value).trim();
@@ -32,57 +30,27 @@ function normalizeDate(value: unknown): string | null {
     return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
   }
 
-  console.warn("normalizeDate: formato de data desconhecido, descartando:", s);
+  console.warn("[process-descricao-cirurgica] normalizeDate: formato de data desconhecido, descartando:", s);
   return null;
 }
 
+// Normaliza hora para formato HH:MM:SS
 function normalizeTime(value: unknown): string | null {
   if (!value) return null;
   const s = String(value).trim();
   if (!s) return null;
 
-  // HH:MM ou HH:MM:SS
-  const match = s.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  // Formato HH:MM ou HH:MM:SS
+  const match = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (match) {
     const [, hh, mm, ss] = match;
-    return `${hh}:${mm}:${ss ?? "00"}`; // HH:MM:SS
+    const hours = hh.padStart(2, "0");
+    const minutes = mm.padStart(2, "0");
+    const seconds = ss ? ss.padStart(2, "0") : "00";
+    return `${hours}:${minutes}:${seconds}`;
   }
 
-  console.warn("normalizeTime: formato de hora desconhecido, descartando:", s);
-  return null;
-}
-
-function normalizeDateTime(value: unknown): string | null {
-  if (!value) return null;
-  const s = String(value).trim();
-  if (!s) return null;
-
-  // Já está em ISO ou formato YYYY-MM-DD HH:MM[:SS]
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    // Se vier sem segundos, adiciona
-    const match = s.match(
-      /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/,
-    );
-    if (match) {
-      const [, datePart, hh, mm, ss] = match;
-      return `${datePart} ${hh}:${mm}:${ss ?? "00"}`;
-    }
-    return s;
-  }
-
-  // Formato brasileiro: DD/MM/YYYY HH:MM[:SS]
-  const match = s.match(
-    /^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/,
-  );
-  if (match) {
-    const [, dd, mm, yyyy, hh, min, ss] = match;
-    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss ?? "00"}`;
-  }
-
-  console.warn(
-    "normalizeDateTime: formato de data/hora desconhecido, descartando:",
-    s,
-  );
+  console.warn("[process-descricao-cirurgica] normalizeTime: formato de hora desconhecido, descartando:", s);
   return null;
 }
 
@@ -92,6 +60,7 @@ interface UploadedFile {
 
 interface RequestBody {
   userId: string;
+  faturamentoId: string;
   files: UploadedFile[];
 }
 
@@ -106,10 +75,13 @@ serve(async (req) => {
     });
   }
 
+  console.log("[process-descricao-cirurgica] Iniciando processamento...");
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!supabaseUrl || !serviceKey) {
+    console.error("[process-descricao-cirurgica] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.");
     return new Response(
       JSON.stringify({
         error: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.",
@@ -128,6 +100,7 @@ serve(async (req) => {
     const raw = await req.text();
     body = JSON.parse(raw) as RequestBody;
   } catch {
+    console.error("[process-descricao-cirurgica] Body JSON inválido.");
     return new Response(
       JSON.stringify({ error: "Body JSON inválido." }),
       {
@@ -137,12 +110,17 @@ serve(async (req) => {
     );
   }
 
-  const { userId, files } = body;
+  const { userId, faturamentoId, files } = body;
 
-  if (!userId || !files || !Array.isArray(files) || files.length === 0) {
+  console.log("[process-descricao-cirurgica] userId:", userId);
+  console.log("[process-descricao-cirurgica] faturamentoId:", faturamentoId);
+  console.log("[process-descricao-cirurgica] files:", files?.length);
+
+  if (!userId || !faturamentoId || !files || !Array.isArray(files) || files.length === 0) {
+    console.error("[process-descricao-cirurgica] Parâmetros obrigatórios faltando.");
     return new Response(
       JSON.stringify({
-        error: "Parâmetros obrigatórios: userId e files (com ao menos 1 item).",
+        error: "Parâmetros obrigatórios: userId, faturamentoId e files (com ao menos 1 item).",
       }),
       {
         status: 400,
@@ -159,7 +137,7 @@ serve(async (req) => {
     .maybeSingle();
 
   if (settingsError) {
-    console.error("Erro ao carregar app_settings:", settingsError);
+    console.error("[process-descricao-cirurgica] Erro ao carregar app_settings:", settingsError);
     return new Response(
       JSON.stringify({
         error: "Erro ao carregar configurações da aplicação.",
@@ -175,6 +153,7 @@ serve(async (req) => {
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
 
   if (!openaiToken) {
+    console.error("[process-descricao-cirurgica] Token da OpenAI não configurado.");
     return new Response(
       JSON.stringify({
         error:
@@ -201,7 +180,7 @@ serve(async (req) => {
 
     if (error || !data?.signedUrl) {
       console.error(
-        "Erro ao criar URL assinada para arquivo:",
+        "[process-descricao-cirurgica] Erro ao criar URL assinada para arquivo:",
         path,
         error,
       );
@@ -212,6 +191,7 @@ serve(async (req) => {
   }
 
   if (signedUrls.length === 0) {
+    console.error("[process-descricao-cirurgica] Não foi possível criar URLs assinadas.");
     return new Response(
       JSON.stringify({
         error:
@@ -224,397 +204,20 @@ serve(async (req) => {
     );
   }
 
-  console.log("URLs assinadas para todos os arquivos:", signedUrls);
+  console.log("[process-descricao-cirurgica] URLs assinadas criadas:", signedUrls.length);
 
-  // Separar imagens e PDFs
+  // Filtrar apenas imagens
   const imageUrls = signedUrls.filter((url) =>
     /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
   );
-  const pdfUrls = signedUrls.filter((url) => /\.pdf(\?|$)/i.test(url));
 
-  console.log("URLs de imagens:", imageUrls);
-  console.log("URLs de PDFs:", pdfUrls);
+  console.log("[process-descricao-cirurgica] URLs de imagens:", imageUrls.length);
 
-  // 3) Instruções de extração e formato JSON esperado
-  const jsonFormatInstructions = `
-Você é um assistente especializado em faturamento médico e descrições cirúrgicas.
-
-A partir dos DOCUMENTOS anexados (imagens e/ou PDFs de prontuário, laudos, relatórios, etc.),
-extraia todos os dados relevantes para preencher uma ficha de descrição cirúrgica.
-
-Regras importantes:
-- Use APENAS informações que aparecem claramente nos documentos.
-- Se um campo não estiver presente ou não for possível inferir com segurança, use null nesse campo.
-- Não invente dados.
-- Responda APENAS com um JSON válido, sem comentários ou explicações extras, no formato abaixo:
-
-{
-  "prontuario": string | null,
-  "registro": string | null,
-  "nome_social": string | null,
-  "registro_civil": string | null,
-  "cpf": string | null,
-  "matricula": string | null,
-  "data_nascimento": string | null,
-  "idade": number | null,
-  "sexo": string | null,
-
-  "convenio_plano": string | null,
-  "setor": string | null,
-  "leito": string | null,
-  "dthr_admissao": string | null,
-
-  "tipo_cirurgia": string | null,
-  "data_inicio_procedimento": string | null,
-  "hora_inicio_procedimento": string | null,
-  "data_fim_procedimento": string | null,
-  "hora_fim_procedimento": string | null,
-  "diagnostico_pre_operatorio": string | null,
-  "diagnostico_pos_operatorio": string | null,
-
-  "procedimentos": [
-    {
-      "procedimento_id": string | null,
-      "descricao_procedimento": string | null,
-      "codigo_procedimento": string | null,
-      "tipo_procedimento": string | null,
-      "quantidade": number | null
-    }
-  ] | null,
-
-  "equipe": [
-    {
-      "nome_profissional": string | null,
-      "funcao": string | null,
-      "conselho": string | null,
-      "numero_conselho": string | null,
-      "uf_conselho": string | null
-    }
-  ] | null,
-
-  "descricao_cirurgica": string | null,
-
-  "cirurgiao_responsavel": string | null,
-  "cirurgiao_responsavel_crm": string | null,
-  "data_hora_afere": string | null,
-  "usuario_impressao": string | null,
-  "data_hora_impressao": string | null,
-
-  "materiais": [
-    {
-      "material_id": string | null,
-      "nome_material": string | null,
-      "descricao_material": string | null,
-      "quantidade": number | null,
-      "lote": string | null,
-      "fabricante": string | null
-    }
-  ] | null,
-
-  "diagnostico_pre_igual_pos": boolean | null,
-  "houve_complicacoes": boolean | null,
-  "descricao_complicacoes": string | null,
-  "possui_peca_anatomo": boolean | null,
-  "sangramento_estimado": string | null,
-  "observacoes_adicionais": string | null,
-
-  "uso_antibioticos": string | null,
-  "profilaxia_tev_tvp": string | null,
-  "troca_curativo": string | null,
-  "dieta": string | null,
-  "deambulacao": string | null,
-  "previsao_alta": string | null,
-  "acompanhamento_pela_instituicao": boolean | null,
-  "outras_orientacoes": string | null
-}
-`;
-
-  let desc: any = null;
-
-  // 4A) Fluxo para IMAGENS (visão com chat/completions)
-  if (imageUrls.length > 0) {
-    console.log("Usando fluxo de VISÃO com gpt-4o-mini para imagens.");
-
-    const openaiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiToken}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0,
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content:
-                "Você é um assistente de IA especializado em leitura de documentos médicos (imagens) e faturamento. Sempre responda com JSON válido.",
-            },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: jsonFormatInstructions,
-                },
-                ...imageUrls.map((url) => ({
-                  type: "image_url",
-                  image_url: {
-                    url,
-                    detail: "high",
-                  },
-                })),
-              ],
-            },
-          ],
-        }),
-      },
-    );
-
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error("Erro da OpenAI (visão):", errorText);
-      return new Response(
-        JSON.stringify({
-          error: "Erro ao chamar a API da OpenAI (visão).",
-          details: errorText,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const completion = await openaiResponse.json();
-    const messageContent = completion?.choices?.[0]?.message?.content;
-
-    if (!messageContent) {
-      console.error("Resposta da OpenAI sem conteúdo (visão):", completion);
-      return new Response(
-        JSON.stringify({
-          error: "Resposta da OpenAI sem conteúdo utilizável (visão).",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(messageContent);
-    } catch (e) {
-      console.error(
-        "Falha ao fazer parse do JSON da OpenAI (visão):",
-        e,
-        messageContent,
-      );
-      return new Response(
-        JSON.stringify({
-          error:
-            "Falha ao interpretar a resposta da OpenAI (visão) como JSON.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    console.log(
-      "Resposta da OpenAI (visão) parseada (primeiros 2000 caracteres):",
-      JSON.stringify(parsed).slice(0, 2000),
-    );
-
-    desc = parsed;
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed) &&
-      parsed.descricao_cirurgica &&
-      typeof parsed.descricao_cirurgica === "object" &&
-      !Array.isArray(parsed.descricao_cirurgica)
-    ) {
-      desc = parsed.descricao_cirurgica;
-    }
-  }
-  // 4B) Fluxo para PDFs (file_search com Responses API)
-  else if (pdfUrls.length > 0) {
-    console.log("Usando fluxo de PDF com gpt-4.1-mini + file_search.");
-
-    const fileIds: string[] = [];
-
-    // 4B-1) Baixar PDFs das URLs assinadas e enviar para OpenAI como arquivos
-    for (const pdfUrl of pdfUrls) {
-      try {
-        console.log("Baixando PDF:", pdfUrl);
-        const pdfResp = await fetch(pdfUrl);
-        if (!pdfResp.ok) {
-          console.error("Falha ao baixar PDF:", pdfUrl, await pdfResp.text());
-          continue;
-        }
-
-        const pdfArrayBuffer = await pdfResp.arrayBuffer();
-        const pdfBlob = new Blob([pdfArrayBuffer], {
-          type: "application/pdf",
-        });
-
-        const formData = new FormData();
-        formData.append("file", pdfBlob, "descricao_cirurgica.pdf");
-        formData.append("purpose", "assistants");
-
-        const uploadResp = await fetch(
-          "https://api.openai.com/v1/files",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${openaiToken}`,
-            },
-            body: formData,
-          },
-        );
-
-        if (!uploadResp.ok) {
-          const errText = await uploadResp.text();
-          console.error("Erro ao enviar PDF para a OpenAI:", errText);
-          continue;
-        }
-
-        const uploadJson = await uploadResp.json();
-        const fileId = uploadJson?.id;
-        if (fileId) {
-          fileIds.push(fileId);
-        }
-      } catch (e) {
-        console.error("Erro inesperado ao processar PDF:", e);
-      }
-    }
-
-    if (fileIds.length === 0) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Não foi possível enviar nenhum PDF para a OpenAI. Verifique os arquivos e tente novamente.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // 4B-2) Chamar Responses API usando file_search
-    const responsesResp = await fetch(
-      "https://api.openai.com/v1/responses",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiToken}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4.1-mini",
-          input: jsonFormatInstructions,
-          attachments: fileIds.map((id) => ({
-            file_id: id,
-            tools: [{ type: "file_search" }],
-          })),
-        }),
-      },
-    );
-
-    if (!responsesResp.ok) {
-      const errText = await responsesResp.text();
-      console.error("Erro da OpenAI (PDF / responses):", errText);
-      return new Response(
-        JSON.stringify({
-          error: "Erro ao chamar a API da OpenAI para analisar PDFs.",
-          details: errText,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const respJson = await responsesResp.json();
-
-    let textContent = "";
-    try {
-      const firstOutput = respJson?.output?.[0];
-      const firstContent = firstOutput?.content?.[0];
-      const textObj = firstContent?.text;
-      textContent = textObj?.value ?? "";
-    } catch (e) {
-      console.error("Erro ao extrair texto da resposta (PDF):", e, respJson);
-    }
-
-    if (!textContent) {
-      console.error("Resposta da OpenAI (PDF) sem conteúdo de texto:", respJson);
-      return new Response(
-        JSON.stringify({
-          error:
-            "Resposta da OpenAI (PDF) não contém conteúdo de texto utilizável.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(textContent);
-    } catch (e) {
-      console.error(
-        "Falha ao fazer parse do JSON da OpenAI (PDF):",
-        e,
-        textContent,
-      );
-      return new Response(
-        JSON.stringify({
-          error:
-            "Falha ao interpretar a resposta da OpenAI (PDF) como JSON.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    console.log(
-      "Resposta da OpenAI (PDF) parseada (primeiros 2000 caracteres):",
-      JSON.stringify(parsed).slice(0, 2000),
-    );
-
-    desc = parsed;
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed) &&
-      parsed.descricao_cirurgica &&
-      typeof parsed.descricao_cirurgica === "object" &&
-      !Array.isArray(parsed.descricao_cirurgica)
-    ) {
-      desc = parsed.descricao_cirurgica;
-    }
-  } else {
-    // Sem imagens e sem PDFs válidos
-    console.error(
-      "Nenhum arquivo em formato suportado encontrado (nem imagens nem PDFs).",
-    );
+  if (imageUrls.length === 0) {
+    console.error("[process-descricao-cirurgica] Nenhuma imagem válida encontrada.");
     return new Response(
       JSON.stringify({
-        error:
-          "Nenhum arquivo em formato suportado encontrado. Envie imagens (png, jpeg, gif, webp) e/ou PDFs.",
+        error: "Nenhuma imagem válida encontrada. Envie imagens (PNG, JPEG, GIF, WEBP).",
       }),
       {
         status: 400,
@@ -623,12 +226,113 @@ Regras importantes:
     );
   }
 
-  if (!desc || typeof desc !== "object") {
-    console.error("Objeto de descrição cirúrgica inválido:", desc);
+  // 3) Instruções de extração para Descrição Cirúrgica
+  const jsonFormatInstructions = `
+Você é um assistente especializado em faturamento médico e descrições cirúrgicas.
+
+A partir das IMAGENS anexadas (fotos de descrições cirúrgicas),
+extraia todos os dados relevantes para preencher os campos de faturamento.
+
+IMPORTANTE:
+- As imagens podem ser de DIFERENTES PARTES da mesma descrição cirúrgica.
+- Analise TODAS as imagens e consolide as informações em um único JSON.
+- Se um campo aparecer em múltiplas imagens, use o valor mais completo/legível.
+- Use APENAS informações que aparecem claramente nos documentos.
+- Se um campo não estiver presente ou não for possível inferir com segurança, use null nesse campo.
+- Não invente dados.
+
+Campos a extrair:
+
+DADOS DA EXECUÇÃO (tabela faturamentos):
+- data_cirurgia: Data da cirurgia (formato DD/MM/YYYY ou YYYY-MM-DD)
+- hora_inicio: Hora de início da cirurgia (formato HH:MM)
+- hora_fim: Hora de término da cirurgia (formato HH:MM)
+
+DIAGNÓSTICO FINAL:
+- cid_codigo: Código CID do diagnóstico (ex: "K80.2", "J18.9")
+- diagnostico_descricao: Descrição do diagnóstico
+
+VALIDAÇÃO:
+- assinatura_medica: Se há assinatura do médico no documento (true/false)
+- data_assinatura: Data da assinatura (formato DD/MM/YYYY ou YYYY-MM-DD)
+
+PROCEDIMENTOS EXECUTADOS (tabela itens_faturamento):
+- procedimentos: Array de procedimentos realizados, cada um com:
+  - codigo_procedimento: Código TUSS ou código do procedimento
+  - descricao_procedimento: Descrição do procedimento realizado
+  - quantidade_executada: Quantidade executada (número)
+
+Responda APENAS com um JSON válido, sem comentários ou explicações extras, no formato abaixo:
+
+{
+  "faturamento": {
+    "data_cirurgia": string | null,
+    "hora_inicio": string | null,
+    "hora_fim": string | null,
+    "cid_codigo": string | null,
+    "diagnostico_descricao": string | null,
+    "assinatura_medica": boolean | null,
+    "data_assinatura": string | null
+  },
+  "procedimentos": [
+    {
+      "codigo_procedimento": string | null,
+      "descricao_procedimento": string | null,
+      "quantidade_executada": number | null
+    }
+  ] | null
+}
+`;
+
+  // 4) Chamar GPT-4 Vision para analisar as imagens
+  console.log("[process-descricao-cirurgica] Chamando GPT-4o-mini para análise de imagens...");
+
+  const openaiResponse = await fetch(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openaiToken}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é um assistente de IA especializado em leitura de descrições cirúrgicas (imagens) e faturamento médico. Sempre responda com JSON válido.",
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: jsonFormatInstructions,
+              },
+              ...imageUrls.map((url) => ({
+                type: "image_url",
+                image_url: {
+                  url,
+                  detail: "high",
+                },
+              })),
+            ],
+          },
+        ],
+      }),
+    },
+  );
+
+  if (!openaiResponse.ok) {
+    const errorText = await openaiResponse.text();
+    console.error("[process-descricao-cirurgica] Erro da OpenAI:", errorText);
     return new Response(
       JSON.stringify({
-        error:
-          "A resposta da OpenAI não pôde ser interpretada como uma descrição cirúrgica válida.",
+        error: "Erro ao chamar a API da OpenAI.",
+        details: errorText,
       }),
       {
         status: 500,
@@ -637,103 +341,107 @@ Regras importantes:
     );
   }
 
-  // 5) Calcular pasta de armazenamento (storage_folder) a partir do primeiro arquivo
-  let storageFolder: string | null = null;
-  const firstFile = files[0];
-  if (firstFile?.path && firstFile.path.includes("/")) {
-    const lastSlash = firstFile.path.lastIndexOf("/");
-    storageFolder = firstFile.path.substring(0, lastSlash); // ex: descricao_cirurgica/<userId>
+  const completion = await openaiResponse.json();
+  const messageContent = completion?.choices?.[0]?.message?.content;
+
+  if (!messageContent) {
+    console.error("[process-descricao-cirurgica] Resposta da OpenAI sem conteúdo:", completion);
+    return new Response(
+      JSON.stringify({
+        error: "Resposta da OpenAI sem conteúdo utilizável.",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
-  // 6) Montar objeto para inserir em descricoes_cirurgicas
-  const insertData: Record<string, unknown> = {
-    user_id: userId,
-    status: "AGUARDANDO",
+  let parsed: any;
+  try {
+    parsed = JSON.parse(messageContent);
+  } catch (e) {
+    console.error(
+      "[process-descricao-cirurgica] Falha ao fazer parse do JSON da OpenAI:",
+      e,
+      messageContent,
+    );
+    return new Response(
+      JSON.stringify({
+        error: "Falha ao interpretar a resposta da OpenAI como JSON.",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
 
-    prontuario: desc?.prontuario ?? null,
-    registro: desc?.registro ?? null,
-    nome_social: desc?.nome_social ?? null,
-    registro_civil: desc?.registro_civil ?? null,
-    cpf: desc?.cpf ?? null,
-    matricula: desc?.matricula ?? null,
-    data_nascimento: normalizeDate(desc?.data_nascimento),
-    idade: desc?.idade ?? null,
-    sexo: desc?.sexo ?? null,
+  console.log(
+    "[process-descricao-cirurgica] Resposta da OpenAI parseada:",
+    JSON.stringify(parsed).slice(0, 2000),
+  );
 
-    convenio_plano: desc?.convenio_plano ?? null,
-    setor: desc?.setor ?? null,
-    leito: desc?.leito ?? null,
-    dthr_admissao: normalizeDateTime(desc?.dthr_admissao),
+  const faturamentoData = parsed?.faturamento ?? {};
+  const procedimentosData = parsed?.procedimentos ?? [];
 
-    tipo_cirurgia: desc?.tipo_cirurgia ?? null,
-    data_inicio_procedimento: normalizeDate(desc?.data_inicio_procedimento),
-    hora_inicio_procedimento: normalizeTime(
-      desc?.hora_inicio_procedimento,
-    ),
-    data_fim_procedimento: normalizeDate(desc?.data_fim_procedimento),
-    hora_fim_procedimento: normalizeTime(desc?.hora_fim_procedimento),
-    diagnostico_pre_operatorio: desc?.diagnostico_pre_operatorio ?? null,
-    diagnostico_pos_operatorio: desc?.diagnostico_pos_operatorio ?? null,
+  // 5) Atualizar o faturamento existente com os dados extraídos
+  const filePaths = files.map((f) => f.path);
 
-    procedimentos: desc?.procedimentos ?? null,
-    equipe: desc?.equipe ?? null,
-    descricao_cirurgica: desc?.descricao_cirurgica ?? null,
-
-    cirurgiao_responsavel: desc?.cirurgiao_responsavel ?? null,
-    cirurgiao_responsavel_crm: desc?.cirurgiao_responsavel_crm ?? null,
-    data_hora_afere: normalizeDateTime(desc?.data_hora_afere),
-    usuario_impressao: desc?.usuario_impressao ?? null,
-    data_hora_impressao: normalizeDateTime(desc?.data_hora_impressao),
-
-    materiais: desc?.materiais ?? null,
-
-    diagnostico_pre_igual_pos:
-      typeof desc?.diagnostico_pre_igual_pos === "boolean"
-        ? desc.diagnostico_pre_igual_pos
-        : null,
-    houve_complicacoes:
-      typeof desc?.houve_complicacoes === "boolean"
-        ? desc.houve_complicacoes
-        : null,
-    descricao_complicacoes: desc?.descricao_complicacoes ?? null,
-    possui_peca_anatomo:
-      typeof desc?.possui_peca_anatomo === "boolean"
-        ? desc.possui_peca_anatomo
-        : null,
-    sangramento_estimado: desc?.sangramento_estimado ?? null,
-    observacoes_adicionais: desc?.observacoes_adicionais ?? null,
-
-    uso_antibioticos: desc?.uso_antibioticos ?? null,
-    profilaxia_tev_tvp: desc?.profilaxia_tev_tvp ?? null,
-    troca_curativo: desc?.troca_curativo ?? null,
-    dieta: desc?.dieta ?? null,
-    deambulacao: desc?.deambulacao ?? null,
-    previsao_alta: desc?.previsao_alta ?? null,
-    acompanhamento_pela_instituicao:
-      typeof desc?.acompanhamento_pela_instituicao === "boolean"
-        ? desc.acompanhamento_pela_instituicao
-        : null,
-    outras_orientacoes: desc?.outras_orientacoes ?? null,
-
-    // Nova informação: pasta do storage onde os arquivos desta descrição foram salvos
-    storage_folder: storageFolder,
+  const updateData: Record<string, unknown> = {
+    url_descricao_cirurgica: filePaths,
+    updated_at: new Date().toISOString(),
   };
 
-  // 7) Inserir na tabela descricoes_cirurgicas
-  const { data: inserted, error: insertError } = await supabase
-    .from("descricoes_cirurgicas")
-    .insert(insertData)
-    .select("id")
-    .single();
+  // Dados da execução
+  const dataCirurgia = normalizeDate(faturamentoData.data_cirurgia);
+  if (dataCirurgia) {
+    updateData.data_cirurgia = dataCirurgia;
+  }
 
-  if (insertError || !inserted?.id) {
-    console.error(
-      "Erro ao inserir em descricoes_cirurgicas:",
-      insertError,
-    );
+  const horaInicio = normalizeTime(faturamentoData.hora_inicio);
+  if (horaInicio) {
+    updateData.hora_inicio = horaInicio;
+  }
+
+  const horaFim = normalizeTime(faturamentoData.hora_fim);
+  if (horaFim) {
+    updateData.hora_fim = horaFim;
+  }
+
+  // Diagnóstico
+  if (faturamentoData.cid_codigo) {
+    updateData.diagnostico_cid = faturamentoData.cid_codigo;
+  }
+
+  if (faturamentoData.diagnostico_descricao) {
+    updateData.diagnostico_descricao = faturamentoData.diagnostico_descricao;
+  }
+
+  // Validação/Assinatura
+  if (faturamentoData.assinatura_medica !== null && faturamentoData.assinatura_medica !== undefined) {
+    updateData.assinatura_medica = Boolean(faturamentoData.assinatura_medica);
+  }
+
+  const dataAssinatura = normalizeDate(faturamentoData.data_assinatura);
+  if (dataAssinatura) {
+    updateData.data_assinatura = dataAssinatura;
+  }
+
+  console.log("[process-descricao-cirurgica] Atualizando faturamento:", faturamentoId);
+  console.log("[process-descricao-cirurgica] Dados de atualização:", JSON.stringify(updateData));
+
+  const { error: updateError } = await supabase
+    .from("faturamentos")
+    .update(updateData)
+    .eq("id", faturamentoId);
+
+  if (updateError) {
+    console.error("[process-descricao-cirurgica] Erro ao atualizar faturamento:", updateError);
     return new Response(
       JSON.stringify({
-        error: "Erro ao salvar a descrição cirúrgica no banco.",
+        error: "Erro ao atualizar o faturamento no banco.",
+        details: updateError.message,
       }),
       {
         status: 500,
@@ -742,43 +450,104 @@ Regras importantes:
     );
   }
 
-  const descricaoId = inserted.id as string;
+  // 6) Atualizar os itens de faturamento existentes com quantidade_executada
+  // ou inserir novos procedimentos se não existirem
+  if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
+    console.log("[process-descricao-cirurgica] Processando", procedimentosData.length, "procedimentos...");
 
-  // 8) Inserir registros de arquivos vinculados à descrição
-  const arquivosRows =
-    files.map((f) => ({
-      descricao_id: descricaoId,
-      user_id: userId,
-      file_path: f.path,
-    })) ?? [];
+    // Buscar o medico_id do faturamento
+    const { data: faturamentoInfo, error: faturamentoError } = await supabase
+      .from("faturamentos")
+      .select("medico_id")
+      .eq("id", faturamentoId)
+      .single();
 
-  if (arquivosRows.length > 0) {
-    const { error: arquivosError } = await supabase
-      .from("descricoes_cirurgicas_arquivos")
-      .insert(arquivosRows);
+    const medicoId = faturamentoInfo?.medico_id ?? userId;
 
-    if (arquivosError) {
-      console.error(
-        "Erro ao inserir em descricoes_cirurgicas_arquivos:",
-        arquivosError,
-      );
-      return new Response(
-        JSON.stringify({
-          error:
-            "Descrição criada, mas houve erro ao registrar os arquivos anexados.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    for (const proc of procedimentosData) {
+      const codigoProcedimento = proc.codigo_procedimento;
+      const quantidadeExecutada = proc.quantidade_executada ?? 1;
+
+      if (codigoProcedimento) {
+        // Tentar encontrar item existente pelo código do procedimento
+        const { data: existingItem, error: findError } = await supabase
+          .from("itens_faturamento")
+          .select("id")
+          .eq("faturamento_id", faturamentoId)
+          .eq("codigo_procedimento", codigoProcedimento)
+          .maybeSingle();
+
+        if (existingItem) {
+          // Atualizar item existente com quantidade_executada
+          const { error: updateItemError } = await supabase
+            .from("itens_faturamento")
+            .update({
+              quantidade_executada: quantidadeExecutada,
+              medico_id: medicoId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingItem.id);
+
+          if (updateItemError) {
+            console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
+          } else {
+            console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento);
+          }
+        } else {
+          // Inserir novo item
+          const { error: insertError } = await supabase
+            .from("itens_faturamento")
+            .insert({
+              faturamento_id: faturamentoId,
+              medico_id: medicoId,
+              codigo_procedimento: codigoProcedimento,
+              descricao_procedimento: proc.descricao_procedimento ?? null,
+              quantidade_autorizada: quantidadeExecutada,
+              quantidade_executada: quantidadeExecutada,
+              quantidade: quantidadeExecutada,
+              status_item: "pendente",
+            });
+
+          if (insertError) {
+            console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
+          } else {
+            console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento);
+          }
+        }
+      } else if (proc.descricao_procedimento) {
+        // Se não tem código mas tem descrição, inserir novo item
+        const { error: insertError } = await supabase
+          .from("itens_faturamento")
+          .insert({
+            faturamento_id: faturamentoId,
+            medico_id: medicoId,
+            codigo_procedimento: null,
+            descricao_procedimento: proc.descricao_procedimento,
+            quantidade_autorizada: quantidadeExecutada,
+            quantidade_executada: quantidadeExecutada,
+            quantidade: quantidadeExecutada,
+            status_item: "pendente",
+          });
+
+        if (insertError) {
+          console.error("[process-descricao-cirurgica] Erro ao inserir item sem código:", insertError);
+        } else {
+          console.log("[process-descricao-cirurgica] Novo item inserido (sem código):", proc.descricao_procedimento);
+        }
+      }
     }
   }
+
+  console.log("[process-descricao-cirurgica] Processamento concluído com sucesso.");
 
   return new Response(
     JSON.stringify({
       success: true,
-      descricao_cirurgica_id: descricaoId,
+      faturamento_id: faturamentoId,
+      dados_extraidos: {
+        faturamento: faturamentoData,
+        procedimentos: procedimentosData,
+      },
     }),
     {
       status: 200,
