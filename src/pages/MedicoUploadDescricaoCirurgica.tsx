@@ -31,7 +31,7 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "start" | "hospital" | "upload" | "clinica" | "success";
+type ViewState = "start" | "hospital" | "upload" | "success";
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -79,6 +79,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [clinicaStepView, setClinicaStepView] = useState<"selector" | "list">(
     "selector",
   );
+
+  // Checkbox "Mesmo hospital que foi realizada a cirurgia"
+  const [useSameAsHospital, setUseSameAsHospital] = useState(false);
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -194,10 +197,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         return;
       }
 
+      // Busca clínicas vinculadas ao médico (tipo_unidade = CLINICA)
       const { data: clinicasData, error: clinicasError } = await supabase
         .from("clinicas")
         .select("id, nome_fantasia")
         .in("id", clinicasIds)
+        .eq("tipo_unidade", "CLINICA")
         .order("nome_fantasia", { ascending: true });
 
       if (clinicasError) {
@@ -400,12 +405,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
   const totalSteps = 6;
   const currentStep =
-    view === "start" || view === "hospital"
+    view === "start"
       ? 1
-      : view === "upload"
-        ? 2
-        : view === "clinica"
-          ? 3
+      : view === "hospital"
+        ? 1
+        : view === "upload"
+          ? 2
           : 6;
 
   const handleNovaDescricao = () => {
@@ -418,6 +423,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setSelectedClinicaId(undefined);
     setSelectedClinicaName("");
     setClinicaStepView("selector");
+    setUseSameAsHospital(false);
   };
 
   const totalArquivos = files.length;
@@ -467,8 +473,24 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleIniciarFluxo = () => {
     setView("hospital");
     setHospitalStepView("selector");
+    setClinicaStepView("selector");
     if (!hospitaisMedico.length) {
       void carregarHospitaisDoMedico();
+    }
+    if (!clinicasMedico.length) {
+      void carregarClinicasDoMedico();
+    }
+  };
+
+  // Handler para o checkbox "Mesmo hospital"
+  const handleUseSameAsHospitalChange = (checked: boolean) => {
+    setUseSameAsHospital(checked);
+    if (checked && selectedHospitalId) {
+      setSelectedClinicaId(selectedHospitalId);
+      setSelectedClinicaName(selectedHospitalName);
+    } else if (!checked) {
+      setSelectedClinicaId(undefined);
+      setSelectedClinicaName("");
     }
   };
 
@@ -496,21 +518,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setHospitalStepView("selector");
   };
 
-  const handleContinuarAposHospital = () => {
+  const handleContinuarAposHospitalClinica = () => {
     if (!selectedHospitalId) {
-      showError("Selecione um hospital para continuar.");
+      showError("Selecione o hospital onde a cirurgia foi realizada.");
+      return;
+    }
+    if (!selectedClinicaId) {
+      showError("Selecione a clínica/hospital onde o serviço será faturado.");
       return;
     }
     setView("upload");
-  };
-
-  // Fluxo de escolha de CLÍNICA (faturamento)
-  const handleAbrirClinicaSelector = () => {
-    setView("clinica");
-    setClinicaStepView("selector");
-    if (!clinicasMedico.length) {
-      void carregarClinicasDoMedico();
-    }
   };
 
   const handleAbrirListaClinicas = () => {
@@ -528,21 +545,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setClinicaStepView("selector");
   };
 
-  const handleFecharSelecaoClinica = () => {
-    setView("upload");
-    setClinicaStepView("selector");
-  };
-
   const handleVoltarListaClinicasParaSelector = () => {
     setClinicaStepView("selector");
-  };
-
-  const handleContinuarAposClinica = () => {
-    if (!selectedClinicaId) {
-      showError("Selecione uma clínica para continuar.");
-      return;
-    }
-    setAutoFillDialogOpen(true);
   };
 
   return (
@@ -647,19 +651,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 2 - HOSPITAL */}
+          {/* TELA 2 - HOSPITAL + CLÍNICA (Nova tela unificada) */}
           {view === "hospital" && (
-            <div className="flex w-full flex-1 items-end justify-center pb-5">
-              {hospitalStepView === "selector" ? (
-                <div className="w-full max-w-sm -mt-6 rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
-
+            <div className="flex w-full flex-1 items-start justify-center pt-4">
+              {hospitalStepView === "selector" && clinicaStepView === "selector" ? (
+                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#F5F5F5]">
                         {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                      </p>
-                      <p className="mt-1 text-xs text-[#9CA3AF]">
-                        Escolha qual o hospital a cirurgia foi realizada.
                       </p>
                     </div>
                     <button
@@ -671,42 +671,109 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleAbrirListaHospitais}
-                    disabled={
-                      loadingHospitais ||
-                      (!hospitaisMedico.length && !selectedHospitalId)
-                    }
-                    className="flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] hover:border-[#D4A017]/50 transition-colors disabled:opacity-60"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                        <Building2 className="h-4 w-4" />
-                      </span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
-                          Hospital selecionado
+                  {/* 1. Seleção de Hospital */}
+                  <div className="mb-5">
+                    <p className="mb-3 text-xs text-[#9CA3AF]">
+                      <span className="font-semibold text-[#F5F5F5]">1.</span>{" "}
+                      Informe o Hospital que a{" "}
+                      <span className="text-[#D4A017] font-semibold">cirurgia</span>{" "}
+                      foi realizada
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAbrirListaHospitais}
+                      disabled={
+                        loadingHospitais ||
+                        (!hospitaisMedico.length && !selectedHospitalId)
+                      }
+                      className="flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] hover:border-[#D4A017]/50 transition-colors disabled:opacity-60"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
+                          <Building2 className="h-4 w-4" />
                         </span>
-                        <span className="text-sm font-semibold">
-                          {selectedHospitalName ||
-                            (loadingHospitais
-                              ? "Carregando hospitais..."
-                              : hospitaisMedico.length
-                                ? "Selecionar Hospital"
-                                : "Nenhum hospital vinculado")}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
+                            Hospital selecionado
+                          </span>
+                          <span className="text-sm font-semibold">
+                            {selectedHospitalName ||
+                              (loadingHospitais
+                                ? "Carregando hospitais..."
+                                : hospitaisMedico.length
+                                  ? "Selecionar Hospital"
+                                  : "Nenhum hospital disponível")}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
-                  </button>
+                      <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
+                    </button>
+                  </div>
+
+                  {/* 2. Seleção de Clínica/Hospital para Faturamento */}
+                  <div className="mb-4">
+                    <p className="mb-3 text-xs text-[#9CA3AF]">
+                      <span className="font-semibold text-[#F5F5F5]">2.</span>{" "}
+                      Informe o Hospital/Clínica que a cirurgia será{" "}
+                      <span className="text-[#D4A017] font-semibold">faturada</span>
+                    </p>
+
+                    {/* Checkbox "Mesmo hospital que foi realizada a cirurgia" */}
+                    <label className="mb-3 flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useSameAsHospital}
+                        onChange={(e) => handleUseSameAsHospitalChange(e.target.checked)}
+                        disabled={!selectedHospitalId}
+                        className="h-4 w-4 rounded border-[#D4A017]/30 bg-[#121212] text-[#D4A017] focus:ring-[#D4A017]/50 focus:ring-offset-0 disabled:opacity-50"
+                      />
+                      <span className="text-[11px] text-[#9CA3AF]">
+                        Mesmo hospital que foi realizada a cirurgia
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleAbrirListaClinicas}
+                      disabled={
+                        useSameAsHospital ||
+                        loadingClinicas ||
+                        (!clinicasMedico.length && !selectedClinicaId)
+                      }
+                      className={`flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] transition-colors ${
+                        useSameAsHospital
+                          ? "opacity-60 cursor-not-allowed"
+                          : "hover:border-[#D4A017]/50"
+                      } disabled:opacity-60`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                          <CircleDollarSign className="h-4 w-4" />
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
+                            Faturamento por
+                          </span>
+                          <span className="text-sm font-semibold">
+                            {selectedClinicaName ||
+                              (loadingClinicas
+                                ? "Carregando clínicas..."
+                                : clinicasMedico.length || useSameAsHospital
+                                  ? "Nenhuma clínica vinculada"
+                                  : "Nenhuma clínica vinculada")}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
+                    </button>
+                  </div>
 
                   <button
                     type="button"
-                    onClick={handleContinuarAposHospital}
-                    disabled={!selectedHospitalId}
-                    className={`mt-6 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ${
-                      selectedHospitalId
+                    onClick={handleContinuarAposHospitalClinica}
+                    disabled={!selectedHospitalId || !selectedClinicaId}
+                    className={`mt-4 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ${
+                      selectedHospitalId && selectedClinicaId
                         ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)] hover:shadow-[0_0_30px_rgba(212,160,23,0.55)] hover:scale-[1.01]"
                         : "cursor-not-allowed bg-black/50 text-[#6B7280] border border-[#D4A017]/10"
                     }`}
@@ -714,7 +781,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     Continuar
                   </button>
                 </div>
-              ) : (
+              ) : hospitalStepView === "list" ? (
                 <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-5 py-5 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
                   <div className="mb-5 flex items-center justify-between">
                     <button
@@ -734,10 +801,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="space-y-3">
+                  <p className="mb-4 text-xs text-[#9CA3AF]">
+                    Selecione o hospital onde a cirurgia foi realizada:
+                  </p>
+
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {loadingHospitais && (
                       <p className="text-xs text-[#9CA3AF]">
-                        Carregando hospitais onde você atua...
+                        Carregando hospitais...
                       </p>
                     )}
 
@@ -746,7 +817,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         <button
                           key={h.id}
                           type="button"
-                          onClick={() => handleSelecionarHospital(h)}
+                          onClick={() => {
+                            handleSelecionarHospital(h);
+                            // Se o checkbox estiver marcado, atualiza a clínica também
+                            if (useSameAsHospital) {
+                              setSelectedClinicaId(h.id);
+                              setSelectedClinicaName(h.nome_fantasia);
+                            }
+                          }}
                           className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
                         >
                           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
@@ -760,13 +838,69 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
                     {!loadingHospitais && !hospitaisMedico.length && (
                       <p className="text-xs text-[#6B7280]">
-                        Não encontramos hospitais vinculados ao seu cadastro.
+                        Não encontramos hospitais disponíveis.
                         Entre em contato com o administrador.
                       </p>
                     )}
                   </div>
                 </div>
-              )}
+              ) : clinicaStepView === "list" ? (
+                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-5 py-5 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
+                  <div className="mb-5 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleVoltarListaClinicasParaSelector}
+                      className="flex items-center gap-2 text-xs text-[#9CA3AF] hover:text-[#D4A017]"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      <span>Voltar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClinicaStepView("selector")}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <p className="mb-4 text-xs text-[#9CA3AF]">
+                    Selecione a clínica para faturamento:
+                  </p>
+
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+                    {loadingClinicas && (
+                      <p className="text-xs text-[#9CA3AF]">
+                        Carregando clínicas vinculadas...
+                      </p>
+                    )}
+
+                    {!loadingClinicas &&
+                      clinicasMedico.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => handleSelecionarClinica(c)}
+                          className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                            <Building2 className="h-4 w-4" />
+                          </span>
+                          <span className="text-sm font-medium">
+                            {c.nome_fantasia}
+                          </span>
+                        </button>
+                      ))}
+
+                    {!loadingClinicas && !clinicasMedico.length && (
+                      <p className="text-xs text-[#6B7280]">
+                        Não encontramos clínicas vinculadas ao seu cadastro.
+                        Entre em contato com o administrador.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -883,7 +1017,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
                     disabled={isUploading || files.length === 0}
-                    onClick={handleAbrirClinicaSelector}
+                    onClick={() => setAutoFillDialogOpen(true)}
                   >
                     {isUploading ? "Enviando..." : "Continuar Envio"}
                   </Button>
@@ -898,128 +1032,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     Voltar para Nova Descrição
                   </Button>
                 </>
-              )}
-            </div>
-          )}
-
-          {/* TELA 4 - CLÍNICA */}
-          {view === "clinica" && (
-            <div className="flex w-full flex-1 items-end justify-center pb-5">
-              {clinicaStepView === "selector" ? (
-                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-6 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
-                  <div className="mb-5 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[#F5F5F5]">
-                        {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                      </p>
-                      <p className="mt-1 text-xs text-[#9CA3AF]">
-                        Por qual Clínica/Hospital o serviço será faturado?
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleFecharSelecaoClinica}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleAbrirListaClinicas}
-                    disabled={
-                      loadingClinicas ||
-                      (!clinicasMedico.length && !selectedClinicaId)
-                    }
-                    className="flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] hover:border-[#D4A017]/50 transition-colors disabled:opacity-60"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                        <CircleDollarSign className="h-4 w-4" />
-                      </span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
-                          Faturamento por
-                        </span>
-                        <span className="text-sm font-semibold">
-                          {selectedClinicaName ||
-                            (loadingClinicas
-                              ? "Carregando clínicas..."
-                              : clinicasMedico.length
-                                ? "Selecionar Clínica"
-                                : "Nenhuma clínica vinculada")}
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleContinuarAposClinica}
-                    disabled={!selectedClinicaId || isUploading}
-                    className={`mt-6 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ${
-                      selectedClinicaId && !isUploading
-                        ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)] hover:shadow-[0_0_30px_rgba(212,160,23,0.55)] hover:scale-[1.01]"
-                        : "cursor-not-allowed bg-black/50 text-[#6B7280] border border-[#D4A017]/10"
-                    }`}
-                  >
-                    {isUploading ? "Enviando..." : "Continuar"}
-                  </button>
-                </div>
-              ) : (
-                <div className="w-full max-w-sm rounded-2xl bg-black/70 backdrop-blur-xl px-5 py-5 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20">
-                  <div className="mb-5 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={handleVoltarListaClinicasParaSelector}
-                      className="flex items-center gap-2 text-xs text-[#9CA3AF] hover:text-[#D4A017]"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      <span>Voltar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFecharSelecaoClinica}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {loadingClinicas && (
-                      <p className="text-xs text-[#9CA3AF]">
-                        Carregando clínicas onde você atua...
-                      </p>
-                    )}
-
-                    {!loadingClinicas &&
-                      clinicasMedico.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => handleSelecionarClinica(c)}
-                          className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
-                        >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            <Building2 className="h-4 w-4" />
-                          </span>
-                          <span className="text-sm font-medium">
-                            {c.nome_fantasia}
-                          </span>
-                        </button>
-                      ))}
-
-                    {!loadingClinicas && !clinicasMedico.length && (
-                      <p className="text-xs text-[#6B7280]">
-                        Não encontramos clínicas vinculadas ao seu cadastro.
-                        Entre em contato com o administrador.
-                      </p>
-                    )}
-                  </div>
-                </div>
               )}
             </div>
           )}
