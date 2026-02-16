@@ -324,140 +324,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     return faturamentoId;
   };
 
-  const handleUpload = async () => {
-    if (files.length === 0) {
-      showError("Selecione pelo menos um arquivo para enviar.");
-      return;
-    }
-
-    if (!selectedHospitalId) {
-      showError("Selecione o hospital onde a cirurgia foi realizada.");
-      return;
-    }
-
-    if (!selectedClinicaId) {
-      showError("Selecione a clínica pela qual o serviço será faturado.");
-      return;
-    }
-
-    setIsUploading(true);
-    const loadingId = showLoading("Enviando arquivos da descrição cirúrgica...");
-
-    const uploadedFilePaths: string[] = [];
-
-    try {
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
-
-      if (userError || !userData?.user) {
-        showError("Faça login novamente para enviar arquivos.");
-        navigate("/login-medico");
-        return;
-      }
-
-      const userId = userData.user.id;
-      const bucketName = "NPS-pro";
-
-      // Garante que existe um faturamento parcial para anexar os dados deste estágio
-      const ensuredFaturamentoId = await upsertFaturamentoParcial({
-        instituicaoCirurgiaId: selectedHospitalId,
-        instituicaoFaturamentoId: selectedClinicaId,
-        hospitalNome: selectedHospitalName,
-        instituicaoFaturamentoNome: selectedClinicaName,
-      });
-
-      for (const file of files) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-        const timestamp = Date.now();
-        const filePath = `descricao_cirurgica/${userId}/${timestamp}-${safeName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
-
-        if (uploadError) {
-          throw new Error(
-            `Falha ao enviar "${file.name}": ${uploadError.message}`,
-          );
-        }
-
-        uploadedFilePaths.push(filePath);
-      }
-
-      // Atualiza o faturamento com os arquivos da descrição cirúrgica (ainda INATIVO)
-      if (ensuredFaturamentoId) {
-        const { error: updateError } = await supabase
-          .from("faturamentos")
-          .update({
-            url_descricao_cirurgica: uploadedFilePaths,
-            instituicao_cirurgia_id: selectedHospitalId,
-            instituicao_faturamento_id: selectedClinicaId,
-            hospital_nome: selectedHospitalName || null,
-            status: "INATIVO",
-          })
-          .eq("id", ensuredFaturamentoId);
-
-        if (updateError) {
-          // Não bloqueia o fluxo de envio, mas avisa o usuário
-          showError(
-            "Arquivos enviados, mas não foi possível salvar o andamento do faturamento. Tente novamente.",
-          );
-        }
-      }
-
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
-
-      // Chama a Edge Function e valida a resposta; se houver erro lá, mostramos no app
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-          hospitalId: selectedHospitalId,
-          clinicaId: selectedClinicaId,
-        }),
-      });
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // se não veio JSON, seguimos só com o status HTTP
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ??
-          "Arquivos enviados, mas houve erro ao criar a descrição cirúrgica no servidor.";
-        throw new Error(errorMessage);
-      }
-
-      showSuccess(
-        "Arquivos enviados e análise da descrição cirúrgica iniciada com sucesso.",
-      );
-      setFiles([]);
-      setStep(1);
-      setView("success");
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível enviar os arquivos.";
-      showError(message);
-    } finally {
-      dismissToast(loadingId);
-      setIsUploading(false);
-      setShowSendingScreen(false);
-    }
-  };
-
   // Função para upload e análise da Guia de Autorização com tela de progresso
   const handleUploadGuiaAutorizacao = async () => {
     if (filesGuia.length === 0) {
@@ -793,7 +659,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           : 6;
 
   const handleNovaDescricao = () => {
-    setFiles([]);
+    setFilesGuia([]);
+    setFilesDescricao([]);
     setStep(1);
     setView("start");
     setSelectedHospitalId(undefined);
@@ -806,7 +673,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setFaturamentoId(null);
   };
 
-  const totalArquivos = files.length;
+  // Arquivos atuais baseado na view
+  const currentFiles = view === "upload_guia" ? filesGuia : filesDescricao;
+  const totalArquivos = currentFiles.length;
   const arquivosLabel =
     totalArquivos === 0
       ? "Nenhum arquivo"
@@ -839,15 +708,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const isImage = (file: File) => file.type.startsWith("image/");
 
-  const handleAdicionarMais = () => {
-    fileInputRef.current?.click();
+  const handleAdicionarMaisGuia = () => {
+    fileInputRefGuia.current?.click();
   };
 
-  const handleRemoverArquivo = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    if (files.length === 1) {
-      setStep(1);
-    }
+  const handleAdicionarMaisDescricao = () => {
+    fileInputRefDescricao.current?.click();
+  };
+
+  const handleRemoverArquivoGuia = (index: number) => {
+    setFilesGuia((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoverArquivoDescricao = (index: number) => {
+    setFilesDescricao((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleIniciarFluxo = () => {
@@ -1320,17 +1194,17 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 3 - UPLOAD */}
+          {/* TELA 2 - UPLOAD GUIA DE AUTORIZAÇÃO */}
           {view === "upload_guia" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
               <Input
-                id="files-upload"
-                ref={fileInputRef}
+                id="files-upload-guia"
+                ref={fileInputRefGuia}
                 type="file"
                 multiple
                 className="hidden"
                 accept="image/*,application/pdf"
-                onChange={handleFileChange}
+                onChange={handleFileChangeGuia}
               />
 
               <div className="mb-6">
@@ -1338,7 +1212,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
                 </h1>
                 <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  {files.length === 0 ? (
+                  {filesGuia.length === 0 ? (
                     <>
                       <span>
                         Faça upload das imagens da Guia de Autorização de Cirurgia.
@@ -1352,14 +1226,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   ) : (
                     "Confira os arquivos antes de enviar a Guia de Autorização de Cirurgia"
                   )}
-
                 </p>
               </div>
 
-              {files.length === 0 ? (
+              {filesGuia.length === 0 ? (
                 <>
                   <label
-                    htmlFor="files-upload"
+                    htmlFor="files-upload-guia"
                     className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
                   >
                     <div className="flex flex-col items-center gap-4">
@@ -1395,14 +1268,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       size="sm"
                       variant="outline"
                       className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                      onClick={handleAdicionarMais}
+                      onClick={handleAdicionarMaisGuia}
                     >
                       + Adicionar mais
                     </Button>
                   </div>
 
                   <div className="space-y-2">
-                    {files.map((file, index) => (
+                    {filesGuia.map((file, index) => (
                       <div
                         key={file.name + file.lastModified + index}
                         className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
@@ -1426,7 +1299,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleRemoverArquivo(index)}
+                          onClick={() => handleRemoverArquivoGuia(index)}
                           className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -1438,8 +1311,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <Button
                     type="button"
                     className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                    disabled={isUploading || files.length === 0}
-                    onClick={handleUploadAndAnalyze}
+                    disabled={isUploading || filesGuia.length === 0}
+                    onClick={handleUploadGuiaAutorizacao}
                   >
                     {isUploading ? "Processando..." : "Continuar Envio"}
                   </Button>
@@ -1459,7 +1332,144 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 5 - SUCESSO GERAL (final do processo) */}
+          {/* TELA 3 - UPLOAD DESCRIÇÃO CIRÚRGICA */}
+          {view === "upload_descricao" && (
+            <div className="mt-2 flex w-full max-w-md flex-col">
+              <Input
+                id="files-upload-descricao"
+                ref={fileInputRefDescricao}
+                type="file"
+                multiple
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={handleFileChangeDescricao}
+              />
+
+              <div className="mb-6">
+                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                </h1>
+                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+                  {filesDescricao.length === 0 ? (
+                    <>
+                      <span>
+                        Faça upload das imagens da Descrição Cirúrgica.
+                      </span>
+                      <br />
+                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
+                        Obs: Tire várias imagens com os detalhes dos campos da mesma
+                        descrição para melhor análise da IA
+                      </span>
+                    </>
+                  ) : (
+                    "Confira os arquivos antes de enviar a Descrição Cirúrgica"
+                  )}
+                </p>
+              </div>
+
+              {filesDescricao.length === 0 ? (
+                <>
+                  <label
+                    htmlFor="files-upload-descricao"
+                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
+                        <Upload className="h-8 w-8 text-black" />
+                      </div>
+                      <p className="text-[#F5F5F5] font-medium">
+                        Adicionar Arquivos
+                      </p>
+                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
+                      <p className="text-[#6B7280] text-[11px]">
+                        Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
+                      </p>
+                    </div>
+                  </label>
+
+                  <Button
+                    type="button"
+                    disabled
+                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
+                  >
+                    Selecione arquivos acima
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-[#F5F5F5]">
+                      Seus Arquivos ({filesDescricao.length === 1 ? "1 arquivo" : `${filesDescricao.length} arquivos`})
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
+                      onClick={handleAdicionarMaisDescricao}
+                    >
+                      + Adicionar mais
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filesDescricao.map((file, index) => (
+                      <div
+                        key={file.name + file.lastModified + index}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                            {isImage(file) ? (
+                              <ImageIcon className="h-4 w-4" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] sm:text-xs">
+                              {file.name}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoverArquivoDescricao(index)}
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
+                    disabled={isUploading || filesDescricao.length === 0}
+                    onClick={handleUploadDescricaoCirurgica}
+                  >
+                    {isUploading ? "Processando..." : "Continuar Envio"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
+                    onClick={() => setView("upload_guia")}
+                    disabled={isUploading}
+                  >
+                    Voltar para Guia de Autorização
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* TELA 4 - SUCESSO GERAL (final do processo) */}
           {view === "success" && (
             <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
               <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
@@ -1474,33 +1484,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         : "Tudo certo!"}
                     </h2>
                     <p className="text-xs text-[#9CA3AF] sm:text-sm">
-                      A descrição cirúrgica foi enviada com sucesso.
+                      Os documentos foram enviados e processados com sucesso.
                     </p>
                   </div>
                   <div className="flex flex-col gap-3 pt-2">
                     <Button
                       type="button"
                       className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                      onClick={() =>
-                        navigate("/medico/guia-autorizacao/enviar", {
-                          state: { faturamentoId },
-                        })
-                      }
+                      onClick={handleNovaDescricao}
                     >
-                      Enviar Guia de Autorização
+                      Novo Faturamento
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                      onClick={handleNovaDescricao}
-                    >
-                      Enviar Nova Descrição Cirúrgica
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
                       onClick={() => navigate("/medico/dashboard")}
                     >
                       Ir para o Início
@@ -1513,251 +1511,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         </main>
       </div>
 
-      {/* Modal de Preenchimento Automático de Honorários */}
-      <Dialog open={autoFillDialogOpen} onOpenChange={setAutoFillDialogOpen}>
-        <DialogContent className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 backdrop-blur-xl px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-            <FileText className="h-6 w-6" />
-          </div>
-          <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
-            Preenchimento Automático
-          </h2>
-          <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
-            Você quer que o sistema preencha o formulário de honorários para
-            você?
-          </p>
-
-          <div className="mt-6 space-y-3">
-            <Button
-              type="button"
-              className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
-              disabled={isUploading}
-              onClick={() => {
-                setAutoFillDialogOpen(false);
-                setShowFillingScreen(true);
-              }}
-            >
-              {isUploading ? "Enviando..." : "Sim, preencher agora"}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-              disabled={isUploading}
-              onClick={() => {
-                setAutoFillDialogOpen(false);
-                setShowSendingScreen(true);
-                void handleUpload();
-              }}
-            >
-              Não, obrigado
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Tela de Assinatura Digital do formulário de honorários */}
-      <Dialog open={signatureDialogOpen} onOpenChange={setSignatureDialogOpen}>
-        <DialogContent className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 backdrop-blur-xl px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-            <Signature className="h-6 w-6" />
-          </div>
-          <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
-            Assinatura Digital
-          </h2>
-          <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
-            Vamos realizar a assinatura digital do formulário de honorários.
-            Toque em &quot;Assinar&quot; para confirmar.
-          </p>
-          <div className="mt-6">
-            <Button
-              type="button"
-              className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
-              disabled={isUploading}
-              onClick={() => {
-                setSignatureDialogOpen(false);
-                setShowSigningScreen(true);
-              }}
-            >
-              Assinar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Tela de progresso de preenchimento do formulário de honorários */}
-      {showFillingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
-          <div className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
-              Preenchendo Formulário...
-            </h2>
-            <div className="mt-5">
-              <Progress value={fillingProgress} className="h-2.5 rounded-full" />
-            </div>
-            <p className="mt-3 text-xs text-[#9CA3AF] sm:text-sm">
-              Aguarde um momento.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Tela "Assinando..." */}
-      {showSigningScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
-          <div className="w-[88%] max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/80 px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-              <Signature className="h-6 w-6" />
-            </div>
-            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
-              Assinando...
-            </h2>
-            <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
-              Aplicando sua assinatura digital segura nos documentos.
-            </p>
-            <div className="mt-5 flex items-center justify-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#D4A017] animate-pulse" />
-              <span className="h-2 w-2 rounded-full bg-[#D4A017]/70 animate-pulse [animation-delay:150ms]" />
-              <span className="h-2 w-2 rounded-full bg-[#D4A017]/40 animate-pulse [animation-delay:300ms]" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tela "Documento Assinado" (pergunta se deseja enviar para faturamento) */}
-      {showSignedScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
-          <div className="w-[88%] max-w-sm rounded-2xl bg-black/80 px-6 py-7 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)]">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
-            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
-              Documento Assinado
-            </h2>
-            <p className="mt-2 text-xs text-[#9CA3AF] sm:text-sm">
-              A assinatura foi aplicada. Deseja enviar os documentos para
-              faturamento agora?
-            </p>
-            <div className="mt-6">
-              <Button
-                type="button"
-                className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
-                disabled={isUploading}
-                onClick={() => {
-                  setShowSignedScreen(false);
-                  setShowSendingScreen(true);
-                  void handleUpload();
-                }}
-              >
-                <span className="flex items-center justify-center gap-2">
-                  <span>Enviar para Faturamento</span>
-                  <Send className="h-4 w-4" />
-                </span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tela "Enviando" com ícones de envelope */}
-      {showSendingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
-          <div className="flex w-full max-w-sm flex-col items-center px-6 py-10 text-center">
-            {/* Orb animado ao estilo macOS */}
-            <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_60px_rgba(212,160,23,0.35)]">
-              <div className="absolute inset-1 rounded-[26px] bg-black/60 backdrop-blur-xl" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#121212] border border-[#D4A017]/20 shadow-[0_10px_40px_rgba(0,0,0,0.65)]">
-                <Mail className="h-8 w-8 text-[#D4A017]" />
-                {/* "Pacotes" de e-mail orbitando */}
-                <span className="pointer-events-none absolute -left-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-[#121212] text-[#F5F5F5] border border-[#D4A017]/15 shadow-[0_10px_25px_rgba(0,0,0,0.6)] animate-bounce">
-                  <Mail className="mx-auto mt-[7px] h-4 w-4" />
-                </span>
-                <span className="pointer-events-none absolute -right-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-2xl bg-[#121212] text-[#F5F5F5] border border-[#D4A017]/15 shadow-[0_10px_25px_rgba(0,0,0,0.6)] animate-bounce [animation-delay:220ms]">
-                  <Mail className="mx-auto mt-[7px] h-4 w-4" />
-                </span>
-              </div>
-            </div>
-
-            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
-              Sincronizando com o faturamento
-            </h2>
-            <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs">
-              Estamos transmitindo seus documentos de forma segura para os
-              e-mails de faturamento.
-            </p>
-
-            {/* Barra de "progresso" com brilho suave */}
-            <div className="mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-black/50 border border-[#D4A017]/10">
-              <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] animate-[pulse_1.8s_ease-in-out_infinite]" />
-            </div>
-
-            <div className="mt-5 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
-              {isSameBillingLocation ? (
-                <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1 text-[10px] text-[#D4A017] border border-[#D4A017]/25">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] animate-pulse" />
-                    <span>1 e-mail de faturamento em envio</span>
-                  </div>
-                  <p className="mt-1 font-medium text-[#F5F5F5]">
-                    Avisando a clinica{" "}
-                    <span className="font-semibold text-[#D4A017]">
-                      {selectedClinicaName || "selecionada"}
-                    </span>{" "}
-                    que esse serviço será faturado.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1 text-[10px] text-[#D4A017] border border-[#D4A017]/25">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] animate-pulse" />
-                    <span>2 e-mails sendo enviados em sequência</span>
-                  </div>
-
-                  <div className="relative space-y-2 pl-4">
-                    {/* Linha vertical estilo timeline */}
-                    <span className="pointer-events-none absolute left-1 top-1 h-full w-px bg-gradient-to-b from-[#D4A017]/60 via-[#D4A017]/10 to-transparent" />
-
-                    <p
-                      className={
-                        sendingStep === 1
-                          ? "font-medium text-[#F5F5F5] animate-pulse"
-                          : "font-medium text-[#9CA3AF]"
-                      }
-                    >
-                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D4A017]/10 text-[10px] text-[#D4A017] border border-[#D4A017]/25">
-                        1
-                      </span>
-                      Avisando o hospital{" "}
-                      <span className="font-semibold">
-                        {selectedHospitalName || "selecionado"}
-                      </span>{" "}
-                      que esse serviço não será faturado.
-                    </p>
-
-                    <p
-                      className={
-                        sendingStep === 2
-                          ? "font-medium text-[#F5F5F5] animate-pulse"
-                          : "font-medium text-[#6B7280]"
-                      }
-                    >
-                      <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D4A017]/5 text-[10px] text-[#D4A017]/90 border border-[#D4A017]/15">
-                        2
-                      </span>
-                      Avisando a clinica{" "}
-                      <span className="font-semibold">
-                        {selectedClinicaName || "selecionada"}
-                      </span>{" "}
-                      que esse serviço será faturado.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Tela de Análise da IA */}
       {showAnalyzingScreen && (
