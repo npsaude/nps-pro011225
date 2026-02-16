@@ -160,69 +160,35 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const carregarClinicasDoMedico = async () => {
     setLoadingClinicas(true);
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
 
       if (authError || !authData?.user) {
-        showError("Faça login para selecionar a clínica de faturamento.");
+        showError("Faça login para selecionar a instituição de faturamento.");
         navigate("/login-medico");
         return;
       }
 
-      const email = authData.user.email;
-      if (!email) {
-        showError(
-          "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
-        );
-        return;
-      }
-
-      const { data: medico, error: medicoError } = await supabase
-        .from("medicos")
-        .select("clinicas_ids")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (medicoError) {
-        throw new Error(
-          medicoError.message ||
-            "Não foi possível carregar as clínicas vinculadas ao seu cadastro.",
-        );
-      }
-
-      const clinicasIds: string[] = (medico?.clinicas_ids as string[]) ?? [];
-
-      if (!clinicasIds.length) {
-        setClinicasMedico([]);
-        return;
-      }
-
-      // Busca clínicas vinculadas ao médico (tipo_unidade = CLINICA)
+      // Lista de instituições para faturamento vem de public.clinicas (todos os registros)
+      // Observação: não filtramos por tipo_unidade aqui; a tela permite Clínica ou Hospital.
       const { data: clinicasData, error: clinicasError } = await supabase
         .from("clinicas")
         .select("id, nome_fantasia")
-        .in("id", clinicasIds)
-        .eq("tipo_unidade", "CLINICA")
         .order("nome_fantasia", { ascending: true });
 
       if (clinicasError) {
         throw new Error(
           clinicasError.message ||
-            "Não foi possível carregar a lista de clínicas.",
+            "Não foi possível carregar a lista de instituições para faturamento.",
         );
       }
 
-      const lista = (clinicasData ?? []) as {
-        id: string;
-        nome_fantasia: string;
-      }[];
-
+      const lista = (clinicasData ?? []) as { id: string; nome_fantasia: string }[];
       setClinicasMedico(lista);
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível carregar as clínicas vinculadas ao seu cadastro.";
+          : "Não foi possível carregar a lista de instituições para faturamento.";
       showError(message);
     } finally {
       setLoadingClinicas(false);
@@ -532,13 +498,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const handleAbrirListaClinicas = () => {
     if (useSameAsHospital) return;
-
-    // Abre a lista mesmo que esteja vazia (para exibir estado de carregamento ou mensagem)
-    setClinicaStepView("list");
-
-    // Garante carregamento caso ainda não tenha sido feito
-    if (!loadingClinicas && clinicasMedico.length === 0) {
-      void carregarClinicasDoMedico();
+    if (!loadingClinicas && clinicasMedico.length > 0) {
+      setClinicaStepView("list");
     }
   };
 
@@ -741,7 +702,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleAbrirListaClinicas}
-                      disabled={useSameAsHospital}
+                      disabled={
+                        useSameAsHospital ||
+                        loadingClinicas ||
+                        (!clinicasMedico.length && !selectedClinicaId)
+                      }
                       className={`flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] transition-colors ${
                         useSameAsHospital
                           ? "opacity-60 cursor-not-allowed"
@@ -761,8 +726,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                               (loadingClinicas
                                 ? "Carregando clínicas..."
                                 : clinicasMedico.length
-                                  ? "Selecionar Clínica"
-                                  : "Nenhuma clínica vinculada")}
+                                  ? "Selecionar Instituição"
+                                  : "Nenhuma instituição disponível")}
                           </span>
                         </div>
                       </div>
@@ -867,13 +832,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </div>
 
                   <p className="mb-4 text-xs text-[#9CA3AF]">
-                    Selecione a clínica para faturamento:
+                    Selecione a instituição para faturamento:
                   </p>
 
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {loadingClinicas && (
                       <p className="text-xs text-[#9CA3AF]">
-                        Carregando clínicas vinculadas...
+                        Carregando instituições...
                       </p>
                     )}
 
@@ -896,7 +861,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
                     {!loadingClinicas && !clinicasMedico.length && (
                       <p className="text-xs text-[#6B7280]">
-                        Não encontramos clínicas vinculadas ao seu cadastro.
+                        Não encontramos instituições disponíveis.
                         Entre em contato com o administrador.
                       </p>
                     )}
