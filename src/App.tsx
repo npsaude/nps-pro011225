@@ -21,6 +21,7 @@ import AdminConfiguracoes from "./pages/AdminConfiguracoes";
 import AdminConverterPdf from "./pages/AdminConverterPdf";
 import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
 import MedicoUploadDescricaoCirurgica from "./pages/MedicoUploadDescricaoCirurgica";
+import MedicoUploadGuiaAutorizacao from "./pages/MedicoUploadGuiaAutorizacao";
 import MedicoDescricoesCirurgicas from "./pages/MedicoDescricoesCirurgicas";
 import DescricaoCirurgicaArquivosPage from "./pages/DescricaoCirurgicaArquivos";
 import HospitaisCadastro from "./pages/HospitaisCadastro";
@@ -77,6 +78,7 @@ const App = () => (
           <Route path="/medico/dashboard" element={<MedicoInicio />} />
           <Route path="/medico/informacoes" element={<DashboardMedico />} />
           <Route path="/medico/descricao-cirurgica/enviar" element={<MedicoUploadDescricaoCirurgica />} />
+          <Route path="/medico/guia-autorizacao/enviar" element={<MedicoUploadGuiaAutorizacao />} />
           <Route path="/medico/descricao-cirurgica" element={<MedicoDescricoesCirurgicas />} />
 
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />

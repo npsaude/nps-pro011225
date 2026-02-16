@@ -1132,25 +1132,36 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         : "Tudo certo!"}
                     </h2>
                     <p className="text-xs text-[#9CA3AF] sm:text-sm">
-                      A descrição cirúrgica e os documentos foram enviados com
-                      sucesso.
+                      A descrição cirúrgica foi enviada com sucesso.
                     </p>
                   </div>
                   <div className="flex flex-col gap-3 pt-2">
                     <Button
                       type="button"
                       className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                      onClick={() =>
+                        navigate("/medico/guia-autorizacao/enviar", {
+                          state: { faturamentoId },
+                        })
+                      }
+                    >
+                      Enviar Guia de Autorização
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
                       onClick={handleNovaDescricao}
                     >
                       Enviar Nova Descrição Cirúrgica
                     </Button>
                     <Button
                       type="button"
-                      variant="outline"
-                      className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                      variant="ghost"
+                      className="text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
                       onClick={() => navigate("/medico/dashboard")}
                     >
-                      Início
+                      Ir para o Início
                     </Button>
                   </div>
                 </CardContent>
