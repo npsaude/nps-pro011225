@@ -810,11 +810,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <span>Voltar</span>
               </button>
 
-              <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
-                <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
-                <span>
-                  {view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}
-                </span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+                  <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
+                  <span>
+                    {view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}
+                  </span>
+                </div>
+                {view === "upload" && (
+                  <span className="text-[11px] text-[#D4A017] pr-1">
+                    Guia de Autorização de Cirurgia
+                  </span>
+                )}
               </div>
             </header>
           </>
