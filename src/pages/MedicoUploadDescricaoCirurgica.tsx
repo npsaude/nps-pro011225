@@ -53,6 +53,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showSendingScreen, setShowSendingScreen] = useState(false);
   const [sendingStep, setSendingStep] = useState<1 | 2>(1);
 
+  // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
+  const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
+
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
   >(hospitalId);
@@ -225,6 +228,61 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     event.target.value = "";
   };
 
+  const upsertFaturamentoParcial = async (params: {
+    instituicaoCirurgiaId: string;
+    instituicaoFaturamentoId: string;
+    hospitalNome?: string;
+    instituicaoFaturamentoNome?: string;
+  }) => {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData?.user) {
+      showError("Faça login novamente para continuar.");
+      navigate("/login-medico");
+      return null;
+    }
+
+    const medicoId = authData.user.id;
+
+    if (!faturamentoId) {
+      const { data, error } = await supabase
+        .from("faturamentos")
+        .insert({
+          medico_id: medicoId,
+          instituicao_cirurgia_id: params.instituicaoCirurgiaId,
+          instituicao_faturamento_id: params.instituicaoFaturamentoId,
+          hospital_nome: params.hospitalNome ?? null,
+          status: "INATIVO",
+          // manter arrays como default no banco
+        })
+        .select("id")
+        .single();
+
+      if (error || !data?.id) {
+        showError("Não foi possível criar o faturamento. Tente novamente.");
+        return null;
+      }
+
+      setFaturamentoId(data.id as string);
+      return data.id as string;
+    }
+
+    const { error } = await supabase
+      .from("faturamentos")
+      .update({
+        instituicao_cirurgia_id: params.instituicaoCirurgiaId,
+        instituicao_faturamento_id: params.instituicaoFaturamentoId,
+        hospital_nome: params.hospitalNome ?? null,
+      })
+      .eq("id", faturamentoId);
+
+    if (error) {
+      showError("Não foi possível atualizar o faturamento. Tente novamente.");
+      return null;
+    }
+
+    return faturamentoId;
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) {
       showError("Selecione pelo menos um arquivo para enviar.");
@@ -259,6 +317,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const userId = userData.user.id;
       const bucketName = "NPS-pro";
 
+      // Garante que existe um faturamento parcial para anexar os dados deste estágio
+      const ensuredFaturamentoId = await upsertFaturamentoParcial({
+        instituicaoCirurgiaId: selectedHospitalId,
+        instituicaoFaturamentoId: selectedClinicaId,
+        hospitalNome: selectedHospitalName,
+        instituicaoFaturamentoNome: selectedClinicaName,
+      });
+
       for (const file of files) {
         const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const timestamp = Date.now();
@@ -278,6 +344,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
 
         uploadedFilePaths.push(filePath);
+      }
+
+      // Atualiza o faturamento com os arquivos da descrição cirúrgica (ainda INATIVO)
+      if (ensuredFaturamentoId) {
+        const { error: updateError } = await supabase
+          .from("faturamentos")
+          .update({
+            url_descricao_cirurgica: uploadedFilePaths,
+            instituicao_cirurgia_id: selectedHospitalId,
+            instituicao_faturamento_id: selectedClinicaId,
+            hospital_nome: selectedHospitalName || null,
+            status: "INATIVO",
+          })
+          .eq("id", ensuredFaturamentoId);
+
+        if (updateError) {
+          // Não bloqueia o fluxo de envio, mas avisa o usuário
+          showError(
+            "Arquivos enviados, mas não foi possível salvar o andamento do faturamento. Tente novamente.",
+          );
+        }
       }
 
       const functionUrl =
@@ -391,6 +478,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setSelectedClinicaName("");
     setClinicaStepView("selector");
     setUseSameAsHospital(false);
+    setFaturamentoId(null);
   };
 
   const totalArquivos = files.length;
@@ -508,7 +596,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showError("Selecione a clínica/hospital onde o serviço será faturado.");
       return;
     }
-    setView("upload");
+
+    void (async () => {
+      const ensuredId = await upsertFaturamentoParcial({
+        instituicaoCirurgiaId: selectedHospitalId,
+        instituicaoFaturamentoId: selectedClinicaId,
+        hospitalNome: selectedHospitalName,
+        instituicaoFaturamentoNome: selectedClinicaName,
+      });
+
+      if (!ensuredId) return;
+      setView("upload");
+    })();
   };
 
   const handleSelecionarClinica = (clinica: {
