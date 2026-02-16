@@ -33,19 +33,24 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "start" | "hospital" | "upload" | "success";
+type ViewState = "start" | "hospital" | "upload_guia" | "upload_descricao" | "success";
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hospitalId } = (location.state ?? {}) as { hospitalId?: string };
 
-  const [files, setFiles] = useState<File[]>([]);
+  // Arquivos da Guia de Autorização
+  const [filesGuia, setFilesGuia] = useState<File[]>([]);
+  // Arquivos da Descrição Cirúrgica
+  const [filesDescricao, setFilesDescricao] = useState<File[]>([]);
+  
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
+  const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
   const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
   const [showFillingScreen, setShowFillingScreen] = useState(false);
   const [fillingProgress, setFillingProgress] = useState(0);
@@ -206,7 +211,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler para arquivos da Guia de Autorização
+  const handleFileChangeGuia = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
@@ -223,15 +229,43 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     if (allowedFiles.length === 0) {
-      setFiles([]);
+      setFilesGuia([]);
       showError(
         "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
       );
       return;
     }
 
-    setFiles((prev) => [...prev, ...allowedFiles]);
-    setStep(2);
+    setFilesGuia((prev) => [...prev, ...allowedFiles]);
+    event.target.value = "";
+  };
+
+  // Handler para arquivos da Descrição Cirúrgica
+  const handleFileChangeDescricao = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return;
+    const selectedFiles = Array.from(event.target.files);
+
+    const allowedFiles = selectedFiles.filter(
+      (file) =>
+        file.type.startsWith("image/") || file.type === "application/pdf",
+    );
+    const ignoredCount = selectedFiles.length - allowedFiles.length;
+
+    if (ignoredCount > 0) {
+      showError(
+        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+      );
+    }
+
+    if (allowedFiles.length === 0) {
+      setFilesDescricao([]);
+      showError(
+        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+      );
+      return;
+    }
+
+    setFilesDescricao((prev) => [...prev, ...allowedFiles]);
     event.target.value = "";
   };
 
@@ -424,9 +458,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Nova função para upload e análise com tela de progresso
-  const handleUploadAndAnalyze = async () => {
-    if (files.length === 0) {
+  // Função para upload e análise da Guia de Autorização com tela de progresso
+  const handleUploadGuiaAutorizacao = async () => {
+    if (filesGuia.length === 0) {
       showError("Selecione pelo menos um arquivo para enviar.");
       return;
     }
@@ -476,8 +510,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       // Etapa 1: Upload dos arquivos (0-30%)
       setAnalyzingProgress(10);
       
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < filesGuia.length; i++) {
+        const file = filesGuia[i];
         const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const timestamp = Date.now();
         const filePath = `guia_autorizacao_cirurgia/${userId}/${timestamp}-${safeName}`;
@@ -497,7 +531,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         uploadedFilePaths.push(filePath);
         // Progresso proporcional ao número de arquivos (10-30%)
-        setAnalyzingProgress(10 + Math.round((i + 1) / files.length * 20));
+        setAnalyzingProgress(10 + Math.round((i + 1) / filesGuia.length * 20));
       }
 
       // Etapa 2: Análise da IA (30-80%)
@@ -558,15 +592,147 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       showSuccess("Guia de autorização processada com sucesso!");
-      setFiles([]);
-      setStep(1);
+      setFilesGuia([]);
+      setShowAnalyzingScreen(false);
+      setView("upload_descricao");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível processar a guia de autorização.";
+      showError(message);
+      setShowAnalyzingScreen(false);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Função para upload e análise da Descrição Cirúrgica com tela de progresso
+  const handleUploadDescricaoCirurgica = async () => {
+    if (filesDescricao.length === 0) {
+      showError("Selecione pelo menos um arquivo para enviar.");
+      return;
+    }
+
+    if (!faturamentoId) {
+      showError("Faturamento não encontrado. Inicie o fluxo novamente.");
+      return;
+    }
+
+    setIsUploading(true);
+    setShowAnalyzingScreen(true);
+    setAnalyzingProgress(0);
+    setAnalyzingStep("uploading");
+
+    const uploadedFilePaths: string[] = [];
+
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+
+      if (userError || !userData?.user) {
+        showError("Faça login novamente para enviar arquivos.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const userId = userData.user.id;
+      const bucketName = "NPS-pro";
+
+      // Etapa 1: Upload dos arquivos (0-30%)
+      setAnalyzingProgress(10);
+      
+      for (let i = 0; i < filesDescricao.length; i++) {
+        const file = filesDescricao[i];
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const timestamp = Date.now();
+        const filePath = `descricao_cirurgica/${userId}/${timestamp}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(
+            `Falha ao enviar "${file.name}": ${uploadError.message}`
+          );
+        }
+
+        uploadedFilePaths.push(filePath);
+        // Progresso proporcional ao número de arquivos (10-30%)
+        setAnalyzingProgress(10 + Math.round((i + 1) / filesDescricao.length * 20));
+      }
+
+      // Etapa 2: Análise da IA (30-80%)
+      setAnalyzingStep("analyzing");
+      setAnalyzingProgress(35);
+
+      const functionUrl =
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
+
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          files: uploadedFilePaths.map((path) => ({ path })),
+          hospitalId: selectedHospitalId,
+          clinicaId: selectedClinicaId,
+        }),
+      });
+
+      setAnalyzingProgress(70);
+
+      let responseJson: any = null;
+      try {
+        responseJson = await response.json();
+      } catch {
+        // se não veio JSON, seguimos só com o status HTTP
+      }
+
+      if (!response.ok || responseJson?.error) {
+        const errorMessage =
+          responseJson?.error ??
+          "Houve erro ao processar a descrição cirúrgica.";
+        throw new Error(errorMessage);
+      }
+
+      // Etapa 3: Salvando dados (80-100%)
+      setAnalyzingStep("saving");
+      setAnalyzingProgress(85);
+
+      // Atualiza o faturamento com os arquivos da descrição cirúrgica
+      const { error: updateError } = await supabase
+        .from("faturamentos")
+        .update({
+          url_descricao_cirurgica: uploadedFilePaths,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", faturamentoId);
+
+      if (updateError) {
+        console.error("Erro ao atualizar faturamento:", updateError);
+      }
+
+      setAnalyzingProgress(100);
+
+      // Aguarda um momento para mostrar 100%
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      showSuccess("Descrição cirúrgica processada com sucesso!");
+      setFilesDescricao([]);
       setShowAnalyzingScreen(false);
       setView("success");
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível processar a guia de autorização.";
+          : "Não foi possível processar a descrição cirúrgica.";
       showError(message);
       setShowAnalyzingScreen(false);
     } finally {
@@ -620,7 +786,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       ? 1
       : view === "hospital"
         ? 1
-        : view === "upload"
+        : view === "upload_guia"
+         ? 2
+         : view === "upload_descricao"
           ? 2
           : 6;
 
@@ -763,7 +931,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       });
 
       if (!ensuredId) return;
-      setView("upload");
+      setView("upload_guia");
     })();
   };
 
@@ -787,7 +955,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
       <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {(view === "upload" || view === "success") && (
+        {(view === "upload_guia" || view === "upload_descricao" || view === "success") && (
           <>
             <p className="mb-3 text-sm font-semibold text-[#D4A017] sm:text-base">
               {saudacao}
@@ -798,12 +966,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 type="button"
                 className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
                 onClick={
-                  view === "upload"
+                  view === "upload_guia"
                     ? () => {
                         setView("hospital");
                         setStep(1);
                       }
-                    : () => navigate("/medico/dashboard")
+                    : view === "upload_descricao"
+                      ? () => {
+                          setView("upload_guia");
+                        }
+                      : () => navigate("/medico/dashboard")
                 }
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -814,12 +986,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
                   <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
                   <span>
-                    {view === "upload" ? "Passo 2/6" : "Envio de Desc. Cirúrgica"}
+                    {view === "upload_guia"
+                      ? "Passo 2/6"
+                      : view === "upload_descricao"
+                        ? "Passo 3/6"
+                        : "Envio Concluído"}
                   </span>
                 </div>
-                {view === "upload" && (
+                {(view === "upload_guia" || view === "upload_descricao") && (
                   <span className="text-[11px] text-[#D4A017] pr-1">
-                    Guia de Autorização de Cirurgia
+                    {view === "upload_guia"
+                      ? "Guia de Autorização de Cirurgia"
+                      : "Descrição Cirúrgica"}
                   </span>
                 )}
               </div>
@@ -1143,7 +1321,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           )}
 
           {/* TELA 3 - UPLOAD */}
-          {view === "upload" && (
+          {view === "upload_guia" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
               <Input
                 id="files-upload"
