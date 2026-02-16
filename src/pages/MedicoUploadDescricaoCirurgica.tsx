@@ -531,8 +531,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   const handleAbrirListaClinicas = () => {
-    if (!loadingClinicas && clinicasMedico.length > 0) {
-      setClinicaStepView("list");
+    if (useSameAsHospital) return;
+
+    // Abre a lista mesmo que esteja vazia (para exibir estado de carregamento ou mensagem)
+    setClinicaStepView("list");
+
+    // Garante carregamento caso ainda não tenha sido feito
+    if (!loadingClinicas && clinicasMedico.length === 0) {
+      void carregarClinicasDoMedico();
     }
   };
 
@@ -735,11 +741,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleAbrirListaClinicas}
-                      disabled={
-                        useSameAsHospital ||
-                        loadingClinicas ||
-                        (!clinicasMedico.length && !selectedClinicaId && !useSameAsHospital)
-                      }
+                      disabled={useSameAsHospital}
                       className={`flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] transition-colors ${
                         useSameAsHospital
                           ? "opacity-60 cursor-not-allowed"
