@@ -700,7 +700,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         </span>
                         <div className="flex flex-col">
                           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#D4A017]/80">
-                            Hospital selecionado
+                            Cirurgia realizada em:
                           </span>
                           <span className="text-sm font-semibold">
                             {selectedHospitalName ||
