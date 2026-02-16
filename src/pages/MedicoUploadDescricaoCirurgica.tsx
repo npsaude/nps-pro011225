@@ -14,6 +14,8 @@ import {
   Signature,
   Send,
   Mail,
+  Loader2,
+  Brain,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showSignedScreen, setShowSignedScreen] = useState(false);
   const [showSendingScreen, setShowSendingScreen] = useState(false);
   const [sendingStep, setSendingStep] = useState<1 | 2>(1);
+
+  // Tela de análise da IA
+  const [showAnalyzingScreen, setShowAnalyzingScreen] = useState(false);
+  const [analyzingProgress, setAnalyzingProgress] = useState(0);
+  const [analyzingStep, setAnalyzingStep] = useState<"uploading" | "analyzing" | "saving">("uploading");
 
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
@@ -414,6 +421,156 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       dismissToast(loadingId);
       setIsUploading(false);
       setShowSendingScreen(false);
+    }
+  };
+
+  // Nova função para upload e análise com tela de progresso
+  const handleUploadAndAnalyze = async () => {
+    if (files.length === 0) {
+      showError("Selecione pelo menos um arquivo para enviar.");
+      return;
+    }
+
+    if (!selectedHospitalId) {
+      showError("Selecione o hospital onde a cirurgia foi realizada.");
+      return;
+    }
+
+    if (!selectedClinicaId) {
+      showError("Selecione a clínica pela qual o serviço será faturado.");
+      return;
+    }
+
+    setIsUploading(true);
+    setShowAnalyzingScreen(true);
+    setAnalyzingProgress(0);
+    setAnalyzingStep("uploading");
+
+    const uploadedFilePaths: string[] = [];
+
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+
+      if (userError || !userData?.user) {
+        showError("Faça login novamente para enviar arquivos.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const userId = userData.user.id;
+      const bucketName = "NPS-pro";
+
+      // Garante que existe um faturamento parcial
+      const ensuredFaturamentoId = await upsertFaturamentoParcial({
+        instituicaoCirurgiaId: selectedHospitalId,
+        instituicaoFaturamentoId: selectedClinicaId,
+        hospitalNome: selectedHospitalName,
+        instituicaoFaturamentoNome: selectedClinicaName,
+      });
+
+      if (!ensuredFaturamentoId) {
+        throw new Error("Não foi possível criar o faturamento.");
+      }
+
+      // Etapa 1: Upload dos arquivos (0-30%)
+      setAnalyzingProgress(10);
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const timestamp = Date.now();
+        const filePath = `guia_autorizacao_cirurgia/${userId}/${timestamp}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(
+            `Falha ao enviar "${file.name}": ${uploadError.message}`
+          );
+        }
+
+        uploadedFilePaths.push(filePath);
+        // Progresso proporcional ao número de arquivos (10-30%)
+        setAnalyzingProgress(10 + Math.round((i + 1) / files.length * 20));
+      }
+
+      // Etapa 2: Análise da IA (30-80%)
+      setAnalyzingStep("analyzing");
+      setAnalyzingProgress(35);
+
+      const functionUrl =
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-autorizacao";
+
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          faturamentoId: ensuredFaturamentoId,
+          files: uploadedFilePaths.map((path) => ({ path })),
+        }),
+      });
+
+      setAnalyzingProgress(70);
+
+      let responseJson: any = null;
+      try {
+        responseJson = await response.json();
+      } catch {
+        // se não veio JSON, seguimos só com o status HTTP
+      }
+
+      if (!response.ok || responseJson?.error) {
+        const errorMessage =
+          responseJson?.error ??
+          "Houve erro ao processar a guia de autorização.";
+        throw new Error(errorMessage);
+      }
+
+      // Etapa 3: Salvando dados (80-100%)
+      setAnalyzingStep("saving");
+      setAnalyzingProgress(85);
+
+      // Atualiza o faturamento com os arquivos da guia de autorização
+      const { error: updateError } = await supabase
+        .from("faturamentos")
+        .update({
+          url_guia_autorizacao: uploadedFilePaths,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", ensuredFaturamentoId);
+
+      if (updateError) {
+        console.error("Erro ao atualizar faturamento:", updateError);
+      }
+
+      setAnalyzingProgress(100);
+
+      // Aguarda um momento para mostrar 100%
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      showSuccess("Guia de autorização processada com sucesso!");
+      setFiles([]);
+      setStep(1);
+      setShowAnalyzingScreen(false);
+      setView("success");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível processar a guia de autorização.";
+      showError(message);
+      setShowAnalyzingScreen(false);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -1097,9 +1254,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
                     disabled={isUploading || files.length === 0}
-                    onClick={() => setAutoFillDialogOpen(true)}
+                    onClick={handleUploadAndAnalyze}
                   >
-                    {isUploading ? "Enviando..." : "Continuar Envio"}
+                    {isUploading ? "Processando..." : "Continuar Envio"}
                   </Button>
 
                   <Button
@@ -1412,6 +1569,142 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tela de Análise da IA */}
+      {showAnalyzingScreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
+          <div className="flex w-full max-w-sm flex-col items-center px-6 py-10 text-center">
+            {/* Ícone animado */}
+            <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_60px_rgba(212,160,23,0.35)]">
+              <div className="absolute inset-1 rounded-[26px] bg-black/60 backdrop-blur-xl" />
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#121212] border border-[#D4A017]/20 shadow-[0_10px_40px_rgba(0,0,0,0.65)]">
+                {analyzingStep === "uploading" ? (
+                  <Upload className="h-8 w-8 text-[#D4A017] animate-pulse" />
+                ) : analyzingStep === "analyzing" ? (
+                  <Brain className="h-8 w-8 text-[#D4A017] animate-pulse" />
+                ) : (
+                  <CheckCircle2 className="h-8 w-8 text-[#D4A017]" />
+                )}
+              </div>
+            </div>
+
+            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
+              {analyzingStep === "uploading"
+                ? "Enviando Imagens..."
+                : analyzingStep === "analyzing"
+                  ? "Analisando com IA..."
+                  : "Salvando Dados..."}
+            </h2>
+            <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs max-w-xs">
+              {analyzingStep === "uploading"
+                ? "Fazendo upload das imagens da guia de autorização."
+                : analyzingStep === "analyzing"
+                  ? "A inteligência artificial está extraindo as informações da guia."
+                  : "Gravando os dados extraídos no sistema."}
+            </p>
+
+            {/* Barra de progresso real */}
+            <div className="mt-6 w-full max-w-xs">
+              <Progress value={analyzingProgress} className="h-2.5 rounded-full" />
+              <p className="mt-2 text-[10px] text-[#6B7280]">
+                {analyzingProgress}% concluído
+              </p>
+            </div>
+
+            {/* Etapas do processo */}
+            <div className="mt-5 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                      analyzingProgress >= 30
+                        ? "bg-[#D4A017] text-black"
+                        : "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/25"
+                    }`}
+                  >
+                    {analyzingProgress >= 30 ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    )}
+                  </span>
+                  <span
+                    className={
+                      analyzingStep === "uploading"
+                        ? "font-medium text-[#F5F5F5]"
+                        : "text-[#9CA3AF]"
+                    }
+                  >
+                    Upload das imagens
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                      analyzingProgress >= 80
+                        ? "bg-[#D4A017] text-black"
+                        : analyzingStep === "analyzing"
+                          ? "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/25"
+                          : "bg-black/50 text-[#6B7280] border border-[#6B7280]/25"
+                    }`}
+                  >
+                    {analyzingProgress >= 80 ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : analyzingStep === "analyzing" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <span className="text-[8px]">2</span>
+                    )}
+                  </span>
+                  <span
+                    className={
+                      analyzingStep === "analyzing"
+                        ? "font-medium text-[#F5F5F5]"
+                        : analyzingProgress >= 80
+                          ? "text-[#9CA3AF]"
+                          : "text-[#6B7280]"
+                    }
+                  >
+                    Análise da IA
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                      analyzingProgress >= 100
+                        ? "bg-[#D4A017] text-black"
+                        : analyzingStep === "saving"
+                          ? "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/25"
+                          : "bg-black/50 text-[#6B7280] border border-[#6B7280]/25"
+                    }`}
+                  >
+                    {analyzingProgress >= 100 ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : analyzingStep === "saving" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <span className="text-[8px]">3</span>
+                    )}
+                  </span>
+                  <span
+                    className={
+                      analyzingStep === "saving"
+                        ? "font-medium text-[#F5F5F5]"
+                        : analyzingProgress >= 100
+                          ? "text-[#9CA3AF]"
+                          : "text-[#6B7280]"
+                    }
+                  >
+                    Salvando no banco de dados
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
