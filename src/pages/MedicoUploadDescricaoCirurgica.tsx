@@ -168,11 +168,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         return;
       }
 
-      // Lista de instituições para faturamento vem de public.clinicas (todos os registros)
+      // Lista de instituições para faturamento vem de public.clinicas (somente ATIVAS)
       // Observação: não filtramos por tipo_unidade aqui; a tela permite Clínica ou Hospital.
       const { data: clinicasData, error: clinicasError } = await supabase
         .from("clinicas")
         .select("id, nome_fantasia")
+        .eq("status", "ATIVA")
         .order("nome_fantasia", { ascending: true });
 
       if (clinicasError) {
@@ -460,6 +461,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
+  const handleAbrirListaClinicas = () => {
+    if (useSameAsHospital) return;
+
+    // Mesmo comportamento de "CIRURGIA REALIZADA EM": se já carregou, abre; se não, carrega.
+    if (!loadingClinicas && clinicasMedico.length > 0) {
+      setClinicaStepView("list");
+      return;
+    }
+
+    if (!loadingClinicas && clinicasMedico.length === 0) {
+      void carregarClinicasDoMedico();
+    }
+  };
+
   const handleAbrirListaHospitais = () => {
     if (!loadingHospitais && hospitaisMedico.length > 0) {
       setHospitalStepView("list");
@@ -494,13 +509,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
     setView("upload");
-  };
-
-  const handleAbrirListaClinicas = () => {
-    if (useSameAsHospital) return;
-    if (!loadingClinicas && clinicasMedico.length > 0) {
-      setClinicaStepView("list");
-    }
   };
 
   const handleSelecionarClinica = (clinica: {
@@ -685,20 +693,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       <span className="text-[#D4A017] font-semibold">faturada</span>
                     </p>
 
-                    {/* Checkbox "Mesmo hospital que foi realizada a cirurgia" */}
-                    <label className="mb-3 flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={useSameAsHospital}
-                        onChange={(e) => handleUseSameAsHospitalChange(e.target.checked)}
-                        disabled={!selectedHospitalId}
-                        className="h-4 w-4 rounded border-[#D4A017]/30 bg-[#121212] text-[#D4A017] focus:ring-[#D4A017]/50 focus:ring-offset-0 disabled:opacity-50"
-                      />
-                      <span className="text-[11px] text-[#9CA3AF]">
-                        Mesmo hospital que foi realizada a cirurgia
-                      </span>
-                    </label>
-
                     <button
                       type="button"
                       onClick={handleAbrirListaClinicas}
@@ -724,7 +718,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                           <span className="text-sm font-semibold">
                             {selectedClinicaName ||
                               (loadingClinicas
-                                ? "Carregando clínicas..."
+                                ? "Carregando instituições..."
                                 : clinicasMedico.length
                                   ? "Selecionar Instituição"
                                   : "Nenhuma instituição disponível")}
@@ -733,6 +727,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       </div>
                       <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
                     </button>
+
+                    {/* Checkbox "Mesmo hospital que foi realizada a cirurgia" (agora abaixo do campo) */}
+                    <label className="mt-3 flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useSameAsHospital}
+                        onChange={(e) => handleUseSameAsHospitalChange(e.target.checked)}
+                        disabled={!selectedHospitalId}
+                        className="h-4 w-4 rounded border-[#D4A017]/30 bg-[#121212] text-[#D4A017] focus:ring-[#D4A017]/50 focus:ring-offset-0 disabled:opacity-50"
+                      />
+                      <span className="text-[11px] text-[#9CA3AF]">
+                        Mesmo hospital que foi realizada a cirurgia
+                      </span>
+                    </label>
                   </div>
 
                   <button
