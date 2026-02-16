@@ -640,6 +640,140 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
+  // Função para upload e análise da Guia de Faturamento de Honorários com tela de progresso
+  const handleUploadGuiaHonorarios = async () => {
+    if (filesHonorarios.length === 0) {
+      showError("Selecione pelo menos um arquivo para enviar.");
+      return;
+    }
+
+    if (!faturamentoId) {
+      showError("Faturamento não encontrado. Inicie o fluxo novamente.");
+      return;
+    }
+
+    setIsUploading(true);
+    setShowAnalyzingScreen(true);
+    setAnalyzingProgress(0);
+    setAnalyzingStep("uploading");
+    setAnalyzingDocType("honorarios");
+
+    const uploadedFilePaths: string[] = [];
+
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+
+      if (userError || !userData?.user) {
+        showError("Faça login novamente para enviar arquivos.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const userId = userData.user.id;
+      const bucketName = "NPS-pro";
+
+      // Etapa 1: Upload dos arquivos (0-30%)
+      setAnalyzingProgress(10);
+      
+      for (let i = 0; i < filesHonorarios.length; i++) {
+        const file = filesHonorarios[i];
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const timestamp = Date.now();
+        const filePath = `guia_honorarios/${userId}/${timestamp}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(
+            `Falha ao enviar "${file.name}": ${uploadError.message}`
+          );
+        }
+
+        uploadedFilePaths.push(filePath);
+        // Progresso proporcional ao número de arquivos (10-30%)
+        setAnalyzingProgress(10 + Math.round((i + 1) / filesHonorarios.length * 20));
+      }
+
+      // Etapa 2: Análise da IA (30-80%)
+      setAnalyzingStep("analyzing");
+      setAnalyzingProgress(35);
+
+      const functionUrl =
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-honorarios";
+
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          faturamentoId,
+          files: uploadedFilePaths.map((path) => ({ path })),
+        }),
+      });
+
+      setAnalyzingProgress(70);
+
+      let responseJson: any = null;
+      try {
+        responseJson = await response.json();
+      } catch {
+        // se não veio JSON, seguimos só com o status HTTP
+      }
+
+      if (!response.ok || responseJson?.error) {
+        const errorMessage =
+          responseJson?.error ??
+          "Houve erro ao processar a guia de faturamento de honorários.";
+        throw new Error(errorMessage);
+      }
+
+      // Etapa 3: Salvando dados (80-100%)
+      setAnalyzingStep("saving");
+      setAnalyzingProgress(85);
+
+      // Atualiza o faturamento com os arquivos da guia de honorários
+      const { error: updateError } = await supabase
+        .from("faturamentos")
+        .update({
+          url_guia_honorarios: uploadedFilePaths,
+          status: "ATIVO", // Ativa o faturamento após completar todos os uploads
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", faturamentoId);
+
+      if (updateError) {
+        console.error("Erro ao atualizar faturamento:", updateError);
+      }
+
+      setAnalyzingProgress(100);
+
+      // Aguarda um momento para mostrar 100%
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      showSuccess("Guia de faturamento de honorários processada com sucesso!");
+      setFilesHonorarios([]);
+      setShowAnalyzingScreen(false);
+      setView("success");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível processar a guia de faturamento de honorários.";
+      showError(message);
+      setShowAnalyzingScreen(false);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Simula o preenchimento automático: barra progride e, ao final, exibe tela de assinatura
   useEffect(() => {
     if (!showFillingScreen) {
@@ -689,12 +823,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         : view === "upload_guia"
          ? 2
          : view === "upload_descricao"
-          ? 2
-          : 6;
+          ? 3
+          : view === "upload_honorarios"
+            ? 4
+            : 6;
 
   const handleNovaDescricao = () => {
     setFilesGuia([]);
     setFilesDescricao([]);
+    setFilesHonorarios([]);
     setStep(1);
     setView("start");
     setSelectedHospitalId(undefined);
@@ -708,7 +845,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   // Arquivos atuais baseado na view
-  const currentFiles = view === "upload_guia" ? filesGuia : filesDescricao;
+  const currentFiles = view === "upload_guia" ? filesGuia : view === "upload_descricao" ? filesDescricao : filesHonorarios;
   const totalArquivos = currentFiles.length;
   const arquivosLabel =
     totalArquivos === 0
@@ -864,6 +1001,48 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setClinicaStepView("selector");
   };
 
+  // Função para obter o título do documento sendo analisado
+  const getAnalyzingDocTitle = () => {
+    switch (analyzingDocType) {
+      case "guia":
+        return "Guia de Autorização de Cirurgia";
+      case "descricao":
+        return "Descrição Cirúrgica";
+      case "honorarios":
+        return "Guia de Faturamento de Honorários";
+      default:
+        return "";
+    }
+  };
+
+  // Função para obter a descrição do passo de análise
+  const getAnalyzingStepDescription = () => {
+    if (analyzingStep === "uploading") {
+      switch (analyzingDocType) {
+        case "guia":
+          return "Fazendo upload das imagens da guia de autorização.";
+        case "descricao":
+          return "Fazendo upload das imagens da descrição cirúrgica.";
+        case "honorarios":
+          return "Fazendo upload das imagens da guia de faturamento de honorários.";
+        default:
+          return "";
+      }
+    } else if (analyzingStep === "analyzing") {
+      switch (analyzingDocType) {
+        case "guia":
+          return "A inteligência artificial está extraindo as informações da guia.";
+        case "descricao":
+          return "A inteligência artificial está extraindo as informações da descrição cirúrgica.";
+        case "honorarios":
+          return "A inteligência artificial está extraindo as informações da guia de faturamento de honorários.";
+        default:
+          return "";
+      }
+    }
+    return "Gravando os dados extraídos no sistema.";
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
       {/* Fundo premium */}
@@ -871,7 +1050,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
       <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {(view === "hospital" || view === "upload_guia" || view === "upload_descricao" || view === "success") && (
+        {(view === "hospital" || view === "upload_guia" || view === "upload_descricao" || view === "upload_honorarios" || view === "success") && (
           <>
             <p className="mb-3 text-sm font-semibold text-[#D4A017] sm:text-base">
               {saudacao}
@@ -896,7 +1075,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       ? () => {
                           setView("upload_guia");
                         }
-                      : () => navigate("/medico/dashboard")
+                      : view === "upload_honorarios"
+                        ? () => {
+                            setView("upload_descricao");
+                          }
+                        : () => navigate("/medico/dashboard")
                 }
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -913,16 +1096,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       ? "Passo 2/6"
                       : view === "upload_descricao"
                         ? "Passo 3/6"
-                        : "Envio Concluído"}
+                        : view === "upload_honorarios"
+                          ? "Passo 4/6"
+                          : "Envio Concluído"}
                   </span>
                 </div>
-                {(view === "hospital" || view === "upload_guia" || view === "upload_descricao") && (
+                {(view === "hospital" || view === "upload_guia" || view === "upload_descricao" || view === "upload_honorarios") && (
                   <span className="text-[11px] text-[#D4A017] pr-1">
                     {view === "hospital"
                       ? "Selecionar Instituições"
                       : view === "upload_guia"
                       ? "Guia de Autorização de Cirurgia"
-                      : "Descrição Cirúrgica"}
+                      : view === "upload_descricao"
+                        ? "Descrição Cirúrgica"
+                        : "Guia de Faturamento de Honorários"}
                   </span>
                 )}
               </div>
@@ -1520,7 +1707,144 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 4 - SUCESSO GERAL (final do processo) */}
+          {/* TELA 4 - UPLOAD GUIA DE FATURAMENTO DE HONORÁRIOS */}
+          {view === "upload_honorarios" && (
+            <div className="mt-2 flex w-full max-w-md flex-col">
+              <Input
+                id="files-upload-honorarios"
+                ref={fileInputRefHonorarios}
+                type="file"
+                multiple
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={handleFileChangeHonorarios}
+              />
+
+              <div className="mb-6">
+                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                </h1>
+                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+                  {filesHonorarios.length === 0 ? (
+                    <>
+                      <span>
+                        Faça upload das imagens da Guia de Faturamento de Honorários.
+                      </span>
+                      <br />
+                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
+                        Obs: Tire várias imagens com os detalhes dos campos da mesma
+                        guia para melhor análise da IA
+                      </span>
+                    </>
+                  ) : (
+                    "Confira os arquivos antes de enviar a Guia de Faturamento de Honorários"
+                  )}
+                </p>
+              </div>
+
+              {filesHonorarios.length === 0 ? (
+                <>
+                  <label
+                    htmlFor="files-upload-honorarios"
+                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
+                        <Upload className="h-8 w-8 text-black" />
+                      </div>
+                      <p className="text-[#F5F5F5] font-medium">
+                        Adicionar Arquivos
+                      </p>
+                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
+                      <p className="text-[#6B7280] text-[11px]">
+                        Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
+                      </p>
+                    </div>
+                  </label>
+
+                  <Button
+                    type="button"
+                    disabled
+                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
+                  >
+                    Selecione arquivos acima
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-[#F5F5F5]">
+                      Seus Arquivos ({filesHonorarios.length === 1 ? "1 arquivo" : `${filesHonorarios.length} arquivos`})
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
+                      onClick={handleAdicionarMaisHonorarios}
+                    >
+                      + Adicionar mais
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filesHonorarios.map((file, index) => (
+                      <div
+                        key={file.name + file.lastModified + index}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                            {isImage(file) ? (
+                              <ImageIcon className="h-4 w-4" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] sm:text-xs">
+                              {file.name}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoverArquivoHonorarios(index)}
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
+                    disabled={isUploading || filesHonorarios.length === 0}
+                    onClick={handleUploadGuiaHonorarios}
+                  >
+                    {isUploading ? "Processando..." : "Finalizar Envio"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
+                    onClick={() => setView("upload_descricao")}
+                    disabled={isUploading}
+                  >
+                    Voltar para Descrição Cirúrgica
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* TELA 5 - SUCESSO GERAL (final do processo) */}
           {view === "success" && (
             <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
               <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
@@ -1589,15 +1913,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   : "Salvando Dados..."}
             </h2>
             <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs max-w-xs">
-              {analyzingStep === "uploading"
-                ? analyzingDocType === "guia"
-                  ? "Fazendo upload das imagens da guia de autorização."
-                  : "Fazendo upload das imagens da descrição cirúrgica."
-                : analyzingStep === "analyzing"
-                  ? analyzingDocType === "guia"
-                    ? "A inteligência artificial está extraindo as informações da guia."
-                    : "A inteligência artificial está extraindo as informações da descrição cirúrgica."
-                  : "Gravando os dados extraídos no sistema."}
+              {getAnalyzingStepDescription()}
             </p>
 
             {/* Barra de progresso real */}
@@ -1610,9 +1926,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
             {/* Título do documento sendo processado */}
             <p className="mt-4 text-[10px] text-[#D4A017] font-medium">
-              {analyzingDocType === "guia"
-                ? "Guia de Autorização de Cirurgia"
-                : "Descrição Cirúrgica"}
+              {getAnalyzingDocTitle()}
             </p>
 
             {/* Etapas do processo */}
