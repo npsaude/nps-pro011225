@@ -33,7 +33,7 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "start" | "hospital" | "upload_guia" | "upload_descricao" | "success";
+type ViewState = "start" | "hospital" | "upload_guia" | "upload_descricao" | "upload_honorarios" | "success";
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -44,6 +44,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
   // Arquivos da Descrição Cirúrgica
   const [filesDescricao, setFilesDescricao] = useState<File[]>([]);
+  // Arquivos da Guia de Honorários
+  const [filesHonorarios, setFilesHonorarios] = useState<File[]>([]);
   
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -51,6 +53,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [view, setView] = useState<ViewState>("start");
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
+  const fileInputRefHonorarios = useRef<HTMLInputElement | null>(null);
   const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
   const [showFillingScreen, setShowFillingScreen] = useState(false);
   const [fillingProgress, setFillingProgress] = useState(0);
@@ -64,7 +67,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showAnalyzingScreen, setShowAnalyzingScreen] = useState(false);
   const [analyzingProgress, setAnalyzingProgress] = useState(0);
   const [analyzingStep, setAnalyzingStep] = useState<"uploading" | "analyzing" | "saving">("uploading");
-  const [analyzingDocType, setAnalyzingDocType] = useState<"guia" | "descricao">("guia");
+  const [analyzingDocType, setAnalyzingDocType] = useState<"guia" | "descricao" | "honorarios">("guia");
 
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
@@ -267,6 +270,35 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     setFilesDescricao((prev) => [...prev, ...allowedFiles]);
+    event.target.value = "";
+  };
+
+  // Handler para arquivos da Guia de Honorários
+  const handleFileChangeHonorarios = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return;
+    const selectedFiles = Array.from(event.target.files);
+
+    const allowedFiles = selectedFiles.filter(
+      (file) =>
+        file.type.startsWith("image/") || file.type === "application/pdf",
+    );
+    const ignoredCount = selectedFiles.length - allowedFiles.length;
+
+    if (ignoredCount > 0) {
+      showError(
+        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+      );
+    }
+
+    if (allowedFiles.length === 0) {
+      setFilesHonorarios([]);
+      showError(
+        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+      );
+      return;
+    }
+
+    setFilesHonorarios((prev) => [...prev, ...allowedFiles]);
     event.target.value = "";
   };
 
@@ -595,7 +627,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Descrição cirúrgica processada com sucesso!");
       setFilesDescricao([]);
       setShowAnalyzingScreen(false);
-      setView("success");
+      setView("upload_honorarios");
     } catch (err) {
       const message =
         err instanceof Error
@@ -718,12 +750,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     fileInputRefDescricao.current?.click();
   };
 
+  const handleAdicionarMaisHonorarios = () => {
+    fileInputRefHonorarios.current?.click();
+  };
+
   const handleRemoverArquivoGuia = (index: number) => {
     setFilesGuia((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoverArquivoDescricao = (index: number) => {
     setFilesDescricao((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoverArquivoHonorarios = (index: number) => {
+    setFilesHonorarios((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleIniciarFluxo = () => {
