@@ -1007,11 +1007,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         guia para melhor análise da IA
                       </span>
                     </>
-                  ) : selectedHospitalName ? (
-                    `Hospital ${selectedHospitalName}. Confira os arquivos antes de enviar a Descrição Cirúrgica.`
                   ) : (
-                    "Confira os arquivos antes de enviar a Descrição Cirúrgica."
+                    "Confira os arquivos antes de enviar a Guia de Autorização de Cirurgia"
                   )}
+
                 </p>
               </div>
 
@@ -1110,8 +1109,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     onClick={handleNovaDescricao}
                     disabled={isUploading}
                   >
-                    Voltar para Nova Descrição
+                    Voltar para Novo Faturamento
                   </Button>
+
                 </>
               )}
             </div>
