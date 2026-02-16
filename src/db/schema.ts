@@ -282,3 +282,129 @@ export interface DbSubscriptionEnrollment {
   created_at: string;
   updated_at: string;
 }
+
+// ==============================
+// Faturamento médico (multi-tenant)
+// ==============================
+
+export type DbFaturamentoStatusPagamento =
+  | "pendente"
+  | "pago_integral"
+  | "pago_parcial"
+  | "glosado";
+
+export type DbItemTipoProcedimento =
+  | "principal"
+  | "secundario"
+  | "anestesia"
+  | "sadt";
+
+export type DbItemStatusPagamento =
+  | "pendente"
+  | "pago_integral"
+  | "pago_parcial"
+  | "glosado_total"
+  | "glosado_parcial";
+
+/**
+ * Cabeçalho do faturamento (tabela: faturamentos)
+ * Multi-tenant por médico logado: medico_id = auth.uid()
+ */
+export interface DbFaturamento {
+  id: string;
+  medico_id: string;
+
+  // Identificação
+  numero_guia_honorarios: string | null;
+  numero_autorizacao: string | null;
+  numero_guia_internacao: string | null;
+
+  // Atendimento
+  data_atendimento: string | null; // ISO date
+  data_cirurgia: string | null; // ISO date
+  hora_inicio: string | null; // HH:mm:ss
+  hora_fim: string | null; // HH:mm:ss
+
+  // Hospital como texto (origem: public.clinicas.nome_fantasia)
+  hospital_nome: string | null;
+  hospital_codigo_cnes: string | null;
+
+  // Paciente
+  paciente_nome: string | null;
+  paciente_cpf: string | null;
+  paciente_carteirinha: string | null;
+  paciente_convenio: string | null;
+
+  // Diagnóstico
+  diagnostico_cid: string | null;
+  diagnostico_descricao: string | null;
+
+  // Equipe (principal)
+  cirurgiao_principal_nome: string | null;
+  cirurgiao_principal_crm: string | null;
+  cirurgiao_principal_uf: string | null;
+  cirurgiao_principal_cbo: string | null;
+
+  // Totais (calculados)
+  valor_total_faturado: number;
+  valor_total_glosa: number;
+  valor_total_desconto: number;
+  valor_total_liquido: number;
+  valor_total_repasse: number;
+
+  // Pagamento
+  forma_pagamento: string | null;
+  grau_participacao: string | null;
+  data_pagamento: string | null; // ISO date
+  status_pagamento: DbFaturamentoStatusPagamento;
+
+  // Documentos (paths/URLs do Storage)
+  url_guia_autorizacao: string[];
+  url_descricao_cirurgica: string[];
+  url_guia_honorarios: string[];
+  url_relatorio_analitico: string[];
+
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Item de faturamento (tabela: itens_faturamento)
+ */
+export interface DbItemFaturamento {
+  id: string;
+  faturamento_id: string;
+
+  // Procedimento
+  codigo_procedimento: string | null;
+  descricao_procedimento: string | null;
+  tipo_procedimento: DbItemTipoProcedimento | null;
+  quantidade: number;
+
+  // Profissional executor
+  profissional_nome: string | null;
+  profissional_crm: string | null;
+  profissional_uf: string | null;
+  profissional_cbo: string | null;
+  percentual_participacao: number;
+
+  // Valores base
+  valor_unitario: number;
+  valor_total_item: number;
+
+  // Conciliação
+  valor_faturado: number;
+  valor_glosa: number;
+  valor_desconto: number;
+  valor_liquido: number;
+  valor_repasse: number;
+  percentual_repasse: number;
+
+  status_item: DbItemStatusPagamento;
+  motivo_glosa: string | null;
+  codigo_glosa: string | null;
+  data_conciliacao: string | null; // ISO date
+
+  created_at: string;
+  updated_at: string;
+}
