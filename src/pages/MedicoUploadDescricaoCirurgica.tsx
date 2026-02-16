@@ -738,7 +738,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       disabled={
                         useSameAsHospital ||
                         loadingClinicas ||
-                        (!clinicasMedico.length && !selectedClinicaId)
+                        (!clinicasMedico.length && !selectedClinicaId && !useSameAsHospital)
                       }
                       className={`flex w-full items-center justify-between rounded-2xl border border-[#D4A017]/30 bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] transition-colors ${
                         useSameAsHospital
@@ -758,8 +758,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                             {selectedClinicaName ||
                               (loadingClinicas
                                 ? "Carregando clínicas..."
-                                : clinicasMedico.length || useSameAsHospital
-                                  ? "Nenhuma clínica vinculada"
+                                : clinicasMedico.length
+                                  ? "Selecionar Clínica"
                                   : "Nenhuma clínica vinculada")}
                           </span>
                         </div>
