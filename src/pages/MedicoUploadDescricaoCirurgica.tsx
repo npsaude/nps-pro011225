@@ -738,7 +738,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         className="h-4 w-4 rounded border-[#D4A017]/30 bg-[#121212] text-[#D4A017] focus:ring-[#D4A017]/50 focus:ring-offset-0 disabled:opacity-50"
                       />
                       <span className="text-[11px] text-[#9CA3AF]">
-                        Mesmo hospital que foi realizada a cirurgia
+                        Mesma instituição que foi realizada a cirurgia
                       </span>
                     </label>
                   </div>
