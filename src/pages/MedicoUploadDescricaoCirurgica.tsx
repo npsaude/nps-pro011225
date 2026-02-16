@@ -829,7 +829,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
       <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {(view === "upload_guia" || view === "upload_descricao" || view === "success") && (
+        {(view === "hospital" || view === "upload_guia" || view === "upload_descricao" || view === "success") && (
           <>
             <p className="mb-3 text-sm font-semibold text-[#D4A017] sm:text-base">
               {saudacao}
@@ -840,7 +840,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 type="button"
                 className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
                 onClick={
-                  view === "upload_guia"
+                  view === "hospital"
+                    ? () => {
+                        setView("start");
+                        setStep(0);
+                      }
+                    : view === "upload_guia"
                     ? () => {
                         setView("hospital");
                         setStep(1);
@@ -860,16 +865,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
                   <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
                   <span>
-                    {view === "upload_guia"
+                    {view === "hospital"
+                      ? "Passo 1/6"
+                      : view === "upload_guia"
                       ? "Passo 2/6"
                       : view === "upload_descricao"
                         ? "Passo 3/6"
                         : "Envio Concluído"}
                   </span>
                 </div>
-                {(view === "upload_guia" || view === "upload_descricao") && (
+                {(view === "hospital" || view === "upload_guia" || view === "upload_descricao") && (
                   <span className="text-[11px] text-[#D4A017] pr-1">
-                    {view === "upload_guia"
+                    {view === "hospital"
+                      ? "Selecionar Instituições"
+                      : view === "upload_guia"
                       ? "Guia de Autorização de Cirurgia"
                       : "Descrição Cirúrgica"}
                   </span>
