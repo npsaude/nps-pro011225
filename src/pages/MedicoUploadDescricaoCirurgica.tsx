@@ -996,15 +996,22 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
                 </h1>
                 <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  {selectedHospitalName
-                    ? `Hospital ${selectedHospitalName}. ${
-                        files.length === 0
-                          ? "Toque abaixo para tirar fotos ou escolher arquivos."
-                          : "Confira os arquivos antes de enviar a Descrição Cirúrgica."
-                      }`
-                    : files.length === 0
-                      ? "Toque abaixo para tirar fotos ou escolher arquivos."
-                      : "Confira os arquivos antes de enviar a Descrição Cirúrgica."}
+                  {files.length === 0 ? (
+                    <>
+                      <span>
+                        Faça upload das imagens da Guia de Autorização de Cirurgia.
+                      </span>
+                      <br />
+                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
+                        Obs: Tire várias imagens com os detalhes dos campos da mesma
+                        guia para melhor análise da IA
+                      </span>
+                    </>
+                  ) : selectedHospitalName ? (
+                    `Hospital ${selectedHospitalName}. Confira os arquivos antes de enviar a Descrição Cirúrgica.`
+                  ) : (
+                    "Confira os arquivos antes de enviar a Descrição Cirúrgica."
+                  )}
                 </p>
               </div>
 
