@@ -142,9 +142,12 @@ const GftForm: React.FC<GftFormProps> = ({
   const onSubmit = async (data: FormData) => {
     setSalvando(true);
     try {
+      // Garantir que clinica_id seja null se for string vazia
+      const clinicaIdValue = data.clinica_id && data.clinica_id.trim() !== "" ? data.clinica_id : null;
+      
       const payload: GftInput = {
         nome_guia: data.nome_guia,
-        clinica_id: data.clinica_id || null,
+        clinica_id: clinicaIdValue,
         html_documento: data.html_documento || null,
         arquivo_modelo_path: editingItem?.arquivo_modelo_path || null,
       };
@@ -290,8 +293,8 @@ const GftForm: React.FC<GftFormProps> = ({
                     Clínica / Hospital
                   </Label>
                   <Select
-                    value={watch("clinica_id") || "none"}
-                    onValueChange={(value) => setValue("clinica_id", value === "none" ? "" : value)}
+                    value={clinicaId || "none"}
+                    onValueChange={(value) => setValue("clinica_id", value === "none" ? "" : value, { shouldDirty: true })}
                     disabled={carregandoClinicas}
                   >
                     <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
