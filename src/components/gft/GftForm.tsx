@@ -430,7 +430,7 @@ const GftForm: React.FC<GftFormProps> = ({
 </body>
 </html>`}
                         {...register("html_documento")}
-                        className="min-h-[350px] resize-none rounded-xl border-slate-200 bg-white font-mono text-xs leading-relaxed transition-all focus:border-emerald-500 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900"
+                        className="min-h-[350px] resize-none rounded-xl border-slate-200 bg-white font-mono text-xs leading-relaxed text-slate-900 transition-all focus:border-emerald-500 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                       />
                       {htmlDocumento && (
                         <div className="absolute bottom-3 right-3 rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
