@@ -39,6 +39,7 @@ import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
 import InactivityLogout from "@/components/auth/InactivityLogout";
 import Profile from "./pages/Profile";
 import AdminSiteContactMessages from "./pages/AdminSiteContactMessages";
+import GftCadastro from "./pages/GftCadastro";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const App = () => (
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />
           <Route path="/cadastro/medicos" element={<MedicosCadastro />} />
+          <Route path="/cadastro/gft" element={<GftCadastro />} />
 
           {/* Gestão de Assinaturas (super_admin) */}
           <Route

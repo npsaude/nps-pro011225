@@ -26,7 +26,7 @@ interface AdminSidebarProps {
     | "cadastro"
     | "config"
     | "assinaturas";
-  cadastroSubsection?: "clinicas" | "hospitais" | "medicos";
+  cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft";
   assinaturasSubsection?: "dashboard" | "assinantes" | "planos" | "formulario-site";
 }
 
@@ -75,6 +75,7 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
+    if (path.startsWith("/cadastro/gft")) return "cadastro";
     if (path.startsWith("/admin/configuracoes")) return "config";
     if (path.startsWith("/admin")) return "home";
     return "home";
@@ -86,6 +87,7 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/clinicas")) return "clinicas";
     if (path.startsWith("/cadastro/hospitais")) return "hospitais";
     if (path.startsWith("/cadastro/medicos")) return "medicos";
+    if (path.startsWith("/cadastro/gft")) return "gft";
     return undefined;
   }, [location.pathname, cadastroSubsection]);
 
@@ -298,6 +300,15 @@ const AdminSidebar = ({
                 onClick={() => navigate("/cadastro/medicos")}
               >
                 <span className="ml-7">Médicos</span>
+              </button>
+
+              <button
+                className={
+                  currentCadastroSub === "gft" ? blockItemActive : blockItemInactive
+                }
+                onClick={() => navigate("/cadastro/gft")}
+              >
+                <span className="ml-7">Guias de Faturamento</span>
               </button>
             </div>
           </div>
