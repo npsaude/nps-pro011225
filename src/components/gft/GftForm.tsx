@@ -277,7 +277,7 @@ const GftForm: React.FC<GftFormProps> = ({
                     id="nome_guia"
                     placeholder="Ex: Guia TISS - Consulta Eletiva"
                     {...register("nome_guia", { required: "Nome da guia é obrigatório" })}
-                    className="h-10 rounded-xl border-slate-200 bg-white text-sm transition-all focus:border-violet-500 focus:ring-violet-500/20 dark:border-slate-700 dark:bg-slate-800"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 transition-all focus:border-violet-500 focus:ring-violet-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                   {errors.nome_guia && (
                     <p className="text-xs text-rose-500">{errors.nome_guia.message}</p>
@@ -294,7 +294,7 @@ const GftForm: React.FC<GftFormProps> = ({
                     onValueChange={(value) => setValue("clinica_id", value === "none" ? "" : value)}
                     disabled={carregandoClinicas}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                       <SelectValue placeholder="Selecione uma clínica ou hospital" />
                     </SelectTrigger>
                     <SelectContent>
