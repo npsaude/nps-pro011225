@@ -21,7 +21,7 @@ export type GftInput = {
 
 export async function listarGuiasFaturamento(): Promise<GuiaFaturamentoHonorarios[]> {
   const { data, error } = await supabase
-    .from("guias_faturamento_honorarios")
+    .from("modelo_guia_faturamento")
     .select(`
       *,
       clinica:clinicas(id, nome_fantasia, razao_social, tipo_unidade)
@@ -41,7 +41,7 @@ export async function buscarGuiaFaturamentoPorId(
   id: string
 ): Promise<GuiaFaturamentoHonorarios | null> {
   const { data, error } = await supabase
-    .from("guias_faturamento_honorarios")
+    .from("modelo_guia_faturamento")
     .select(`
       *,
       clinica:clinicas(id, nome_fantasia, razao_social, tipo_unidade)
@@ -63,7 +63,7 @@ export async function criarGuiaFaturamento(
   payload: GftInput
 ): Promise<GuiaFaturamentoHonorarios> {
   const { data, error } = await supabase
-    .from("guias_faturamento_honorarios")
+    .from("modelo_guia_faturamento")
     .insert(payload)
     .select("*")
     .single();
@@ -82,7 +82,7 @@ export async function atualizarGuiaFaturamento(
   payload: Partial<GftInput>
 ): Promise<GuiaFaturamentoHonorarios> {
   const { data, error } = await supabase
-    .from("guias_faturamento_honorarios")
+    .from("modelo_guia_faturamento")
     .update({
       ...payload,
       updated_at: new Date().toISOString(),
@@ -112,7 +112,7 @@ export async function excluirGuiaFaturamento(id: string): Promise<void> {
   }
 
   const { error } = await supabase
-    .from("guias_faturamento_honorarios")
+    .from("modelo_guia_faturamento")
     .delete()
     .eq("id", id);
 
