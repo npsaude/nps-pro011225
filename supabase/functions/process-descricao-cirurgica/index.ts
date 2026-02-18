@@ -252,6 +252,16 @@ DIAGNÓSTICO FINAL:
 - cid_codigo: Código CID do diagnóstico (ex: "K80.2", "J18.9")
 - diagnostico_descricao: Descrição do diagnóstico
 
+EQUIPE CIRÚRGICA (MUITO IMPORTANTE - extrair todos os membros da equipe):
+- cirurgiao_nome: Nome completo do cirurgião principal
+- cirurgiao_crm: CRM do cirurgião principal (apenas o número)
+- auxiliar1_nome: Nome completo do 1º auxiliar
+- auxiliar1_crm: CRM do 1º auxiliar (apenas o número)
+- auxiliar2_nome: Nome completo do 2º auxiliar
+- auxiliar2_crm: CRM do 2º auxiliar (apenas o número)
+- anestesista_nome: Nome completo do anestesista
+- anestesista_crm: CRM do anestesista (apenas o número)
+
 VALIDAÇÃO:
 - assinatura_medica: Se há assinatura do médico no documento (true/false)
 - data_assinatura: Data da assinatura (formato DD/MM/YYYY ou YYYY-MM-DD)
@@ -271,6 +281,14 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     "hora_fim": string | null,
     "cid_codigo": string | null,
     "diagnostico_descricao": string | null,
+    "cirurgiao_nome": string | null,
+    "cirurgiao_crm": string | null,
+    "auxiliar1_nome": string | null,
+    "auxiliar1_crm": string | null,
+    "auxiliar2_nome": string | null,
+    "auxiliar2_crm": string | null,
+    "anestesista_nome": string | null,
+    "anestesista_crm": string | null,
     "assinatura_medica": boolean | null,
     "data_assinatura": string | null
   },
@@ -418,6 +436,38 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     updateData.diagnostico_descricao = faturamentoData.diagnostico_descricao;
   }
 
+  // Equipe Cirúrgica - Cirurgião Principal
+  if (faturamentoData.cirurgiao_nome) {
+    updateData.cirurgiao_principal_nome = faturamentoData.cirurgiao_nome;
+  }
+  if (faturamentoData.cirurgiao_crm) {
+    updateData.cirurgiao_principal_crm = faturamentoData.cirurgiao_crm;
+  }
+
+  // Equipe Cirúrgica - 1º Auxiliar
+  if (faturamentoData.auxiliar1_nome) {
+    updateData.auxiliar1_nome = faturamentoData.auxiliar1_nome;
+  }
+  if (faturamentoData.auxiliar1_crm) {
+    updateData.auxiliar1_crm = faturamentoData.auxiliar1_crm;
+  }
+
+  // Equipe Cirúrgica - 2º Auxiliar
+  if (faturamentoData.auxiliar2_nome) {
+    updateData.auxiliar2_nome = faturamentoData.auxiliar2_nome;
+  }
+  if (faturamentoData.auxiliar2_crm) {
+    updateData.auxiliar2_crm = faturamentoData.auxiliar2_crm;
+  }
+
+  // Equipe Cirúrgica - Anestesista
+  if (faturamentoData.anestesista_nome) {
+    updateData.anestesista_nome = faturamentoData.anestesista_nome;
+  }
+  if (faturamentoData.anestesista_crm) {
+    updateData.anestesista_crm = faturamentoData.anestesista_crm;
+  }
+
   // Validação/Assinatura
   if (faturamentoData.assinatura_medica !== null && faturamentoData.assinatura_medica !== undefined) {
     updateData.assinatura_medica = Boolean(faturamentoData.assinatura_medica);
@@ -483,6 +533,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
             .from("itens_faturamento")
             .update({
               quantidade_executada: quantidadeExecutada,
+              descricao_procedimento: proc.descricao_procedimento ?? undefined,
               medico_id: medicoId,
               updated_at: new Date().toISOString(),
             })

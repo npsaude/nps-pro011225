@@ -230,7 +230,8 @@ FATURAMENTO (tabela faturamentos):
 - nome_paciente: Nome completo do paciente
 - numero_carteira: Número da carteira/carteirinha do paciente
 - hospital_solicitado: Nome do hospital onde será realizado o procedimento
-- crm_medico_solicitante: CRM do médico solicitante
+- cirurgiao_nome: Nome completo do médico cirurgião solicitante/executante
+- cirurgiao_crm: CRM do médico cirurgião (apenas o número)
 - status_autorizacao: Status da autorização (ex: "AUTORIZADO", "PENDENTE", "NEGADO")
 
 ITENS/PROCEDIMENTOS (tabela itens_faturamento):
@@ -249,7 +250,8 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     "nome_paciente": string | null,
     "numero_carteira": string | null,
     "hospital_solicitado": string | null,
-    "crm_medico_solicitante": string | null,
+    "cirurgiao_nome": string | null,
+    "cirurgiao_crm": string | null,
     "status_autorizacao": string | null
   },
   "procedimentos": [
@@ -372,7 +374,8 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     paciente_nome: faturamentoData.nome_paciente ?? null,
     paciente_carteirinha: faturamentoData.numero_carteira ?? null,
     hospital_nome: faturamentoData.hospital_solicitado ?? null,
-    cirurgiao_principal_crm: faturamentoData.crm_medico_solicitante ?? null,
+    cirurgiao_principal_nome: faturamentoData.cirurgiao_nome ?? null,
+    cirurgiao_principal_crm: faturamentoData.cirurgiao_crm ?? null,
     url_guia_autorizacao: filePaths,
     updated_at: new Date().toISOString(),
   };
@@ -384,6 +387,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   }
 
   console.log("[process-guia-autorizacao] Atualizando faturamento:", faturamentoId);
+  console.log("[process-guia-autorizacao] Dados de atualização:", JSON.stringify(updateData));
 
   const { error: updateError } = await supabase
     .from("faturamentos")
@@ -413,6 +417,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
       codigo_procedimento: proc.codigo_procedimento ?? null,
       descricao_procedimento: proc.descricao_procedimento ?? null,
       quantidade: proc.quantidade_autorizada ?? 1,
+      quantidade_autorizada: proc.quantidade_autorizada ?? 1,
       status_item: "pendente",
     }));
 
