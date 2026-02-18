@@ -17,6 +17,7 @@ import {
   Brain,
   FileCheck,
   AlertCircle,
+  Download,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -134,6 +135,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Estado para controlar geração do PDF
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // Estado para controlar se o PDF já foi gerado e URL para download
+  const [pdfGerado, setPdfGerado] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+
+  // Limpar URL do blob quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [pdfBlobUrl]);
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -1005,15 +1019,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Função para avançar após preview da guia - AGORA GERA PDF
-  const handleAvancarAposPreview = async () => {
-    console.log("[handleAvancarAposPreview] Iniciando...");
-    console.log("[handleAvancarAposPreview] guiaHonorariosId:", guiaHonorariosId);
-    console.log("[handleAvancarAposPreview] htmlGuiaPreenchida length:", htmlGuiaPreenchida?.length || 0);
+  // Função para gerar e salvar o PDF (chamada ao entrar na tela de preview)
+  const handleGerarPdf = async () => {
+    console.log("[handleGerarPdf] Iniciando...");
+    console.log("[handleGerarPdf] guiaHonorariosId:", guiaHonorariosId);
+    console.log("[handleGerarPdf] htmlGuiaPreenchida length:", htmlGuiaPreenchida?.length || 0);
 
     if (!guiaHonorariosId || !htmlGuiaPreenchida) {
-      console.log("[handleAvancarAposPreview] Sem guia ou HTML, finalizando direto");
-      await finalizarFaturamento();
+      console.log("[handleGerarPdf] Sem guia ou HTML, não pode gerar PDF");
       return;
     }
 
@@ -1022,27 +1035,30 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        console.error("[handleAvancarAposPreview] Erro de autenticação:", userError);
+        console.error("[handleGerarPdf] Erro de autenticação:", userError);
         showError("Faça login novamente.");
         navigate("/login-medico");
         return;
       }
 
       const userId = userData.user.id;
-      console.log("[handleAvancarAposPreview] userId:", userId);
+      console.log("[handleGerarPdf] userId:", userId);
 
       // 1. Gerar o PDF
-      console.log("[handleAvancarAposPreview] Gerando PDF...");
+      console.log("[handleGerarPdf] Gerando PDF...");
       const pdfBlob = await gerarPdfGuiaHonorarios();
       
       if (!pdfBlob) {
-        console.error("[handleAvancarAposPreview] Falha ao gerar PDF - blob é null");
-        showError("Não foi possível gerar o PDF da guia. O faturamento será finalizado sem o PDF.");
-        await finalizarFaturamento();
+        console.error("[handleGerarPdf] Falha ao gerar PDF - blob é null");
+        showError("Não foi possível gerar o PDF da guia.");
         return;
       }
 
-      console.log("[handleAvancarAposPreview] PDF gerado com sucesso, tamanho:", pdfBlob.size);
+      console.log("[handleGerarPdf] PDF gerado com sucesso, tamanho:", pdfBlob.size);
+
+      // Criar URL para download
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      setPdfBlobUrl(blobUrl);
 
       // 2. Fazer upload do PDF para o storage
       const bucketName = "NPS-pro";
@@ -1050,28 +1066,28 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const pdfFileName = `guia_honorarios_${guiaHonorariosId}_${timestamp}.pdf`;
       const pdfPath = `guias_honorarios/${userId}/${pdfFileName}`;
 
-      console.log("[handleAvancarAposPreview] Fazendo upload para:", pdfPath);
+      console.log("[handleGerarPdf] Fazendo upload para:", pdfPath);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(pdfPath, pdfBlob, {
           cacheControl: "3600",
-          upsert: true, // Mudado para true para sobrescrever se existir
+          upsert: true,
           contentType: "application/pdf",
         });
 
       if (uploadError) {
-        console.error("[handleAvancarAposPreview] Erro no upload:", uploadError);
-        showError(`Erro ao salvar PDF: ${uploadError.message}`);
-        // Continua mesmo com erro no upload
-        await finalizarFaturamento();
+        console.error("[handleGerarPdf] Erro no upload:", uploadError);
+        showError(`Erro ao salvar PDF no servidor: ${uploadError.message}`);
+        // Mesmo com erro no upload, permite download local
+        setPdfGerado(true);
         return;
       }
 
-      console.log("[handleAvancarAposPreview] Upload concluído:", uploadData);
+      console.log("[handleGerarPdf] Upload concluído:", uploadData);
 
       // 3. Atualizar a tabela guia_honorarios com o path do PDF
-      console.log("[handleAvancarAposPreview] Atualizando tabela guia_honorarios...");
+      console.log("[handleGerarPdf] Atualizando tabela guia_honorarios...");
       const { data: updateData, error: updateError } = await supabase
         .from("guia_honorarios")
         .update({
@@ -1082,28 +1098,49 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         .select();
 
       if (updateError) {
-        console.error("[handleAvancarAposPreview] Erro ao atualizar tabela:", updateError);
+        console.error("[handleGerarPdf] Erro ao atualizar tabela:", updateError);
         showError(`Erro ao registrar PDF: ${updateError.message}`);
       } else {
-        console.log("[handleAvancarAposPreview] Tabela atualizada com sucesso:", updateData);
+        console.log("[handleGerarPdf] Tabela atualizada com sucesso:", updateData);
         showSuccess("PDF da guia gerado e salvo com sucesso!");
       }
 
-      // 4. Finalizar o faturamento
-      await finalizarFaturamento();
+      setPdfGerado(true);
     } catch (error) {
-      console.error("[handleAvancarAposPreview] Erro geral:", error);
+      console.error("[handleGerarPdf] Erro geral:", error);
       showError("Erro ao processar PDF da guia.");
-      // Continua mesmo com erro
-      await finalizarFaturamento();
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
+  // Função para baixar o PDF
+  const handleBaixarPdf = () => {
+    if (!pdfBlobUrl) {
+      showError("PDF não disponível para download.");
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = pdfBlobUrl;
+    link.download = `guia_honorarios_${guiaHonorariosId || "documento"}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Função para avançar após preview da guia (apenas finaliza o faturamento)
+  const handleAvancarAposPreview = async () => {
+    console.log("[handleAvancarAposPreview] Finalizando faturamento...");
+    await finalizarFaturamento();
+  };
+
   // Função para finalizar o faturamento (mudar status para ATIVO)
   const finalizarFaturamento = async () => {
-    if (!faturamentoId) return;
+    if (!faturamentoId) {
+      setView("success");
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -1158,6 +1195,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setItensFaturamento([]);
     setHtmlGuiaPreenchida("");
     setGuiaHonorariosId(null);
+    // Resetar estados do PDF
+    setPdfGerado(false);
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+    }
+    setPdfBlobUrl(null);
   };
 
   const currentFiles = view === "upload_guia" ? filesGuia : filesDescricao;
@@ -2098,28 +2141,58 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               {/* Container do HTML da guia */}
               <div className="w-full rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto max-h-[60vh]">
-                <div 
+                <div
                   ref={guiaPreviewRef}
                   className="guia-preview"
                   dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
                 />
               </div>
 
-              <Button
-                type="button"
-                className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                onClick={handleAvancarAposPreview}
-                disabled={isGeneratingPdf}
-              >
-                {isGeneratingPdf ? (
-                  <>
+              {/* Botões de ação */}
+              <div className="mt-6 flex flex-col gap-3">
+                {/* Estado inicial: mostrar botão de gerar PDF */}
+                {!pdfGerado && !isGeneratingPdf && (
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
+                    onClick={handleGerarPdf}
+                  >
+                    <FileCheck className="mr-2 h-4 w-4" />
+                    Gerar PDF da Guia
+                  </Button>
+                )}
+
+                {/* Estado gerando: mostrar loading */}
+                {isGeneratingPdf && (
+                  <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Gerando PDF...
-                  </>
-                ) : (
-                  "Avançar"
+                  </div>
                 )}
-              </Button>
+
+                {/* Estado PDF gerado: mostrar botões de baixar e avançar */}
+                {pdfGerado && !isGeneratingPdf && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full rounded-lg border-[#D4A017]/40 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 flex items-center justify-center"
+                      onClick={handleBaixarPdf}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar PDF
+                    </Button>
+
+                    <Button
+                      type="button"
+                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
+                      onClick={handleAvancarAposPreview}
+                    >
+                      Avançar
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
