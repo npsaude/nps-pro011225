@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   ArrowLeft,
   Upload,
@@ -126,6 +128,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Checkbox "Mesmo hospital que foi realizada a cirurgia"
   const [useSameAsHospital, setUseSameAsHospital] = useState(false);
+
+  // Ref para o container do preview da guia (para gerar PDF)
+  const guiaPreviewRef = useRef<HTMLDivElement | null>(null);
+
+  // Estado para controlar geração do PDF
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
@@ -860,9 +868,172 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     await finalizarFaturamento();
   };
 
-  // Função para avançar após preview da guia
+  // Função para gerar PDF da guia de honorários
+  const gerarPdfGuiaHonorarios = async (): Promise<Blob | null> => {
+    if (!guiaPreviewRef.current) {
+      console.error("Ref do preview da guia não encontrado");
+      return null;
+    }
+
+    try {
+      // Capturar o HTML como canvas
+      const canvas = await html2canvas(guiaPreviewRef.current, {
+        scale: 2, // Melhor qualidade
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      // Criar PDF
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calcular dimensões mantendo proporção
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10; // Margem superior
+
+      // Se a imagem for maior que uma página, dividir em múltiplas páginas
+      const scaledHeight = imgHeight * ratio;
+      const pageHeight = pdfHeight - 20; // Margem
+
+      if (scaledHeight <= pageHeight) {
+        // Cabe em uma página
+        pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, scaledHeight);
+      } else {
+        // Múltiplas páginas
+        let remainingHeight = scaledHeight;
+        let currentY = 0;
+        let pageNum = 0;
+
+        while (remainingHeight > 0) {
+          if (pageNum > 0) {
+            pdf.addPage();
+          }
+
+          const heightToDraw = Math.min(pageHeight, remainingHeight);
+          
+          // Criar um canvas temporário para a porção atual
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = (heightToDraw / ratio) * (canvas.width / imgWidth);
+          
+          const tempCtx = tempCanvas.getContext("2d");
+          if (tempCtx) {
+            tempCtx.drawImage(
+              canvas,
+              0,
+              currentY / ratio,
+              canvas.width,
+              tempCanvas.height,
+              0,
+              0,
+              tempCanvas.width,
+              tempCanvas.height
+            );
+            
+            const tempImgData = tempCanvas.toDataURL("image/png");
+            pdf.addImage(tempImgData, "PNG", imgX, imgY, imgWidth * ratio, heightToDraw);
+          }
+
+          remainingHeight -= heightToDraw;
+          currentY += heightToDraw;
+          pageNum++;
+        }
+      }
+
+      // Retornar como Blob
+      return pdf.output("blob");
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      return null;
+    }
+  };
+
+  // Função para avançar após preview da guia - AGORA GERA PDF
   const handleAvancarAposPreview = async () => {
-    await finalizarFaturamento();
+    if (!guiaHonorariosId || !htmlGuiaPreenchida) {
+      await finalizarFaturamento();
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        showError("Faça login novamente.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const userId = userData.user.id;
+
+      // 1. Gerar o PDF
+      const pdfBlob = await gerarPdfGuiaHonorarios();
+      
+      if (!pdfBlob) {
+        console.error("Não foi possível gerar o PDF");
+        // Continua mesmo sem PDF
+        await finalizarFaturamento();
+        return;
+      }
+
+      // 2. Fazer upload do PDF para o storage
+      const bucketName = "NPS-pro";
+      const timestamp = Date.now();
+      const pdfFileName = `guia_honorarios_${guiaHonorariosId}_${timestamp}.pdf`;
+      const pdfPath = `guias_honorarios/${userId}/${pdfFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(pdfPath, pdfBlob, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: "application/pdf",
+        });
+
+      if (uploadError) {
+        console.error("Erro ao fazer upload do PDF:", uploadError);
+        // Continua mesmo com erro no upload
+        await finalizarFaturamento();
+        return;
+      }
+
+      // 3. Atualizar a tabela guia_honorarios com o path do PDF
+      const { error: updateError } = await supabase
+        .from("guia_honorarios")
+        .update({
+          pdf_guia_honorario: pdfPath,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", guiaHonorariosId);
+
+      if (updateError) {
+        console.error("Erro ao atualizar guia_honorarios com PDF:", updateError);
+      } else {
+        console.log("PDF da guia de honorários salvo com sucesso:", pdfPath);
+      }
+
+      // 4. Finalizar o faturamento
+      await finalizarFaturamento();
+    } catch (error) {
+      console.error("Erro ao processar PDF da guia:", error);
+      // Continua mesmo com erro
+      await finalizarFaturamento();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   // Função para finalizar o faturamento (mudar status para ATIVO)
@@ -1863,6 +2034,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               {/* Container do HTML da guia */}
               <div className="w-full rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto max-h-[60vh]">
                 <div 
+                  ref={guiaPreviewRef}
                   className="guia-preview"
                   dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
                 />
@@ -1870,10 +2042,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               <Button
                 type="button"
-                className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
+                className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
                 onClick={handleAvancarAposPreview}
+                disabled={isGeneratingPdf}
               >
-                Avançar
+                {isGeneratingPdf ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando PDF...
+                  </>
+                ) : (
+                  "Avançar"
+                )}
               </Button>
             </div>
           )}
