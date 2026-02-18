@@ -912,16 +912,33 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     try {
+      console.log("[PDF] Aguardando renderização completa...");
+      
+      // Aguardar um momento para garantir que as fontes e estilos foram carregados
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Forçar reflow do elemento
+      elementToCapture.offsetHeight;
+      
       console.log("[PDF] Capturando elemento com html2canvas...");
       
-      // Capturar o HTML como canvas - escala reduzida para menor tamanho
+      // Capturar o HTML como canvas
       const canvas = await html2canvas(elementToCapture, {
-        scale: 1.5, // Reduzido de 2 para 1.5 para menor tamanho
+        scale: 2, // Escala maior para melhor qualidade de texto
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
         allowTaint: true,
         foreignObjectRendering: false,
+        windowWidth: elementToCapture.scrollWidth,
+        windowHeight: elementToCapture.scrollHeight,
+        // Garantir que todo o conteúdo seja capturado
+        width: elementToCapture.scrollWidth,
+        height: elementToCapture.scrollHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
       });
 
       console.log("[PDF] Canvas gerado:", canvas.width, "x", canvas.height);
@@ -1065,7 +1082,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const bucketName = "NPS-pro";
       const timestamp = Date.now();
       const pdfFileName = `guia_honorarios_${guiaHonorariosId}_${timestamp}.pdf`;
-      const pdfPath = `guias_honorarios/${userId}/${pdfFileName}`;
+      const pdfPath = `guia_honorarios/${userId}/${pdfFileName}`;
 
       console.log("[handleGerarPdf] Fazendo upload para:", pdfPath);
 
