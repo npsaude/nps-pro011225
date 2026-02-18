@@ -723,6 +723,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       // 4. Preencher os placeholders no HTML
       let htmlPreenchido = modeloData.html_documento;
+      
+      // Remover marcadores de código markdown (```html e ```) se existirem
+      htmlPreenchido = htmlPreenchido
+        .replace(/^```html\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
 
       // Formatar data
       const formatarData = (data: string | null | undefined) => {
