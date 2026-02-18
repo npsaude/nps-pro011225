@@ -35,6 +35,7 @@ interface FaturamentoData {
   url_guia_autorizacao: string[];
   url_descricao_cirurgica: string[];
   url_guia_honorarios: string[];
+  guia_honorarios_id: string | null;
 }
 
 // Formatar data para exibição
@@ -395,7 +396,8 @@ serve(async (req) => {
       instituicao_faturamento_id,
       url_guia_autorizacao,
       url_descricao_cirurgica,
-      url_guia_honorarios
+      url_guia_honorarios,
+      guia_honorarios_id
     `)
     .eq("id", faturamentoId)
     .single();
@@ -415,6 +417,27 @@ serve(async (req) => {
 
   const fat = faturamento as FaturamentoData;
   console.log("[send-billing-emails] Faturamento encontrado:", fat.id);
+  console.log("[send-billing-emails] guia_honorarios_id:", fat.guia_honorarios_id);
+  console.log("[send-billing-emails] url_guia_autorizacao:", fat.url_guia_autorizacao);
+  console.log("[send-billing-emails] url_descricao_cirurgica:", fat.url_descricao_cirurgica);
+  console.log("[send-billing-emails] url_guia_honorarios:", fat.url_guia_honorarios);
+
+  // 1.1) Buscar PDF da guia de honorários se existir guia_honorarios_id
+  let pdfGuiaHonorarioPath: string | null = null;
+  if (fat.guia_honorarios_id) {
+    const { data: guiaHonorarios, error: guiaError } = await supabase
+      .from("guia_honorarios")
+      .select("pdf_guia_honorario")
+      .eq("id", fat.guia_honorarios_id)
+      .single();
+
+    if (!guiaError && guiaHonorarios?.pdf_guia_honorario) {
+      pdfGuiaHonorarioPath = guiaHonorarios.pdf_guia_honorario;
+      console.log("[send-billing-emails] PDF da guia de honorários encontrado:", pdfGuiaHonorarioPath);
+    } else {
+      console.log("[send-billing-emails] Guia de honorários sem PDF ou erro:", guiaError);
+    }
+  }
 
   // 2) Buscar dados das instituições
   const instituicaoCirurgiaId = fat.instituicao_cirurgia_id;
@@ -547,18 +570,32 @@ serve(async (req) => {
     }
   }
 
-  // Processar guia de honorários
+  // Processar guia de honorários - primeiro do array url_guia_honorarios
   if (fat.url_guia_honorarios && fat.url_guia_honorarios.length > 0) {
     for (let i = 0; i < fat.url_guia_honorarios.length; i++) {
       const path = fat.url_guia_honorarios[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_honorarios_${i + 1}.${ext}`;
+      console.log("[send-billing-emails] Processando guia honorários do array:", path);
       const attachment = await downloadFile(path, filename);
       if (attachment) attachments.push(attachment);
     }
   }
 
+  // Processar PDF da guia de honorários da tabela guia_honorarios
+  if (pdfGuiaHonorarioPath) {
+    console.log("[send-billing-emails] Processando PDF da guia de honorários:", pdfGuiaHonorarioPath);
+    const attachment = await downloadFile(pdfGuiaHonorarioPath, "guia_honorarios.pdf");
+    if (attachment) {
+      attachments.push(attachment);
+      console.log("[send-billing-emails] PDF da guia de honorários adicionado aos anexos");
+    } else {
+      console.log("[send-billing-emails] Falha ao baixar PDF da guia de honorários");
+    }
+  }
+
   console.log("[send-billing-emails] Total de anexos preparados:", attachments.length);
+  console.log("[send-billing-emails] Anexos:", attachments.map(a => a.filename));
 
   // 4) Preparar dados formatados
   const dataCirurgiaFormatada = formatarData(fat.data_cirurgia);
@@ -590,7 +627,7 @@ serve(async (req) => {
         smtpFromName,
         clinicaCirurgia.email_contato_faturamento,
         userEmail,
-        `[NÃO FATURAR] Documentação Cirúrgica - ${fat.paciente_nome || "Paciente"}`,
+        `[NÃO FATURAR] ${userName} - ${fat.paciente_nome || "Paciente"}`,
         emailNaoEnviar,
         attachments
       );
@@ -622,7 +659,7 @@ serve(async (req) => {
       smtpFromName,
       clinicaFat.email_contato_faturamento!,
       userEmail,
-      `[FATURAMENTO] Documentação Cirúrgica - ${fat.paciente_nome || "Paciente"}`,
+      `[FATURAMENTO] ${userName} - ${fat.paciente_nome || "Paciente"}`,
       emailEnviar,
       attachments
     );
@@ -653,7 +690,7 @@ serve(async (req) => {
       smtpFromName,
       clinicaFat.email_contato_faturamento!,
       userEmail,
-      `[FATURAMENTO] Documentação Cirúrgica - ${fat.paciente_nome || "Paciente"}`,
+      `[FATURAMENTO] ${userName} - ${fat.paciente_nome || "Paciente"}`,
       emailEnviar,
       attachments
     );
