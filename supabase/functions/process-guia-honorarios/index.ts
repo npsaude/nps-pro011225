@@ -1,6 +1,9 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  validarProcedimentoCbhpm,
+} from "../_shared/cbhpm-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -481,7 +484,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     );
   }
 
-  // 6) Atualizar os itens de faturamento existentes ou inserir novos
+  // 6) Atualizar os itens de faturamento existentes ou inserir novos - COM VALIDAÇÃO CBHPM
   if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
     console.log("[process-guia-honorarios] Processando", procedimentosData.length, "procedimentos...");
 
@@ -495,73 +498,70 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     const medicoId = faturamentoInfo?.medico_id ?? userId;
 
     for (const proc of procedimentosData) {
-      const codigoProcedimento = proc.codigo_procedimento;
+      const codigoOriginal = proc.codigo_procedimento?.toString().trim() || null;
+      const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
       const quantidadeFaturada = proc.quantidade_faturada ?? proc.quantidade_executada ?? 1;
       const valorUnitario = normalizeMonetary(proc.valor_unitario) ?? 0;
       const valorTotal = normalizeMonetary(proc.valor_total) ?? (valorUnitario * quantidadeFaturada);
 
-      if (codigoProcedimento) {
-        // Tentar encontrar item existente pelo código do procedimento
-        const { data: existingItem, error: findError } = await supabase
+      // Validar contra CBHPM para obter código/descrição corretos
+      const validacao = await validarProcedimentoCbhpm(
+        supabase,
+        codigoOriginal,
+        descricaoOriginal,
+        0.6 // limiar de similaridade 60%
+      );
+
+      if (!validacao.valido || !validacao.codigo_validado) {
+        console.log(
+          `[process-guia-honorarios] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
+        );
+        continue;
+      }
+
+      const codigoProcedimento = validacao.codigo_validado;
+      const descricaoProcedimento = validacao.descricao_validada;
+
+      console.log(
+        `[process-guia-honorarios] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
+      );
+
+      // Tentar encontrar item existente pelo código do procedimento
+      const { data: existingItem, error: findError } = await supabase
+        .from("itens_faturamento")
+        .select("id")
+        .eq("faturamento_id", faturamentoId)
+        .eq("codigo_procedimento", codigoProcedimento)
+        .maybeSingle();
+
+      if (existingItem) {
+        // Atualizar item existente com dados de faturamento
+        const { error: updateItemError } = await supabase
           .from("itens_faturamento")
-          .select("id")
-          .eq("faturamento_id", faturamentoId)
-          .eq("codigo_procedimento", codigoProcedimento)
-          .maybeSingle();
+          .update({
+            quantidade_faturada: quantidadeFaturada,
+            valor_unitario: valorUnitario,
+            valor_total_item: valorTotal,
+            valor_faturado: valorTotal,
+            medico_id: medicoId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingItem.id);
 
-        if (existingItem) {
-          // Atualizar item existente com dados de faturamento
-          const { error: updateItemError } = await supabase
-            .from("itens_faturamento")
-            .update({
-              quantidade_faturada: quantidadeFaturada,
-              valor_unitario: valorUnitario,
-              valor_total_item: valorTotal,
-              valor_faturado: valorTotal,
-              medico_id: medicoId,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingItem.id);
-
-          if (updateItemError) {
-            console.error("[process-guia-honorarios] Erro ao atualizar item:", updateItemError);
-          } else {
-            console.log("[process-guia-honorarios] Item atualizado:", codigoProcedimento);
-          }
+        if (updateItemError) {
+          console.error("[process-guia-honorarios] Erro ao atualizar item:", updateItemError);
         } else {
-          // Inserir novo item
-          const { error: insertError } = await supabase
-            .from("itens_faturamento")
-            .insert({
-              faturamento_id: faturamentoId,
-              medico_id: medicoId,
-              codigo_procedimento: codigoProcedimento,
-              descricao_procedimento: proc.descricao_procedimento ?? null,
-              quantidade_autorizada: proc.quantidade_autorizada ?? quantidadeFaturada,
-              quantidade_executada: proc.quantidade_executada ?? quantidadeFaturada,
-              quantidade_faturada: quantidadeFaturada,
-              quantidade: quantidadeFaturada,
-              valor_unitario: valorUnitario,
-              valor_total_item: valorTotal,
-              valor_faturado: valorTotal,
-              status_item: "pendente",
-            });
-
-          if (insertError) {
-            console.error("[process-guia-honorarios] Erro ao inserir item:", insertError);
-          } else {
-            console.log("[process-guia-honorarios] Novo item inserido:", codigoProcedimento);
-          }
+          console.log("[process-guia-honorarios] Item atualizado:", codigoProcedimento);
         }
-      } else if (proc.descricao_procedimento) {
-        // Se não tem código mas tem descrição, inserir novo item
+      } else {
+        // Inserir novo item
         const { error: insertError } = await supabase
           .from("itens_faturamento")
           .insert({
             faturamento_id: faturamentoId,
             medico_id: medicoId,
-            codigo_procedimento: null,
-            descricao_procedimento: proc.descricao_procedimento,
+            codigo_procedimento: codigoProcedimento,
+            descricao_procedimento: descricaoProcedimento,
             quantidade_autorizada: proc.quantidade_autorizada ?? quantidadeFaturada,
             quantidade_executada: proc.quantidade_executada ?? quantidadeFaturada,
             quantidade_faturada: quantidadeFaturada,
@@ -573,9 +573,9 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
           });
 
         if (insertError) {
-          console.error("[process-guia-honorarios] Erro ao inserir item sem código:", insertError);
+          console.error("[process-guia-honorarios] Erro ao inserir item:", insertError);
         } else {
-          console.log("[process-guia-honorarios] Novo item inserido (sem código):", proc.descricao_procedimento);
+          console.log("[process-guia-honorarios] Novo item inserido:", codigoProcedimento);
         }
       }
     }

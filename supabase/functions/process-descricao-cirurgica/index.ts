@@ -1,6 +1,10 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  validarProcedimentoCbhpm,
+  normalizeText as normalizeTextCbhpm,
+} from "../_shared/cbhpm-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -501,7 +505,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   }
 
   // 6) Atualizar os itens de faturamento existentes com quantidade_executada
-  // ou inserir novos procedimentos se não existirem
+  // ou inserir novos procedimentos se não existirem - COM VALIDAÇÃO CBHPM
   if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
     console.log("[process-descricao-cirurgica] Processando", procedimentosData.length, "procedimentos...");
 
@@ -560,9 +564,31 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     };
 
     for (const proc of procedimentosData) {
-      const codigoProcedimento = proc.codigo_procedimento;
-      const descricaoProcedimento = proc.descricao_procedimento;
+      const codigoOriginal = proc.codigo_procedimento?.toString().trim() || null;
+      const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
       const quantidadeExecutada = proc.quantidade_executada ?? 1;
+
+      // Validar contra CBHPM para obter código/descrição corretos
+      const validacao = await validarProcedimentoCbhpm(
+        supabase,
+        codigoOriginal,
+        descricaoOriginal,
+        0.6 // limiar de similaridade 60%
+      );
+
+      if (!validacao.valido || !validacao.codigo_validado) {
+        console.log(
+          `[process-descricao-cirurgica] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
+        );
+        continue;
+      }
+
+      const codigoProcedimento = validacao.codigo_validado;
+      const descricaoProcedimento = validacao.descricao_validada;
+
+      console.log(
+        `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
+      );
 
       // Verificar se já existe (por código OU por descrição)
       const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);

@@ -1,6 +1,10 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  validarProcedimentoCbhpm,
+  normalizeText,
+} from "../_shared/cbhpm-validator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -417,58 +421,59 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     );
   }
 
-  // 6) Inserir os itens de faturamento (procedimentos) - COM DEDUPLICAÇÃO
+  // 6) Inserir os itens de faturamento (procedimentos) - COM VALIDAÇÃO CBHPM
   if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
     console.log("[process-guia-autorizacao] Processando", procedimentosData.length, "procedimentos da IA...");
 
-    // Função para normalizar texto para comparação
-    const normalizeText = (text: string | null | undefined): string => {
-      if (!text) return "";
-      return text
-        .toLowerCase()
-        .trim()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, " ");
-    };
-
-    // Deduplicar procedimentos por código OU descrição
-    const seenCodes = new Set<string>();
-    const seenDescriptions = new Set<string>();
-    const uniqueProcedimentos: any[] = [];
+    // Deduplicar e validar procedimentos contra CBHPM
+    const codigosJaAdicionados = new Set<string>();
+    const procedimentosValidados: any[] = [];
 
     for (const proc of procedimentosData) {
-      const codigo = proc.codigo_procedimento?.toString().trim() || null;
-      const descricao = proc.descricao_procedimento?.toString().trim() || null;
-      const normalizedDescricao = normalizeText(descricao);
+      const codigoOriginal = proc.codigo_procedimento?.toString().trim() || null;
+      const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
 
-      // Verificar se já vimos este código
-      if (codigo && seenCodes.has(codigo)) {
-        console.log("[process-guia-autorizacao] Procedimento duplicado ignorado (código):", codigo);
-        continue;
+      // Validar contra CBHPM
+      const validacao = await validarProcedimentoCbhpm(
+        supabase,
+        codigoOriginal,
+        descricaoOriginal,
+        0.6 // limiar de similaridade 60%
+      );
+
+      if (validacao.valido && validacao.codigo_validado) {
+        // Evitar duplicatas
+        if (codigosJaAdicionados.has(validacao.codigo_validado)) {
+          console.log("[process-guia-autorizacao] Procedimento duplicado ignorado:", validacao.codigo_validado);
+          continue;
+        }
+
+        codigosJaAdicionados.add(validacao.codigo_validado);
+
+        procedimentosValidados.push({
+          codigo_procedimento: validacao.codigo_validado,
+          descricao_procedimento: validacao.descricao_validada,
+          quantidade_autorizada: proc.quantidade_autorizada ?? 1,
+          metodo_validacao: validacao.metodo_validacao,
+        });
+
+        console.log(
+          `[process-guia-autorizacao] ✅ Procedimento validado (${validacao.metodo_validacao}): ${validacao.codigo_validado}`
+        );
+      } else {
+        console.log(
+          `[process-guia-autorizacao] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
+        );
       }
-
-      // Verificar se já vimos esta descrição (normalizada)
-      if (normalizedDescricao && seenDescriptions.has(normalizedDescricao)) {
-        console.log("[process-guia-autorizacao] Procedimento duplicado ignorado (descrição):", descricao);
-        continue;
-      }
-
-      // Adicionar aos sets de controle
-      if (codigo) seenCodes.add(codigo);
-      if (normalizedDescricao) seenDescriptions.add(normalizedDescricao);
-
-      // Adicionar à lista de únicos
-      uniqueProcedimentos.push(proc);
     }
 
-    console.log("[process-guia-autorizacao] Procedimentos únicos após deduplicação:", uniqueProcedimentos.length);
+    console.log("[process-guia-autorizacao] Procedimentos validados:", procedimentosValidados.length, "de", procedimentosData.length);
 
-    if (uniqueProcedimentos.length > 0) {
-      const itensRows = uniqueProcedimentos.map((proc: any) => ({
+    if (procedimentosValidados.length > 0) {
+      const itensRows = procedimentosValidados.map((proc: any) => ({
         faturamento_id: faturamentoId,
-        codigo_procedimento: proc.codigo_procedimento ?? null,
-        descricao_procedimento: proc.descricao_procedimento ?? null,
+        codigo_procedimento: proc.codigo_procedimento,
+        descricao_procedimento: proc.descricao_procedimento,
         quantidade: proc.quantidade_autorizada ?? 1,
         quantidade_autorizada: proc.quantidade_autorizada ?? 1,
         status_item: "pendente",
@@ -482,7 +487,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         console.error("[process-guia-autorizacao] Erro ao inserir itens_faturamento:", itensError);
         // Não bloqueia o fluxo, apenas loga o erro
       } else {
-        console.log("[process-guia-autorizacao] Itens inseridos com sucesso:", uniqueProcedimentos.length);
+        console.log("[process-guia-autorizacao] Itens inseridos com sucesso:", procedimentosValidados.length);
       }
     }
   }
