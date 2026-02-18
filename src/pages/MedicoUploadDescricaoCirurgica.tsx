@@ -723,16 +723,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         return hora;
       };
 
-      // Dados do profissional (médico logado)
-      const { data: medicoData } = await supabase
-        .from("usuarios_sistema")
-        .select("nome, crm")
-        .eq("id", userId)
-        .maybeSingle();
-
-      // Substituir placeholders - Profissional
-      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_nome\}\}/g, medicoData?.nome || "");
-      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_crm\}\}/g, medicoData?.crm || "");
+      // Substituir placeholders - Profissional (usar cirurgião principal, não médico logado)
+      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_nome\}\}/g, fatData.cirurgiao_principal_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_crm\}\}/g, fatData.cirurgiao_principal_crm || "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_cod_sist\}\}/g, "");
 
       // Substituir placeholders - Paciente
@@ -809,8 +802,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         clinica_id: selectedClinicaId,
         modelo_id: modeloData.id,
         html_preenchido: htmlPreenchido,
-        profissional_nome: medicoData?.nome || null,
-        profissional_crm: medicoData?.crm || null,
+        // Profissional = Cirurgião Principal
+        profissional_nome: fatData.cirurgiao_principal_nome || null,
+        profissional_crm: fatData.cirurgiao_principal_crm || null,
         paciente_nome: fatData.paciente_nome || null,
         paciente_registro: fatData.paciente_carteirinha || null,
         data: formatarData(fatData.data_cirurgia) || null,

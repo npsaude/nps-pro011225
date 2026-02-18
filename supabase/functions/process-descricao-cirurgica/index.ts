@@ -514,76 +514,112 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
 
     const medicoId = faturamentoInfo?.medico_id ?? userId;
 
+    // Buscar todos os itens existentes para este faturamento
+    const { data: existingItems, error: existingItemsError } = await supabase
+      .from("itens_faturamento")
+      .select("id, codigo_procedimento, descricao_procedimento")
+      .eq("faturamento_id", faturamentoId);
+
+    if (existingItemsError) {
+      console.error("[process-descricao-cirurgica] Erro ao buscar itens existentes:", existingItemsError);
+    }
+
+    const existingItemsList = existingItems || [];
+
+    // Função para normalizar texto para comparação (remove acentos, lowercase, trim)
+    const normalizeText = (text: string | null | undefined): string => {
+      if (!text) return "";
+      return text
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
+    };
+
+    // Função para verificar se um procedimento já existe
+    const findExistingItem = (codigo: string | null, descricao: string | null) => {
+      // Primeiro, tentar encontrar por código
+      if (codigo) {
+        const byCode = existingItemsList.find(
+          (item) => item.codigo_procedimento === codigo
+        );
+        if (byCode) return byCode;
+      }
+
+      // Se não encontrou por código, tentar por descrição normalizada
+      if (descricao) {
+        const normalizedDescricao = normalizeText(descricao);
+        const byDescription = existingItemsList.find(
+          (item) => normalizeText(item.descricao_procedimento) === normalizedDescricao
+        );
+        if (byDescription) return byDescription;
+      }
+
+      return null;
+    };
+
     for (const proc of procedimentosData) {
       const codigoProcedimento = proc.codigo_procedimento;
+      const descricaoProcedimento = proc.descricao_procedimento;
       const quantidadeExecutada = proc.quantidade_executada ?? 1;
 
-      if (codigoProcedimento) {
-        // Tentar encontrar item existente pelo código do procedimento
-        const { data: existingItem, error: findError } = await supabase
-          .from("itens_faturamento")
-          .select("id")
-          .eq("faturamento_id", faturamentoId)
-          .eq("codigo_procedimento", codigoProcedimento)
-          .maybeSingle();
+      // Verificar se já existe (por código OU por descrição)
+      const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
 
-        if (existingItem) {
-          // Atualizar item existente com quantidade_executada
-          const { error: updateItemError } = await supabase
-            .from("itens_faturamento")
-            .update({
-              quantidade_executada: quantidadeExecutada,
-              descricao_procedimento: proc.descricao_procedimento ?? undefined,
-              medico_id: medicoId,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingItem.id);
+      if (existingItem) {
+        // Atualizar item existente com quantidade_executada
+        const updateFields: Record<string, unknown> = {
+          quantidade_executada: quantidadeExecutada,
+          medico_id: medicoId,
+          updated_at: new Date().toISOString(),
+        };
 
-          if (updateItemError) {
-            console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
-          } else {
-            console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento);
-          }
-        } else {
-          // Inserir novo item
-          const { error: insertError } = await supabase
-            .from("itens_faturamento")
-            .insert({
-              faturamento_id: faturamentoId,
-              medico_id: medicoId,
-              codigo_procedimento: codigoProcedimento,
-              descricao_procedimento: proc.descricao_procedimento ?? null,
-              quantidade_autorizada: quantidadeExecutada,
-              quantidade_executada: quantidadeExecutada,
-              quantidade: quantidadeExecutada,
-              status_item: "pendente",
-            });
-
-          if (insertError) {
-            console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
-          } else {
-            console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento);
-          }
+        // Atualizar descrição se não tinha e agora tem
+        if (descricaoProcedimento && !existingItem.descricao_procedimento) {
+          updateFields.descricao_procedimento = descricaoProcedimento;
         }
-      } else if (proc.descricao_procedimento) {
-        // Se não tem código mas tem descrição, inserir novo item
-        const { error: insertError } = await supabase
+
+        // Atualizar código se não tinha e agora tem
+        if (codigoProcedimento && !existingItem.codigo_procedimento) {
+          updateFields.codigo_procedimento = codigoProcedimento;
+        }
+
+        const { error: updateItemError } = await supabase
+          .from("itens_faturamento")
+          .update(updateFields)
+          .eq("id", existingItem.id);
+
+        if (updateItemError) {
+          console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
+        } else {
+          console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento || descricaoProcedimento);
+        }
+      } else if (codigoProcedimento || descricaoProcedimento) {
+        // Inserir novo item apenas se tem código OU descrição
+        const { data: newItem, error: insertError } = await supabase
           .from("itens_faturamento")
           .insert({
             faturamento_id: faturamentoId,
             medico_id: medicoId,
-            codigo_procedimento: null,
-            descricao_procedimento: proc.descricao_procedimento,
+            codigo_procedimento: codigoProcedimento ?? null,
+            descricao_procedimento: descricaoProcedimento ?? null,
             quantidade_autorizada: quantidadeExecutada,
             quantidade_executada: quantidadeExecutada,
             quantidade: quantidadeExecutada,
             status_item: "pendente",
-          });
+          })
+          .select("id, codigo_procedimento, descricao_procedimento")
+          .single();
 
         if (insertError) {
-          console.error("[process-descricao-cirurgica] Erro ao inserir item sem código:", insertError);
+          console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
         } else {
-          console.log("[process-descricao-cirurgica] Novo item inserido (sem código):", proc.descricao_procedimento);
+          console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento || descricaoProcedimento);
+          // Adicionar à lista de existentes para evitar duplicatas no mesmo lote
+          if (newItem) {
+            existingItemsList.push(newItem);
+          }
         }
       }
     }
