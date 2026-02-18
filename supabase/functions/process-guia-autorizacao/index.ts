@@ -213,6 +213,15 @@ Você é um assistente especializado em faturamento médico e guias de autoriza�
 A partir das IMAGENS anexadas (fotos de guias de autorização de cirurgia),
 extraia todos os dados relevantes para preencher os campos de faturamento.
 
+REGRAS CRÍTICAS PARA EXTRAÇÃO DE PROCEDIMENTOS:
+1. Extraia APENAS os procedimentos que estão EXPLICITAMENTE listados na seção "Procedimentos" ou "Procedimentos Solicitados/Autorizados" da guia.
+2. NÃO duplique procedimentos - cada procedimento deve aparecer APENAS UMA VEZ no array.
+3. Se o mesmo procedimento aparecer em múltiplas imagens, inclua-o apenas UMA vez.
+4. NÃO invente ou infira procedimentos que não estejam claramente escritos na guia.
+5. Verifique se cada código de procedimento é ÚNICO no array antes de incluí-lo.
+6. Se houver dúvida se um item é um procedimento ou não, NÃO inclua.
+7. Preste atenção ao número de linhas na tabela de procedimentos - extraia EXATAMENTE esse número.
+
 IMPORTANTE:
 - As imagens podem ser de DIFERENTES PARTES da mesma guia de autorização.
 - Analise TODAS as imagens e consolide as informações em um único JSON.
@@ -235,10 +244,10 @@ FATURAMENTO (tabela faturamentos):
 - status_autorizacao: Status da autorização (ex: "AUTORIZADO", "PENDENTE", "NEGADO")
 
 ITENS/PROCEDIMENTOS (tabela itens_faturamento):
-- procedimentos: Array de procedimentos autorizados, cada um com:
-  - codigo_procedimento: Código TUSS ou código do procedimento
+- procedimentos: Array de procedimentos autorizados. ATENÇÃO: Cada procedimento deve ser ÚNICO (sem duplicatas).
+  - codigo_procedimento: Código TUSS ou código do procedimento (DEVE SER ÚNICO no array)
   - descricao_procedimento: Descrição do procedimento
-  - quantidade_autorizada: Quantidade autorizada
+  - quantidade_autorizada: Quantidade autorizada (geralmente 1)
 
 Responda APENAS com um JSON válido, sem comentários ou explicações extras, no formato abaixo:
 
@@ -408,28 +417,73 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     );
   }
 
-  // 6) Inserir os itens de faturamento (procedimentos)
+  // 6) Inserir os itens de faturamento (procedimentos) - COM DEDUPLICAÇÃO
   if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
-    console.log("[process-guia-autorizacao] Inserindo", procedimentosData.length, "procedimentos...");
+    console.log("[process-guia-autorizacao] Processando", procedimentosData.length, "procedimentos da IA...");
 
-    const itensRows = procedimentosData.map((proc: any) => ({
-      faturamento_id: faturamentoId,
-      codigo_procedimento: proc.codigo_procedimento ?? null,
-      descricao_procedimento: proc.descricao_procedimento ?? null,
-      quantidade: proc.quantidade_autorizada ?? 1,
-      quantidade_autorizada: proc.quantidade_autorizada ?? 1,
-      status_item: "pendente",
-    }));
+    // Função para normalizar texto para comparação
+    const normalizeText = (text: string | null | undefined): string => {
+      if (!text) return "";
+      return text
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
+    };
 
-    const { error: itensError } = await supabase
-      .from("itens_faturamento")
-      .insert(itensRows);
+    // Deduplicar procedimentos por código OU descrição
+    const seenCodes = new Set<string>();
+    const seenDescriptions = new Set<string>();
+    const uniqueProcedimentos: any[] = [];
 
-    if (itensError) {
-      console.error("[process-guia-autorizacao] Erro ao inserir itens_faturamento:", itensError);
-      // Não bloqueia o fluxo, apenas loga o erro
-    } else {
-      console.log("[process-guia-autorizacao] Itens inseridos com sucesso.");
+    for (const proc of procedimentosData) {
+      const codigo = proc.codigo_procedimento?.toString().trim() || null;
+      const descricao = proc.descricao_procedimento?.toString().trim() || null;
+      const normalizedDescricao = normalizeText(descricao);
+
+      // Verificar se já vimos este código
+      if (codigo && seenCodes.has(codigo)) {
+        console.log("[process-guia-autorizacao] Procedimento duplicado ignorado (código):", codigo);
+        continue;
+      }
+
+      // Verificar se já vimos esta descrição (normalizada)
+      if (normalizedDescricao && seenDescriptions.has(normalizedDescricao)) {
+        console.log("[process-guia-autorizacao] Procedimento duplicado ignorado (descrição):", descricao);
+        continue;
+      }
+
+      // Adicionar aos sets de controle
+      if (codigo) seenCodes.add(codigo);
+      if (normalizedDescricao) seenDescriptions.add(normalizedDescricao);
+
+      // Adicionar à lista de únicos
+      uniqueProcedimentos.push(proc);
+    }
+
+    console.log("[process-guia-autorizacao] Procedimentos únicos após deduplicação:", uniqueProcedimentos.length);
+
+    if (uniqueProcedimentos.length > 0) {
+      const itensRows = uniqueProcedimentos.map((proc: any) => ({
+        faturamento_id: faturamentoId,
+        codigo_procedimento: proc.codigo_procedimento ?? null,
+        descricao_procedimento: proc.descricao_procedimento ?? null,
+        quantidade: proc.quantidade_autorizada ?? 1,
+        quantidade_autorizada: proc.quantidade_autorizada ?? 1,
+        status_item: "pendente",
+      }));
+
+      const { error: itensError } = await supabase
+        .from("itens_faturamento")
+        .insert(itensRows);
+
+      if (itensError) {
+        console.error("[process-guia-autorizacao] Erro ao inserir itens_faturamento:", itensError);
+        // Não bloqueia o fluxo, apenas loga o erro
+      } else {
+        console.log("[process-guia-autorizacao] Itens inseridos com sucesso:", uniqueProcedimentos.length);
+      }
     }
   }
 
