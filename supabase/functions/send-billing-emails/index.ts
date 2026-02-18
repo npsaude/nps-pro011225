@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,18 +100,20 @@ Atenciosamente
 ${nomeUsuario}`;
 }
 
-// Converter Uint8Array para Base64
-function uint8ArrayToBase64(uint8Array: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < uint8Array.length; i++) {
-    binary += String.fromCharCode(uint8Array[i]);
+// Converter Uint8Array para Base64 com quebras de linha para MIME (76 caracteres por linha)
+function uint8ArrayToBase64WithLineBreaks(uint8Array: Uint8Array): string {
+  const base64 = base64Encode(uint8Array);
+  // Quebrar em linhas de 76 caracteres para compatibilidade MIME
+  const lines: string[] = [];
+  for (let i = 0; i < base64.length; i += 76) {
+    lines.push(base64.substring(i, i + 76));
   }
-  return btoa(binary);
+  return lines.join("\r\n");
 }
 
 // Gerar boundary único para multipart
 function generateBoundary(): string {
-  return "----=_Part_" + Math.random().toString(36).substring(2);
+  return "----=_Part_" + Math.random().toString(36).substring(2) + "_" + Date.now();
 }
 
 // Construir email MIME com anexos
@@ -125,13 +128,18 @@ function buildMimeEmail(
 ): string {
   const boundary = generateBoundary();
   
+  // Codificar subject em Base64 para suportar caracteres especiais
+  const encoder = new TextEncoder();
+  const subjectBytes = encoder.encode(subject);
+  const subjectBase64 = base64Encode(subjectBytes);
+  
   let email = "";
   email += `From: ${fromName} <${from}>\r\n`;
   email += `To: ${to}\r\n`;
   if (cc) {
     email += `Cc: ${cc}\r\n`;
   }
-  email += `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=\r\n`;
+  email += `Subject: =?UTF-8?B?${subjectBase64}?=\r\n`;
   email += `MIME-Version: 1.0\r\n`;
   email += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n`;
   email += `\r\n`;
@@ -141,7 +149,8 @@ function buildMimeEmail(
   email += `Content-Type: text/plain; charset=UTF-8\r\n`;
   email += `Content-Transfer-Encoding: base64\r\n`;
   email += `\r\n`;
-  email += btoa(unescape(encodeURIComponent(textBody))) + `\r\n`;
+  const textBytes = encoder.encode(textBody);
+  email += uint8ArrayToBase64WithLineBreaks(textBytes) + `\r\n`;
   
   // Anexos
   for (const att of attachments) {
@@ -150,7 +159,7 @@ function buildMimeEmail(
     email += `Content-Disposition: attachment; filename="${att.filename}"\r\n`;
     email += `Content-Transfer-Encoding: base64\r\n`;
     email += `\r\n`;
-    email += uint8ArrayToBase64(att.content) + `\r\n`;
+    email += uint8ArrayToBase64WithLineBreaks(att.content) + `\r\n`;
   }
   
   email += `--${boundary}--\r\n`;
@@ -174,6 +183,7 @@ async function sendEmailViaSMTP(
 ): Promise<{ success: boolean; error?: string }> {
   
   console.log("[send-billing-emails] Iniciando conexão SMTP...");
+  console.log("[send-billing-emails] Número de anexos a enviar:", attachments.length);
   
   try {
     // Conectar via TLS
@@ -226,14 +236,16 @@ async function sendEmailViaSMTP(
     }
     
     // Enviar username (base64)
-    response = await sendCommand(btoa(username));
+    const usernameBytes = encoder.encode(username);
+    response = await sendCommand(base64Encode(usernameBytes));
     if (!response.startsWith("334")) {
       conn.close();
       return { success: false, error: "Username rejeitado" };
     }
     
     // Enviar password (base64)
-    response = await sendCommand(btoa(password));
+    const passwordBytes = encoder.encode(password);
+    response = await sendCommand(base64Encode(passwordBytes));
     if (!response.startsWith("235")) {
       conn.close();
       return { success: false, error: "Autenticação falhou - verifique usuário e senha" };
@@ -271,8 +283,18 @@ async function sendEmailViaSMTP(
     }
     
     // Construir e enviar email
+    console.log("[send-billing-emails] Construindo email MIME...");
     const mimeEmail = buildMimeEmail(from, fromName, to, cc, subject, textBody, attachments);
-    await conn.write(encoder.encode(mimeEmail));
+    console.log("[send-billing-emails] Tamanho do email MIME:", mimeEmail.length, "bytes");
+    
+    // Enviar em chunks para evitar problemas com emails grandes
+    const emailBytes = encoder.encode(mimeEmail);
+    const chunkSize = 65536; // 64KB chunks
+    for (let i = 0; i < emailBytes.length; i += chunkSize) {
+      const chunk = emailBytes.subarray(i, Math.min(i + chunkSize, emailBytes.length));
+      await conn.write(chunk);
+    }
+    
     await conn.write(encoder.encode("\r\n.\r\n"));
     
     response = await readResponse();
@@ -418,9 +440,9 @@ serve(async (req) => {
   const fat = faturamento as FaturamentoData;
   console.log("[send-billing-emails] Faturamento encontrado:", fat.id);
   console.log("[send-billing-emails] guia_honorarios_id:", fat.guia_honorarios_id);
-  console.log("[send-billing-emails] url_guia_autorizacao:", fat.url_guia_autorizacao);
-  console.log("[send-billing-emails] url_descricao_cirurgica:", fat.url_descricao_cirurgica);
-  console.log("[send-billing-emails] url_guia_honorarios:", fat.url_guia_honorarios);
+  console.log("[send-billing-emails] url_guia_autorizacao:", JSON.stringify(fat.url_guia_autorizacao));
+  console.log("[send-billing-emails] url_descricao_cirurgica:", JSON.stringify(fat.url_descricao_cirurgica));
+  console.log("[send-billing-emails] url_guia_honorarios:", JSON.stringify(fat.url_guia_honorarios));
 
   // 1.1) Buscar PDF da guia de honorários se existir guia_honorarios_id
   let pdfGuiaHonorarioPath: string | null = null;
@@ -517,29 +539,35 @@ serve(async (req) => {
   // Função para baixar arquivo
   async function downloadFile(path: string, filename: string): Promise<{ filename: string; content: Uint8Array; contentType: string } | null> {
     try {
+      console.log("[send-billing-emails] Baixando arquivo:", path);
+      
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from(bucketName)
         .createSignedUrl(path, 60 * 60);
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
-        console.error("[send-billing-emails] Erro ao criar URL assinada para:", path);
+        console.error("[send-billing-emails] Erro ao criar URL assinada para:", path, signedUrlError);
         return null;
       }
 
       const response = await fetch(signedUrlData.signedUrl);
       if (!response.ok) {
-        console.error("[send-billing-emails] Erro ao baixar arquivo:", path);
+        console.error("[send-billing-emails] Erro ao baixar arquivo:", path, response.status);
         return null;
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
+      console.log("[send-billing-emails] Arquivo baixado:", filename, "tamanho:", uint8Array.length, "bytes");
+      
       const ext = path.split(".").pop()?.toLowerCase() || "";
       let contentType = "application/octet-stream";
       if (ext === "pdf") contentType = "application/pdf";
       else if (ext === "png") contentType = "image/png";
       else if (ext === "jpg" || ext === "jpeg") contentType = "image/jpeg";
+      else if (ext === "gif") contentType = "image/gif";
+      else if (ext === "webp") contentType = "image/webp";
 
       return { filename, content: uint8Array, contentType };
     } catch (error) {
@@ -550,41 +578,52 @@ serve(async (req) => {
 
   // Processar guia de autorização
   if (fat.url_guia_autorizacao && fat.url_guia_autorizacao.length > 0) {
+    console.log("[send-billing-emails] Processando", fat.url_guia_autorizacao.length, "arquivos de guia de autorização");
     for (let i = 0; i < fat.url_guia_autorizacao.length; i++) {
       const path = fat.url_guia_autorizacao[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_autorizacao_${i + 1}.${ext}`;
       const attachment = await downloadFile(path, filename);
-      if (attachment) attachments.push(attachment);
+      if (attachment) {
+        attachments.push(attachment);
+        console.log("[send-billing-emails] Anexo adicionado:", filename);
+      }
     }
   }
 
   // Processar descrição cirúrgica
   if (fat.url_descricao_cirurgica && fat.url_descricao_cirurgica.length > 0) {
+    console.log("[send-billing-emails] Processando", fat.url_descricao_cirurgica.length, "arquivos de descrição cirúrgica");
     for (let i = 0; i < fat.url_descricao_cirurgica.length; i++) {
       const path = fat.url_descricao_cirurgica[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `descricao_cirurgica_${i + 1}.${ext}`;
       const attachment = await downloadFile(path, filename);
-      if (attachment) attachments.push(attachment);
+      if (attachment) {
+        attachments.push(attachment);
+        console.log("[send-billing-emails] Anexo adicionado:", filename);
+      }
     }
   }
 
   // Processar guia de honorários - primeiro do array url_guia_honorarios
   if (fat.url_guia_honorarios && fat.url_guia_honorarios.length > 0) {
+    console.log("[send-billing-emails] Processando", fat.url_guia_honorarios.length, "arquivos de guia de honorários do array");
     for (let i = 0; i < fat.url_guia_honorarios.length; i++) {
       const path = fat.url_guia_honorarios[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_honorarios_${i + 1}.${ext}`;
-      console.log("[send-billing-emails] Processando guia honorários do array:", path);
       const attachment = await downloadFile(path, filename);
-      if (attachment) attachments.push(attachment);
+      if (attachment) {
+        attachments.push(attachment);
+        console.log("[send-billing-emails] Anexo adicionado:", filename);
+      }
     }
   }
 
   // Processar PDF da guia de honorários da tabela guia_honorarios
   if (pdfGuiaHonorarioPath) {
-    console.log("[send-billing-emails] Processando PDF da guia de honorários:", pdfGuiaHonorarioPath);
+    console.log("[send-billing-emails] Processando PDF da guia de honorários da tabela guia_honorarios");
     const attachment = await downloadFile(pdfGuiaHonorarioPath, "guia_honorarios.pdf");
     if (attachment) {
       attachments.push(attachment);
@@ -595,7 +634,7 @@ serve(async (req) => {
   }
 
   console.log("[send-billing-emails] Total de anexos preparados:", attachments.length);
-  console.log("[send-billing-emails] Anexos:", attachments.map(a => a.filename));
+  console.log("[send-billing-emails] Lista de anexos:", attachments.map(a => `${a.filename} (${a.content.length} bytes)`));
 
   // 4) Preparar dados formatados
   const dataCirurgiaFormatada = formatarData(fat.data_cirurgia);
