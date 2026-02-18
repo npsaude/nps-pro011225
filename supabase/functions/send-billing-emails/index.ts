@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,7 +114,14 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  
+  // Configurações SMTP da Hostinger (configuradas como secrets no Supabase)
+  const smtpHost = Deno.env.get("SMTP_HOST") ?? "smtp.hostinger.com";
+  const smtpPort = parseInt(Deno.env.get("SMTP_PORT") ?? "465");
+  const smtpUser = Deno.env.get("SMTP_USER") ?? "";
+  const smtpPass = Deno.env.get("SMTP_PASS") ?? "";
+  const smtpFrom = Deno.env.get("SMTP_FROM") ?? smtpUser;
+  const smtpFromName = Deno.env.get("SMTP_FROM_NAME") ?? "Conmedic";
 
   if (!supabaseUrl || !serviceKey) {
     console.error("[send-billing-emails] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.");
@@ -128,11 +136,12 @@ serve(async (req) => {
     );
   }
 
-  if (!resendApiKey) {
-    console.error("[send-billing-emails] RESEND_API_KEY não configurado.");
+  if (!smtpUser || !smtpPass) {
+    console.error("[send-billing-emails] Configurações SMTP não encontradas.");
+    console.error("[send-billing-emails] Configure os secrets: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_FROM_NAME");
     return new Response(
       JSON.stringify({
-        error: "RESEND_API_KEY não configurado. Configure o secret no Supabase.",
+        error: "Configurações SMTP não encontradas. Configure os secrets SMTP_USER e SMTP_PASS no Supabase.",
       }),
       {
         status: 500,
@@ -285,10 +294,10 @@ serve(async (req) => {
 
   // 3) Preparar anexos (URLs assinadas dos PDFs)
   const bucketName = "NPS-pro";
-  const attachments: { filename: string; content: string }[] = [];
+  const attachments: { filename: string; content: Uint8Array; contentType: string }[] = [];
 
-  // Função para baixar arquivo e converter para base64
-  async function downloadAndConvertToBase64(path: string, filename: string): Promise<{ filename: string; content: string } | null> {
+  // Função para baixar arquivo
+  async function downloadFile(path: string, filename: string): Promise<{ filename: string; content: Uint8Array; contentType: string } | null> {
     try {
       // Criar URL assinada
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -310,16 +319,19 @@ serve(async (req) => {
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
-      // Converter para base64
-      let binary = "";
-      for (let i = 0; i < uint8Array.length; i++) {
-        binary += String.fromCharCode(uint8Array[i]);
-      }
-      const base64 = btoa(binary);
+      // Determinar content type
+      const ext = path.split(".").pop()?.toLowerCase() || "";
+      let contentType = "application/octet-stream";
+      if (ext === "pdf") contentType = "application/pdf";
+      else if (ext === "png") contentType = "image/png";
+      else if (ext === "jpg" || ext === "jpeg") contentType = "image/jpeg";
+      else if (ext === "gif") contentType = "image/gif";
+      else if (ext === "webp") contentType = "image/webp";
 
       return {
         filename,
-        content: base64,
+        content: uint8Array,
+        contentType,
       };
     } catch (error) {
       console.error("[send-billing-emails] Erro ao processar arquivo:", path, error);
@@ -333,7 +345,7 @@ serve(async (req) => {
       const path = fat.url_guia_autorizacao[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_autorizacao_${i + 1}.${ext}`;
-      const attachment = await downloadAndConvertToBase64(path, filename);
+      const attachment = await downloadFile(path, filename);
       if (attachment) {
         attachments.push(attachment);
       }
@@ -346,7 +358,7 @@ serve(async (req) => {
       const path = fat.url_descricao_cirurgica[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `descricao_cirurgica_${i + 1}.${ext}`;
-      const attachment = await downloadAndConvertToBase64(path, filename);
+      const attachment = await downloadFile(path, filename);
       if (attachment) {
         attachments.push(attachment);
       }
@@ -359,7 +371,7 @@ serve(async (req) => {
       const path = fat.url_guia_honorarios[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_honorarios_${i + 1}.${ext}`;
-      const attachment = await downloadAndConvertToBase64(path, filename);
+      const attachment = await downloadFile(path, filename);
       if (attachment) {
         attachments.push(attachment);
       }
@@ -374,7 +386,7 @@ serve(async (req) => {
     .maybeSingle();
 
   if (guiaHonorarios?.pdf_guia_honorario) {
-    const attachment = await downloadAndConvertToBase64(
+    const attachment = await downloadFile(
       guiaHonorarios.pdf_guia_honorario,
       "guia_honorarios.pdf"
     );
@@ -389,11 +401,40 @@ serve(async (req) => {
   const dataCirurgiaFormatada = formatarData(fat.data_cirurgia);
   const horaInicioFormatada = formatarHora(fat.hora_inicio);
 
-  // 5) Enviar emails
+  // 5) Configurar cliente SMTP
+  const client = new SmtpClient();
+
+  try {
+    console.log("[send-billing-emails] Conectando ao servidor SMTP...");
+    console.log("[send-billing-emails] Host:", smtpHost, "Port:", smtpPort);
+    
+    await client.connectTLS({
+      hostname: smtpHost,
+      port: smtpPort,
+      username: smtpUser,
+      password: smtpPass,
+    });
+
+    console.log("[send-billing-emails] Conectado ao SMTP com sucesso!");
+  } catch (smtpError) {
+    console.error("[send-billing-emails] Erro ao conectar ao SMTP:", smtpError);
+    return new Response(
+      JSON.stringify({
+        error: "Erro ao conectar ao servidor de email. Verifique as configurações SMTP.",
+        details: String(smtpError),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  // 6) Enviar emails
   const emailsEnviados: string[] = [];
   const errosEnvio: string[] = [];
 
-  // Função para enviar email via Resend
+  // Função para enviar email via SMTP
   async function enviarEmail(
     to: string,
     subject: string,
@@ -403,42 +444,27 @@ serve(async (req) => {
     try {
       console.log("[send-billing-emails] Enviando email para:", to);
 
-      const resendPayload: any = {
-        from: "Conmedic <noreply@conmedic.com.br>",
-        to: [to],
-        cc: [cc],
-        subject,
-        text,
-      };
+      // Preparar anexos para o SMTP
+      const smtpAttachments = attachments.map((att) => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType,
+        encoding: "binary" as const,
+      }));
 
-      // Adicionar anexos se houver
-      if (attachments.length > 0) {
-        resendPayload.attachments = attachments.map((att) => ({
-          filename: att.filename,
-          content: att.content,
-        }));
-      }
-
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${resendApiKey}`,
-        },
-        body: JSON.stringify(resendPayload),
+      await client.send({
+        from: `${smtpFromName} <${smtpFrom}>`,
+        to: to,
+        cc: cc,
+        subject: subject,
+        content: text,
+        attachments: smtpAttachments.length > 0 ? smtpAttachments : undefined,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[send-billing-emails] Erro do Resend:", errorText);
-        return false;
-      }
-
-      const result = await response.json();
-      console.log("[send-billing-emails] Email enviado com sucesso:", result.id);
+      console.log("[send-billing-emails] Email enviado com sucesso para:", to);
       return true;
     } catch (error) {
-      console.error("[send-billing-emails] Erro ao enviar email:", error);
+      console.error("[send-billing-emails] Erro ao enviar email para:", to, error);
       return false;
     }
   }
@@ -521,7 +547,15 @@ serve(async (req) => {
     }
   }
 
-  // 6) Atualizar status do faturamento
+  // Fechar conexão SMTP
+  try {
+    await client.close();
+    console.log("[send-billing-emails] Conexão SMTP fechada.");
+  } catch (closeError) {
+    console.error("[send-billing-emails] Erro ao fechar conexão SMTP:", closeError);
+  }
+
+  // 7) Atualizar status do faturamento
   if (emailsEnviados.length > 0) {
     const agora = new Date().toISOString();
     const { error: updateError } = await supabase
@@ -540,7 +574,7 @@ serve(async (req) => {
     }
   }
 
-  // 7) Retornar resultado
+  // 8) Retornar resultado
   const sucesso = emailsEnviados.length > 0;
   const mensagem = sucesso
     ? `Email(s) enviado(s) com sucesso para: ${emailsEnviados.join(", ")}`
