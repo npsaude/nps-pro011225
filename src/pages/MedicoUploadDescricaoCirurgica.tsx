@@ -31,6 +31,7 @@ import {
   showError,
   showSuccess,
 } from "@/utils/toast";
+import { SendBillingEmailsDialog } from "@/components/faturamento/SendBillingEmailsDialog";
 
 type ViewState = 
   | "start" 
@@ -79,6 +80,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [medicoNome, setMedicoNome] = useState<string>("");
+  const [medicoEmail, setMedicoEmail] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
@@ -140,6 +142,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [pdfGerado, setPdfGerado] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
+  // Estado para o diálogo de envio de emails
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+
   // Limpar URL do blob quando o componente for desmontado
   useEffect(() => {
     return () => {
@@ -156,6 +161,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       const email = authData.user?.email;
       if (!email) return;
+
+      setMedicoEmail(email);
 
       const { data, error } = await supabase
         .from("usuarios_sistema")
@@ -1165,9 +1172,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // Função para avançar após preview da guia (apenas finaliza o faturamento)
+  // Função para avançar após preview da guia (agora mostra diálogo de emails)
   const handleAvancarAposPreview = async () => {
-    console.log("[handleAvancarAposPreview] Finalizando faturamento...");
+    console.log("[handleAvancarAposPreview] Mostrando diálogo de envio de emails...");
+    setShowEmailDialog(true);
+  };
+
+  // Callback quando emails são enviados com sucesso
+  const handleEmailsSent = async () => {
+    console.log("[handleEmailsSent] Emails enviados, finalizando faturamento...");
+    setShowEmailDialog(false);
+    await finalizarFaturamento();
+  };
+
+  // Callback quando usuário pula o envio de emails
+  const handleSkipEmails = async () => {
+    console.log("[handleSkipEmails] Usuário pulou envio de emails, finalizando faturamento...");
+    setShowEmailDialog(false);
     await finalizarFaturamento();
   };
 
@@ -2273,6 +2294,22 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Diálogo de Envio de Emails */}
+      {faturamentoId && (
+        <SendBillingEmailsDialog
+          open={showEmailDialog}
+          onOpenChange={setShowEmailDialog}
+          faturamentoId={faturamentoId}
+          userEmail={medicoEmail}
+          userName={medicoNome ? `Dr. ${medicoNome}` : "Médico"}
+          instituicaoCirurgiaNome={selectedHospitalName}
+          instituicaoFaturamentoNome={selectedClinicaName}
+          instituicoesDiferentes={selectedHospitalId !== selectedClinicaId}
+          onEmailsSent={handleEmailsSent}
+          onSkip={handleSkipEmails}
+        />
+      )}
 
       {/* Tela de Análise da IA */}
       {showAnalyzingScreen && (
