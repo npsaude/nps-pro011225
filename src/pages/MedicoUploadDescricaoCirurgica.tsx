@@ -11,11 +11,10 @@ import {
   ChevronDown,
   X,
   CircleDollarSign,
-  Signature,
-  Send,
-  Mail,
   Loader2,
   Brain,
+  FileCheck,
+  AlertCircle,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -23,17 +22,46 @@ import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import {
   showError,
   showSuccess,
-  showLoading,
-  dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "start" | "hospital" | "upload_guia" | "upload_descricao" | "upload_honorarios" | "success";
+type ViewState = 
+  | "start" 
+  | "hospital" 
+  | "upload_guia" 
+  | "upload_descricao" 
+  | "pergunta_honorarios"
+  | "gerando_honorarios"
+  | "preview_honorarios"
+  | "sem_modelo"
+  | "success";
+
+interface FaturamentoData {
+  paciente_nome?: string;
+  paciente_convenio?: string;
+  paciente_carteirinha?: string;
+  data_cirurgia?: string;
+  hora_inicio?: string;
+  hora_fim?: string;
+  cirurgiao_principal_nome?: string;
+  cirurgiao_principal_crm?: string;
+  auxiliar1_nome?: string;
+  auxiliar1_crm?: string;
+  auxiliar2_nome?: string;
+  auxiliar2_crm?: string;
+  anestesista_nome?: string;
+  anestesista_crm?: string;
+}
+
+interface ItemFaturamento {
+  codigo_procedimento?: string;
+  descricao_procedimento?: string;
+  quantidade?: number;
+}
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -44,8 +72,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
   // Arquivos da Descrição Cirúrgica
   const [filesDescricao, setFilesDescricao] = useState<File[]>([]);
-  // Arquivos da Guia de Honorários
-  const [filesHonorarios, setFilesHonorarios] = useState<File[]>([]);
   
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -53,15 +79,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [view, setView] = useState<ViewState>("start");
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
-  const fileInputRefHonorarios = useRef<HTMLInputElement | null>(null);
-  const [autoFillDialogOpen, setAutoFillDialogOpen] = useState(false);
-  const [showFillingScreen, setShowFillingScreen] = useState(false);
-  const [fillingProgress, setFillingProgress] = useState(0);
-  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
-  const [showSigningScreen, setShowSigningScreen] = useState(false);
-  const [showSignedScreen, setShowSignedScreen] = useState(false);
-  const [showSendingScreen, setShowSendingScreen] = useState(false);
-  const [sendingStep, setSendingStep] = useState<1 | 2>(1);
 
   // Tela de análise da IA
   const [showAnalyzingScreen, setShowAnalyzingScreen] = useState(false);
@@ -71,6 +88,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
+
+  // Dados do faturamento para preencher a guia de honorários
+  const [faturamentoData, setFaturamentoData] = useState<FaturamentoData | null>(null);
+  const [itensFaturamento, setItensFaturamento] = useState<ItemFaturamento[]>([]);
+
+  // HTML da guia de honorários preenchida
+  const [htmlGuiaPreenchida, setHtmlGuiaPreenchida] = useState<string>("");
+  const [guiaHonorariosId, setGuiaHonorariosId] = useState<string | null>(null);
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<
     string | undefined
@@ -137,7 +162,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         return;
       }
 
-      // Lista de hospitais vem de public.clinicas (tipo_unidade = HOSPITAL)
       const { data: hospitaisData, error: hospitaisError } = await supabase
         .from("clinicas")
         .select("id, nome_fantasia")
@@ -187,8 +211,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         return;
       }
 
-      // Lista de instituições para faturamento vem de public.clinicas (somente ATIVAS)
-      // Observação: não filtramos por tipo_unidade aqui; a tela permite Clínica ou Hospital.
       const { data: clinicasData, error: clinicasError } = await supabase
         .from("clinicas")
         .select("id, nome_fantasia")
@@ -273,35 +295,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     event.target.value = "";
   };
 
-  // Handler para arquivos da Guia de Honorários
-  const handleFileChangeHonorarios = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) return;
-    const selectedFiles = Array.from(event.target.files);
-
-    const allowedFiles = selectedFiles.filter(
-      (file) =>
-        file.type.startsWith("image/") || file.type === "application/pdf",
-    );
-    const ignoredCount = selectedFiles.length - allowedFiles.length;
-
-    if (ignoredCount > 0) {
-      showError(
-        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
-    }
-
-    if (allowedFiles.length === 0) {
-      setFilesHonorarios([]);
-      showError(
-        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
-      return;
-    }
-
-    setFilesHonorarios((prev) => [...prev, ...allowedFiles]);
-    event.target.value = "";
-  };
-
   const upsertFaturamentoParcial = async (params: {
     instituicaoCirurgiaId: string;
     instituicaoFaturamentoId: string;
@@ -326,7 +319,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           instituicao_faturamento_id: params.instituicaoFaturamentoId,
           hospital_nome: params.hospitalNome ?? null,
           status: "INATIVO",
-          // manter arrays como default no banco
         })
         .select("id")
         .single();
@@ -357,7 +349,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     return faturamentoId;
   };
 
-  // Função para upload e análise da Guia de Autorização com tela de progresso
+  // Função para upload e análise da Guia de Autorização
   const handleUploadGuiaAutorizacao = async () => {
     if (filesGuia.length === 0) {
       showError("Selecione pelo menos um arquivo para enviar.");
@@ -395,7 +387,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const userId = userData.user.id;
       const bucketName = "NPS-pro";
 
-      // Garante que existe um faturamento parcial
       const ensuredFaturamentoId = await upsertFaturamentoParcial({
         instituicaoCirurgiaId: selectedHospitalId,
         instituicaoFaturamentoId: selectedClinicaId,
@@ -407,7 +398,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         throw new Error("Não foi possível criar o faturamento.");
       }
 
-      // Etapa 1: Upload dos arquivos (0-30%)
       setAnalyzingProgress(10);
       
       for (let i = 0; i < filesGuia.length; i++) {
@@ -430,11 +420,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
 
         uploadedFilePaths.push(filePath);
-        // Progresso proporcional ao número de arquivos (10-30%)
         setAnalyzingProgress(10 + Math.round((i + 1) / filesGuia.length * 20));
       }
 
-      // Etapa 2: Análise da IA (30-80%)
       setAnalyzingStep("analyzing");
       setAnalyzingProgress(35);
 
@@ -469,11 +457,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         throw new Error(errorMessage);
       }
 
-      // Etapa 3: Salvando dados (80-100%)
       setAnalyzingStep("saving");
       setAnalyzingProgress(85);
 
-      // Atualiza o faturamento com os arquivos da guia de autorização
       const { error: updateError } = await supabase
         .from("faturamentos")
         .update({
@@ -488,7 +474,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       setAnalyzingProgress(100);
 
-      // Aguarda um momento para mostrar 100%
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       showSuccess("Guia de autorização processada com sucesso!");
@@ -507,7 +492,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Função para upload e análise da Descrição Cirúrgica com tela de progresso
+  // Função para upload e análise da Descrição Cirúrgica
   const handleUploadDescricaoCirurgica = async () => {
     if (filesDescricao.length === 0) {
       showError("Selecione pelo menos um arquivo para enviar.");
@@ -540,7 +525,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const userId = userData.user.id;
       const bucketName = "NPS-pro";
 
-      // Etapa 1: Upload dos arquivos (0-30%)
       setAnalyzingProgress(10);
       
       for (let i = 0; i < filesDescricao.length; i++) {
@@ -563,11 +547,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
 
         uploadedFilePaths.push(filePath);
-        // Progresso proporcional ao número de arquivos (10-30%)
         setAnalyzingProgress(10 + Math.round((i + 1) / filesDescricao.length * 20));
       }
 
-      // Etapa 2: Análise da IA (30-80%)
       setAnalyzingStep("analyzing");
       setAnalyzingProgress(35);
 
@@ -602,11 +584,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         throw new Error(errorMessage);
       }
 
-      // Etapa 3: Salvando dados (80-100%)
       setAnalyzingStep("saving");
       setAnalyzingProgress(85);
 
-      // Atualiza o faturamento com os arquivos da descrição cirúrgica
       const { error: updateError } = await supabase
         .from("faturamentos")
         .update({
@@ -621,13 +601,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       setAnalyzingProgress(100);
 
-      // Aguarda um momento para mostrar 100%
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       showSuccess("Descrição cirúrgica processada com sucesso!");
       setFilesDescricao([]);
       setShowAnalyzingScreen(false);
-      setView("upload_honorarios");
+      
+      // Avança para a pergunta sobre guia de honorários
+      setView("pergunta_honorarios");
     } catch (err) {
       const message =
         err instanceof Error
@@ -640,181 +621,283 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Função para upload e análise da Guia de Faturamento de Honorários com tela de progresso
-  const handleUploadGuiaHonorarios = async () => {
-    if (filesHonorarios.length === 0) {
-      showError("Selecione pelo menos um arquivo para enviar.");
+  // Função para gerar a guia de honorários preenchida
+  const handleGerarGuiaHonorarios = async () => {
+    if (!faturamentoId || !selectedClinicaId) {
+      showError("Dados do faturamento não encontrados.");
       return;
     }
 
-    if (!faturamentoId) {
-      showError("Faturamento não encontrado. Inicie o fluxo novamente.");
-      return;
-    }
-
-    setIsUploading(true);
-    setShowAnalyzingScreen(true);
-    setAnalyzingProgress(0);
-    setAnalyzingStep("uploading");
-    setAnalyzingDocType("honorarios");
-
-    const uploadedFilePaths: string[] = [];
+    setView("gerando_honorarios");
 
     try {
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
-
+      const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        showError("Faça login novamente para enviar arquivos.");
+        showError("Faça login novamente.");
         navigate("/login-medico");
         return;
       }
 
       const userId = userData.user.id;
-      const bucketName = "NPS-pro";
 
-      // Etapa 1: Upload dos arquivos (0-30%)
-      setAnalyzingProgress(10);
-      
-      for (let i = 0; i < filesHonorarios.length; i++) {
-        const file = filesHonorarios[i];
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-        const timestamp = Date.now();
-        const filePath = `guia_honorarios/${userId}/${timestamp}-${safeName}`;
+      // 1. Buscar modelo de guia para a instituição de faturamento
+      const { data: modeloData, error: modeloError } = await supabase
+        .from("modelo_guia_faturamento")
+        .select("id, html_documento")
+        .eq("clinica_id", selectedClinicaId)
+        .maybeSingle();
 
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+      if (modeloError) {
+        console.error("Erro ao buscar modelo:", modeloError);
+        setView("sem_modelo");
+        return;
+      }
 
-        if (uploadError) {
-          throw new Error(
-            `Falha ao enviar "${file.name}": ${uploadError.message}`
-          );
+      if (!modeloData || !modeloData.html_documento) {
+        setView("sem_modelo");
+        return;
+      }
+
+      // 2. Buscar dados do faturamento
+      const { data: fatData, error: fatError } = await supabase
+        .from("faturamentos")
+        .select(`
+          paciente_nome,
+          paciente_convenio,
+          paciente_carteirinha,
+          data_cirurgia,
+          hora_inicio,
+          hora_fim,
+          cirurgiao_principal_nome,
+          cirurgiao_principal_crm,
+          auxiliar1_nome,
+          auxiliar1_crm,
+          auxiliar2_nome,
+          auxiliar2_crm,
+          anestesista_nome,
+          anestesista_crm
+        `)
+        .eq("id", faturamentoId)
+        .single();
+
+      if (fatError || !fatData) {
+        showError("Erro ao carregar dados do faturamento.");
+        setView("pergunta_honorarios");
+        return;
+      }
+
+      setFaturamentoData(fatData);
+
+      // 3. Buscar itens do faturamento (procedimentos)
+      const { data: itensData, error: itensError } = await supabase
+        .from("itens_faturamento")
+        .select("codigo_procedimento, descricao_procedimento, quantidade")
+        .eq("faturamento_id", faturamentoId)
+        .order("created_at", { ascending: true });
+
+      if (!itensError && itensData) {
+        setItensFaturamento(itensData);
+      }
+
+      // 4. Preencher os placeholders no HTML
+      let htmlPreenchido = modeloData.html_documento;
+
+      // Formatar data
+      const formatarData = (data: string | null | undefined) => {
+        if (!data) return "";
+        try {
+          const d = new Date(data);
+          return d.toLocaleDateString("pt-BR");
+        } catch {
+          return data;
         }
+      };
 
-        uploadedFilePaths.push(filePath);
-        // Progresso proporcional ao número de arquivos (10-30%)
-        setAnalyzingProgress(10 + Math.round((i + 1) / filesHonorarios.length * 20));
+      // Formatar hora
+      const formatarHora = (hora: string | null | undefined) => {
+        if (!hora) return "";
+        // Se já está no formato HH:MM:SS, pega só HH:MM
+        if (hora.includes(":")) {
+          return hora.substring(0, 5);
+        }
+        return hora;
+      };
+
+      // Dados do profissional (médico logado)
+      const { data: medicoData } = await supabase
+        .from("usuarios_sistema")
+        .select("nome, crm")
+        .eq("id", userId)
+        .maybeSingle();
+
+      // Substituir placeholders - Profissional
+      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_nome\}\}/g, medicoData?.nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_crm\}\}/g, medicoData?.crm || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{profissional_cod_sist\}\}/g, "");
+
+      // Substituir placeholders - Paciente
+      htmlPreenchido = htmlPreenchido.replace(/\{\{paciente_nome\}\}/g, fatData.paciente_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{paciente_registro\}\}/g, fatData.paciente_carteirinha || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{paciente_leito\}\}/g, "");
+
+      // Substituir placeholders - Data/Hora/Convênio
+      htmlPreenchido = htmlPreenchido.replace(/\{\{data\}\}/g, formatarData(fatData.data_cirurgia));
+      htmlPreenchido = htmlPreenchido.replace(/\{\{hora\}\}/g, formatarHora(fatData.hora_inicio));
+      htmlPreenchido = htmlPreenchido.replace(/\{\{convenio\}\}/g, fatData.paciente_convenio || "");
+
+      // Substituir placeholders - Procedimentos Cirúrgicos (até 5)
+      const procedimentos = itensData || [];
+      for (let i = 1; i <= 5; i++) {
+        const proc = procedimentos[i - 1];
+        htmlPreenchido = htmlPreenchido.replace(new RegExp(`\\{\\{proc_cir_${i}_descricao\\}\\}`, "g"), proc?.descricao_procedimento || "");
+        htmlPreenchido = htmlPreenchido.replace(new RegExp(`\\{\\{proc_cir_${i}_cod_sistema\\}\\}`, "g"), proc?.codigo_procedimento || "");
+        htmlPreenchido = htmlPreenchido.replace(new RegExp(`\\{\\{proc_cir_${i}_amb_cbhpm\\}\\}`, "g"), "");
+        htmlPreenchido = htmlPreenchido.replace(new RegExp(`\\{\\{proc_cir_${i}_via_acesso\\}\\}`, "g"), "");
       }
 
-      // Etapa 2: Análise da IA (30-80%)
-      setAnalyzingStep("analyzing");
-      setAnalyzingProgress(35);
+      // Substituir placeholders - Equipe Cirúrgica
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_cirurgiao_medico\}\}/g, fatData.cirurgiao_principal_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_cirurgiao_crm\}\}/g, fatData.cirurgiao_principal_crm || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_cirurgiao_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_cirurgiao_cpf\}\}/g, "");
 
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-honorarios";
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux1_medico\}\}/g, fatData.auxiliar1_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux1_crm\}\}/g, fatData.auxiliar1_crm || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux1_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux1_cpf\}\}/g, "");
 
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-        }),
-      });
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux2_medico\}\}/g, fatData.auxiliar2_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux2_crm\}\}/g, fatData.auxiliar2_crm || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux2_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux2_cpf\}\}/g, "");
 
-      setAnalyzingProgress(70);
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_medico\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_crm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_cpf\}\}/g, "");
 
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // se não veio JSON, seguimos só com o status HTTP
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_medico\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_crm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_cpf\}\}/g, "");
+
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_perfusionista_medico\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_perfusionista_crm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_perfusionista_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_perfusionista_cpf\}\}/g, "");
+
+      // Substituir placeholders - Procedimentos Médicos
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_visita_cod_sistema\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_visita_qtd\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_parecer_cod_sistema\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_parecer_qtd\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_outros_cod_sistema\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_outros_amb_cbhpm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_outros_qtd\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra1_desc\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra1_cod_sistema\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra1_amb_cbhpm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra1_qtd\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra2_desc\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra2_cod_sistema\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra2_amb_cbhpm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{proc_med_extra2_qtd\}\}/g, "");
+
+      // 5. Criar registro na tabela guia_honorarios
+      const guiaData: Record<string, unknown> = {
+        medico_id: userId,
+        clinica_id: selectedClinicaId,
+        modelo_id: modeloData.id,
+        html_preenchido: htmlPreenchido,
+        profissional_nome: medicoData?.nome || null,
+        profissional_crm: medicoData?.crm || null,
+        paciente_nome: fatData.paciente_nome || null,
+        paciente_registro: fatData.paciente_carteirinha || null,
+        data: formatarData(fatData.data_cirurgia) || null,
+        hora: formatarHora(fatData.hora_inicio) || null,
+        convenio: fatData.paciente_convenio || null,
+        equipe_cirurgiao_medico: fatData.cirurgiao_principal_nome || null,
+        equipe_cirurgiao_crm: fatData.cirurgiao_principal_crm || null,
+        equipe_aux1_medico: fatData.auxiliar1_nome || null,
+        equipe_aux1_crm: fatData.auxiliar1_crm || null,
+        equipe_aux2_medico: fatData.auxiliar2_nome || null,
+        equipe_aux2_crm: fatData.auxiliar2_crm || null,
+      };
+
+      // Adicionar procedimentos
+      for (let i = 1; i <= 5; i++) {
+        const proc = procedimentos[i - 1];
+        guiaData[`proc_cir_${i}_descricao`] = proc?.descricao_procedimento || null;
+        guiaData[`proc_cir_${i}_cod_sistema`] = proc?.codigo_procedimento || null;
       }
 
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ??
-          "Houve erro ao processar a guia de faturamento de honorários.";
-        throw new Error(errorMessage);
+      const { data: guiaCreated, error: guiaError } = await supabase
+        .from("guia_honorarios")
+        .insert(guiaData)
+        .select("id")
+        .single();
+
+      if (guiaError || !guiaCreated) {
+        console.error("Erro ao criar guia de honorários:", guiaError);
+        showError("Erro ao salvar a guia de honorários.");
+        setView("pergunta_honorarios");
+        return;
       }
 
-      // Etapa 3: Salvando dados (80-100%)
-      setAnalyzingStep("saving");
-      setAnalyzingProgress(85);
+      setGuiaHonorariosId(guiaCreated.id);
+      setHtmlGuiaPreenchida(htmlPreenchido);
 
-      // Atualiza o faturamento com os arquivos da guia de honorários
-      const { error: updateError } = await supabase
+      // 6. Vincular a guia ao faturamento
+      await supabase
+        .from("faturamentos")
+        .update({ guia_honorarios_id: guiaCreated.id })
+        .eq("id", faturamentoId);
+
+      setView("preview_honorarios");
+    } catch (err) {
+      console.error("Erro ao gerar guia de honorários:", err);
+      showError("Erro ao gerar a guia de honorários.");
+      setView("pergunta_honorarios");
+    }
+  };
+
+  // Função para pular a guia de honorários e finalizar
+  const handlePularGuiaHonorarios = async () => {
+    await finalizarFaturamento();
+  };
+
+  // Função para avançar após preview da guia
+  const handleAvancarAposPreview = async () => {
+    await finalizarFaturamento();
+  };
+
+  // Função para finalizar o faturamento (mudar status para ATIVO)
+  const finalizarFaturamento = async () => {
+    if (!faturamentoId) return;
+
+    try {
+      const { error } = await supabase
         .from("faturamentos")
         .update({
-          url_guia_honorarios: uploadedFilePaths,
-          status: "ATIVO", // Ativa o faturamento após completar todos os uploads
+          status: "ATIVO",
           updated_at: new Date().toISOString(),
         })
         .eq("id", faturamentoId);
 
-      if (updateError) {
-        console.error("Erro ao atualizar faturamento:", updateError);
+      if (error) {
+        console.error("Erro ao finalizar faturamento:", error);
       }
 
-      setAnalyzingProgress(100);
-
-      // Aguarda um momento para mostrar 100%
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      showSuccess("Guia de faturamento de honorários processada com sucesso!");
-      setFilesHonorarios([]);
-      setShowAnalyzingScreen(false);
+      showSuccess("Faturamento concluído com sucesso!");
       setView("success");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível processar a guia de faturamento de honorários.";
-      showError(message);
-      setShowAnalyzingScreen(false);
-    } finally {
-      setIsUploading(false);
+      console.error("Erro ao finalizar:", err);
+      setView("success");
     }
   };
 
-  // Simula o preenchimento automático: barra progride e, ao final, exibe tela de assinatura
-  useEffect(() => {
-    if (!showFillingScreen) {
-      setFillingProgress(0);
-      return;
-    }
-
-    let current = 0;
-    setFillingProgress(0);
-
-    const interval = window.setInterval(() => {
-      current += 20;
-      if (current >= 100) {
-        window.clearInterval(interval);
-        setFillingProgress(100);
-        setShowFillingScreen(false);
-        setSignatureDialogOpen(true);
-      } else {
-        setFillingProgress(current);
-      }
-    }, 400);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [showFillingScreen]);
-
-  // Após clicar em Assinar, mostra tela de "Assinando..." e depois transita para "Documento Assinado"
-  useEffect(() => {
-    if (!showSigningScreen) return;
-
-    const timeout = window.setTimeout(() => {
-      setShowSigningScreen(false);
-      setShowSignedScreen(true);
-    }, 1500);
-
-    return () => window.clearTimeout(timeout);
-  }, [showSigningScreen]);
-
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
-  const totalSteps = 6;
+  const totalSteps = 5;
   const currentStep =
     view === "start"
       ? 1
@@ -824,14 +907,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
          ? 2
          : view === "upload_descricao"
           ? 3
-          : view === "upload_honorarios"
+          : view === "pergunta_honorarios" || view === "gerando_honorarios" || view === "preview_honorarios" || view === "sem_modelo"
             ? 4
-            : 6;
+            : 5;
 
   const handleNovaDescricao = () => {
     setFilesGuia([]);
     setFilesDescricao([]);
-    setFilesHonorarios([]);
     setStep(1);
     setView("start");
     setSelectedHospitalId(undefined);
@@ -842,10 +924,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setClinicaStepView("selector");
     setUseSameAsHospital(false);
     setFaturamentoId(null);
+    setFaturamentoData(null);
+    setItensFaturamento([]);
+    setHtmlGuiaPreenchida("");
+    setGuiaHonorariosId(null);
   };
 
-  // Arquivos atuais baseado na view
-  const currentFiles = view === "upload_guia" ? filesGuia : view === "upload_descricao" ? filesDescricao : filesHonorarios;
+  const currentFiles = view === "upload_guia" ? filesGuia : filesDescricao;
   const totalArquivos = currentFiles.length;
   const arquivosLabel =
     totalArquivos === 0
@@ -853,29 +938,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       : totalArquivos === 1
         ? "1 arquivo"
         : `${totalArquivos} arquivos`;
-
-  const isSameBillingLocation = Boolean(
-    selectedHospitalId &&
-      selectedClinicaId &&
-      selectedHospitalId === selectedClinicaId,
-  );
-
-  useEffect(() => {
-    if (!showSendingScreen || isSameBillingLocation) {
-      setSendingStep(1);
-      return;
-    }
-
-    setSendingStep(1);
-
-    const timeout = window.setTimeout(() => {
-      setSendingStep(2);
-    }, 1800);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [showSendingScreen, isSameBillingLocation]);
 
   const isImage = (file: File) => file.type.startsWith("image/");
 
@@ -887,20 +949,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     fileInputRefDescricao.current?.click();
   };
 
-  const handleAdicionarMaisHonorarios = () => {
-    fileInputRefHonorarios.current?.click();
-  };
-
   const handleRemoverArquivoGuia = (index: number) => {
     setFilesGuia((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoverArquivoDescricao = (index: number) => {
     setFilesDescricao((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleRemoverArquivoHonorarios = (index: number) => {
-    setFilesHonorarios((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleIniciarFluxo = () => {
@@ -915,7 +969,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Handler para o checkbox "Mesmo hospital"
   const handleUseSameAsHospitalChange = (checked: boolean) => {
     setUseSameAsHospital(checked);
     if (checked && selectedHospitalId) {
@@ -930,7 +983,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleAbrirListaClinicas = () => {
     if (useSameAsHospital) return;
 
-    // Mesmo comportamento de "CIRURGIA REALIZADA EM": se já carregou, abre; se não, carrega.
     if (!loadingClinicas && clinicasMedico.length > 0) {
       setClinicaStepView("list");
       return;
@@ -1001,7 +1053,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setClinicaStepView("selector");
   };
 
-  // Função para obter o título do documento sendo analisado
   const getAnalyzingDocTitle = () => {
     switch (analyzingDocType) {
       case "guia":
@@ -1015,7 +1066,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Função para obter a descrição do passo de análise
   const getAnalyzingStepDescription = () => {
     if (analyzingStep === "uploading") {
       switch (analyzingDocType) {
@@ -1043,6 +1093,24 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     return "Gravando os dados extraídos no sistema.";
   };
 
+  const getStepLabel = () => {
+    switch (view) {
+      case "hospital":
+        return "Selecionar Instituições";
+      case "upload_guia":
+        return "Guia de Autorização de Cirurgia";
+      case "upload_descricao":
+        return "Descrição Cirúrgica";
+      case "pergunta_honorarios":
+      case "gerando_honorarios":
+      case "preview_honorarios":
+      case "sem_modelo":
+        return "Guia de Honorários";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
       {/* Fundo premium */}
@@ -1050,7 +1118,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
       <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {(view === "hospital" || view === "upload_guia" || view === "upload_descricao" || view === "upload_honorarios" || view === "success") && (
+        {(view !== "start" && view !== "success") && (
           <>
             <p className="mb-3 text-sm font-semibold text-[#D4A017] sm:text-base">
               {saudacao}
@@ -1075,11 +1143,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       ? () => {
                           setView("upload_guia");
                         }
-                      : view === "upload_honorarios"
+                      : view === "pergunta_honorarios"
                         ? () => {
                             setView("upload_descricao");
                           }
-                        : () => navigate("/medico/dashboard")
+                        : view === "sem_modelo"
+                          ? () => {
+                              setView("pergunta_honorarios");
+                            }
+                          : view === "preview_honorarios"
+                            ? () => {
+                                setView("pergunta_honorarios");
+                              }
+                            : () => navigate("/medico/dashboard")
                 }
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -1089,43 +1165,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <div className="flex flex-col items-end gap-1">
                 <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
                   <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
-                  <span>
-                    {view === "hospital"
-                      ? "Passo 1/6"
-                      : view === "upload_guia"
-                      ? "Passo 2/6"
-                      : view === "upload_descricao"
-                        ? "Passo 3/6"
-                        : view === "upload_honorarios"
-                          ? "Passo 4/6"
-                          : "Envio Concluído"}
-                  </span>
+                  <span>Passo {currentStep}/{totalSteps}</span>
                 </div>
-                {(view === "hospital" || view === "upload_guia" || view === "upload_descricao" || view === "upload_honorarios") && (
-                  <span className="text-[11px] text-[#D4A017] pr-1">
-                    {view === "hospital"
-                      ? "Selecionar Instituições"
-                      : view === "upload_guia"
-                      ? "Guia de Autorização de Cirurgia"
-                      : view === "upload_descricao"
-                        ? "Descrição Cirúrgica"
-                        : "Guia de Faturamento de Honorários"}
-                  </span>
-                )}
+                <span className="text-[11px] text-[#D4A017] pr-1">
+                  {getStepLabel()}
+                </span>
               </div>
             </header>
           </>
         )}
 
         {/* Barra de progresso do fluxo sempre no topo */}
-        <div className="mb-5 w-full max-w-md self-center">
-          <div className="h-1 w-full rounded-full bg-black/40 border border-[#D4A017]/10">
-            <div
-              className="h-1 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] transition-all duration-300"
-              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-            />
+        {view !== "start" && (
+          <div className="mb-5 w-full max-w-md self-center">
+            <div className="h-1 w-full rounded-full bg-black/40 border border-[#D4A017]/10">
+              <div
+                className="h-1 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] transition-all duration-300"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
@@ -1179,7 +1239,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 2 - HOSPITAL + CLÍNICA (Nova tela unificada) */}
+          {/* TELA 2 - HOSPITAL + CLÍNICA */}
           {view === "hospital" && (
             <div className="flex w-full flex-1 items-start justify-center pt-4">
               {hospitalStepView === "selector" && clinicaStepView === "selector" ? (
@@ -1281,7 +1341,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       <ChevronDown className="h-4 w-4 text-[#9CA3AF]" />
                     </button>
 
-                    {/* Checkbox "Mesmo hospital que foi realizada a cirurgia" (agora abaixo do campo) */}
                     <label className="mt-3 flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -1347,7 +1406,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                           type="button"
                           onClick={() => {
                             handleSelecionarHospital(h);
-                            // Se o checkbox estiver marcado, atualiza a clínica também
                             if (useSameAsHospital) {
                               setSelectedClinicaId(h.id);
                               setSelectedClinicaName(h.nome_fantasia);
@@ -1432,7 +1490,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 2 - UPLOAD GUIA DE AUTORIZAÇÃO */}
+          {/* TELA 3 - UPLOAD GUIA DE AUTORIZAÇÃO */}
           {view === "upload_guia" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
               <Input
@@ -1564,13 +1622,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   >
                     Voltar para Novo Faturamento
                   </Button>
-
                 </>
               )}
             </div>
           )}
 
-          {/* TELA 3 - UPLOAD DESCRIÇÃO CIRÚRGICA */}
+          {/* TELA 4 - UPLOAD DESCRIÇÃO CIRÚRGICA */}
           {view === "upload_descricao" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
               <Input
@@ -1707,144 +1764,127 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 4 - UPLOAD GUIA DE FATURAMENTO DE HONORÁRIOS */}
-          {view === "upload_honorarios" && (
-            <div className="mt-2 flex w-full max-w-md flex-col">
-              <Input
-                id="files-upload-honorarios"
-                ref={fileInputRefHonorarios}
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/*,application/pdf"
-                onChange={handleFileChangeHonorarios}
-              />
+          {/* TELA 5 - PERGUNTA SOBRE GUIA DE HONORÁRIOS */}
+          {view === "pergunta_honorarios" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+                  <FileCheck className="h-8 w-8" />
+                </div>
 
-              <div className="mb-6">
-                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                </h1>
-                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  {filesHonorarios.length === 0 ? (
-                    <>
-                      <span>
-                        Faça upload das imagens da Guia de Faturamento de Honorários.
-                      </span>
-                      <br />
-                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
-                        Obs: Tire várias imagens com os detalhes dos campos da mesma
-                        guia para melhor análise da IA
-                      </span>
-                    </>
-                  ) : (
-                    "Confira os arquivos antes de enviar a Guia de Faturamento de Honorários"
-                  )}
+                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
+                  Guia de Honorários
+                </h2>
+                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
+                  Deseja que o sistema preencha automaticamente a Guia de Faturamento de Honorários com os dados extraídos?
                 </p>
+
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                    onClick={handleGerarGuiaHonorarios}
+                  >
+                    Sim, preencher guia
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                    onClick={handlePularGuiaHonorarios}
+                  >
+                    Não, pular esta etapa
+                  </Button>
+                </div>
               </div>
-
-              {filesHonorarios.length === 0 ? (
-                <>
-                  <label
-                    htmlFor="files-upload-honorarios"
-                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
-                        <Upload className="h-8 w-8 text-black" />
-                      </div>
-                      <p className="text-[#F5F5F5] font-medium">
-                        Adicionar Arquivos
-                      </p>
-                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
-                      <p className="text-[#6B7280] text-[11px]">
-                        Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
-                      </p>
-                    </div>
-                  </label>
-
-                  <Button
-                    type="button"
-                    disabled
-                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
-                  >
-                    Selecione arquivos acima
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#F5F5F5]">
-                      Seus Arquivos ({filesHonorarios.length === 1 ? "1 arquivo" : `${filesHonorarios.length} arquivos`})
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                      onClick={handleAdicionarMaisHonorarios}
-                    >
-                      + Adicionar mais
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {filesHonorarios.map((file, index) => (
-                      <div
-                        key={file.name + file.lastModified + index}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            {isImage(file) ? (
-                              <ImageIcon className="h-4 w-4" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] sm:text-xs">
-                              {file.name}
-                            </p>
-                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoverArquivoHonorarios(index)}
-                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button
-                    type="button"
-                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                    disabled={isUploading || filesHonorarios.length === 0}
-                    onClick={handleUploadGuiaHonorarios}
-                  >
-                    {isUploading ? "Processando..." : "Finalizar Envio"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => setView("upload_descricao")}
-                    disabled={isUploading}
-                  >
-                    Voltar para Descrição Cirúrgica
-                  </Button>
-                </>
-              )}
             </div>
           )}
 
-          {/* TELA 5 - SUCESSO GERAL (final do processo) */}
+          {/* TELA 6 - GERANDO GUIA DE HONORÁRIOS */}
+          {view === "gerando_honorarios" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+
+                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
+                  Gerando Guia de Honorários
+                </h2>
+                <p className="text-xs text-[#9CA3AF] sm:text-sm">
+                  Aguarde enquanto preenchemos a guia com os dados extraídos...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* TELA 7 - SEM MODELO CADASTRADO */}
+          {view === "sem_modelo" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                  <AlertCircle className="h-8 w-8" />
+                </div>
+
+                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
+                  Modelo não encontrado
+                </h2>
+                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
+                  Não existe modelo de guia de faturamento cadastrado para a instituição selecionada ({selectedClinicaName}).
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                    onClick={handlePularGuiaHonorarios}
+                  >
+                    Continuar sem guia
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                    onClick={() => setView("pergunta_honorarios")}
+                  >
+                    Voltar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TELA 8 - PREVIEW DA GUIA DE HONORÁRIOS */}
+          {view === "preview_honorarios" && (
+            <div className="mt-2 flex w-full max-w-4xl flex-col">
+              <div className="mb-4">
+                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                  Guia de Honorários Preenchida
+                </h1>
+                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+                  Confira os dados preenchidos automaticamente na guia abaixo.
+                </p>
+              </div>
+
+              {/* Container do HTML da guia */}
+              <div className="w-full rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto max-h-[60vh]">
+                <div 
+                  className="guia-preview"
+                  dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
+                />
+              </div>
+
+              <Button
+                type="button"
+                className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
+                onClick={handleAvancarAposPreview}
+              >
+                Avançar
+              </Button>
+            </div>
+          )}
+
+          {/* TELA 9 - SUCESSO */}
           {view === "success" && (
             <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
               <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
@@ -1886,12 +1926,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         </main>
       </div>
 
-
       {/* Tela de Análise da IA */}
       {showAnalyzingScreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
           <div className="flex w-full max-w-sm flex-col items-center px-6 py-10 text-center">
-            {/* Ícone animado */}
             <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_60px_rgba(212,160,23,0.35)]">
               <div className="absolute inset-1 rounded-[26px] bg-black/60 backdrop-blur-xl" />
               <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#121212] border border-[#D4A017]/20 shadow-[0_10px_40px_rgba(0,0,0,0.65)]">
@@ -1916,7 +1954,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               {getAnalyzingStepDescription()}
             </p>
 
-            {/* Barra de progresso real */}
             <div className="mt-6 w-full max-w-xs">
               <Progress value={analyzingProgress} className="h-2.5 rounded-full" />
               <p className="mt-2 text-[10px] text-[#6B7280]">
@@ -1924,12 +1961,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </p>
             </div>
 
-            {/* Título do documento sendo processado */}
             <p className="mt-4 text-[10px] text-[#D4A017] font-medium">
               {getAnalyzingDocTitle()}
             </p>
 
-            {/* Etapas do processo */}
             <div className="mt-4 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
