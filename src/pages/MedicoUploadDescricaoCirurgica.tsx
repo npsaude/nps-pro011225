@@ -914,11 +914,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     try {
       console.log("[PDF] Capturando elemento com html2canvas...");
       
-      // Capturar o HTML como canvas
+      // Capturar o HTML como canvas - escala reduzida para menor tamanho
       const canvas = await html2canvas(elementToCapture, {
-        scale: 2, // Melhor qualidade
+        scale: 1.5, // Reduzido de 2 para 1.5 para menor tamanho
         useCORS: true,
-        logging: true, // Ativar logs do html2canvas
+        logging: false,
         backgroundColor: "#ffffff",
         allowTaint: true,
         foreignObjectRendering: false,
@@ -927,13 +927,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       console.log("[PDF] Canvas gerado:", canvas.width, "x", canvas.height);
 
       // Criar PDF
-      const imgData = canvas.toDataURL("image/png");
-      console.log("[PDF] Imagem gerada, tamanho:", imgData.length);
-
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
+        compress: true, // Ativar compressão
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -954,8 +952,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       console.log("[PDF] Dimensões - pdfWidth:", pdfWidth, "pdfHeight:", pdfHeight, "scaledHeight:", scaledHeight);
 
       if (scaledHeight <= pageHeight) {
-        // Cabe em uma página
-        pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, scaledHeight);
+        // Cabe em uma página - usar JPEG com qualidade 0.8 para menor tamanho
+        const imgData = canvas.toDataURL("image/jpeg", 0.8);
+        console.log("[PDF] Imagem gerada (JPEG), tamanho:", imgData.length);
+        pdf.addImage(imgData, "JPEG", imgX, imgY, imgWidth * ratio, scaledHeight);
         console.log("[PDF] PDF gerado com 1 página");
       } else {
         // Múltiplas páginas
@@ -989,8 +989,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               tempCanvas.height
             );
             
-            const tempImgData = tempCanvas.toDataURL("image/png");
-            pdf.addImage(tempImgData, "PNG", imgX, imgY, imgWidth * ratio, heightToDraw);
+            // Usar JPEG com qualidade 0.8 para menor tamanho
+            const tempImgData = tempCanvas.toDataURL("image/jpeg", 0.8);
+            pdf.addImage(tempImgData, "JPEG", imgX, imgY, imgWidth * ratio, heightToDraw);
           }
 
           remainingHeight -= heightToDraw;
@@ -1007,7 +1008,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       // Retornar como Blob
       const blob = pdf.output("blob");
-      console.log("[PDF] Blob gerado, tamanho:", blob.size, "bytes");
+      console.log("[PDF] Blob gerado, tamanho:", blob.size, "bytes", "(" + (blob.size / 1024 / 1024).toFixed(2) + " MB)");
       return blob;
     } catch (error) {
       console.error("[PDF] Erro ao gerar PDF:", error);
