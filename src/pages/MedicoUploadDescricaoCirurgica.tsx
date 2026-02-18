@@ -885,60 +885,70 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Função para gerar PDF da guia de honorários
   const gerarPdfGuiaHonorarios = async (): Promise<Blob | null> => {
     console.log("[PDF] Iniciando geração do PDF da guia de honorários");
-    console.log("[PDF] guiaPreviewRef.current:", guiaPreviewRef.current);
     console.log("[PDF] htmlGuiaPreenchida length:", htmlGuiaPreenchida?.length || 0);
 
-    // Se não tiver o ref, tentar criar um elemento temporário com o HTML
-    let elementToCapture = guiaPreviewRef.current;
-    let tempContainer: HTMLDivElement | null = null;
-
-    if (!elementToCapture && htmlGuiaPreenchida) {
-      console.log("[PDF] Ref não encontrado, criando elemento temporário");
-      tempContainer = document.createElement("div");
-      tempContainer.innerHTML = htmlGuiaPreenchida;
-      tempContainer.style.position = "absolute";
-      tempContainer.style.left = "-9999px";
-      tempContainer.style.top = "0";
-      tempContainer.style.width = "800px";
-      tempContainer.style.backgroundColor = "#ffffff";
-      tempContainer.style.padding = "20px";
-      document.body.appendChild(tempContainer);
-      elementToCapture = tempContainer;
-    }
-
-    if (!elementToCapture) {
-      console.error("[PDF] Nenhum elemento disponível para captura");
+    if (!htmlGuiaPreenchida) {
+      console.error("[PDF] HTML da guia não disponível");
       return null;
     }
 
+    // Criar container temporário com estilos corrigidos para PDF
+    const tempContainer = document.createElement("div");
+    tempContainer.id = "pdf-capture-container";
+    
+    // Injetar CSS para corrigir line-height e renderização de fontes
+    const styleTag = document.createElement("style");
+    styleTag.id = "pdf-capture-styles";
+    styleTag.textContent = `
+      #pdf-capture-container, #pdf-capture-container * {
+        line-height: 1.6 !important;
+        font-family: Arial, Helvetica, sans-serif !important;
+      }
+      #pdf-capture-container td, #pdf-capture-container th {
+        padding: 6px 8px !important;
+        vertical-align: middle !important;
+      }
+      #pdf-capture-container table { border-collapse: collapse !important; }
+    `;
+    
+    tempContainer.innerHTML = htmlGuiaPreenchida;
+    tempContainer.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 800px;
+      background-color: #ffffff;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+    `;
+    
+    document.head.appendChild(styleTag);
+    document.body.appendChild(tempContainer);
+
     try {
-      console.log("[PDF] Aguardando renderização completa...");
+      console.log("[PDF] Aguardando renderização...");
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Aguardar um momento para garantir que as fontes e estilos foram carregados
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Forçar reflow
+      tempContainer.offsetHeight;
       
-      // Forçar reflow do elemento
-      elementToCapture.offsetHeight;
+      console.log("[PDF] Capturando com html2canvas...");
       
-      console.log("[PDF] Capturando elemento com html2canvas...");
-      
-      // Capturar o HTML como canvas
-      const canvas = await html2canvas(elementToCapture, {
-        scale: 2, // Escala maior para melhor qualidade de texto
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
         allowTaint: true,
-        foreignObjectRendering: false,
-        windowWidth: elementToCapture.scrollWidth,
-        windowHeight: elementToCapture.scrollHeight,
-        // Garantir que todo o conteúdo seja capturado
-        width: elementToCapture.scrollWidth,
-        height: elementToCapture.scrollHeight,
-        x: 0,
-        y: 0,
-        scrollX: 0,
-        scrollY: 0,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById("pdf-capture-container");
+          if (el) {
+            el.querySelectorAll("*").forEach((node) => {
+              (node as HTMLElement).style.lineHeight = "1.6";
+            });
+          }
+        },
       });
 
       console.log("[PDF] Canvas gerado:", canvas.width, "x", canvas.height);
@@ -1018,10 +1028,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         console.log("[PDF] PDF gerado com", pageNum, "páginas");
       }
 
-      // Limpar elemento temporário se foi criado
-      if (tempContainer) {
-        document.body.removeChild(tempContainer);
-      }
+      // Limpar elementos temporários
+      document.body.removeChild(tempContainer);
+      const styleEl = document.getElementById("pdf-capture-styles");
+      if (styleEl) document.head.removeChild(styleEl);
 
       // Retornar como Blob
       const blob = pdf.output("blob");
@@ -1029,10 +1039,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return blob;
     } catch (error) {
       console.error("[PDF] Erro ao gerar PDF:", error);
-      // Limpar elemento temporário se foi criado
-      if (tempContainer) {
-        document.body.removeChild(tempContainer);
-      }
+      // Limpar elementos temporários em caso de erro
+      const container = document.getElementById("pdf-capture-container");
+      if (container) document.body.removeChild(container);
+      const styleEl = document.getElementById("pdf-capture-styles");
+      if (styleEl) document.head.removeChild(styleEl);
       return null;
     }
   };
