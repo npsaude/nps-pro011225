@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,6 +98,203 @@ Atenciosamente
 ${nomeUsuario}`;
 }
 
+// Converter Uint8Array para Base64
+function uint8ArrayToBase64(uint8Array: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary);
+}
+
+// Gerar boundary único para multipart
+function generateBoundary(): string {
+  return "----=_Part_" + Math.random().toString(36).substring(2);
+}
+
+// Construir email MIME com anexos
+function buildMimeEmail(
+  from: string,
+  fromName: string,
+  to: string,
+  cc: string,
+  subject: string,
+  textBody: string,
+  attachments: { filename: string; content: Uint8Array; contentType: string }[]
+): string {
+  const boundary = generateBoundary();
+  
+  let email = "";
+  email += `From: ${fromName} <${from}>\r\n`;
+  email += `To: ${to}\r\n`;
+  if (cc) {
+    email += `Cc: ${cc}\r\n`;
+  }
+  email += `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=\r\n`;
+  email += `MIME-Version: 1.0\r\n`;
+  email += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n`;
+  email += `\r\n`;
+  
+  // Corpo do texto
+  email += `--${boundary}\r\n`;
+  email += `Content-Type: text/plain; charset=UTF-8\r\n`;
+  email += `Content-Transfer-Encoding: base64\r\n`;
+  email += `\r\n`;
+  email += btoa(unescape(encodeURIComponent(textBody))) + `\r\n`;
+  
+  // Anexos
+  for (const att of attachments) {
+    email += `--${boundary}\r\n`;
+    email += `Content-Type: ${att.contentType}; name="${att.filename}"\r\n`;
+    email += `Content-Disposition: attachment; filename="${att.filename}"\r\n`;
+    email += `Content-Transfer-Encoding: base64\r\n`;
+    email += `\r\n`;
+    email += uint8ArrayToBase64(att.content) + `\r\n`;
+  }
+  
+  email += `--${boundary}--\r\n`;
+  
+  return email;
+}
+
+// Enviar email via SMTP usando conexão TCP direta
+async function sendEmailViaSMTP(
+  host: string,
+  port: number,
+  username: string,
+  password: string,
+  from: string,
+  fromName: string,
+  to: string,
+  cc: string,
+  subject: string,
+  textBody: string,
+  attachments: { filename: string; content: Uint8Array; contentType: string }[]
+): Promise<{ success: boolean; error?: string }> {
+  
+  console.log("[send-billing-emails] Iniciando conexão SMTP...");
+  
+  try {
+    // Conectar via TLS
+    const conn = await Deno.connectTls({
+      hostname: host,
+      port: port,
+    });
+    
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    
+    // Função para ler resposta do servidor
+    async function readResponse(): Promise<string> {
+      const buffer = new Uint8Array(4096);
+      const n = await conn.read(buffer);
+      if (n === null) return "";
+      return decoder.decode(buffer.subarray(0, n));
+    }
+    
+    // Função para enviar comando
+    async function sendCommand(cmd: string): Promise<string> {
+      console.log("[send-billing-emails] SMTP >", cmd.replace(/\r\n/g, "").substring(0, 50));
+      await conn.write(encoder.encode(cmd + "\r\n"));
+      const response = await readResponse();
+      console.log("[send-billing-emails] SMTP <", response.substring(0, 100).replace(/\r\n/g, " "));
+      return response;
+    }
+    
+    // Ler saudação do servidor
+    let response = await readResponse();
+    console.log("[send-billing-emails] SMTP Greeting:", response.substring(0, 100));
+    
+    if (!response.startsWith("220")) {
+      conn.close();
+      return { success: false, error: "Servidor SMTP não respondeu corretamente" };
+    }
+    
+    // EHLO
+    response = await sendCommand(`EHLO localhost`);
+    if (!response.startsWith("250")) {
+      conn.close();
+      return { success: false, error: "EHLO falhou" };
+    }
+    
+    // AUTH LOGIN
+    response = await sendCommand("AUTH LOGIN");
+    if (!response.startsWith("334")) {
+      conn.close();
+      return { success: false, error: "AUTH LOGIN não suportado" };
+    }
+    
+    // Enviar username (base64)
+    response = await sendCommand(btoa(username));
+    if (!response.startsWith("334")) {
+      conn.close();
+      return { success: false, error: "Username rejeitado" };
+    }
+    
+    // Enviar password (base64)
+    response = await sendCommand(btoa(password));
+    if (!response.startsWith("235")) {
+      conn.close();
+      return { success: false, error: "Autenticação falhou - verifique usuário e senha" };
+    }
+    
+    console.log("[send-billing-emails] Autenticação SMTP bem sucedida!");
+    
+    // MAIL FROM
+    response = await sendCommand(`MAIL FROM:<${from}>`);
+    if (!response.startsWith("250")) {
+      conn.close();
+      return { success: false, error: "MAIL FROM rejeitado" };
+    }
+    
+    // RCPT TO (destinatário principal)
+    response = await sendCommand(`RCPT TO:<${to}>`);
+    if (!response.startsWith("250")) {
+      conn.close();
+      return { success: false, error: `Destinatário ${to} rejeitado` };
+    }
+    
+    // RCPT TO (cópia)
+    if (cc) {
+      response = await sendCommand(`RCPT TO:<${cc}>`);
+      if (!response.startsWith("250")) {
+        console.log("[send-billing-emails] CC rejeitado, continuando sem cópia");
+      }
+    }
+    
+    // DATA
+    response = await sendCommand("DATA");
+    if (!response.startsWith("354")) {
+      conn.close();
+      return { success: false, error: "DATA rejeitado" };
+    }
+    
+    // Construir e enviar email
+    const mimeEmail = buildMimeEmail(from, fromName, to, cc, subject, textBody, attachments);
+    await conn.write(encoder.encode(mimeEmail));
+    await conn.write(encoder.encode("\r\n.\r\n"));
+    
+    response = await readResponse();
+    console.log("[send-billing-emails] Resposta após DATA:", response.substring(0, 100));
+    
+    if (!response.startsWith("250")) {
+      conn.close();
+      return { success: false, error: "Email rejeitado pelo servidor" };
+    }
+    
+    // QUIT
+    await sendCommand("QUIT");
+    conn.close();
+    
+    console.log("[send-billing-emails] Email enviado com sucesso!");
+    return { success: true };
+    
+  } catch (error) {
+    console.error("[send-billing-emails] Erro SMTP:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
 serve(async (req) => {
   const method = req.method.toUpperCase();
 
@@ -115,7 +311,7 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   
-  // Configurações SMTP da Hostinger (configuradas como secrets no Supabase)
+  // Configurações SMTP
   const smtpHost = Deno.env.get("SMTP_HOST") ?? "smtp.hostinger.com";
   const smtpPort = parseInt(Deno.env.get("SMTP_PORT") ?? "465");
   const smtpUser = Deno.env.get("SMTP_USER") ?? "";
@@ -138,7 +334,6 @@ serve(async (req) => {
 
   if (!smtpUser || !smtpPass) {
     console.error("[send-billing-emails] Configurações SMTP não encontradas.");
-    console.error("[send-billing-emails] Configure os secrets: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_FROM_NAME");
     return new Response(
       JSON.stringify({
         error: "Configurações SMTP não encontradas. Configure os secrets SMTP_USER e SMTP_PASS no Supabase.",
@@ -292,47 +487,38 @@ serve(async (req) => {
     }
   }
 
-  // 3) Preparar anexos (URLs assinadas dos PDFs)
+  // 3) Preparar anexos
   const bucketName = "NPS-pro";
   const attachments: { filename: string; content: Uint8Array; contentType: string }[] = [];
 
   // Função para baixar arquivo
   async function downloadFile(path: string, filename: string): Promise<{ filename: string; content: Uint8Array; contentType: string } | null> {
     try {
-      // Criar URL assinada
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from(bucketName)
-        .createSignedUrl(path, 60 * 60); // 1 hora
+        .createSignedUrl(path, 60 * 60);
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
-        console.error("[send-billing-emails] Erro ao criar URL assinada para:", path, signedUrlError);
+        console.error("[send-billing-emails] Erro ao criar URL assinada para:", path);
         return null;
       }
 
-      // Baixar o arquivo
       const response = await fetch(signedUrlData.signedUrl);
       if (!response.ok) {
-        console.error("[send-billing-emails] Erro ao baixar arquivo:", path, response.status);
+        console.error("[send-billing-emails] Erro ao baixar arquivo:", path);
         return null;
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
-      // Determinar content type
       const ext = path.split(".").pop()?.toLowerCase() || "";
       let contentType = "application/octet-stream";
       if (ext === "pdf") contentType = "application/pdf";
       else if (ext === "png") contentType = "image/png";
       else if (ext === "jpg" || ext === "jpeg") contentType = "image/jpeg";
-      else if (ext === "gif") contentType = "image/gif";
-      else if (ext === "webp") contentType = "image/webp";
 
-      return {
-        filename,
-        content: uint8Array,
-        contentType,
-      };
+      return { filename, content: uint8Array, contentType };
     } catch (error) {
       console.error("[send-billing-emails] Erro ao processar arquivo:", path, error);
       return null;
@@ -346,9 +532,7 @@ serve(async (req) => {
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_autorizacao_${i + 1}.${ext}`;
       const attachment = await downloadFile(path, filename);
-      if (attachment) {
-        attachments.push(attachment);
-      }
+      if (attachment) attachments.push(attachment);
     }
   }
 
@@ -359,9 +543,7 @@ serve(async (req) => {
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `descricao_cirurgica_${i + 1}.${ext}`;
       const attachment = await downloadFile(path, filename);
-      if (attachment) {
-        attachments.push(attachment);
-      }
+      if (attachment) attachments.push(attachment);
     }
   }
 
@@ -372,26 +554,7 @@ serve(async (req) => {
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
       const filename = `guia_honorarios_${i + 1}.${ext}`;
       const attachment = await downloadFile(path, filename);
-      if (attachment) {
-        attachments.push(attachment);
-      }
-    }
-  }
-
-  // Buscar PDF da guia de honorários na tabela guia_honorarios
-  const { data: guiaHonorarios } = await supabase
-    .from("guia_honorarios")
-    .select("pdf_guia_honorario")
-    .eq("id", fat.id)
-    .maybeSingle();
-
-  if (guiaHonorarios?.pdf_guia_honorario) {
-    const attachment = await downloadFile(
-      guiaHonorarios.pdf_guia_honorario,
-      "guia_honorarios.pdf"
-    );
-    if (attachment) {
-      attachments.push(attachment);
+      if (attachment) attachments.push(attachment);
     }
   }
 
@@ -401,73 +564,9 @@ serve(async (req) => {
   const dataCirurgiaFormatada = formatarData(fat.data_cirurgia);
   const horaInicioFormatada = formatarHora(fat.hora_inicio);
 
-  // 5) Configurar cliente SMTP
-  const client = new SmtpClient();
-
-  try {
-    console.log("[send-billing-emails] Conectando ao servidor SMTP...");
-    console.log("[send-billing-emails] Host:", smtpHost, "Port:", smtpPort);
-    
-    await client.connectTLS({
-      hostname: smtpHost,
-      port: smtpPort,
-      username: smtpUser,
-      password: smtpPass,
-    });
-
-    console.log("[send-billing-emails] Conectado ao SMTP com sucesso!");
-  } catch (smtpError) {
-    console.error("[send-billing-emails] Erro ao conectar ao SMTP:", smtpError);
-    return new Response(
-      JSON.stringify({
-        error: "Erro ao conectar ao servidor de email. Verifique as configurações SMTP.",
-        details: String(smtpError),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  }
-
-  // 6) Enviar emails
+  // 5) Enviar emails
   const emailsEnviados: string[] = [];
   const errosEnvio: string[] = [];
-
-  // Função para enviar email via SMTP
-  async function enviarEmail(
-    to: string,
-    subject: string,
-    text: string,
-    cc: string
-  ): Promise<boolean> {
-    try {
-      console.log("[send-billing-emails] Enviando email para:", to);
-
-      // Preparar anexos para o SMTP
-      const smtpAttachments = attachments.map((att) => ({
-        filename: att.filename,
-        content: att.content,
-        contentType: att.contentType,
-        encoding: "binary" as const,
-      }));
-
-      await client.send({
-        from: `${smtpFromName} <${smtpFrom}>`,
-        to: to,
-        cc: cc,
-        subject: subject,
-        content: text,
-        attachments: smtpAttachments.length > 0 ? smtpAttachments : undefined,
-      });
-
-      console.log("[send-billing-emails] Email enviado com sucesso para:", to);
-      return true;
-    } catch (error) {
-      console.error("[send-billing-emails] Erro ao enviar email para:", to, error);
-      return false;
-    }
-  }
 
   // Cenário A: Instituições diferentes - enviar 2 emails
   if (instituicoesDiferentes && clinicaCirurgia) {
@@ -482,20 +581,25 @@ serve(async (req) => {
         userName
       );
 
-      const enviado = await enviarEmail(
+      const result = await sendEmailViaSMTP(
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPass,
+        smtpFrom,
+        smtpFromName,
         clinicaCirurgia.email_contato_faturamento,
+        userEmail,
         `[NÃO FATURAR] Documentação Cirúrgica - ${fat.paciente_nome || "Paciente"}`,
         emailNaoEnviar,
-        userEmail
+        attachments
       );
 
-      if (enviado) {
+      if (result.success) {
         emailsEnviados.push(clinicaCirurgia.email_contato_faturamento);
       } else {
-        errosEnvio.push(`Falha ao enviar para ${clinicaCirurgia.nome_fantasia}`);
+        errosEnvio.push(`Falha ao enviar para ${clinicaCirurgia.nome_fantasia}: ${result.error}`);
       }
-    } else {
-      console.log("[send-billing-emails] Instituição da cirurgia sem email configurado, pulando...");
     }
 
     // Email 2: Para instituição de faturamento (FATURAR)
@@ -509,17 +613,24 @@ serve(async (req) => {
       userName
     );
 
-    const enviado = await enviarEmail(
+    const result = await sendEmailViaSMTP(
+      smtpHost,
+      smtpPort,
+      smtpUser,
+      smtpPass,
+      smtpFrom,
+      smtpFromName,
       clinicaFat.email_contato_faturamento!,
+      userEmail,
       `[FATURAMENTO] Documentação Cirúrgica - ${fat.paciente_nome || "Paciente"}`,
       emailEnviar,
-      userEmail
+      attachments
     );
 
-    if (enviado) {
+    if (result.success) {
       emailsEnviados.push(clinicaFat.email_contato_faturamento!);
     } else {
-      errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}`);
+      errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}: ${result.error}`);
     }
   } else {
     // Cenário B: Mesma instituição - enviar apenas 1 email
@@ -533,29 +644,28 @@ serve(async (req) => {
       userName
     );
 
-    const enviado = await enviarEmail(
+    const result = await sendEmailViaSMTP(
+      smtpHost,
+      smtpPort,
+      smtpUser,
+      smtpPass,
+      smtpFrom,
+      smtpFromName,
       clinicaFat.email_contato_faturamento!,
+      userEmail,
       `[FATURAMENTO] Documentação Cirúrgica - ${fat.paciente_nome || "Paciente"}`,
       emailEnviar,
-      userEmail
+      attachments
     );
 
-    if (enviado) {
+    if (result.success) {
       emailsEnviados.push(clinicaFat.email_contato_faturamento!);
     } else {
-      errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}`);
+      errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}: ${result.error}`);
     }
   }
 
-  // Fechar conexão SMTP
-  try {
-    await client.close();
-    console.log("[send-billing-emails] Conexão SMTP fechada.");
-  } catch (closeError) {
-    console.error("[send-billing-emails] Erro ao fechar conexão SMTP:", closeError);
-  }
-
-  // 7) Atualizar status do faturamento
+  // 6) Atualizar status do faturamento
   if (emailsEnviados.length > 0) {
     const agora = new Date().toISOString();
     const { error: updateError } = await supabase
@@ -568,19 +678,17 @@ serve(async (req) => {
       .eq("id", faturamentoId);
 
     if (updateError) {
-      console.error("[send-billing-emails] Erro ao atualizar status do faturamento:", updateError);
-    } else {
-      console.log("[send-billing-emails] Status do faturamento atualizado para ENVIADO");
+      console.error("[send-billing-emails] Erro ao atualizar status:", updateError);
     }
   }
 
-  // 8) Retornar resultado
+  // 7) Retornar resultado
   const sucesso = emailsEnviados.length > 0;
   const mensagem = sucesso
     ? `Email(s) enviado(s) com sucesso para: ${emailsEnviados.join(", ")}`
-    : "Nenhum email foi enviado.";
+    : `Nenhum email foi enviado. Erros: ${errosEnvio.join("; ")}`;
 
-  console.log("[send-billing-emails] Processamento concluído:", mensagem);
+  console.log("[send-billing-emails] Resultado:", mensagem);
 
   return new Response(
     JSON.stringify({
