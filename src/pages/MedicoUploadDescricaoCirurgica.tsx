@@ -2090,7 +2090,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   {filesDescricao.length === 0 ? (
                     <>
                       <span>
-                        Faça upload das imagens da Descrição Cirúrgica.
+                        Faça upload das imagens da{" "}
+                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                          Descrição Cirúrgica
+                        </span>
+                        .
                       </span>
                       <br />
                       <span className="text-[11px] text-[#6B7280] sm:text-xs">
@@ -2099,7 +2103,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       </span>
                     </>
                   ) : (
-                    "Confira os arquivos antes de enviar a Descrição Cirúrgica"
+                    <>
+                      Confira os arquivos antes de enviar a{" "}
+                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                        Descrição Cirúrgica
+                      </span>
+                    </>
                   )}
                 </p>
               </div>
