@@ -20,6 +20,8 @@ import {
   FileCheck,
   AlertCircle,
   Download,
+  Calendar,
+  Zap,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -42,6 +44,7 @@ type ViewState =
   | "hospital" 
   | "pergunta_solicitacao"
   | "upload_solicitacao"
+  | "pergunta_guia_autorizacao"
   | "upload_guia" 
   | "upload_descricao" 
   | "pergunta_honorarios"
@@ -229,6 +232,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Estado para o diálogo de envio de emails
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+
+  // Tipo de cirurgia (eletiva ou emergencial)
+  const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
 
   // Limpar URL do blob quando o componente for desmontado
   useEffect(() => {
@@ -1784,28 +1790,28 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         ? () => {
                             setView("pergunta_solicitacao");
                           }
-                    : view === "upload_guia"
-                    ? () => {
-                        setView("pergunta_solicitacao");
-                        setStep(1);
-                      }
-                    : view === "upload_descricao"
-                      ? () => {
-                          setView("upload_guia");
-                        }
-                      : view === "pergunta_honorarios"
+                        : view === "upload_guia"
                         ? () => {
-                            setView("upload_descricao");
+                            setView("pergunta_solicitacao");
+                            setStep(1);
                           }
-                        : view === "sem_modelo"
+                        : view === "upload_descricao"
                           ? () => {
-                              setView("pergunta_honorarios");
+                              setView("upload_guia");
                             }
-                          : view === "preview_honorarios"
-                            ? () => {
-                                setView("pergunta_honorarios");
-                              }
-                            : () => navigate("/medico/dashboard")
+                            : view === "pergunta_honorarios"
+                              ? () => {
+                                  setView("upload_descricao");
+                                }
+                                : view === "sem_modelo"
+                                  ? () => {
+                                      setView("pergunta_honorarios");
+                                    }
+                                    : view === "preview_honorarios"
+                                      ? () => {
+                                          setView("pergunta_honorarios");
+                                        }
+                                        : () => navigate("/medico/dashboard")
                 }
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
