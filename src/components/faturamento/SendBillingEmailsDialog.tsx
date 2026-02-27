@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -11,8 +9,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Mail, Loader2, CheckCircle2, XCircle, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import {
+  Select as UiSelect,
+  SelectContent as UiSelectContent,
+  SelectItem as UiSelectItem,
+  SelectTrigger as UiSelectTrigger,
+  SelectValue as UiSelectValue,
+} from "@/components/ui/select";
+import {
+  ATUACAO_LABEL,
+  reconhecerAtuacao,
+  type Atuacao,
+} from "@/utils/atuacao";
 
 interface SendBillingEmailsDialogProps {
   open: boolean;
@@ -20,6 +29,8 @@ interface SendBillingEmailsDialogProps {
   faturamentoId: string;
   userEmail: string;
   userName: string;
+  userCrm?: string;
+  descricaoCirurgicaTexto?: string | null;
   instituicaoCirurgiaNome?: string;
   instituicaoFaturamentoNome?: string;
   instituicoesDiferentes: boolean;
@@ -29,12 +40,27 @@ interface SendBillingEmailsDialogProps {
 
 type DialogState = "confirm" | "sending" | "success" | "error";
 
+type TeamInfo = {
+  cirurgiao_principal_nome: string | null;
+  cirurgiao_principal_crm: string | null;
+  auxiliar1_nome: string | null;
+  auxiliar1_crm: string | null;
+  auxiliar2_nome: string | null;
+  auxiliar2_crm: string | null;
+  auxiliar3_nome: string | null;
+  auxiliar3_crm: string | null;
+  anestesista_nome: string | null;
+  anestesista_crm: string | null;
+};
+
 export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = ({
   open,
   onOpenChange,
   faturamentoId,
   userEmail,
   userName,
+  userCrm,
+  descricaoCirurgicaTexto,
   instituicaoCirurgiaNome,
   instituicaoFaturamentoNome,
   instituicoesDiferentes,
@@ -44,8 +70,94 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
   const [state, setState] = useState<DialogState>("confirm");
   const [resultMessage, setResultMessage] = useState<string>("");
   const [emailsEnviados, setEmailsEnviados] = useState<string[]>([]);
+  const [atuacao, setAtuacao] = useState<Atuacao | "">("");
+
+  const requiresAtuacao = useMemo(() => {
+    const norm = String(descricaoCirurgicaTexto ?? "").trim();
+    return norm.length > 0;
+  }, [descricaoCirurgicaTexto]);
+
+  const atuacaoLabel = useMemo(() => {
+    if (!atuacao) return "";
+    return ATUACAO_LABEL[atuacao];
+  }, [atuacao]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!requiresAtuacao) return;
+    if (atuacao) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const functionUrl =
+          "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
+
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            faturamentoId,
+            userEmail,
+            userName,
+            userCrm,
+            descricaoCirurgicaTexto,
+            atuacao: null,
+            dryRun: true,
+          }),
+        });
+
+        const result = await response.json();
+        const team = (result?.team ?? null) as TeamInfo | null;
+
+        if (!cancelled && team && userCrm) {
+          const guess = reconhecerAtuacao({
+            descricaoCirurgicaTexto,
+            userNome: userName,
+            userCrm,
+            cirurgiaoNome: team.cirurgiao_principal_nome,
+            cirurgiaoCrm: team.cirurgiao_principal_crm,
+            auxiliar1Nome: team.auxiliar1_nome,
+            auxiliar1Crm: team.auxiliar1_crm,
+            auxiliar2Nome: team.auxiliar2_nome,
+            auxiliar2Crm: team.auxiliar2_crm,
+            auxiliar3Nome: team.auxiliar3_nome,
+            auxiliar3Crm: team.auxiliar3_crm,
+            anestesistaNome: team.anestesista_nome,
+            anestesistaCrm: team.anestesista_crm,
+          });
+
+          if (guess) setAtuacao(guess);
+        }
+      } catch {
+        // Sem pré-seleção
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    requiresAtuacao,
+    atuacao,
+    faturamentoId,
+    userEmail,
+    userName,
+    userCrm,
+    descricaoCirurgicaTexto,
+  ]);
 
   const handleSendEmails = async () => {
+    if (requiresAtuacao && !atuacao) {
+      showError("Confirme sua atuação na cirurgia antes de enviar.");
+      return;
+    }
+
     setState("sending");
 
     try {
@@ -61,6 +173,9 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
           faturamentoId,
           userEmail,
           userName,
+          userCrm,
+          descricaoCirurgicaTexto,
+          atuacao: atuacao || null,
         }),
       });
 
@@ -90,6 +205,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     setState("confirm");
     setResultMessage("");
     setEmailsEnviados([]);
+    setAtuacao("");
     onOpenChange(false);
   };
 
@@ -117,6 +233,32 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             </AlertDialogHeader>
 
             <div className="my-4 space-y-3">
+              {requiresAtuacao && (
+                <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
+                  <p className="text-xs text-[#9CA3AF] mb-2">
+                    Confirme sua atuação na cirurgia
+                    {atuacaoLabel ? (
+                      <span className="text-[#D4A017]"> (reconhecida: {atuacaoLabel})</span>
+                    ) : (
+                      <span className="text-[#D4A017]"> (não reconhecida)</span>
+                    )}
+                  </p>
+
+                  <UiSelect value={atuacao} onValueChange={(v) => setAtuacao(v as Atuacao)}>
+                    <UiSelectTrigger className="h-10 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5]">
+                      <UiSelectValue placeholder="Selecione sua atuação" />
+                    </UiSelectTrigger>
+                    <UiSelectContent className="bg-[#121212] border border-[#D4A017]/20 text-[#F5F5F5]">
+                      {(Object.keys(ATUACAO_LABEL) as Atuacao[]).map((k) => (
+                        <UiSelectItem key={k} value={k} className="focus:bg-[#D4A017]/10">
+                          {ATUACAO_LABEL[k]}
+                        </UiSelectItem>
+                      ))}
+                    </UiSelectContent>
+                  </UiSelect>
+                </div>
+              )}
+
               {instituicoesDiferentes ? (
                 <>
                   <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
@@ -237,9 +379,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
               <h3 className="text-lg font-semibold text-[#F5F5F5] mb-2">
                 Emails Enviados!
               </h3>
-              <p className="text-sm text-[#9CA3AF] mb-4">
-                {resultMessage}
-              </p>
+              <p className="text-sm text-[#9CA3AF] mb-4">{resultMessage}</p>
               {emailsEnviados.length > 0 && (
                 <div className="rounded-xl bg-black/40 border border-green-500/20 p-3 text-left">
                   <p className="text-xs text-[#9CA3AF] mb-2">Enviado para:</p>
@@ -272,9 +412,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
               <h3 className="text-lg font-semibold text-[#F5F5F5] mb-2">
                 Erro ao Enviar
               </h3>
-              <p className="text-sm text-[#9CA3AF]">
-                {resultMessage}
-              </p>
+              <p className="text-sm text-[#9CA3AF]">{resultMessage}</p>
             </div>
             <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
               <Button
