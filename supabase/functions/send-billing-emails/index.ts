@@ -39,6 +39,12 @@ interface FaturamentoData {
   guia_honorarios_id: string | null;
 }
 
+interface ModeloEmailRow {
+  tipo: "FATURAR" | "NAO_FATURAR";
+  assunto: string;
+  corpo_html: string;
+}
+
 type Attachment = { filename: string; content: Uint8Array; contentType: string };
 type EncodedAttachment = { filename: string; contentType: string; base64: string };
 
@@ -145,9 +151,9 @@ function buildMimeEmailEncoded(
   email += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n`;
   email += `\r\n`;
 
-  // Corpo do texto
+  // Corpo do HTML
   email += `--${boundary}\r\n`;
-  email += `Content-Type: text/plain; charset=UTF-8\r\n`;
+  email += `Content-Type: text/html; charset=UTF-8\r\n`;
   email += `Content-Transfer-Encoding: base64\r\n`;
   email += `\r\n`;
   const textBytes = encoder.encode(textBody);
@@ -335,6 +341,16 @@ async function sendEmailViaSMTP(
     console.error("[send-billing-emails] Erro SMTP:", error);
     return { success: false, error: String(error) };
   }
+}
+
+function applyTemplate(input: string, vars: Record<string, string>): string {
+  let out = input;
+  for (const [key, value] of Object.entries(vars)) {
+    // suporte a {{ chave }} e {{chave}}
+    const re = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
+    out = out.replace(re, value);
+  }
+  return out;
 }
 
 serve(async (req) => {
@@ -697,22 +713,75 @@ serve(async (req) => {
   // Base64 uma vez para reutilizar em 1 ou 2 emails
   const encodedAttachments = encodeAttachmentsOnce(attachments);
 
+  // 4) Preparar dados formatados
   const dataCirurgiaFormatada = formatarData(fat.data_cirurgia);
   const horaInicioFormatada = formatarHora(fat.hora_inicio);
 
+  // 4.1) Carregar modelos de email
+  const { data: modelosEmail, error: modelosEmailError } = await supabase
+    .from("modelos_email_faturamento")
+    .select("tipo, assunto, corpo_html")
+    .in("tipo", ["FATURAR", "NAO_FATURAR"]);
+
+  if (modelosEmailError) {
+    console.error("[send-billing-emails] Erro ao buscar modelos de email:", modelosEmailError);
+    return new Response(
+      JSON.stringify({
+        error: "Não foi possível carregar os modelos de email nas configurações.",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const templatesByType = new Map(
+    ((modelosEmail ?? []) as ModeloEmailRow[]).map((m) => [m.tipo, m] as const),
+  );
+
+  const templateFaturar = templatesByType.get("FATURAR");
+  const templateNaoFaturar = templatesByType.get("NAO_FATURAR");
+
+  if (!templateFaturar || !templateNaoFaturar) {
+    console.error("[send-billing-emails] Modelos de email ausentes.");
+    return new Response(
+      JSON.stringify({
+        error:
+          "Modelos de email não configurados (FATURAR e/ou NAO_FATURAR). Acesse Admin > Configurações.",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const commonVars = {
+    paciente_nome: fat.paciente_nome || "N/A",
+    convenio: fat.paciente_convenio || "N/A",
+    data_cirurgia: dataCirurgiaFormatada || "N/A",
+    hora_inicio: horaInicioFormatada || "N/A",
+    hospital_nome: fat.hospital_nome || clinicaFat.nome_fantasia || "N/A",
+    nome_usuario: userName || "",
+  };
+
+  // 5) Enviar emails
   const emailsEnviados: string[] = [];
   const errosEnvio: string[] = [];
 
+  // Cenário A: Instituições diferentes - enviar 2 emails
   if (instituicoesDiferentes && clinicaCirurgia) {
+    // Email 1: Para instituição da cirurgia (NÃO faturar)
     if (clinicaCirurgia.email_contato_faturamento) {
-      const emailNaoEnviar = gerarEmailNaoEnviar(
-        clinicaCirurgia.contato || "",
-        fat.paciente_nome || "",
-        fat.paciente_convenio || "",
-        dataCirurgiaFormatada,
-        horaInicioFormatada,
-        userName,
-      );
+      const vars = {
+        ...commonVars,
+        contato: clinicaCirurgia.contato || "Responsável",
+        hospital_nome: fat.hospital_nome || clinicaCirurgia.nome_fantasia || "N/A",
+      };
+
+      const subject = applyTemplate(templateNaoFaturar.assunto, vars);
+      const htmlBody = applyTemplate(templateNaoFaturar.corpo_html, vars);
 
       const result = await sendEmailViaSMTP(
         smtpHost,
@@ -723,27 +792,29 @@ serve(async (req) => {
         smtpFromName,
         clinicaCirurgia.email_contato_faturamento,
         userEmail,
-        `[NÃO FATURAR] ${userName} - ${fat.paciente_nome || "Paciente"}`,
-        emailNaoEnviar,
+        subject,
+        htmlBody,
         encodedAttachments,
       );
 
       if (result.success) {
         emailsEnviados.push(clinicaCirurgia.email_contato_faturamento);
       } else {
-        errosEnvio.push(`Falha ao enviar para ${clinicaCirurgia.nome_fantasia}: ${result.error}`);
+        errosEnvio.push(
+          `Falha ao enviar para ${clinicaCirurgia.nome_fantasia}: ${result.error}`,
+        );
       }
     }
 
-    const emailEnviar = gerarEmailEnviar(
-      clinicaFat.contato || "",
-      fat.paciente_nome || "",
-      fat.paciente_convenio || "",
-      dataCirurgiaFormatada,
-      horaInicioFormatada,
-      fat.hospital_nome || clinicaCirurgia?.nome_fantasia || "",
-      userName,
-    );
+    // Email 2: Para instituição de faturamento (FATURAR)
+    const varsFat = {
+      ...commonVars,
+      contato: clinicaFat.contato || "Responsável",
+      hospital_nome: fat.hospital_nome || clinicaCirurgia?.nome_fantasia || "N/A",
+    };
+
+    const subjectFat = applyTemplate(templateFaturar.assunto, varsFat);
+    const htmlBodyFat = applyTemplate(templateFaturar.corpo_html, varsFat);
 
     const result = await sendEmailViaSMTP(
       smtpHost,
@@ -754,8 +825,8 @@ serve(async (req) => {
       smtpFromName,
       clinicaFat.email_contato_faturamento!,
       userEmail,
-      `[FATURAMENTO] ${userName} - ${fat.paciente_nome || "Paciente"}`,
-      emailEnviar,
+      subjectFat,
+      htmlBodyFat,
       encodedAttachments,
     );
 
@@ -765,15 +836,15 @@ serve(async (req) => {
       errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}: ${result.error}`);
     }
   } else {
-    const emailEnviar = gerarEmailEnviar(
-      clinicaFat.contato || "",
-      fat.paciente_nome || "",
-      fat.paciente_convenio || "",
-      dataCirurgiaFormatada,
-      horaInicioFormatada,
-      fat.hospital_nome || clinicaFat.nome_fantasia,
-      userName,
-    );
+    // Cenário B: Mesma instituição - enviar apenas 1 email (FATURAR)
+    const varsFat = {
+      ...commonVars,
+      contato: clinicaFat.contato || "Responsável",
+      hospital_nome: fat.hospital_nome || clinicaFat.nome_fantasia || "N/A",
+    };
+
+    const subjectFat = applyTemplate(templateFaturar.assunto, varsFat);
+    const htmlBodyFat = applyTemplate(templateFaturar.corpo_html, varsFat);
 
     const result = await sendEmailViaSMTP(
       smtpHost,
@@ -784,8 +855,8 @@ serve(async (req) => {
       smtpFromName,
       clinicaFat.email_contato_faturamento!,
       userEmail,
-      `[FATURAMENTO] ${userName} - ${fat.paciente_nome || "Paciente"}`,
-      emailEnviar,
+      subjectFat,
+      htmlBodyFat,
       encodedAttachments,
     );
 
