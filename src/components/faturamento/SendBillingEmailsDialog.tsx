@@ -282,13 +282,8 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             </AlertDialogHeader>
 
             <div className="my-4 space-y-3">
-              {blockedMessage && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
-                  <p className="text-sm text-red-200">{blockedMessage}</p>
-                </div>
-              )}
-
               {!requiresAtuacao ? (
+
                 <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
                   <p className="text-sm text-[#9CA3AF]">
                     Não foi encontrada descrição cirúrgica anexada; a confirmação de atuação não é
@@ -314,17 +309,14 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
                           key={k}
                           type="button"
                           onClick={() => {
-                            if (blockedMessage) return;
                             setAtuacao((prev) => (prev === k ? "" : k));
                           }}
-                          className="w-full rounded-lg border border-[#D4A017]/15 bg-black/30 px-3 py-2 text-left hover:bg-[#D4A017]/10 transition-colors disabled:opacity-60"
-                          disabled={!!blockedMessage}
+                          className="w-full rounded-lg border border-[#D4A017]/15 bg-black/30 px-3 py-2 text-left hover:bg-[#D4A017]/10 transition-colors"
                         >
                           <div className="flex items-center gap-3">
                             <Checkbox
                               checked={checked}
                               onCheckedChange={(v) => {
-                                if (blockedMessage) return;
                                 setAtuacao(v ? k : "");
                               }}
                               className="border-[#D4A017]/40 data-[state=checked]:bg-[#D4A017] data-[state=checked]:text-black"
@@ -346,7 +338,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
               <Button
                 onClick={handleConfirmAtuacao}
-                disabled={!!blockedMessage || (requiresAtuacao && !atuacao)}
+                disabled={requiresAtuacao && !atuacao}
                 className="w-full h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow disabled:opacity-60 disabled:hover:shadow-[0_0_20px_rgba(212,160,23,0.4)]"
               >
                 Confirmar e continuar
