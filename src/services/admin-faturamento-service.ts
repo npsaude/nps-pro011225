@@ -52,6 +52,7 @@ type ItemGuiaSolicitacaoRow = {
   descricao_procedimento: string | null;
   quantidade: number | null;
   valor_unitario: number | null;
+  valor_total: number | null;
 };
 
 export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[]> {
@@ -87,7 +88,7 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
   if (guiaSolicitacaoIds.length > 0) {
     const { data: solData, error: solError } = await supabase
       .from("itens_guia_solicitacao")
-      .select("guia_id,codigo_procedimento,descricao_procedimento,quantidade,valor_unitario")
+      .select("guia_id,codigo_procedimento,descricao_procedimento,quantidade,valor_unitario,valor_total")
       .in("guia_id", guiaSolicitacaoIds);
 
     if (solError) throw solError;
@@ -158,39 +159,15 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
       0
     );
 
-    // Valor de faturamento: para cada item solicitado, min(qtd_solicitada, qtd_autorizada) * valor_unitario
-    // Mapear autorizados por código
-    const autorizadosPorCodigo = new Map<string, { qtdAutorizada: number; valorUnitario: number }>();
-    for (const item of itensAutorizados) {
-      const codigo = item.codigo_procedimento ?? "";
-      const existing = autorizadosPorCodigo.get(codigo);
-      const qtdAut = item.quantidade_autorizada ?? item.quantidade ?? 1;
-      const valor = Number(item.valor_unitario) || 0;
-      if (existing) {
-        existing.qtdAutorizada += qtdAut;
-        // Manter o maior valor unitário ou somar? Vamos usar o valor do item
-      } else {
-        autorizadosPorCodigo.set(codigo, { qtdAutorizada: qtdAut, valorUnitario: valor });
-      }
-    }
-
+    // Valor de faturamento: usar valor_total dos itens solicitados
     let valorFaturamento = 0;
     if (itensSolicitados.length > 0) {
-      // Calcular baseado nos itens solicitados
+      // Usar o valor_total diretamente dos itens solicitados
       for (const itemSol of itensSolicitados) {
-        const codigo = itemSol.codigo_procedimento ?? "";
-        const qtdSol = itemSol.quantidade ?? 1;
-        const autorizado = autorizadosPorCodigo.get(codigo);
-        
-        if (autorizado && autorizado.qtdAutorizada > 0) {
-          const qtdFaturar = Math.min(qtdSol, autorizado.qtdAutorizada);
-          const valorUnit = autorizado.valorUnitario || Number(itemSol.valor_unitario) || 0;
-          valorFaturamento += qtdFaturar * valorUnit;
-          // Decrementar a quantidade autorizada usada
-          autorizado.qtdAutorizada -= qtdFaturar;
-        }
+        const valorTotal = Number(itemSol.valor_total) || 0;
+        valorFaturamento += valorTotal;
       }
-    } else {
+    } else if (itensAutorizados.length > 0) {
       // Se não há itens solicitados, usar o total dos itens autorizados
       valorFaturamento = itensAutorizados.reduce(
         (sum, item) => sum + (item.quantidade_autorizada ?? item.quantidade ?? 1) * (Number(item.valor_unitario) || 0),

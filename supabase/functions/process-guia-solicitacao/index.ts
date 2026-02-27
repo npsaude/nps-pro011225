@@ -235,6 +235,14 @@ REGRAS:
 - Se um campo não estiver presente ou não for confiável, use null.
 - Responda APENAS com JSON válido (sem comentários, sem texto extra).
 
+ATENÇÃO ESPECIAL PARA OS ITENS/PROCEDIMENTOS:
+- Campo 23 (Qtde.) = quantidade
+- Campo 24 (Via) = via_acesso
+- Campo 25 (Tec.) = tecnica_utilizada
+- Campo 26 (% Red./Acresc.) = percentual_reducao_acrescimo
+- Campo 27 (Valor Unitário - R$) = valor_unitario
+- Campo 28 (Valor Total - R$) = valor_total (IMPORTANTE: extrair este campo corretamente, é o valor total do item)
+
 Retorne no formato:
 {
   "guia": {
