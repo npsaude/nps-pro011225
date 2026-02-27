@@ -74,6 +74,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
   const [resultMessage, setResultMessage] = useState<string>("");
   const [emailsEnviados, setEmailsEnviados] = useState<string[]>([]);
   const [atuacao, setAtuacao] = useState<Atuacao | "">("");
+  const [atuacaoReconhecida, setAtuacaoReconhecida] = useState<Atuacao | null>(null);
   const [requiresAtuacao, setRequiresAtuacao] = useState(() => {
     const norm = String(descricaoCirurgicaTexto ?? "").trim();
     return norm.length > 0;
@@ -91,6 +92,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     setScreen("atuacao");
     setResultMessage("");
     setEmailsEnviados([]);
+    setAtuacaoReconhecida(null);
 
     let cancelled = false;
 
@@ -125,11 +127,19 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
           setRequiresAtuacao(result.requires_atuacao);
         }
 
+        const reconhecida = (result?.atuacao_reconhecida ?? null) as Atuacao | null;
+        setAtuacaoReconhecida(reconhecida);
+
         if (!response.ok) {
           const msg =
             (typeof result?.error === "string" && result.error) ||
             "Não foi possível validar sua participação na cirurgia.";
           setBlockedMessage(msg);
+          return;
+        }
+
+        if (reconhecida && !atuacao) {
+          setAtuacao(reconhecida);
           return;
         }
 
@@ -177,6 +187,8 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     descricaoCirurgicaTexto,
     atuacao,
   ]);
+
+  const isAtuacaoReconhecida = !!atuacaoReconhecida;
 
   const handleConfirmAtuacao = () => {
     if (blockedMessage) {
@@ -273,12 +285,35 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_25px_rgba(212,160,23,0.35)]">
                 <Check className="h-7 w-7" />
               </div>
-              <AlertDialogTitle className="text-center text-lg font-semibold text-[#F5F5F5]">
-                Sua atuação na cirurgia
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-center text-sm text-[#9CA3AF]">
-                Confirme como você atuou para registrar no faturamento e usar no email.
-              </AlertDialogDescription>
+
+              {!requiresAtuacao ? (
+                <>
+                  <AlertDialogTitle className="text-center text-lg font-semibold text-[#F5F5F5]">
+                    Sua atuação na cirurgia
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-center text-sm text-[#9CA3AF]">
+                    Confirme como você atuou para registrar no faturamento e usar no email.
+                  </AlertDialogDescription>
+                </>
+              ) : isAtuacaoReconhecida ? (
+                <>
+                  <AlertDialogTitle className="text-center text-lg font-semibold text-[#F5F5F5]">
+                    Confirme abaixo em qual área você atuou nessa cirurgia.
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-center text-sm text-[#9CA3AF]" />
+                </>
+              ) : (
+                <>
+                  <AlertDialogTitle className="text-center text-lg font-semibold text-[#F5F5F5]">
+                    Sua atuação na cirurgia não foi reconhecida.
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-center text-sm text-[#9CA3AF]">
+                    Isso significa que a descrição cirúrgica pode estar trocada ou o CRM nela preenchida
+                    é diferente do seu CRM. Se você realmente atuou nessa cirurgia, escolha abaixo em
+                    qual área você atuou.
+                  </AlertDialogDescription>
+                </>
+              )}
             </AlertDialogHeader>
 
             <div className="my-4 space-y-3">
