@@ -1,5 +1,5 @@
 import React from "react";
-import { CalendarDays, Clock3, Hospital, User2 } from "lucide-react";
+import { CalendarDays, Clock3, Hospital, User2, Stethoscope, Users, FileText, FileCheck, DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import BillingDocsProgress, { type BillingDocStep } from "./BillingDocsProgress";
 
@@ -124,57 +124,73 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
           </div>
         </div>
 
-        {/* Linha de informações resumidas - Layout visual melhorado */}
+        {/* Linha de informações resumidas - Layout visual com ícones */}
         <div className="border-t border-[#D5DFEF] bg-[#F9FAFC] px-6 py-4">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
             {/* Coluna esquerda: Procedimentos e Equipe */}
             <div className="space-y-2.5">
               {/* Procedimentos */}
-              <div className="flex flex-wrap items-start gap-x-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Procedimentos:
-                </span>
-                <span className="text-[11px] text-slate-700">
-                  {procedimentosText}
-                </span>
+              <div className="flex items-start gap-2">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#EDE9FE] text-violet-600">
+                  <Stethoscope className="h-3 w-3" />
+                </div>
+                <div className="flex flex-wrap items-start gap-x-1.5">
+                  <span className="text-[11px] font-semibold text-slate-600">
+                    Procedimentos:
+                  </span>
+                  <span className="text-[11px] text-slate-600">
+                    {procedimentosText}
+                  </span>
+                </div>
               </div>
 
               {/* Equipe */}
-              <div className="flex flex-wrap items-start gap-x-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Equipe:
-                </span>
-                <span className="text-[11px] text-slate-700">
-                  {profissionaisText}
-                </span>
+              <div className="flex items-start gap-2">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#DBEAFE] text-blue-600">
+                  <Users className="h-3 w-3" />
+                </div>
+                <div className="flex flex-wrap items-start gap-x-1.5">
+                  <span className="text-[11px] font-semibold text-slate-600">
+                    Equipe:
+                  </span>
+                  <span className="text-[11px] text-slate-600">
+                    {profissionaisText}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Coluna direita: Métricas numéricas */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 lg:justify-end">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 lg:justify-end">
+              {/* Itens solicitados */}
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Itens solicitados:
-                </span>
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#FEF3C7] text-amber-600">
+                  <FileText className="h-3 w-3" />
+                </div>
+                <span className="text-[11px] text-slate-500">Solicitados:</span>
                 <span className="text-[13px] font-semibold text-slate-800">
                   {record.qtdSolicitada}
                 </span>
               </div>
 
+              {/* Itens autorizados */}
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Itens autorizados:
-                </span>
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#D1FAE5] text-emerald-600">
+                  <FileCheck className="h-3 w-3" />
+                </div>
+                <span className="text-[11px] text-slate-500">Autorizados:</span>
                 <span className="text-[13px] font-semibold text-slate-800">
                   {record.qtdAutorizada}
                 </span>
               </div>
 
+              {/* Valor */}
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Valor:
-                </span>
-                <span className="text-[13px] font-semibold text-emerald-600">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#DCFCE7] text-green-600">
+                  <DollarSign className="h-3 w-3" />
+                </div>
+                <span className="text-[11px] text-slate-500">Valor:</span>
+                <span className="text-[13px] font-bold text-emerald-600">
                   {formatCurrency(record.valorFaturamento)}
                 </span>
               </div>
