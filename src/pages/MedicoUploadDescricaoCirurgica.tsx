@@ -2453,9 +2453,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               {analyzingStep === "uploading"
                 ? "Enviando Imagens..."
                 : analyzingStep === "analyzing"
-                  ? "Analisando com IA..."
+                  ? "Analisando Documento"
                   : "Salvando Dados..."}
             </h2>
+
             <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs max-w-xs">
               {getAnalyzingStepDescription()}
             </p>
