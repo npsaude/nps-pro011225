@@ -1514,11 +1514,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     } else if (analyzingStep === "analyzing") {
       switch (analyzingDocType) {
         case "guia":
-          return "A inteligência artificial está extraindo as informações da guia.";
+          return "O sistema está extraindo as informações da guia.";
         case "descricao":
-          return "A inteligência artificial está extraindo as informações da descrição cirúrgica.";
+          return "O sistema está extraindo as informações da descrição cirúrgica.";
         case "honorarios":
-          return "A inteligência artificial está extraindo as informações da guia de faturamento de honorários.";
+          return "O sistema está extraindo as informações da guia de faturamento de honorários.";
         default:
           return "";
       }
