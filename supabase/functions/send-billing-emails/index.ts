@@ -39,6 +39,9 @@ interface FaturamentoData {
   guia_honorarios_id: string | null;
 }
 
+type Attachment = { filename: string; content: Uint8Array; contentType: string };
+type EncodedAttachment = { filename: string; contentType: string; base64: string };
+
 // Formatar data para exibição
 function formatarData(data: string | null): string {
   if (!data) return "";
@@ -103,7 +106,6 @@ ${nomeUsuario}`;
 // Converter Uint8Array para Base64 com quebras de linha para MIME (76 caracteres por linha)
 function uint8ArrayToBase64WithLineBreaks(uint8Array: Uint8Array): string {
   const base64 = base64Encode(uint8Array);
-  // Quebrar em linhas de 76 caracteres para compatibilidade MIME
   const lines: string[] = [];
   for (let i = 0; i < base64.length; i += 76) {
     lines.push(base64.substring(i, i + 76));
@@ -116,23 +118,22 @@ function generateBoundary(): string {
   return "----=_Part_" + Math.random().toString(36).substring(2) + "_" + Date.now();
 }
 
-// Construir email MIME com anexos
-function buildMimeEmail(
+function buildMimeEmailEncoded(
   from: string,
   fromName: string,
   to: string,
   cc: string,
   subject: string,
   textBody: string,
-  attachments: { filename: string; content: Uint8Array; contentType: string }[]
+  attachments: EncodedAttachment[]
 ): string {
   const boundary = generateBoundary();
-  
+
   // Codificar subject em Base64 para suportar caracteres especiais
   const encoder = new TextEncoder();
   const subjectBytes = encoder.encode(subject);
   const subjectBase64 = base64Encode(subjectBytes);
-  
+
   let email = "";
   email += `From: ${fromName} <${from}>\r\n`;
   email += `To: ${to}\r\n`;
@@ -143,7 +144,7 @@ function buildMimeEmail(
   email += `MIME-Version: 1.0\r\n`;
   email += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n`;
   email += `\r\n`;
-  
+
   // Corpo do texto
   email += `--${boundary}\r\n`;
   email += `Content-Type: text/plain; charset=UTF-8\r\n`;
@@ -151,20 +152,41 @@ function buildMimeEmail(
   email += `\r\n`;
   const textBytes = encoder.encode(textBody);
   email += uint8ArrayToBase64WithLineBreaks(textBytes) + `\r\n`;
-  
-  // Anexos
+
+  // Anexos (já base64-encodados)
   for (const att of attachments) {
     email += `--${boundary}\r\n`;
     email += `Content-Type: ${att.contentType}; name="${att.filename}"\r\n`;
     email += `Content-Disposition: attachment; filename="${att.filename}"\r\n`;
     email += `Content-Transfer-Encoding: base64\r\n`;
     email += `\r\n`;
-    email += uint8ArrayToBase64WithLineBreaks(att.content) + `\r\n`;
+    email += att.base64 + `\r\n`;
   }
-  
+
   email += `--${boundary}--\r\n`;
-  
+
   return email;
+}
+
+function encodeAttachmentsOnce(attachments: Attachment[]): EncodedAttachment[] {
+  console.log(
+    "[send-billing-emails] Iniciando base64 dos anexos (uma vez para reutilizar nos emails)...",
+  );
+
+  const encoded: EncodedAttachment[] = [];
+  for (const att of attachments) {
+    encoded.push({
+      filename: att.filename,
+      contentType: att.contentType,
+      base64: uint8ArrayToBase64WithLineBreaks(att.content),
+    });
+  }
+
+  console.log(
+    "[send-billing-emails] Base64 dos anexos concluído. Total:",
+    encoded.length,
+  );
+  return encoded;
 }
 
 // Enviar email via SMTP usando conexão TCP direta
@@ -179,139 +201,136 @@ async function sendEmailViaSMTP(
   cc: string,
   subject: string,
   textBody: string,
-  attachments: { filename: string; content: Uint8Array; contentType: string }[]
+  attachments: EncodedAttachment[]
 ): Promise<{ success: boolean; error?: string }> {
-  
   console.log("[send-billing-emails] Iniciando conexão SMTP...");
   console.log("[send-billing-emails] Número de anexos a enviar:", attachments.length);
-  
+
   try {
-    // Conectar via TLS
     const conn = await Deno.connectTls({
       hostname: host,
       port: port,
     });
-    
+
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    
-    // Função para ler resposta do servidor
+
     async function readResponse(): Promise<string> {
       const buffer = new Uint8Array(4096);
       const n = await conn.read(buffer);
       if (n === null) return "";
       return decoder.decode(buffer.subarray(0, n));
     }
-    
-    // Função para enviar comando
+
     async function sendCommand(cmd: string): Promise<string> {
-      console.log("[send-billing-emails] SMTP >", cmd.replace(/\r\n/g, "").substring(0, 50));
+      console.log(
+        "[send-billing-emails] SMTP >",
+        cmd.replace(/\r\n/g, "").substring(0, 50),
+      );
       await conn.write(encoder.encode(cmd + "\r\n"));
       const response = await readResponse();
-      console.log("[send-billing-emails] SMTP <", response.substring(0, 100).replace(/\r\n/g, " "));
+      console.log(
+        "[send-billing-emails] SMTP <",
+        response.substring(0, 100).replace(/\r\n/g, " "),
+      );
       return response;
     }
-    
-    // Ler saudação do servidor
+
     let response = await readResponse();
     console.log("[send-billing-emails] SMTP Greeting:", response.substring(0, 100));
-    
+
     if (!response.startsWith("220")) {
       conn.close();
       return { success: false, error: "Servidor SMTP não respondeu corretamente" };
     }
-    
-    // EHLO
+
     response = await sendCommand(`EHLO localhost`);
     if (!response.startsWith("250")) {
       conn.close();
       return { success: false, error: "EHLO falhou" };
     }
-    
-    // AUTH LOGIN
+
     response = await sendCommand("AUTH LOGIN");
     if (!response.startsWith("334")) {
       conn.close();
       return { success: false, error: "AUTH LOGIN não suportado" };
     }
-    
-    // Enviar username (base64)
+
     const usernameBytes = encoder.encode(username);
     response = await sendCommand(base64Encode(usernameBytes));
     if (!response.startsWith("334")) {
       conn.close();
       return { success: false, error: "Username rejeitado" };
     }
-    
-    // Enviar password (base64)
+
     const passwordBytes = encoder.encode(password);
     response = await sendCommand(base64Encode(passwordBytes));
     if (!response.startsWith("235")) {
       conn.close();
       return { success: false, error: "Autenticação falhou - verifique usuário e senha" };
     }
-    
+
     console.log("[send-billing-emails] Autenticação SMTP bem sucedida!");
-    
-    // MAIL FROM
+
     response = await sendCommand(`MAIL FROM:<${from}>`);
     if (!response.startsWith("250")) {
       conn.close();
       return { success: false, error: "MAIL FROM rejeitado" };
     }
-    
-    // RCPT TO (destinatário principal)
+
     response = await sendCommand(`RCPT TO:<${to}>`);
     if (!response.startsWith("250")) {
       conn.close();
       return { success: false, error: `Destinatário ${to} rejeitado` };
     }
-    
-    // RCPT TO (cópia)
+
     if (cc) {
       response = await sendCommand(`RCPT TO:<${cc}>`);
       if (!response.startsWith("250")) {
         console.log("[send-billing-emails] CC rejeitado, continuando sem cópia");
       }
     }
-    
-    // DATA
+
     response = await sendCommand("DATA");
     if (!response.startsWith("354")) {
       conn.close();
       return { success: false, error: "DATA rejeitado" };
     }
-    
-    // Construir e enviar email
+
     console.log("[send-billing-emails] Construindo email MIME...");
-    const mimeEmail = buildMimeEmail(from, fromName, to, cc, subject, textBody, attachments);
+    const mimeEmail = buildMimeEmailEncoded(
+      from,
+      fromName,
+      to,
+      cc,
+      subject,
+      textBody,
+      attachments,
+    );
     console.log("[send-billing-emails] Tamanho do email MIME:", mimeEmail.length, "bytes");
-    
-    // Enviar em chunks para evitar problemas com emails grandes
+
     const emailBytes = encoder.encode(mimeEmail);
-    const chunkSize = 65536; // 64KB chunks
+    const chunkSize = 65536;
     for (let i = 0; i < emailBytes.length; i += chunkSize) {
       const chunk = emailBytes.subarray(i, Math.min(i + chunkSize, emailBytes.length));
       await conn.write(chunk);
     }
-    
+
     await conn.write(encoder.encode("\r\n.\r\n"));
-    
+
     response = await readResponse();
     console.log("[send-billing-emails] Resposta após DATA:", response.substring(0, 100));
-    
+
     if (!response.startsWith("250")) {
       conn.close();
       return { success: false, error: "Email rejeitado pelo servidor" };
     }
-    
-    // QUIT
+
     await sendCommand("QUIT");
     conn.close();
-    
+
     console.log("[send-billing-emails] Email enviado com sucesso!");
     return { success: true };
-    
   } catch (error) {
     console.error("[send-billing-emails] Erro SMTP:", error);
     return { success: false, error: String(error) };
@@ -321,7 +340,6 @@ async function sendEmailViaSMTP(
 serve(async (req) => {
   const method = req.method.toUpperCase();
 
-  // Preflight CORS
   if (method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -333,8 +351,7 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  
-  // Configurações SMTP
+
   const smtpHost = Deno.env.get("SMTP_HOST") ?? "smtp.hostinger.com";
   const smtpPort = parseInt(Deno.env.get("SMTP_PORT") ?? "465");
   const smtpUser = Deno.env.get("SMTP_USER") ?? "";
@@ -343,7 +360,9 @@ serve(async (req) => {
   const smtpFromName = Deno.env.get("SMTP_FROM_NAME") ?? "Conmedic";
 
   if (!supabaseUrl || !serviceKey) {
-    console.error("[send-billing-emails] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.");
+    console.error(
+      "[send-billing-emails] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.",
+    );
     return new Response(
       JSON.stringify({
         error: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.",
@@ -351,7 +370,7 @@ serve(async (req) => {
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
@@ -359,12 +378,13 @@ serve(async (req) => {
     console.error("[send-billing-emails] Configurações SMTP não encontradas.");
     return new Response(
       JSON.stringify({
-        error: "Configurações SMTP não encontradas. Configure os secrets SMTP_USER e SMTP_PASS no Supabase.",
+        error:
+          "Configurações SMTP não encontradas. Configure os secrets SMTP_USER e SMTP_PASS no Supabase.",
       }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
@@ -376,13 +396,10 @@ serve(async (req) => {
     body = JSON.parse(raw) as RequestBody;
   } catch {
     console.error("[send-billing-emails] Body JSON inválido.");
-    return new Response(
-      JSON.stringify({ error: "Body JSON inválido." }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Body JSON inválido." }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const { faturamentoId, userEmail, userName } = body;
@@ -400,7 +417,7 @@ serve(async (req) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
@@ -425,24 +442,31 @@ serve(async (req) => {
     .single();
 
   if (faturamentoError || !faturamento) {
-    console.error("[send-billing-emails] Erro ao buscar faturamento:", faturamentoError);
-    return new Response(
-      JSON.stringify({
-        error: "Faturamento não encontrado.",
-      }),
-      {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+    console.error(
+      "[send-billing-emails] Erro ao buscar faturamento:",
+      faturamentoError,
     );
+    return new Response(JSON.stringify({ error: "Faturamento não encontrado." }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const fat = faturamento as FaturamentoData;
   console.log("[send-billing-emails] Faturamento encontrado:", fat.id);
   console.log("[send-billing-emails] guia_honorarios_id:", fat.guia_honorarios_id);
-  console.log("[send-billing-emails] url_guia_autorizacao:", JSON.stringify(fat.url_guia_autorizacao));
-  console.log("[send-billing-emails] url_descricao_cirurgica:", JSON.stringify(fat.url_descricao_cirurgica));
-  console.log("[send-billing-emails] url_guia_honorarios:", JSON.stringify(fat.url_guia_honorarios));
+  console.log(
+    "[send-billing-emails] url_guia_autorizacao:",
+    JSON.stringify(fat.url_guia_autorizacao),
+  );
+  console.log(
+    "[send-billing-emails] url_descricao_cirurgica:",
+    JSON.stringify(fat.url_descricao_cirurgica),
+  );
+  console.log(
+    "[send-billing-emails] url_guia_honorarios:",
+    JSON.stringify(fat.url_guia_honorarios),
+  );
 
   // 1.1) Buscar PDF da guia de honorários se existir guia_honorarios_id
   let pdfGuiaHonorarioPath: string | null = null;
@@ -455,7 +479,10 @@ serve(async (req) => {
 
     if (!guiaError && guiaHonorarios?.pdf_guia_honorario) {
       pdfGuiaHonorarioPath = guiaHonorarios.pdf_guia_honorario;
-      console.log("[send-billing-emails] PDF da guia de honorários encontrado:", pdfGuiaHonorarioPath);
+      console.log(
+        "[send-billing-emails] PDF da guia de honorários encontrado:",
+        pdfGuiaHonorarioPath,
+      );
     } else {
       console.log("[send-billing-emails] Guia de honorários sem PDF ou erro:", guiaError);
     }
@@ -474,11 +501,10 @@ serve(async (req) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
-  // Buscar instituição de faturamento
   const { data: clinicaFaturamento, error: clinicaFatError } = await supabase
     .from("clinicas")
     .select("id, nome_fantasia, contato, email_contato_faturamento")
@@ -486,24 +512,27 @@ serve(async (req) => {
     .single();
 
   if (clinicaFatError || !clinicaFaturamento) {
-    console.error("[send-billing-emails] Erro ao buscar clínica de faturamento:", clinicaFatError);
+    console.error(
+      "[send-billing-emails] Erro ao buscar clínica de faturamento:",
+      clinicaFatError,
+    );
     return new Response(
-      JSON.stringify({
-        error: "Instituição de faturamento não encontrada.",
-      }),
+      JSON.stringify({ error: "Instituição de faturamento não encontrada." }),
       {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
   const clinicaFat = clinicaFaturamento as ClinicaData;
   console.log("[send-billing-emails] Clínica de faturamento:", clinicaFat.nome_fantasia);
 
-  // Verificar se tem email configurado
   if (!clinicaFat.email_contato_faturamento) {
-    console.error("[send-billing-emails] Email de faturamento não configurado para a clínica:", clinicaFat.nome_fantasia);
+    console.error(
+      "[send-billing-emails] Email de faturamento não configurado para a clínica:",
+      clinicaFat.nome_fantasia,
+    );
     return new Response(
       JSON.stringify({
         error: `A instituição "${clinicaFat.nome_fantasia}" não possui email de faturamento configurado.`,
@@ -511,13 +540,13 @@ serve(async (req) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 
-  // Buscar instituição da cirurgia (se diferente)
   let clinicaCirurgia: ClinicaData | null = null;
-  const instituicoesDiferentes = instituicaoCirurgiaId && instituicaoCirurgiaId !== instituicaoFaturamentoId;
+  const instituicoesDiferentes =
+    instituicaoCirurgiaId && instituicaoCirurgiaId !== instituicaoFaturamentoId;
 
   if (instituicoesDiferentes) {
     const { data: clinicaCir, error: clinicaCirError } = await supabase
@@ -534,33 +563,49 @@ serve(async (req) => {
 
   // 3) Preparar anexos
   const bucketName = "NPS-pro";
-  const attachments: { filename: string; content: Uint8Array; contentType: string }[] = [];
+  const attachments: Attachment[] = [];
 
-  // Função para baixar arquivo
-  async function downloadFile(path: string, filename: string): Promise<{ filename: string; content: Uint8Array; contentType: string } | null> {
+  async function downloadFile(
+    path: string,
+    filename: string,
+  ): Promise<Attachment | null> {
     try {
       console.log("[send-billing-emails] Baixando arquivo:", path);
-      
+
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from(bucketName)
         .createSignedUrl(path, 60 * 60);
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
-        console.error("[send-billing-emails] Erro ao criar URL assinada para:", path, signedUrlError);
+        console.error(
+          "[send-billing-emails] Erro ao criar URL assinada para:",
+          path,
+          signedUrlError,
+        );
         return null;
       }
 
       const response = await fetch(signedUrlData.signedUrl);
       if (!response.ok) {
-        console.error("[send-billing-emails] Erro ao baixar arquivo:", path, response.status);
+        console.error(
+          "[send-billing-emails] Erro ao baixar arquivo:",
+          path,
+          response.status,
+        );
         return null;
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      
-      console.log("[send-billing-emails] Arquivo baixado:", filename, "tamanho:", uint8Array.length, "bytes");
-      
+
+      console.log(
+        "[send-billing-emails] Arquivo baixado:",
+        filename,
+        "tamanho:",
+        uint8Array.length,
+        "bytes",
+      );
+
       const ext = path.split(".").pop()?.toLowerCase() || "";
       let contentType = "application/octet-stream";
       if (ext === "pdf") contentType = "application/pdf";
@@ -576,9 +621,12 @@ serve(async (req) => {
     }
   }
 
-  // Processar guia de autorização
   if (fat.url_guia_autorizacao && fat.url_guia_autorizacao.length > 0) {
-    console.log("[send-billing-emails] Processando", fat.url_guia_autorizacao.length, "arquivos de guia de autorização");
+    console.log(
+      "[send-billing-emails] Processando",
+      fat.url_guia_autorizacao.length,
+      "arquivos de guia de autorização",
+    );
     for (let i = 0; i < fat.url_guia_autorizacao.length; i++) {
       const path = fat.url_guia_autorizacao[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
@@ -591,9 +639,12 @@ serve(async (req) => {
     }
   }
 
-  // Processar descrição cirúrgica
   if (fat.url_descricao_cirurgica && fat.url_descricao_cirurgica.length > 0) {
-    console.log("[send-billing-emails] Processando", fat.url_descricao_cirurgica.length, "arquivos de descrição cirúrgica");
+    console.log(
+      "[send-billing-emails] Processando",
+      fat.url_descricao_cirurgica.length,
+      "arquivos de descrição cirúrgica",
+    );
     for (let i = 0; i < fat.url_descricao_cirurgica.length; i++) {
       const path = fat.url_descricao_cirurgica[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
@@ -606,9 +657,12 @@ serve(async (req) => {
     }
   }
 
-  // Processar guia de honorários - primeiro do array url_guia_honorarios
   if (fat.url_guia_honorarios && fat.url_guia_honorarios.length > 0) {
-    console.log("[send-billing-emails] Processando", fat.url_guia_honorarios.length, "arquivos de guia de honorários do array");
+    console.log(
+      "[send-billing-emails] Processando",
+      fat.url_guia_honorarios.length,
+      "arquivos de guia de honorários do array",
+    );
     for (let i = 0; i < fat.url_guia_honorarios.length; i++) {
       const path = fat.url_guia_honorarios[i];
       const ext = path.split(".").pop()?.toLowerCase() || "pdf";
@@ -621,9 +675,10 @@ serve(async (req) => {
     }
   }
 
-  // Processar PDF da guia de honorários da tabela guia_honorarios
   if (pdfGuiaHonorarioPath) {
-    console.log("[send-billing-emails] Processando PDF da guia de honorários da tabela guia_honorarios");
+    console.log(
+      "[send-billing-emails] Processando PDF da guia de honorários da tabela guia_honorarios",
+    );
     const attachment = await downloadFile(pdfGuiaHonorarioPath, "guia_honorarios.pdf");
     if (attachment) {
       attachments.push(attachment);
@@ -634,19 +689,21 @@ serve(async (req) => {
   }
 
   console.log("[send-billing-emails] Total de anexos preparados:", attachments.length);
-  console.log("[send-billing-emails] Lista de anexos:", attachments.map(a => `${a.filename} (${a.content.length} bytes)`));
+  console.log(
+    "[send-billing-emails] Lista de anexos:",
+    attachments.map((a) => `${a.filename} (${a.content.length} bytes)`),
+  );
 
-  // 4) Preparar dados formatados
+  // Base64 uma vez para reutilizar em 1 ou 2 emails
+  const encodedAttachments = encodeAttachmentsOnce(attachments);
+
   const dataCirurgiaFormatada = formatarData(fat.data_cirurgia);
   const horaInicioFormatada = formatarHora(fat.hora_inicio);
 
-  // 5) Enviar emails
   const emailsEnviados: string[] = [];
   const errosEnvio: string[] = [];
 
-  // Cenário A: Instituições diferentes - enviar 2 emails
   if (instituicoesDiferentes && clinicaCirurgia) {
-    // Email 1: Para instituição da cirurgia (NÃO faturar)
     if (clinicaCirurgia.email_contato_faturamento) {
       const emailNaoEnviar = gerarEmailNaoEnviar(
         clinicaCirurgia.contato || "",
@@ -654,7 +711,7 @@ serve(async (req) => {
         fat.paciente_convenio || "",
         dataCirurgiaFormatada,
         horaInicioFormatada,
-        userName
+        userName,
       );
 
       const result = await sendEmailViaSMTP(
@@ -668,7 +725,7 @@ serve(async (req) => {
         userEmail,
         `[NÃO FATURAR] ${userName} - ${fat.paciente_nome || "Paciente"}`,
         emailNaoEnviar,
-        attachments
+        encodedAttachments,
       );
 
       if (result.success) {
@@ -678,7 +735,6 @@ serve(async (req) => {
       }
     }
 
-    // Email 2: Para instituição de faturamento (FATURAR)
     const emailEnviar = gerarEmailEnviar(
       clinicaFat.contato || "",
       fat.paciente_nome || "",
@@ -686,7 +742,7 @@ serve(async (req) => {
       dataCirurgiaFormatada,
       horaInicioFormatada,
       fat.hospital_nome || clinicaCirurgia?.nome_fantasia || "",
-      userName
+      userName,
     );
 
     const result = await sendEmailViaSMTP(
@@ -700,7 +756,7 @@ serve(async (req) => {
       userEmail,
       `[FATURAMENTO] ${userName} - ${fat.paciente_nome || "Paciente"}`,
       emailEnviar,
-      attachments
+      encodedAttachments,
     );
 
     if (result.success) {
@@ -709,7 +765,6 @@ serve(async (req) => {
       errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}: ${result.error}`);
     }
   } else {
-    // Cenário B: Mesma instituição - enviar apenas 1 email
     const emailEnviar = gerarEmailEnviar(
       clinicaFat.contato || "",
       fat.paciente_nome || "",
@@ -717,7 +772,7 @@ serve(async (req) => {
       dataCirurgiaFormatada,
       horaInicioFormatada,
       fat.hospital_nome || clinicaFat.nome_fantasia,
-      userName
+      userName,
     );
 
     const result = await sendEmailViaSMTP(
@@ -731,7 +786,7 @@ serve(async (req) => {
       userEmail,
       `[FATURAMENTO] ${userName} - ${fat.paciente_nome || "Paciente"}`,
       emailEnviar,
-      attachments
+      encodedAttachments,
     );
 
     if (result.success) {
@@ -741,7 +796,6 @@ serve(async (req) => {
     }
   }
 
-  // 6) Atualizar status do faturamento
   if (emailsEnviados.length > 0) {
     const agora = new Date().toISOString();
     const { error: updateError } = await supabase
@@ -758,7 +812,6 @@ serve(async (req) => {
     }
   }
 
-  // 7) Retornar resultado
   const sucesso = emailsEnviados.length > 0;
   const mensagem = sucesso
     ? `Email(s) enviado(s) com sucesso para: ${emailsEnviados.join(", ")}`
@@ -772,11 +825,11 @@ serve(async (req) => {
       message: mensagem,
       emails_enviados: emailsEnviados,
       erros: errosEnvio,
-      anexos_count: attachments.length,
+      anexos_count: encodedAttachments.length,
     }),
     {
       status: sucesso ? 200 : 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+    },
   );
 });
