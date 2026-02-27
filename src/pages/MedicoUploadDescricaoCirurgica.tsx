@@ -3059,7 +3059,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   : "Salvando Dados..."}
             </h2>
 
-            <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs max-w-xs">
+            <p className="mt-2 max-w-xs text-[11px] text-[#9CA3AF] sm:text-xs">
               {getAnalyzingStepDescription()}
             </p>
 
