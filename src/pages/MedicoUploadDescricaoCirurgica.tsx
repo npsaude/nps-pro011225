@@ -1841,7 +1841,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   {filesGuia.length === 0 ? (
                     <>
                       <span>
-                        Faça upload das imagens da Guia de Autorização de Cirurgia.
+                        Faça upload das imagens da{" "}
+                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                          Guia de Autorização de Cirurgia
+                        </span>
+                        .
                       </span>
                       <br />
                       <span className="text-[11px] text-[#6B7280] sm:text-xs">
@@ -1850,7 +1854,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       </span>
                     </>
                   ) : (
-                    "Confira os arquivos antes de enviar a Guia de Autorização de Cirurgia"
+                    <>
+                      Confira os arquivos antes de enviar a{" "}
+                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                        Guia de Autorização de Cirurgia
+                      </span>
+                    </>
                   )}
                 </p>
               </div>
@@ -2346,8 +2355,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </p>
             </div>
 
-            <p className="mt-4 text-[10px] text-[#D4A017] font-medium">
-              {getAnalyzingDocTitle()}
+            <p className="mt-4 text-[10px] font-medium">
+              <span className="inline-flex items-center rounded-full border border-[#D4A017]/30 bg-[#FFD700]/15 px-3 py-1 text-[#FFD700]">
+                {getAnalyzingDocTitle()}
+              </span>
             </p>
 
             <div className="mt-4 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
