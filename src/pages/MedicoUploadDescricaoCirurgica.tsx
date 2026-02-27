@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   ArrowLeft,
   Upload,
@@ -32,6 +34,8 @@ import {
   showSuccess,
 } from "@/utils/toast";
 import { SendBillingEmailsDialog } from "@/components/faturamento/SendBillingEmailsDialog";
+
+GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type ViewState = 
   | "start" 
@@ -66,6 +70,81 @@ interface ItemFaturamento {
   descricao_procedimento?: string;
   quantidade?: number;
 }
+
+type UploadItem = {
+  data: Blob;
+  contentType: string;
+  suggestedName: string;
+};
+
+const isPdfFile = (file: File) =>
+  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+
+const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> => {
+  const data = await pdfFile.arrayBuffer();
+  const loadingTask = getDocument({ data });
+  const pdf = await loadingTask.promise;
+
+  const baseName = sanitizeFileName(
+    pdfFile.name.replace(/\.pdf$/i, "") || "documento",
+  );
+
+  const items: UploadItem[] = [];
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2 });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+
+    await (page.render({ canvasContext: ctx, viewport, canvas } as any).promise as Promise<void>);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => {
+        if (!b) {
+          reject(new Error("Falha ao converter página do PDF em imagem."));
+          return;
+        }
+        resolve(b);
+      }, "image/png");
+    });
+
+    items.push({
+      data: blob,
+      contentType: "image/png",
+      suggestedName: `${baseName}_p${pageNum}.png`,
+    });
+  }
+
+  return items;
+};
+
+const expandFilesToUploadItems = async (files: File[]): Promise<UploadItem[]> => {
+  const items: UploadItem[] = [];
+
+  for (const file of files) {
+    if (isPdfFile(file)) {
+      const pdfItems = await pdfToPngUploadItems(file);
+      items.push(...pdfItems);
+      continue;
+    }
+
+    items.push({
+      data: file,
+      contentType: file.type || "application/octet-stream",
+      suggestedName: file.name,
+    });
+  }
+
+  return items;
+};
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
@@ -428,28 +507,42 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       }
 
       setAnalyzingProgress(10);
-      
-      for (let i = 0; i < filesGuia.length; i++) {
-        const file = filesGuia[i];
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+
+      let uploadItems: UploadItem[] = [];
+      try {
+        uploadItems = await expandFilesToUploadItems(filesGuia);
+      } catch (e) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : "Não foi possível ler o PDF. Tente novamente.";
+        throw new Error(msg);
+      }
+
+      if (uploadItems.length === 0) {
+        throw new Error("Nenhum arquivo válido foi gerado para envio.");
+      }
+
+      for (let i = 0; i < uploadItems.length; i++) {
+        const item = uploadItems[i];
+        const safeName = sanitizeFileName(item.suggestedName);
         const timestamp = Date.now();
         const filePath = `guia_autorizacao_cirurgia/${userId}/${timestamp}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
           .from(bucketName)
-          .upload(filePath, file, {
+          .upload(filePath, item.data, {
             cacheControl: "3600",
             upsert: false,
+            contentType: item.contentType,
           });
 
         if (uploadError) {
-          throw new Error(
-            `Falha ao enviar "${file.name}": ${uploadError.message}`
-          );
+          throw new Error(`Falha ao enviar "${safeName}": ${uploadError.message}`);
         }
 
         uploadedFilePaths.push(filePath);
-        setAnalyzingProgress(10 + Math.round((i + 1) / filesGuia.length * 20));
+        setAnalyzingProgress(10 + Math.round(((i + 1) / uploadItems.length) * 20));
       }
 
       setAnalyzingStep("analyzing");
@@ -481,8 +574,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       if (!response.ok || responseJson?.error) {
         const errorMessage =
-          responseJson?.error ??
-          "Houve erro ao processar a guia de autorização.";
+          responseJson?.error ?? "Houve erro ao processar a guia de autorização.";
         throw new Error(errorMessage);
       }
 
@@ -555,28 +647,42 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const bucketName = "NPS-pro";
 
       setAnalyzingProgress(10);
-      
-      for (let i = 0; i < filesDescricao.length; i++) {
-        const file = filesDescricao[i];
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+
+      let uploadItems: UploadItem[] = [];
+      try {
+        uploadItems = await expandFilesToUploadItems(filesDescricao);
+      } catch (e) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : "Não foi possível ler o PDF. Tente novamente.";
+        throw new Error(msg);
+      }
+
+      if (uploadItems.length === 0) {
+        throw new Error("Nenhum arquivo válido foi gerado para envio.");
+      }
+
+      for (let i = 0; i < uploadItems.length; i++) {
+        const item = uploadItems[i];
+        const safeName = sanitizeFileName(item.suggestedName);
         const timestamp = Date.now();
         const filePath = `descricao_cirurgica/${userId}/${timestamp}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
           .from(bucketName)
-          .upload(filePath, file, {
+          .upload(filePath, item.data, {
             cacheControl: "3600",
             upsert: false,
+            contentType: item.contentType,
           });
 
         if (uploadError) {
-          throw new Error(
-            `Falha ao enviar "${file.name}": ${uploadError.message}`
-          );
+          throw new Error(`Falha ao enviar "${safeName}": ${uploadError.message}`);
         }
 
         uploadedFilePaths.push(filePath);
-        setAnalyzingProgress(10 + Math.round((i + 1) / filesDescricao.length * 20));
+        setAnalyzingProgress(10 + Math.round(((i + 1) / uploadItems.length) * 20));
       }
 
       setAnalyzingStep("analyzing");
@@ -608,8 +714,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       if (!response.ok || responseJson?.error) {
         const errorMessage =
-          responseJson?.error ??
-          "Houve erro ao processar a descrição cirúrgica.";
+          responseJson?.error ?? "Houve erro ao processar a descrição cirúrgica.";
         throw new Error(errorMessage);
       }
 
@@ -635,8 +740,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Descrição cirúrgica processada com sucesso!");
       setFilesDescricao([]);
       setShowAnalyzingScreen(false);
-      
-      // Avança para a pergunta sobre guia de honorários
       setView("pergunta_honorarios");
     } catch (err) {
       const message =
