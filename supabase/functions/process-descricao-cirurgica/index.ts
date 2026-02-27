@@ -620,22 +620,19 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         0.6 // limiar de similaridade 60%
       );
 
-      // Se não validar, não descartamos: salvamos mesmo assim com os dados extraídos.
-      // Isso evita perder procedimentos reais por falha de OCR/variação de nomenclatura.
-      const codigoProcedimento =
-        (validacao.valido ? validacao.codigo_validado : codigoOriginal) ?? null;
-      const descricaoProcedimento =
-        (validacao.valido ? validacao.descricao_validada : descricaoOriginal) ?? null;
-
-      if (validacao.valido && codigoProcedimento) {
+      if (!validacao.valido || !validacao.codigo_validado) {
         console.log(
-          `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
+          `[process-descricao-cirurgica] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
         );
-      } else {
-        console.log(
-          `[process-descricao-cirurgica] ⚠️ Procedimento NÃO validado na CBHPM, salvando como extraído: codigo="${codigoProcedimento}", descricao="${(descricaoProcedimento ?? "").slice(0, 60)}..."`
-        );
+        continue;
       }
+
+      const codigoProcedimento = validacao.codigo_validado;
+      const descricaoProcedimento = validacao.descricao_validada;
+
+      console.log(
+        `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
+      );
 
       // Verificar se já existe (por código OU por descrição)
       const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
