@@ -8,20 +8,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Mail, Loader2, CheckCircle2, XCircle, Send } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Mail,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Send,
+  ArrowLeft,
+  Check,
+} from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
-import {
-  Select as UiSelect,
-  SelectContent as UiSelectContent,
-  SelectItem as UiSelectItem,
-  SelectTrigger as UiSelectTrigger,
-  SelectValue as UiSelectValue,
-} from "@/components/ui/select";
-import {
-  ATUACAO_LABEL,
-  reconhecerAtuacao,
-  type Atuacao,
-} from "@/utils/atuacao";
+import { ATUACAO_LABEL, reconhecerAtuacao, type Atuacao } from "@/utils/atuacao";
 
 interface SendBillingEmailsDialogProps {
   open: boolean;
@@ -38,7 +36,12 @@ interface SendBillingEmailsDialogProps {
   onSkip: () => void;
 }
 
-type DialogState = "confirm" | "sending" | "success" | "error";
+type Screen =
+  | "atuacao"
+  | "confirm-send"
+  | "sending"
+  | "success"
+  | "error";
 
 type TeamInfo = {
   cirurgiao_principal_nome: string | null;
@@ -67,7 +70,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
   onEmailsSent,
   onSkip,
 }) => {
-  const [state, setState] = useState<DialogState>("confirm");
+  const [screen, setScreen] = useState<Screen>("atuacao");
   const [resultMessage, setResultMessage] = useState<string>("");
   const [emailsEnviados, setEmailsEnviados] = useState<string[]>([]);
   const [atuacao, setAtuacao] = useState<Atuacao | "">("");
@@ -84,6 +87,10 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
   useEffect(() => {
     if (!open) return;
+
+    setScreen("atuacao");
+    setResultMessage("");
+    setEmailsEnviados([]);
 
     let cancelled = false;
 
@@ -147,6 +154,11 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
           if (guess) setAtuacao(guess);
         }
+
+        // Se não precisa atuação, pula direto para a confirmação de envio.
+        if (typeof result?.requires_atuacao === "boolean" && !result.requires_atuacao) {
+          setScreen("confirm-send");
+        }
       } catch {
         // Sem pré-seleção
       }
@@ -166,6 +178,20 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     atuacao,
   ]);
 
+  const handleConfirmAtuacao = () => {
+    if (blockedMessage) {
+      showError(blockedMessage);
+      return;
+    }
+
+    if (requiresAtuacao && !atuacao) {
+      showError("Selecione sua atuação na cirurgia para continuar.");
+      return;
+    }
+
+    setScreen("confirm-send");
+  };
+
   const handleSendEmails = async () => {
     if (blockedMessage) {
       showError(blockedMessage);
@@ -174,10 +200,11 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
     if (requiresAtuacao && !atuacao) {
       showError("Confirme sua atuação na cirurgia antes de enviar.");
+      setScreen("atuacao");
       return;
     }
 
-    setState("sending");
+    setScreen("sending");
 
     try {
       const functionUrl =
@@ -206,22 +233,22 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
       setEmailsEnviados(result.emails_enviados || []);
       setResultMessage(result.message || "Emails enviados com sucesso!");
-      setState("success");
+      setScreen("success");
       showSuccess("Emails enviados com sucesso!");
     } catch (error) {
       console.error("Erro ao enviar emails:", error);
       const message = error instanceof Error ? error.message : "Erro ao enviar emails";
       setResultMessage(message);
-      setState("error");
+      setScreen("error");
       showError(message);
     }
   };
 
   const handleClose = () => {
-    if (state === "success") {
+    if (screen === "success") {
       onEmailsSent();
     }
-    setState("confirm");
+    setScreen("atuacao");
     setResultMessage("");
     setEmailsEnviados([]);
     setAtuacao("");
@@ -234,21 +261,23 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     onOpenChange(false);
   };
 
+  const atuacoes = Object.keys(ATUACAO_LABEL) as Atuacao[];
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="bg-[#121212] border border-[#D4A017]/20 text-[#F5F5F5] max-w-md">
-        {/* Estado: Confirmação */}
-        {state === "confirm" && (
+        {/* Tela 1: Atuação */}
+        {screen === "atuacao" && (
           <>
             <AlertDialogHeader>
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_25px_rgba(212,160,23,0.35)]">
-                <Mail className="h-7 w-7" />
+                <Check className="h-7 w-7" />
               </div>
               <AlertDialogTitle className="text-center text-lg font-semibold text-[#F5F5F5]">
-                Enviar Emails de Faturamento
+                Sua atuação na cirurgia
               </AlertDialogTitle>
               <AlertDialogDescription className="text-center text-sm text-[#9CA3AF]">
-                O sistema está pronto para enviar os documentos para as instituições.
+                Confirme como você atuou para registrar no faturamento e usar no email.
               </AlertDialogDescription>
             </AlertDialogHeader>
 
@@ -259,10 +288,17 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
                 </div>
               )}
 
-              {requiresAtuacao && (
+              {!requiresAtuacao ? (
                 <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
-                  <p className="text-xs text-[#9CA3AF] mb-2">
-                    Confirme sua atuação na cirurgia
+                  <p className="text-sm text-[#9CA3AF]">
+                    Não foi encontrada descrição cirúrgica anexada; a confirmação de atuação não é
+                    necessária.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
+                  <p className="text-xs text-[#9CA3AF] mb-3">
+                    Selecione apenas uma opção
                     {atuacaoLabel ? (
                       <span className="text-[#D4A017]"> (reconhecida: {atuacaoLabel})</span>
                     ) : (
@@ -270,22 +306,82 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
                     )}
                   </p>
 
-                  <UiSelect
-                    value={atuacao}
-                    onValueChange={(v) => setAtuacao(v as Atuacao)}
-                    disabled={!!blockedMessage}
-                  >
-                    <UiSelectTrigger className="h-10 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5]">
-                      <UiSelectValue placeholder="Selecione sua atuação" />
-                    </UiSelectTrigger>
-                    <UiSelectContent className="bg-[#121212] border border-[#D4A017]/20 text-[#F5F5F5]">
-                      {(Object.keys(ATUACAO_LABEL) as Atuacao[]).map((k) => (
-                        <UiSelectItem key={k} value={k} className="focus:bg-[#D4A017]/10">
-                          {ATUACAO_LABEL[k]}
-                        </UiSelectItem>
-                      ))}
-                    </UiSelectContent>
-                  </UiSelect>
+                  <div className="space-y-2">
+                    {atuacoes.map((k) => {
+                      const checked = atuacao === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => {
+                            if (blockedMessage) return;
+                            setAtuacao((prev) => (prev === k ? "" : k));
+                          }}
+                          className="w-full rounded-lg border border-[#D4A017]/15 bg-black/30 px-3 py-2 text-left hover:bg-[#D4A017]/10 transition-colors disabled:opacity-60"
+                          disabled={!!blockedMessage}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                if (blockedMessage) return;
+                                setAtuacao(v ? k : "");
+                              }}
+                              className="border-[#D4A017]/40 data-[state=checked]:bg-[#D4A017] data-[state=checked]:text-black"
+                            />
+                            <div>
+                              <p className="text-sm text-[#F5F5F5] font-medium">
+                                {ATUACAO_LABEL[k]}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button
+                onClick={handleConfirmAtuacao}
+                disabled={!!blockedMessage || (requiresAtuacao && !atuacao)}
+                className="w-full h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow disabled:opacity-60 disabled:hover:shadow-[0_0_20px_rgba(212,160,23,0.4)]"
+              >
+                Confirmar e continuar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSkip}
+                className="w-full h-11 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+              >
+                Não, pular esta etapa
+              </Button>
+            </AlertDialogFooter>
+          </>
+        )}
+
+        {/* Tela 2: Confirmação de envio */}
+        {screen === "confirm-send" && (
+          <>
+            <AlertDialogHeader>
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_25px_rgba(212,160,23,0.35)]">
+                <Mail className="h-7 w-7" />
+              </div>
+              <AlertDialogTitle className="text-center text-lg font-semibold text-[#F5F5F5]">
+                Enviar Emails de Faturamento
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-sm text-[#9CA3AF]">
+                Confira as instituições e confirme se deseja enviar.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="my-4 space-y-3">
+              {requiresAtuacao && atuacaoLabel && (
+                <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
+                  <p className="text-xs text-[#9CA3AF]">Sua atuação confirmada</p>
+                  <p className="text-sm text-[#F5F5F5] font-medium">{atuacaoLabel}</p>
                 </div>
               )}
 
@@ -322,15 +418,14 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
                   <p className="text-sm text-[#F5F5F5] font-medium">
                     {instituicaoFaturamentoNome || "N/A"}
                   </p>
-                  <p className="text-[10px] text-[#6B7280] mt-1">
-                    Solicitando faturamento
-                  </p>
+                  <p className="text-[10px] text-[#6B7280] mt-1">Solicitando faturamento</p>
                 </div>
               )}
 
               <div className="rounded-xl bg-[#D4A017]/5 border border-[#D4A017]/20 p-3">
                 <p className="text-[11px] text-[#9CA3AF]">
-                  <span className="text-[#D4A017] font-medium">Anexos:</span> Guia de Autorização, Descrição Cirúrgica e Guia de Honorários (PDF)
+                  <span className="text-[#D4A017] font-medium">Anexos:</span> Guia de Autorização,
+                  Descrição Cirúrgica e Guia de Honorários (PDF)
                 </p>
                 <p className="text-[11px] text-[#9CA3AF] mt-1">
                   <span className="text-[#D4A017] font-medium">Cópia:</span> {userEmail}
@@ -339,14 +434,23 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             </div>
 
             <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-              <Button
-                onClick={handleSendEmails}
-                disabled={!!blockedMessage}
-                className="w-full h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow disabled:opacity-60 disabled:hover:shadow-[0_0_20px_rgba(212,160,23,0.4)]"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Sim, enviar emails
-              </Button>
+              <div className="flex w-full gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setScreen("atuacao")}
+                  className="h-11 flex-1 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Voltar
+                </Button>
+                <Button
+                  onClick={handleSendEmails}
+                  className="h-11 flex-1 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Sim, enviar
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 onClick={handleSkip}
@@ -359,7 +463,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         )}
 
         {/* Estado: Enviando */}
-        {state === "sending" && (
+        {screen === "sending" && (
           <div className="py-8 text-center">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -401,7 +505,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         )}
 
         {/* Estado: Sucesso */}
-        {state === "success" && (
+        {screen === "success" && (
           <>
             <div className="py-6 text-center">
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20 text-green-500 border border-green-500/30">
@@ -434,7 +538,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         )}
 
         {/* Estado: Erro */}
-        {state === "error" && (
+        {screen === "error" && (
           <>
             <div className="py-6 text-center">
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 text-red-500 border border-red-500/30">
@@ -447,10 +551,10 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             </div>
             <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
               <Button
-                onClick={handleSendEmails}
+                onClick={() => setScreen("confirm-send")}
                 className="w-full h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold"
               >
-                Tentar Novamente
+                Voltar
               </Button>
               <Button
                 variant="outline"
