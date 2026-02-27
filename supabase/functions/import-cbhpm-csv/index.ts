@@ -45,7 +45,9 @@ serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!supabaseUrl || !anonKey || !serviceKey) {
-    console.error("[import-cbhpm-csv] Variáveis SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY ausentes.");
+    console.error(
+      "[import-cbhpm-csv] Variáveis SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY ausentes.",
+    );
     return new Response(
       JSON.stringify({ error: "Configuração do Supabase ausente." }),
       {
@@ -55,7 +57,7 @@ serve(async (req) => {
     );
   }
 
-  // Autenticação: valida o token do usuário chamador
+  // Autenticação: qualquer usuário autenticado pode importar
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -69,7 +71,9 @@ serve(async (req) => {
   });
 
   const { data: userRes, error: userErr } = await supabaseAuth.auth.getUser();
-  if (userErr || !userRes?.user) {
+  const user = userRes?.user;
+
+  if (userErr || !user) {
     console.error("[import-cbhpm-csv] Token inválido.", userErr);
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
@@ -77,34 +81,12 @@ serve(async (req) => {
     });
   }
 
-  const userId = userRes.user.id;
+  const userId = user.id;
+  const userEmail = user.email;
+
+  console.log("[import-cbhpm-csv] Usuário autenticado.", { userId, userEmail });
 
   const supabaseAdmin = createClient(supabaseUrl, serviceKey);
-
-  // Autorização: apenas ADMIN/SUPER_ADMIN
-  const { data: userRoleRow, error: roleErr } = await supabaseAdmin
-    .from("usuarios_sistema")
-    .select("regra, ativo")
-    .eq("id_user", userId)
-    .maybeSingle();
-
-  if (roleErr) {
-    console.error("[import-cbhpm-csv] Erro ao buscar role.", roleErr);
-    return new Response(JSON.stringify({ error: "Erro ao validar permissões." }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const regra = String((userRoleRow as any)?.regra ?? "").toLowerCase();
-  const ativo = Boolean((userRoleRow as any)?.ativo);
-
-  if (!ativo || (regra !== "admin" && regra !== "super_admin")) {
-    return new Response(JSON.stringify({ error: "Forbidden" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
 
   let body: RequestBody;
   try {
@@ -146,13 +128,21 @@ serve(async (req) => {
     .filter((r) => r.codigo && r.descricao);
 
   if (cleaned.length === 0) {
-    return new Response(JSON.stringify({ error: "Nenhuma linha válida (codigo/descricao)." }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Nenhuma linha válida (codigo/descricao)." }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
-  console.log("[import-cbhpm-csv] Linhas recebidas:", rows.length, "válidas:", cleaned.length);
+  console.log(
+    "[import-cbhpm-csv] Linhas recebidas:",
+    rows.length,
+    "válidas:",
+    cleaned.length,
+  );
 
   // UPSERT substitui duplicadas (por conflito em codigo)
   const { error: upsertErr } = await supabaseAdmin
@@ -162,7 +152,10 @@ serve(async (req) => {
   if (upsertErr) {
     console.error("[import-cbhpm-csv] Erro no upsert.", upsertErr);
     return new Response(
-      JSON.stringify({ error: "Erro ao gravar cbhpm_cirurgias.", details: upsertErr.message }),
+      JSON.stringify({
+        error: "Erro ao gravar cbhpm_cirurgias.",
+        details: upsertErr.message,
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -172,8 +165,7 @@ serve(async (req) => {
 
   console.log("[import-cbhpm-csv] Importação concluída.");
 
-  return new Response(
-    JSON.stringify({ success: true, processed: cleaned.length }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
+  return new Response(JSON.stringify({ success: true, processed: cleaned.length }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });
