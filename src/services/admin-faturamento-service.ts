@@ -16,7 +16,7 @@ export type AdminFaturamentoListItem = {
   profissionais: string[];
   qtdSolicitada: number;
   qtdAutorizada: number;
-  valorFaturamento: number;
+  valorFaturamento: number | null; // null quando não há guia de solicitação
 };
 
 type FaturamentoRow = {
@@ -160,19 +160,15 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
     );
 
     // Valor de faturamento: usar valor_total dos itens solicitados
-    let valorFaturamento = 0;
+    // Se não há guia de solicitação, retornar null
+    let valorFaturamento: number | null = null;
     if (itensSolicitados.length > 0) {
       // Usar o valor_total diretamente dos itens solicitados
+      valorFaturamento = 0;
       for (const itemSol of itensSolicitados) {
         const valorTotal = Number(itemSol.valor_total) || 0;
         valorFaturamento += valorTotal;
       }
-    } else if (itensAutorizados.length > 0) {
-      // Se não há itens solicitados, usar o total dos itens autorizados
-      valorFaturamento = itensAutorizados.reduce(
-        (sum, item) => sum + (item.quantidade_autorizada ?? item.quantidade ?? 1) * (Number(item.valor_unitario) || 0),
-        0
-      );
     }
 
     return {

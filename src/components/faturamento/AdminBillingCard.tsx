@@ -22,7 +22,7 @@ export type AdminBillingCardRecord = {
   profissionais: string[];
   qtdSolicitada: number;
   qtdAutorizada: number;
-  valorFaturamento: number;
+  valorFaturamento: number | null; // null quando não há guia de solicitação
 };
 
 function formatDatePtBr(dateIso: string | null): string {
@@ -56,6 +56,9 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
   const profissionaisText = record.profissionais.length > 0
     ? record.profissionais.join(", ")
     : "—";
+
+  // Determinar se tem guia de solicitação
+  const temGuiaSolicitacao = record.qtdSolicitada > 0;
 
   return (
     <Card className="overflow-hidden rounded-[22px] border-[#D5DFEF] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.1)]">
@@ -169,7 +172,7 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
                 </div>
                 <span className="text-[11px] text-slate-500">Solicitados:</span>
                 <span className="text-[13px] font-semibold text-slate-800">
-                  {record.qtdSolicitada}
+                  {temGuiaSolicitacao ? record.qtdSolicitada : "—"}
                 </span>
               </div>
 
@@ -186,13 +189,19 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
 
               {/* Valor */}
               <div className="flex items-center gap-1.5">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#DCFCE7] text-green-600">
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${temGuiaSolicitacao ? "bg-[#DCFCE7] text-green-600" : "bg-[#FEE2E2] text-red-500"}`}>
                   <DollarSign className="h-3 w-3" />
                 </div>
                 <span className="text-[11px] text-slate-500">Valor:</span>
-                <span className="text-[13px] font-bold text-emerald-600">
-                  {formatCurrency(record.valorFaturamento)}
-                </span>
+                {temGuiaSolicitacao ? (
+                  <span className="text-[13px] font-bold text-emerald-600">
+                    {formatCurrency(record.valorFaturamento ?? 0)}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-red-500">
+                    (falta guia de solicitação)
+                  </span>
+                )}
               </div>
             </div>
           </div>
