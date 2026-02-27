@@ -620,19 +620,22 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         0.6 // limiar de similaridade 60%
       );
 
-      if (!validacao.valido || !validacao.codigo_validado) {
+      // Se não validar, não descartamos: salvamos mesmo assim com os dados extraídos.
+      // Isso evita perder procedimentos reais por falha de OCR/variação de nomenclatura.
+      const codigoProcedimento =
+        (validacao.valido ? validacao.codigo_validado : codigoOriginal) ?? null;
+      const descricaoProcedimento =
+        (validacao.valido ? validacao.descricao_validada : descricaoOriginal) ?? null;
+
+      if (validacao.valido && codigoProcedimento) {
         console.log(
-          `[process-descricao-cirurgica] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
+          `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
         );
-        continue;
+      } else {
+        console.log(
+          `[process-descricao-cirurgica] ⚠️ Procedimento NÃO validado na CBHPM, salvando como extraído: codigo="${codigoProcedimento}", descricao="${(descricaoProcedimento ?? "").slice(0, 60)}..."`
+        );
       }
-
-      const codigoProcedimento = validacao.codigo_validado;
-      const descricaoProcedimento = validacao.descricao_validada;
-
-      console.log(
-        `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
-      );
 
       // Verificar se já existe (por código OU por descrição)
       const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
@@ -661,9 +664,15 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
           .eq("id", existingItem.id);
 
         if (updateItemError) {
-          console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
+          console.error(
+            "[process-descricao-cirurgica] Erro ao atualizar item:",
+            updateItemError
+          );
         } else {
-          console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento || descricaoProcedimento);
+          console.log(
+            "[process-descricao-cirurgica] Item atualizado:",
+            codigoProcedimento || descricaoProcedimento
+          );
         }
       } else if (codigoProcedimento || descricaoProcedimento) {
         // Inserir novo item apenas se tem código OU descrição
@@ -685,7 +694,10 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         if (insertError) {
           console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
         } else {
-          console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento || descricaoProcedimento);
+          console.log(
+            "[process-descricao-cirurgica] Novo item inserido:",
+            codigoProcedimento || descricaoProcedimento
+          );
           // Adicionar à lista de existentes para evitar duplicatas no mesmo lote
           if (newItem) {
             existingItemsList.push(newItem);
