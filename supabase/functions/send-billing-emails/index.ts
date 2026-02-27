@@ -724,6 +724,23 @@ serve(async (req) => {
     );
   }
 
+  // 2.0) Buscar dados do usuário logado (public.usuarios_sistema) para preencher placeholders
+  let usuarioNome = userName || "";
+  let usuarioCrm = userCrm ?? "";
+
+  try {
+    const { data: usuarioSistema } = await supabase
+      .from("usuarios_sistema")
+      .select("nome, crm")
+      .eq("email", userEmail)
+      .maybeSingle();
+
+    if (usuarioSistema?.nome) usuarioNome = String(usuarioSistema.nome);
+    if (usuarioSistema?.crm) usuarioCrm = String(usuarioSistema.crm);
+  } catch {
+    // mantém fallback do body
+  }
+
   const { data: clinicaFaturamento, error: clinicaFatError } = await supabase
     .from("clinicas")
     .select("id, nome_fantasia, contato, email_contato_faturamento")
@@ -897,7 +914,14 @@ serve(async (req) => {
     data_cirurgia: dataCirurgiaFormatada || "N/A",
     hora_inicio: horaInicioFormatada || "N/A",
     hospital_nome: fat.hospital_nome || clinicaFat.nome_fantasia || "N/A",
+
+    // compat
     nome_usuario: userName || "",
+
+    // novos placeholders
+    usuario_nome: usuarioNome || "",
+    usuario_crm: usuarioCrm || "",
+
     atuou_como: atuacaoLabel(atuacaoFinal) || "",
   };
 
