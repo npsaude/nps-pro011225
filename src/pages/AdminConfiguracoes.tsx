@@ -35,6 +35,7 @@ import {
 import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { criarDadosExemplo } from "@/services/demo-data-service";
+import CbhpmCsvImportCard from "@/components/admin/CbhpmCsvImportCard";
 
 type EmailFormState = {
   assunto: string;
@@ -339,6 +340,8 @@ const AdminConfiguracoes = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              <CbhpmCsvImportCard />
 
               <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader>
