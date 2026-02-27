@@ -69,6 +69,14 @@ function normalizeCpf(value: unknown): string | null {
   return null;
 }
 
+function normalizeGuideNumber(value: unknown): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  // Mantém dígitos e letras (alguns guias podem ter letras), remove espaços internos.
+  return s.replace(/\s+/g, "");
+}
+
 interface UploadedFile {
   path: string;
 }
@@ -263,6 +271,8 @@ DADOS DA EXECUÇÃO (tabela faturamentos):
 - hora_inicio: Hora de início da cirurgia (formato HH:MM)
 - hora_fim: Hora de término da cirurgia (formato HH:MM)
 - paciente_cpf: CPF do paciente (apenas números, 11 dígitos)
+- numero_guia_honorarios: Número da guia de honorários
+- numero_guia_internacao: Número da guia de internação
 
 DIAGNÓSTICO FINAL:
 - cid_codigo: Código CID do diagnóstico (ex: "K80.2", "J18.9")
@@ -296,6 +306,8 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     "hora_inicio": string | null,
     "hora_fim": string | null,
     "paciente_cpf": string | null,
+    "numero_guia_honorarios": string | null,
+    "numero_guia_internacao": string | null,
     "cid_codigo": string | null,
     "diagnostico_descricao": string | null,
     "cirurgiao_nome": string | null,
@@ -447,6 +459,20 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   const pacienteCpf = normalizeCpf(faturamentoData.paciente_cpf);
   if (pacienteCpf) {
     updateData.paciente_cpf = pacienteCpf;
+  }
+
+  const numeroGuiaHonorarios = normalizeGuideNumber(
+    faturamentoData.numero_guia_honorarios,
+  );
+  if (numeroGuiaHonorarios) {
+    updateData.numero_guia_honorarios = numeroGuiaHonorarios;
+  }
+
+  const numeroGuiaInternacao = normalizeGuideNumber(
+    faturamentoData.numero_guia_internacao,
+  );
+  if (numeroGuiaInternacao) {
+    updateData.numero_guia_internacao = numeroGuiaInternacao;
   }
 
   // Diagnóstico
