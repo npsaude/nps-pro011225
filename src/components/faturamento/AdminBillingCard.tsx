@@ -124,33 +124,61 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
           </div>
         </div>
 
-        {/* Linha de informações resumidas */}
-        <div className="border-t border-[#D5DFEF] bg-[#F9FAFC] px-6 py-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
-            <span>
-              <span className="font-semibold text-slate-700">Procedimentos:</span>{" "}
-              {procedimentosText}
-            </span>
-            <span className="text-slate-300">•</span>
-            <span>
-              <span className="font-semibold text-slate-700">Equipe:</span>{" "}
-              {profissionaisText}
-            </span>
-            <span className="text-slate-300">•</span>
-            <span>
-              <span className="font-semibold text-slate-700">Itens solicitados:</span>{" "}
-              {record.qtdSolicitada}
-            </span>
-            <span className="text-slate-300">•</span>
-            <span>
-              <span className="font-semibold text-slate-700">Itens autorizados:</span>{" "}
-              {record.qtdAutorizada}
-            </span>
-            <span className="text-slate-300">•</span>
-            <span>
-              <span className="font-semibold text-slate-700">Valor:</span>{" "}
-              {formatCurrency(record.valorFaturamento)}
-            </span>
+        {/* Linha de informações resumidas - Layout visual melhorado */}
+        <div className="border-t border-[#D5DFEF] bg-[#F9FAFC] px-6 py-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+            {/* Coluna esquerda: Procedimentos e Equipe */}
+            <div className="space-y-2.5">
+              {/* Procedimentos */}
+              <div className="flex flex-wrap items-start gap-x-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Procedimentos:
+                </span>
+                <span className="text-[11px] text-slate-700">
+                  {procedimentosText}
+                </span>
+              </div>
+
+              {/* Equipe */}
+              <div className="flex flex-wrap items-start gap-x-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Equipe:
+                </span>
+                <span className="text-[11px] text-slate-700">
+                  {profissionaisText}
+                </span>
+              </div>
+            </div>
+
+            {/* Coluna direita: Métricas numéricas */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 lg:justify-end">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Itens solicitados:
+                </span>
+                <span className="text-[13px] font-semibold text-slate-800">
+                  {record.qtdSolicitada}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Itens autorizados:
+                </span>
+                <span className="text-[13px] font-semibold text-slate-800">
+                  {record.qtdAutorizada}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Valor:
+                </span>
+                <span className="text-[13px] font-semibold text-emerald-600">
+                  {formatCurrency(record.valorFaturamento)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
