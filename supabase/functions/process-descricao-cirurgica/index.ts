@@ -58,6 +58,17 @@ function normalizeTime(value: unknown): string | null {
   return null;
 }
 
+// Normaliza CPF para apenas dígitos (idealmente 11). Retorna null se vazio.
+function normalizeCpf(value: unknown): string | null {
+  if (value == null) return null;
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return null;
+  // Se vier com mais/menos dígitos (ruído), ainda salvamos o que foi extraído.
+  // Preferimos salvar apenas se tiver tamanho típico.
+  if (digits.length === 11) return digits;
+  return null;
+}
+
 interface UploadedFile {
   path: string;
 }
@@ -251,6 +262,7 @@ DADOS DA EXECUÇÃO (tabela faturamentos):
 - data_cirurgia: Data da cirurgia (formato DD/MM/YYYY ou YYYY-MM-DD)
 - hora_inicio: Hora de início da cirurgia (formato HH:MM)
 - hora_fim: Hora de término da cirurgia (formato HH:MM)
+- paciente_cpf: CPF do paciente (apenas números, 11 dígitos)
 
 DIAGNÓSTICO FINAL:
 - cid_codigo: Código CID do diagnóstico (ex: "K80.2", "J18.9")
@@ -283,6 +295,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     "data_cirurgia": string | null,
     "hora_inicio": string | null,
     "hora_fim": string | null,
+    "paciente_cpf": string | null,
     "cid_codigo": string | null,
     "diagnostico_descricao": string | null,
     "cirurgiao_nome": string | null,
@@ -429,6 +442,11 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   const horaFim = normalizeTime(faturamentoData.hora_fim);
   if (horaFim) {
     updateData.hora_fim = horaFim;
+  }
+
+  const pacienteCpf = normalizeCpf(faturamentoData.paciente_cpf);
+  if (pacienteCpf) {
+    updateData.paciente_cpf = pacienteCpf;
   }
 
   // Diagnóstico
