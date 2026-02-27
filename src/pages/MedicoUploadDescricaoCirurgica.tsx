@@ -2415,7 +2415,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                           : "text-[#6B7280]"
                     }
                   >
-                    Análise da IA
+                    Coletando os dados
                   </span>
                 </div>
 
