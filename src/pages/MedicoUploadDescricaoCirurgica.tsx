@@ -40,6 +40,8 @@ GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 type ViewState = 
   | "start" 
   | "hospital" 
+  | "pergunta_solicitacao"
+  | "upload_solicitacao"
   | "upload_guia" 
   | "upload_descricao" 
   | "pergunta_honorarios"
@@ -153,6 +155,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Arquivos da Guia de Autorização
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
+  // Arquivos da Guia de Solicitação
+  const [filesSolicitacao, setFilesSolicitacao] = useState<File[]>([]);
   // Arquivos da Descrição Cirúrgica
   const [filesDescricao, setFilesDescricao] = useState<File[]>([]);
   
@@ -163,13 +167,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [medicoCrm, setMedicoCrm] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
+  const fileInputRefSolicitacao = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
 
   // Tela de análise da IA
   const [showAnalyzingScreen, setShowAnalyzingScreen] = useState(false);
   const [analyzingProgress, setAnalyzingProgress] = useState(0);
   const [analyzingStep, setAnalyzingStep] = useState<"uploading" | "analyzing" | "saving">("uploading");
-  const [analyzingDocType, setAnalyzingDocType] = useState<"guia" | "descricao" | "honorarios">("guia");
+  const [analyzingDocType, setAnalyzingDocType] = useState<"solicitacao" | "guia" | "descricao" | "honorarios">("guia");
 
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
@@ -408,6 +413,35 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     event.target.value = "";
   };
 
+  // Handler para arquivos da Guia de Solicitação
+  const handleFileChangeSolicitacao = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return;
+    const selectedFiles = Array.from(event.target.files);
+
+    const allowedFiles = selectedFiles.filter(
+      (file) =>
+        file.type.startsWith("image/") || file.type === "application/pdf",
+    );
+    const ignoredCount = selectedFiles.length - allowedFiles.length;
+
+    if (ignoredCount > 0) {
+      showError(
+        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+      );
+    }
+
+    if (allowedFiles.length === 0) {
+      setFilesSolicitacao([]);
+      showError(
+        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+      );
+      return;
+    }
+
+    setFilesSolicitacao((prev) => [...prev, ...allowedFiles]);
+    event.target.value = "";
+  };
+
   const upsertFaturamentoParcial = async (params: {
     instituicaoCirurgiaId: string;
     instituicaoFaturamentoId: string;
@@ -460,6 +494,147 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     return faturamentoId;
+  };
+
+  // Função para upload e análise da Guia de Solicitação
+  const handleUploadGuiaSolicitacao = async () => {
+    if (filesSolicitacao.length === 0) {
+      showError("Selecione pelo menos um arquivo para enviar.");
+      return;
+    }
+
+    if (!selectedHospitalId) {
+      showError("Selecione o hospital onde a cirurgia foi realizada.");
+      return;
+    }
+
+    if (!selectedClinicaId) {
+      showError("Selecione a clínica pela qual o serviço será faturado.");
+      return;
+    }
+
+    setIsUploading(true);
+    setShowAnalyzingScreen(true);
+    setAnalyzingProgress(0);
+    setAnalyzingStep("uploading");
+    setAnalyzingDocType("solicitacao");
+
+    const uploadedFilePaths: string[] = [];
+
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+
+      if (userError || !userData?.user) {
+        showError("Faça login novamente para enviar arquivos.");
+        navigate("/login-medico");
+        return;
+      }
+
+      const userId = userData.user.id;
+      const bucketName = "NPS-pro";
+
+      const ensuredFaturamentoId = await upsertFaturamentoParcial({
+        instituicaoCirurgiaId: selectedHospitalId,
+        instituicaoFaturamentoId: selectedClinicaId,
+        hospitalNome: selectedHospitalName,
+        instituicaoFaturamentoNome: selectedClinicaName,
+      });
+
+      if (!ensuredFaturamentoId) {
+        throw new Error("Não foi possível criar o faturamento.");
+      }
+
+      setAnalyzingProgress(10);
+
+      let uploadItems: UploadItem[] = [];
+      try {
+        uploadItems = await expandFilesToUploadItems(filesSolicitacao);
+      } catch (e) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : "Não foi possível ler o PDF. Tente novamente.";
+        throw new Error(msg);
+      }
+
+      if (uploadItems.length === 0) {
+        throw new Error("Nenhum arquivo válido foi gerado para envio.");
+      }
+
+      for (let i = 0; i < uploadItems.length; i++) {
+        const item = uploadItems[i];
+        const safeName = sanitizeFileName(item.suggestedName);
+        const timestamp = Date.now();
+        const filePath = `guia_solicitacao/${userId}/${timestamp}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, item.data, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: item.contentType,
+          });
+
+        if (uploadError) {
+          throw new Error(`Falha ao enviar "${safeName}": ${uploadError.message}`);
+        }
+
+        uploadedFilePaths.push(filePath);
+        setAnalyzingProgress(10 + Math.round(((i + 1) / uploadItems.length) * 20));
+      }
+
+      setAnalyzingStep("analyzing");
+      setAnalyzingProgress(35);
+
+      const functionUrl =
+        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-solicitacao";
+
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          faturamentoId: ensuredFaturamentoId,
+          files: uploadedFilePaths.map((path) => ({ path })),
+        }),
+      });
+
+      setAnalyzingProgress(70);
+
+      let responseJson: any = null;
+      try {
+        responseJson = await response.json();
+      } catch {
+        // ignore
+      }
+
+      if (!response.ok || responseJson?.error) {
+        const errorMessage =
+          responseJson?.error ?? "Houve erro ao processar a guia de solicitação.";
+        throw new Error(errorMessage);
+      }
+
+      setAnalyzingStep("saving");
+      setAnalyzingProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      showSuccess("Guia de solicitação processada com sucesso!");
+      setFilesSolicitacao([]);
+      setShowAnalyzingScreen(false);
+      setView("upload_guia");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível processar a guia de solicitação.";
+      showError(message);
+      setShowAnalyzingScreen(false);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Função para upload e análise da Guia de Autorização
@@ -1329,22 +1504,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
-  const totalSteps = 5;
+  const totalSteps = 6;
   const currentStep =
     view === "start"
       ? 1
       : view === "hospital"
         ? 1
-        : view === "upload_guia"
-         ? 2
-         : view === "upload_descricao"
-          ? 3
-          : view === "pergunta_honorarios" || view === "gerando_honorarios" || view === "preview_honorarios" || view === "sem_modelo"
-            ? 4
-            : 5;
+        : view === "pergunta_solicitacao"
+          ? 2
+          : view === "upload_solicitacao"
+            ? 3
+            : view === "upload_guia"
+              ? 3
+              : view === "upload_descricao"
+                ? 4
+                : view === "pergunta_honorarios" || view === "gerando_honorarios" || view === "preview_honorarios" || view === "sem_modelo"
+                  ? 5
+                  : 6;
 
   const handleNovaDescricao = () => {
     setFilesGuia([]);
+    setFilesSolicitacao([]);
     setFilesDescricao([]);
     setStep(1);
     setView("start");
@@ -1368,7 +1548,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setPdfBlobUrl(null);
   };
 
-  const currentFiles = view === "upload_guia" ? filesGuia : filesDescricao;
+  const currentFiles =
+    view === "upload_guia"
+      ? filesGuia
+      : view === "upload_solicitacao"
+        ? filesSolicitacao
+        : filesDescricao;
+
   const totalArquivos = currentFiles.length;
   const arquivosLabel =
     totalArquivos === 0
@@ -1383,12 +1569,20 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     fileInputRefGuia.current?.click();
   };
 
+  const handleAdicionarMaisSolicitacao = () => {
+    fileInputRefSolicitacao.current?.click();
+  };
+
   const handleAdicionarMaisDescricao = () => {
     fileInputRefDescricao.current?.click();
   };
 
   const handleRemoverArquivoGuia = (index: number) => {
     setFilesGuia((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoverArquivoSolicitacao = (index: number) => {
+    setFilesSolicitacao((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoverArquivoDescricao = (index: number) => {
@@ -1474,7 +1668,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       });
 
       if (!ensuredId) return;
-      setView("upload_guia");
+      setView("pergunta_solicitacao");
     })();
   };
 
@@ -1493,6 +1687,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const getAnalyzingDocTitle = () => {
     switch (analyzingDocType) {
+      case "solicitacao":
+        return "Guia de Solicitação";
       case "guia":
         return "Guia de Autorização de Cirurgia";
       case "descricao":
@@ -1507,6 +1703,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const getAnalyzingStepDescription = () => {
     if (analyzingStep === "uploading") {
       switch (analyzingDocType) {
+        case "solicitacao":
+          return "Fazendo upload das imagens da guia de solicitação.";
         case "guia":
           return "Fazendo upload das imagens da guia de autorização.";
         case "descricao":
@@ -1518,6 +1716,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       }
     } else if (analyzingStep === "analyzing") {
       switch (analyzingDocType) {
+        case "solicitacao":
+          return "O sistema está extraindo as informações da guia de solicitação.";
         case "guia":
           return "O sistema está extraindo as informações da guia.";
         case "descricao":
@@ -1535,6 +1735,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     switch (view) {
       case "hospital":
         return "Selecionar Instituições";
+      case "pergunta_solicitacao":
+      case "upload_solicitacao":
+        return "Guia de Solicitação";
       case "upload_guia":
         return "Guia de Autorização de Cirurgia";
       case "upload_descricao":
@@ -1572,9 +1775,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         setView("start");
                         setStep(1);
                       }
+                    : view === "pergunta_solicitacao"
+                      ? () => {
+                          setView("hospital");
+                          setStep(1);
+                        }
+                      : view === "upload_solicitacao"
+                        ? () => {
+                            setView("pergunta_solicitacao");
+                          }
                     : view === "upload_guia"
                     ? () => {
-                        setView("hospital");
+                        setView("pergunta_solicitacao");
                         setStep(1);
                       }
                     : view === "upload_descricao"
@@ -1925,6 +2137,188 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </div>
                 </div>
               ) : null}
+            </div>
+          )}
+
+          {/* TELA 2.5 - PERGUNTA GUIA DE SOLICITAÇÃO */}
+          {view === "pergunta_solicitacao" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+                  <FileCheck className="h-8 w-8" />
+                </div>
+
+                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
+                  Guia de Solicitação
+                </h2>
+                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
+                  Deseja enviar a Guia de Solicitação agora? Esta etapa é opcional.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                    onClick={() => setView("upload_solicitacao")}
+                  >
+                    Sim, enviar guia
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                    onClick={() => setView("upload_guia")}
+                  >
+                    Não, pular esta etapa
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TELA 2.6 - UPLOAD GUIA DE SOLICITAÇÃO */}
+          {view === "upload_solicitacao" && (
+            <div className="mt-2 flex w-full max-w-md flex-col">
+              <Input
+                id="files-upload-solicitacao"
+                ref={fileInputRefSolicitacao}
+                type="file"
+                multiple
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={handleFileChangeSolicitacao}
+              />
+
+              <div className="mb-6">
+                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                </h1>
+                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+                  {filesSolicitacao.length === 0 ? (
+                    <>
+                      <span>
+                        Faça upload das imagens/PDF da{" "}
+                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                          Guia de Solicitação
+                        </span>
+                        .
+                      </span>
+                      <br />
+                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
+                        Obs: Tire várias imagens com os detalhes dos campos para melhor
+                        análise da IA
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Confira os arquivos antes de enviar a{" "}
+                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                        Guia de Solicitação
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+
+              {filesSolicitacao.length === 0 ? (
+                <>
+                  <label
+                    htmlFor="files-upload-solicitacao"
+                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
+                        <Upload className="h-8 w-8 text-black" />
+                      </div>
+                      <p className="text-[#F5F5F5] font-medium">
+                        Adicionar Arquivos
+                      </p>
+                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
+                      <p className="text-[#6B7280] text-[11px]">
+                        Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
+                      </p>
+                    </div>
+                  </label>
+
+                  <Button
+                    type="button"
+                    disabled
+                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
+                  >
+                    Selecione arquivos acima
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-[#F5F5F5]">
+                      Seus Arquivos ({arquivosLabel})
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
+                      onClick={handleAdicionarMaisSolicitacao}
+                    >
+                      + Adicionar mais
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filesSolicitacao.map((file, index) => (
+                      <div
+                        key={file.name + file.lastModified + index}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                            {isImage(file) ? (
+                              <ImageIcon className="h-4 w-4" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] sm:text-xs">
+                              {file.name}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoverArquivoSolicitacao(index)}
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
+                    disabled={isUploading || filesSolicitacao.length === 0}
+                    onClick={handleUploadGuiaSolicitacao}
+                  >
+                    {isUploading ? "Processando..." : "Processar Guia"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
+                    onClick={() => setView("pergunta_solicitacao")}
+                    disabled={isUploading}
+                  >
+                    Voltar
+                  </Button>
+                </>
+              )}
             </div>
           )}
 
