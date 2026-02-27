@@ -22,9 +22,20 @@ function normalizeText(input: string): string {
     .trim();
 }
 
+function cleanToken(token: string): string {
+  return normalizeText(token).replace(/[^a-z0-9]/g, "");
+}
+
 function firstName(input: string): string {
-  const n = normalizeText(input);
-  return n.split(" ").filter(Boolean)[0] ?? "";
+  const parts = normalizeText(input).split(" ").filter(Boolean);
+  if (parts.length === 0) return "";
+
+  const first = cleanToken(parts[0]);
+  if (first === "dr" || first === "dra" || first === "doutor" || first === "doutora") {
+    return cleanToken(parts[1] ?? "");
+  }
+
+  return first;
 }
 
 function normalizeDigits(input: string): string {

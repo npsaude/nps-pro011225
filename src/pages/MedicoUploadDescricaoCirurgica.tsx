@@ -160,6 +160,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [step, setStep] = useState<1 | 2>(1);
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [medicoEmail, setMedicoEmail] = useState<string>("");
+  const [medicoCrm, setMedicoCrm] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
@@ -245,13 +246,17 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       const { data, error } = await supabase
         .from("usuarios_sistema")
-        .select("nome")
+        .select("nome, crm")
         .eq("email", email)
         .maybeSingle();
 
       if (!error && data?.nome) {
         const primeiroNome = (data.nome as string).split(" ")[0];
         setMedicoNome(primeiroNome);
+      }
+
+      if (!error && data?.crm) {
+        setMedicoCrm(String(data.crm));
       }
     };
 
@@ -2424,6 +2429,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           faturamentoId={faturamentoId}
           userEmail={medicoEmail}
           userName={medicoNome ? `Dr. ${medicoNome}` : "Médico"}
+          userCrm={medicoCrm || undefined}
           instituicaoCirurgiaNome={selectedHospitalName}
           instituicaoFaturamentoNome={selectedClinicaName}
           instituicoesDiferentes={selectedHospitalId !== selectedClinicaId}

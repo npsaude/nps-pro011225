@@ -345,6 +345,8 @@ export interface DbFaturamento {
   cirurgiao_principal_uf: string | null;
   cirurgiao_principal_cbo: string | null;
 
+  atuou_como: string | null;
+
   // Totais (calculados)
   valor_total_faturado: number;
   valor_total_glosa: number;

@@ -83,14 +83,20 @@ function normalizeDigits(input: string): string {
   return String(input ?? "").replace(/\D/g, "");
 }
 
+function cleanToken(token: string): string {
+  return normalizeText(token).replace(/[^a-z0-9]/g, "");
+}
+
 function firstName(input: string): string {
   const parts = normalizeText(input).split(" ").filter(Boolean);
   if (parts.length === 0) return "";
-  // remove títulos comuns
-  const first = parts[0];
+
+  // remove títulos comuns (com ou sem pontuação)
+  const first = cleanToken(parts[0]);
   if (first === "dr" || first === "dra" || first === "doutor" || first === "doutora") {
-    return parts[1] ?? "";
+    return cleanToken(parts[1] ?? "");
   }
+
   return first;
 }
 
@@ -163,6 +169,43 @@ function reconhecerAtuacao(params: {
   }
 
   return null;
+}
+
+function equipeBateComUsuario(params: {
+  userNome: string;
+  userCrm?: string | null;
+  team: {
+    cirurgiao_principal_nome: string | null;
+    cirurgiao_principal_crm: string | null;
+    auxiliar1_nome: string | null;
+    auxiliar1_crm: string | null;
+    auxiliar2_nome: string | null;
+    auxiliar2_crm: string | null;
+    auxiliar3_nome: string | null;
+    auxiliar3_crm: string | null;
+    anestesista_nome: string | null;
+    anestesista_crm: string | null;
+  };
+}): boolean {
+  const crmUser = normalizeDigits(params.userCrm ?? "");
+  const fUser = firstName(params.userNome);
+  if (!crmUser || !fUser) return false;
+
+  const candidates = [
+    { nome: params.team.cirurgiao_principal_nome, crm: params.team.cirurgiao_principal_crm },
+    { nome: params.team.auxiliar1_nome, crm: params.team.auxiliar1_crm },
+    { nome: params.team.auxiliar2_nome, crm: params.team.auxiliar2_crm },
+    { nome: params.team.auxiliar3_nome, crm: params.team.auxiliar3_crm },
+    { nome: params.team.anestesista_nome, crm: params.team.anestesista_crm },
+  ];
+
+  for (const c of candidates) {
+    const crm = normalizeDigits(c.crm ?? "");
+    const fn = firstName(c.nome ?? "");
+    if (crm && fn && crm === crmUser && fn === fUser) return true;
+  }
+
+  return false;
 }
 
 function atuacaoLabel(atuacao: Atuacao | null | undefined): string {
@@ -516,6 +559,19 @@ serve(async (req) => {
 
   const fat = faturamento as FaturamentoData;
 
+  const team = {
+    cirurgiao_principal_nome: fat.cirurgiao_principal_nome,
+    cirurgiao_principal_crm: fat.cirurgiao_principal_crm,
+    auxiliar1_nome: fat.auxiliar1_nome,
+    auxiliar1_crm: fat.auxiliar1_crm,
+    auxiliar2_nome: fat.auxiliar2_nome,
+    auxiliar2_crm: fat.auxiliar2_crm,
+    auxiliar3_nome: fat.auxiliar3_nome,
+    auxiliar3_crm: fat.auxiliar3_crm,
+    anestesista_nome: fat.anestesista_nome,
+    anestesista_crm: fat.anestesista_crm,
+  };
+
   const atuacaoReconhecida = reconhecerAtuacao({
     descricaoCirurgicaTexto,
     userNome: userName,
@@ -534,6 +590,29 @@ serve(async (req) => {
 
   const atuacaoFinal: Atuacao | null = (atuacao ?? atuacaoReconhecida) as Atuacao | null;
 
+  const requiresAtuacao = (fat.url_descricao_cirurgica?.length ?? 0) > 0;
+  const bateEquipe = requiresAtuacao
+    ? equipeBateComUsuario({ userNome: userName, userCrm: userCrm ?? null, team })
+    : true;
+
+  if (requiresAtuacao && !bateEquipe) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error:
+          "Não foi possível confirmar sua participação nesta cirurgia (nome + CRM não batem com a equipe). Confira seu CRM no Perfil e revise a descrição cirúrgica/equipe antes de enviar.",
+        atuacao_reconhecida: atuacaoReconhecida,
+        atuacao_utilizada: atuacaoFinal,
+        requires_atuacao: requiresAtuacao,
+        team,
+      }),
+      {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
   if (dryRun) {
     return new Response(
       JSON.stringify({
@@ -541,24 +620,30 @@ serve(async (req) => {
         dry_run: true,
         atuacao_reconhecida: atuacaoReconhecida,
         atuacao_utilizada: atuacaoFinal,
-        team: {
-          cirurgiao_principal_nome: fat.cirurgiao_principal_nome,
-          cirurgiao_principal_crm: fat.cirurgiao_principal_crm,
-          auxiliar1_nome: fat.auxiliar1_nome,
-          auxiliar1_crm: fat.auxiliar1_crm,
-          auxiliar2_nome: fat.auxiliar2_nome,
-          auxiliar2_crm: fat.auxiliar2_crm,
-          auxiliar3_nome: fat.auxiliar3_nome,
-          auxiliar3_crm: fat.auxiliar3_crm,
-          anestesista_nome: fat.anestesista_nome,
-          anestesista_crm: fat.anestesista_crm,
-        },
+        requires_atuacao: requiresAtuacao,
+        team,
       }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
+  }
+
+  // Persistir atuação confirmada no faturamento antes do envio (mesmo se o SMTP falhar)
+  {
+    const agora = new Date().toISOString();
+    const { error: atuouComoError } = await supabase
+      .from("faturamentos")
+      .update({
+        atuou_como: atuacaoFinal,
+        updated_at: agora,
+      })
+      .eq("id", faturamentoId);
+
+    if (atuouComoError) {
+      console.error("[send-billing-emails] Erro ao salvar atuou_como:", atuouComoError);
+    }
   }
 
   const smtpHost = Deno.env.get("SMTP_HOST") ?? "smtp.hostinger.com";

@@ -71,11 +71,11 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
   const [resultMessage, setResultMessage] = useState<string>("");
   const [emailsEnviados, setEmailsEnviados] = useState<string[]>([]);
   const [atuacao, setAtuacao] = useState<Atuacao | "">("");
-
-  const requiresAtuacao = useMemo(() => {
+  const [requiresAtuacao, setRequiresAtuacao] = useState(() => {
     const norm = String(descricaoCirurgicaTexto ?? "").trim();
     return norm.length > 0;
-  }, [descricaoCirurgicaTexto]);
+  });
+  const [blockedMessage, setBlockedMessage] = useState<string>("");
 
   const atuacaoLabel = useMemo(() => {
     if (!atuacao) return "";
@@ -84,13 +84,13 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
   useEffect(() => {
     if (!open) return;
-    if (!requiresAtuacao) return;
-    if (atuacao) return;
 
     let cancelled = false;
 
     const run = async () => {
       try {
+        setBlockedMessage("");
+
         const functionUrl =
           "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
 
@@ -111,9 +111,24 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         });
 
         const result = await response.json();
+
+        if (cancelled) return;
+
+        if (typeof result?.requires_atuacao === "boolean") {
+          setRequiresAtuacao(result.requires_atuacao);
+        }
+
+        if (!response.ok) {
+          const msg =
+            (typeof result?.error === "string" && result.error) ||
+            "Não foi possível validar sua participação na cirurgia.";
+          setBlockedMessage(msg);
+          return;
+        }
+
         const team = (result?.team ?? null) as TeamInfo | null;
 
-        if (!cancelled && team && userCrm) {
+        if (team && userCrm && !atuacao) {
           const guess = reconhecerAtuacao({
             descricaoCirurgicaTexto,
             userNome: userName,
@@ -143,16 +158,20 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     };
   }, [
     open,
-    requiresAtuacao,
-    atuacao,
     faturamentoId,
     userEmail,
     userName,
     userCrm,
     descricaoCirurgicaTexto,
+    atuacao,
   ]);
 
   const handleSendEmails = async () => {
+    if (blockedMessage) {
+      showError(blockedMessage);
+      return;
+    }
+
     if (requiresAtuacao && !atuacao) {
       showError("Confirme sua atuação na cirurgia antes de enviar.");
       return;
@@ -206,6 +225,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     setResultMessage("");
     setEmailsEnviados([]);
     setAtuacao("");
+    setBlockedMessage("");
     onOpenChange(false);
   };
 
@@ -233,6 +253,12 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             </AlertDialogHeader>
 
             <div className="my-4 space-y-3">
+              {blockedMessage && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+                  <p className="text-sm text-red-200">{blockedMessage}</p>
+                </div>
+              )}
+
               {requiresAtuacao && (
                 <div className="rounded-xl bg-black/40 border border-[#D4A017]/15 p-3">
                   <p className="text-xs text-[#9CA3AF] mb-2">
@@ -244,7 +270,11 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
                     )}
                   </p>
 
-                  <UiSelect value={atuacao} onValueChange={(v) => setAtuacao(v as Atuacao)}>
+                  <UiSelect
+                    value={atuacao}
+                    onValueChange={(v) => setAtuacao(v as Atuacao)}
+                    disabled={!!blockedMessage}
+                  >
                     <UiSelectTrigger className="h-10 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5]">
                       <UiSelectValue placeholder="Selecione sua atuação" />
                     </UiSelectTrigger>
@@ -311,7 +341,8 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
               <Button
                 onClick={handleSendEmails}
-                className="w-full h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                disabled={!!blockedMessage}
+                className="w-full h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow disabled:opacity-60 disabled:hover:shadow-[0_0_20px_rgba(212,160,23,0.4)]"
               >
                 <Send className="mr-2 h-4 w-4" />
                 Sim, enviar emails
