@@ -78,6 +78,11 @@ const AdminFaturamento = () => {
             horaCirurgia: d.hora_inicio,
             hospitalNome: d.hospital_nome,
             steps: buildSteps(d),
+            procedimentos: d.procedimentos,
+            profissionais: d.profissionais,
+            qtdSolicitada: d.qtdSolicitada,
+            qtdAutorizada: d.qtdAutorizada,
+            valorFaturamento: d.valorFaturamento,
           })),
         );
       } finally {

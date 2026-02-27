@@ -17,6 +17,12 @@ export type AdminBillingCardRecord = {
   horaCirurgia: string | null; // HH:mm:ss
   hospitalNome: string | null;
   steps: BillingDocStep[];
+  // Novos campos de resumo
+  procedimentos: string[];
+  profissionais: string[];
+  qtdSolicitada: number;
+  qtdAutorizada: number;
+  valorFaturamento: number;
 };
 
 function formatDatePtBr(dateIso: string | null): string {
@@ -33,8 +39,23 @@ function formatTimeShort(time: string | null): string {
   return time;
 }
 
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
 export default function AdminBillingCard({ record }: { record: AdminBillingCardRecord }) {
   const pacienteLabel = record.pacienteNome?.trim() || "Paciente não informado";
+
+  const procedimentosText = record.procedimentos.length > 0
+    ? record.procedimentos.join(", ")
+    : "—";
+
+  const profissionaisText = record.profissionais.length > 0
+    ? record.profissionais.join(", ")
+    : "—";
 
   return (
     <Card className="overflow-hidden rounded-[22px] border-[#D5DFEF] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.1)]">
@@ -100,6 +121,36 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Linha de informações resumidas */}
+        <div className="border-t border-[#D5DFEF] bg-[#F9FAFC] px-6 py-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
+            <span>
+              <span className="font-semibold text-slate-700">Procedimentos:</span>{" "}
+              {procedimentosText}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span>
+              <span className="font-semibold text-slate-700">Equipe:</span>{" "}
+              {profissionaisText}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span>
+              <span className="font-semibold text-slate-700">Itens solicitados:</span>{" "}
+              {record.qtdSolicitada}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span>
+              <span className="font-semibold text-slate-700">Itens autorizados:</span>{" "}
+              {record.qtdAutorizada}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span>
+              <span className="font-semibold text-slate-700">Valor:</span>{" "}
+              {formatCurrency(record.valorFaturamento)}
+            </span>
           </div>
         </div>
 
