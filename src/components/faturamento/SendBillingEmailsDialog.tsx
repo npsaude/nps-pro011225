@@ -19,6 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
+import { supabase } from "@/integrations/supabase/client";
 import { ATUACAO_LABEL, reconhecerAtuacao, type Atuacao } from "@/utils/atuacao";
 
 interface SendBillingEmailsDialogProps {
@@ -79,7 +80,6 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     const norm = String(descricaoCirurgicaTexto ?? "").trim();
     return norm.length > 0;
   });
-  const [blockedMessage, setBlockedMessage] = useState<string>("");
 
   const atuacaoLabel = useMemo(() => {
     if (!atuacao) return "";
@@ -98,8 +98,6 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
     const run = async () => {
       try {
-        setBlockedMessage("");
-
         const functionUrl =
           "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
 
@@ -129,14 +127,6 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
         const reconhecida = (result?.atuacao_reconhecida ?? null) as Atuacao | null;
         setAtuacaoReconhecida(reconhecida);
-
-        if (!response.ok) {
-          const msg =
-            (typeof result?.error === "string" && result.error) ||
-            "Não foi possível validar sua participação na cirurgia.";
-          setBlockedMessage(msg);
-          return;
-        }
 
         if (reconhecida && !atuacao) {
           setAtuacao(reconhecida);
@@ -190,26 +180,32 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
   const isAtuacaoReconhecida = !!atuacaoReconhecida;
 
-  const handleConfirmAtuacao = () => {
-    if (blockedMessage) {
-      showError(blockedMessage);
-      return;
-    }
-
+  const handleConfirmAtuacao = async () => {
     if (requiresAtuacao && !atuacao) {
       showError("Selecione sua atuação na cirurgia para continuar.");
       return;
+    }
+
+    // Salva a atuação no faturamento já na confirmação.
+    if (requiresAtuacao && atuacao) {
+      const { error } = await supabase
+        .from("faturamentos")
+        .update({
+          atuou_como: atuacao,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", faturamentoId);
+
+      if (error) {
+        showError("Não foi possível salvar sua atuação. Tente novamente.");
+        return;
+      }
     }
 
     setScreen("confirm-send");
   };
 
   const handleSendEmails = async () => {
-    if (blockedMessage) {
-      showError(blockedMessage);
-      return;
-    }
-
     if (requiresAtuacao && !atuacao) {
       showError("Confirme sua atuação na cirurgia antes de enviar.");
       setScreen("atuacao");
@@ -264,7 +260,6 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     setResultMessage("");
     setEmailsEnviados([]);
     setAtuacao("");
-    setBlockedMessage("");
     onOpenChange(false);
   };
 

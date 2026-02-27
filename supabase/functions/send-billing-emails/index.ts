@@ -595,23 +595,7 @@ serve(async (req) => {
     ? equipeBateComUsuario({ userNome: userName, userCrm: userCrm ?? null, team })
     : true;
 
-  if (requiresAtuacao && !bateEquipe) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error:
-          "Não foi possível confirmar sua participação nesta cirurgia (nome + CRM não batem com a equipe). Confira seu CRM no Perfil e revise a descrição cirúrgica/equipe antes de enviar.",
-        atuacao_reconhecida: atuacaoReconhecida,
-        atuacao_utilizada: atuacaoFinal,
-        requires_atuacao: requiresAtuacao,
-        team,
-      }),
-      {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
+  const atuacaoConfirmadaManualmente = atuacao !== null && typeof atuacao !== "undefined";
 
   if (dryRun) {
     return new Response(
@@ -621,10 +605,50 @@ serve(async (req) => {
         atuacao_reconhecida: atuacaoReconhecida,
         atuacao_utilizada: atuacaoFinal,
         requires_atuacao: requiresAtuacao,
+        bate_equipe: bateEquipe,
+        warning:
+          requiresAtuacao && !bateEquipe
+            ? "Participação não confirmada por nome + CRM. Você ainda pode escolher manualmente sua atuação."
+            : null,
         team,
       }),
       {
         status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // Se precisa atuação, ela deve vir confirmada (selecionada) ou reconhecida.
+  if (requiresAtuacao && !atuacaoFinal) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Confirme sua atuação na cirurgia antes de enviar.",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // Se não bateu com a equipe e o usuário NÃO confirmou manualmente, bloqueia.
+  // Se confirmou manualmente (atuacao enviada), permite seguir.
+  if (requiresAtuacao && !bateEquipe && !atuacaoConfirmadaManualmente) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error:
+          "Não foi possível confirmar sua participação nesta cirurgia (nome + CRM não batem com a equipe). Se você realmente atuou, selecione sua atuação manualmente para continuar.",
+        atuacao_reconhecida: atuacaoReconhecida,
+        atuacao_utilizada: atuacaoFinal,
+        requires_atuacao: requiresAtuacao,
+        bate_equipe: bateEquipe,
+        team,
+      }),
+      {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
