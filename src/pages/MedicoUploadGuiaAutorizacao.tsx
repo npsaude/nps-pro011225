@@ -8,6 +8,10 @@ import {
   CheckCircle2,
   FileCheck,
   Loader2,
+  AlertCircle,
+  Calendar,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -22,7 +26,8 @@ import {
   dismissToast,
 } from "@/utils/toast";
 
-type ViewState = "upload" | "processing" | "success";
+type ViewState = "choice" | "upload" | "processing" | "success";
+type TipoCirurgia = "ELETIVA" | "EMERGENCIAL" | null;
 
 const MedicoUploadGuiaAutorizacao: React.FC = () => {
   const navigate = useNavigate();
@@ -31,9 +36,11 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [view, setView] = useState<ViewState>("upload");
+  const [view, setView] = useState<ViewState>("choice");
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [dadosExtraidos, setDadosExtraidos] = useState<any>(null);
+  const [tipoCirurgia, setTipoCirurgia] = useState<TipoCirurgia>(null);
+  const [skipGuia, setSkipGuia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Carrega o nome do médico logado para exibir na saudação
@@ -94,6 +101,54 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
     event.target.value = "";
   };
 
+  const handleSkipGuia = async () => {
+    if (!tipoCirurgia) {
+      showError("Selecione o tipo de cirurgia antes de continuar.");
+      return;
+    }
+
+    if (!faturamentoId) {
+      showError("Faturamento não encontrado.");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Atualizar apenas o tipo_cirurgia no faturamento
+      const { error } = await supabase
+        .from("faturamentos")
+        .update({
+          tipo_cirurgia: tipoCirurgia,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", faturamentoId);
+
+      if (error) throw error;
+
+      showSuccess("Tipo de cirurgia salvo. Avançando sem guia de autorização.");
+      
+      // Navegar para o próximo passo ou dashboard
+      navigate("/medico/dashboard");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o tipo de cirurgia.";
+      showError(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleContinueToUpload = () => {
+    if (!tipoCirurgia) {
+      showError("Selecione o tipo de cirurgia antes de continuar.");
+      return;
+    }
+    setView("upload");
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) {
       showError("Selecione pelo menos uma imagem para enviar.");
@@ -102,6 +157,11 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
     if (!faturamentoId) {
       showError("Faturamento não encontrado. Inicie o fluxo novamente.");
+      return;
+    }
+
+    if (!tipoCirurgia) {
+      showError("Tipo de cirurgia não definido.");
       return;
     }
 
@@ -158,6 +218,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
           userId,
           faturamentoId,
           files: uploadedFilePaths.map((path) => ({ path })),
+          tipoCirurgia, // Enviar o tipo de cirurgia para a edge function
         }),
       });
 
@@ -174,6 +235,15 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
           "Arquivos enviados, mas houve erro ao processar a guia de autorização.";
         throw new Error(errorMessage);
       }
+
+      // Atualizar o tipo_cirurgia no faturamento (caso a edge function não faça)
+      await supabase
+        .from("faturamentos")
+        .update({
+          tipo_cirurgia: tipoCirurgia,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", faturamentoId);
 
       setDadosExtraidos(responseJson?.dados_extraidos ?? null);
       showSuccess("Guia de autorização processada com sucesso!");
@@ -201,8 +271,9 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
   const handleNovaGuia = () => {
     setFiles([]);
-    setView("upload");
+    setView("choice");
     setDadosExtraidos(null);
+    setTipoCirurgia(null);
   };
 
   const saudacao = medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),";
@@ -216,6 +287,21 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
   const isImage = (file: File) => file.type.startsWith("image/");
 
+  const getProgressWidth = () => {
+    switch (view) {
+      case "choice":
+        return "25%";
+      case "upload":
+        return "50%";
+      case "processing":
+        return "75%";
+      case "success":
+        return "100%";
+      default:
+        return "25%";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
       {/* Fundo premium */}
@@ -228,7 +314,13 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
           <button
             type="button"
             className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
-            onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
+            onClick={() => {
+              if (view === "upload") {
+                setView("choice");
+              } else {
+                navigate("/medico/descricao-cirurgica/enviar");
+              }
+            }}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Voltar</span>
@@ -236,7 +328,11 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
           <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
             <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
-            <span>Guia de Autorização</span>
+            <span>Passo 3/6</span>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[11px] text-[#D4A017]">Guia de Autorização de Cirurgia</span>
           </div>
         </header>
 
@@ -245,13 +341,125 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
           <div className="h-1 w-full rounded-full bg-black/40 border border-[#D4A017]/10">
             <div
               className="h-1 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] transition-all duration-300"
-              style={{ width: view === "success" ? "100%" : "50%" }}
+              style={{ width: getProgressWidth() }}
             />
           </div>
         </div>
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
+          {/* TELA DE ESCOLHA INICIAL */}
+          {view === "choice" && (
+            <div className="mt-2 flex w-full max-w-md flex-col">
+              <div className="mb-6">
+                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                  {saudacao}
+                </h1>
+                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+                  Antes de continuar, precisamos de algumas informações.
+                </p>
+              </div>
+
+              {/* Tipo de Cirurgia */}
+              <div className="mb-6">
+                <p className="text-xs font-semibold text-[#F5F5F5] mb-3">
+                  Qual o tipo de cirurgia?
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTipoCirurgia("ELETIVA")}
+                    className={`flex flex-col items-center gap-2 rounded-2xl p-4 border-2 transition-all ${
+                      tipoCirurgia === "ELETIVA"
+                        ? "border-[#D4A017] bg-[#D4A017]/10"
+                        : "border-[#D4A017]/20 bg-black/40 hover:border-[#D4A017]/40"
+                    }`}
+                  >
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                      tipoCirurgia === "ELETIVA"
+                        ? "bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black"
+                        : "bg-[#D4A017]/10 text-[#D4A017]"
+                    }`}>
+                      <Calendar className="h-6 w-6" />
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      tipoCirurgia === "ELETIVA" ? "text-[#D4A017]" : "text-[#F5F5F5]"
+                    }`}>
+                      Eletiva
+                    </span>
+                    <span className="text-[10px] text-[#6B7280] text-center">
+                      Cirurgia programada
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTipoCirurgia("EMERGENCIAL")}
+                    className={`flex flex-col items-center gap-2 rounded-2xl p-4 border-2 transition-all ${
+                      tipoCirurgia === "EMERGENCIAL"
+                        ? "border-[#D4A017] bg-[#D4A017]/10"
+                        : "border-[#D4A017]/20 bg-black/40 hover:border-[#D4A017]/40"
+                    }`}
+                  >
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                      tipoCirurgia === "EMERGENCIAL"
+                        ? "bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black"
+                        : "bg-[#D4A017]/10 text-[#D4A017]"
+                    }`}>
+                      <Zap className="h-6 w-6" />
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      tipoCirurgia === "EMERGENCIAL" ? "text-[#D4A017]" : "text-[#F5F5F5]"
+                    }`}>
+                      Emergencial
+                    </span>
+                    <span className="text-[10px] text-[#6B7280] text-center">
+                      Cirurgia de urgência
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Opções de ação */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-[#F5F5F5] mb-3">
+                  Deseja enviar a Guia de Autorização?
+                </p>
+
+                <Button
+                  type="button"
+                  className="h-12 w-full rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-50"
+                  disabled={!tipoCirurgia}
+                  onClick={handleContinueToUpload}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Sim, enviar guia de autorização
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full rounded-xl border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 hover:border-[#D4A017]/40 disabled:opacity-50"
+                  disabled={!tipoCirurgia || isUploading}
+                  onClick={handleSkipGuia}
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                  )}
+                  Não, avançar sem enviar
+                </Button>
+
+                {!tipoCirurgia && (
+                  <p className="text-[10px] text-[#9CA3AF] text-center mt-2">
+                    Selecione o tipo de cirurgia para continuar
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* TELA DE UPLOAD */}
           {view === "upload" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
@@ -270,12 +478,23 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
                   {saudacao}
                 </h1>
                 <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  Faça upload das imagens da Guia de Autorização de Cirurgia.
+                  Faça upload das imagens da{" "}
+                  <span className="text-[#D4A017] font-medium">Guia de Autorização de Cirurgia</span>.
                 </p>
                 <p className="mt-1 text-[11px] text-[#6B7280] sm:text-xs">
                   Obs: Tire várias imagens com os detalhes dos campos da mesma
                   guia para melhor análise da IA
                 </p>
+
+                {/* Badge do tipo de cirurgia selecionado */}
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+                  {tipoCirurgia === "ELETIVA" ? (
+                    <Calendar className="h-3 w-3" />
+                  ) : (
+                    <Zap className="h-3 w-3" />
+                  )}
+                  <span>Cirurgia {tipoCirurgia === "ELETIVA" ? "Eletiva" : "Emergencial"}</span>
+                </div>
               </div>
 
               {files.length === 0 ? (
@@ -456,6 +675,10 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
                             {dadosExtraidos.procedimentos.length} encontrado(s)
                           </p>
                         )}
+                        <p>
+                          <span className="text-[#F5F5F5]">Tipo:</span>{" "}
+                          {tipoCirurgia === "ELETIVA" ? "Eletiva" : "Emergencial"}
+                        </p>
                       </div>
                     </div>
                   )}
