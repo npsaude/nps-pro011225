@@ -630,7 +630,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Guia de solicitação processada com sucesso!");
       setFilesSolicitacao([]);
       setShowAnalyzingScreen(false);
-      setView("upload_guia");
+      setView("pergunta_guia_autorizacao");
     } catch (err) {
       const message =
         err instanceof Error
@@ -643,10 +643,77 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
+  const handleContinuarParaUploadGuiaAutorizacao = () => {
+    if (!tipoCirurgia) {
+      showError("Selecione o tipo de cirurgia antes de continuar.");
+      return;
+    }
+
+    setView("upload_guia");
+  };
+
+  const handlePularGuiaAutorizacao = async () => {
+    if (!tipoCirurgia) {
+      showError("Selecione o tipo de cirurgia antes de continuar.");
+      return;
+    }
+
+    if (!selectedHospitalId) {
+      showError("Selecione o hospital onde a cirurgia foi realizada.");
+      return;
+    }
+
+    if (!selectedClinicaId) {
+      showError("Selecione a clínica pela qual o serviço será faturado.");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const ensuredFaturamentoId = await upsertFaturamentoParcial({
+        instituicaoCirurgiaId: selectedHospitalId,
+        instituicaoFaturamentoId: selectedClinicaId,
+        hospitalNome: selectedHospitalName,
+        instituicaoFaturamentoNome: selectedClinicaName,
+      });
+
+      if (!ensuredFaturamentoId) {
+        throw new Error("Não foi possível encontrar/criar o faturamento.");
+      }
+
+      const { error } = await supabase
+        .from("faturamentos")
+        .update({
+          tipo_cirurgia: tipoCirurgia,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", ensuredFaturamentoId);
+
+      if (error) throw error;
+
+      showSuccess("Tipo de cirurgia salvo. Continuando sem guia de autorização.");
+      setView("upload_descricao");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o tipo de cirurgia.";
+      showError(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Função para upload e análise da Guia de Autorização
   const handleUploadGuiaAutorizacao = async () => {
     if (filesGuia.length === 0) {
       showError("Selecione pelo menos um arquivo para enviar.");
+      return;
+    }
+
+    if (!tipoCirurgia) {
+      showError("Selecione o tipo de cirurgia antes de continuar.");
       return;
     }
 
@@ -690,6 +757,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       if (!ensuredFaturamentoId) {
         throw new Error("Não foi possível criar o faturamento.");
+      }
+
+      const { error: tipoError } = await supabase
+        .from("faturamentos")
+        .update({
+          tipo_cirurgia: tipoCirurgia,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", ensuredFaturamentoId);
+
+      if (tipoError) {
+        throw new Error(tipoError.message || "Não foi possível salvar o tipo de cirurgia.");
       }
 
       setAnalyzingProgress(10);
@@ -746,6 +825,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           userId,
           faturamentoId: ensuredFaturamentoId,
           files: uploadedFilePaths.map((path) => ({ path })),
+          tipoCirurgia,
         }),
       });
 
@@ -1520,13 +1600,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           ? 2
           : view === "upload_solicitacao"
             ? 3
-            : view === "upload_guia"
+            : view === "pergunta_guia_autorizacao"
               ? 3
-              : view === "upload_descricao"
-                ? 4
-                : view === "pergunta_honorarios" || view === "gerando_honorarios" || view === "preview_honorarios" || view === "sem_modelo"
-                  ? 5
-                  : 6;
+              : view === "upload_guia"
+                ? 3
+                : view === "upload_descricao"
+                  ? 4
+                  : view === "pergunta_honorarios" || view === "gerando_honorarios" || view === "preview_honorarios" || view === "sem_modelo"
+                    ? 5
+                    : 6;
 
   const handleNovaDescricao = () => {
     setFilesGuia([]);
@@ -1546,6 +1628,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setItensFaturamento([]);
     setHtmlGuiaPreenchida("");
     setGuiaHonorariosId(null);
+    setTipoCirurgia(null);
     // Resetar estados do PDF
     setPdfGerado(false);
     if (pdfBlobUrl) {
@@ -1744,6 +1827,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       case "pergunta_solicitacao":
       case "upload_solicitacao":
         return "Guia de Solicitação";
+      case "pergunta_guia_autorizacao":
+        return "Guia de Autorização de Cirurgia";
       case "upload_guia":
         return "Guia de Autorização de Cirurgia";
       case "upload_descricao":
@@ -1790,28 +1875,31 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         ? () => {
                             setView("pergunta_solicitacao");
                           }
-                        : view === "upload_guia"
-                        ? () => {
-                            setView("pergunta_solicitacao");
-                            setStep(1);
-                          }
-                        : view === "upload_descricao"
+                        : view === "pergunta_guia_autorizacao"
                           ? () => {
-                              setView("upload_guia");
+                              setView("pergunta_solicitacao");
                             }
-                            : view === "pergunta_honorarios"
+                          : view === "upload_guia"
+                            ? () => {
+                                setView("pergunta_guia_autorizacao");
+                              }
+                            : view === "upload_descricao"
                               ? () => {
-                                  setView("upload_descricao");
+                                  setView("upload_guia");
                                 }
+                              : view === "pergunta_honorarios"
+                                ? () => {
+                                    setView("upload_descricao");
+                                  }
                                 : view === "sem_modelo"
                                   ? () => {
                                       setView("pergunta_honorarios");
                                     }
-                                    : view === "preview_honorarios"
-                                      ? () => {
-                                          setView("pergunta_honorarios");
-                                        }
-                                        : () => navigate("/medico/dashboard")
+                                  : view === "preview_honorarios"
+                                    ? () => {
+                                        setView("pergunta_honorarios");
+                                      }
+                                    : () => navigate("/medico/dashboard")
                 }
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -2173,9 +2261,117 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="outline"
                     className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => setView("upload_guia")}
+                    onClick={() => setView("pergunta_guia_autorizacao")}
                   >
                     Não, pular esta etapa
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TELA 2.55 - PERGUNTA GUIA DE AUTORIZAÇÃO + TIPO DE CIRURGIA */}
+          {view === "pergunta_guia_autorizacao" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+                  <Calendar className="h-8 w-8" />
+                </div>
+
+                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
+                  Guia de Autorização de Cirurgia
+                </h2>
+                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-6">
+                  Antes de continuar, selecione o tipo de cirurgia e informe se deseja enviar a guia de autorização.
+                </p>
+
+                <div className="mb-6">
+                  <p className="mb-3 text-xs font-semibold text-[#F5F5F5]">
+                    Qual o tipo de cirurgia?
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTipoCirurgia("ELETIVA")}
+                      className={`group rounded-2xl border px-4 py-4 text-left transition-colors ${
+                        tipoCirurgia === "ELETIVA"
+                          ? "border-[#FFD700]/60 bg-[#FFD700]/10"
+                          : "border-[#D4A017]/15 bg-black/40 hover:border-[#D4A017]/35"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                            tipoCirurgia === "ELETIVA"
+                              ? "border-[#FFD700]/40 bg-[#FFD700]/20 text-[#FFD700]"
+                              : "border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]"
+                          }`}
+                        >
+                          <Calendar className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-[#F5F5F5]">
+                            Eletiva
+                          </p>
+                          <p className="text-[11px] text-[#9CA3AF]">Agendada</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTipoCirurgia("EMERGENCIAL")}
+                      className={`group rounded-2xl border px-4 py-4 text-left transition-colors ${
+                        tipoCirurgia === "EMERGENCIAL"
+                          ? "border-[#FFD700]/60 bg-[#FFD700]/10"
+                          : "border-[#D4A017]/15 bg-black/40 hover:border-[#D4A017]/35"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                            tipoCirurgia === "EMERGENCIAL"
+                              ? "border-[#FFD700]/40 bg-[#FFD700]/20 text-[#FFD700]"
+                              : "border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]"
+                          }`}
+                        >
+                          <Zap className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-[#F5F5F5]">
+                            Emergencial
+                          </p>
+                          <p className="text-[11px] text-[#9CA3AF]">Urgência</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {!tipoCirurgia && (
+                    <p className="mt-3 text-[11px] text-[#D4A017]">
+                      Selecione o tipo de cirurgia para continuar.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                    disabled={!tipoCirurgia || isUploading}
+                    onClick={handleContinuarParaUploadGuiaAutorizacao}
+                  >
+                    Sim, enviar guia
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                    disabled={!tipoCirurgia || isUploading}
+                    onClick={handlePularGuiaAutorizacao}
+                  >
+                    Não, continuar sem guia
                   </Button>
                 </div>
               </div>
@@ -2944,37 +3140,4 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       analyzingProgress >= 100
                         ? "bg-[#D4A017] text-black"
                         : analyzingStep === "saving"
-                          ? "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/25"
-                          : "bg-black/50 text-[#6B7280] border border-[#6B7280]/25"
-                    }`}
-                  >
-                    {analyzingProgress >= 100 ? (
-                      <CheckCircle2 className="h-3 w-3" />
-                    ) : analyzingStep === "saving" ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <span className="text-[8px]">3</span>
-                    )}
-                  </span>
-                  <span
-                    className={
-                      analyzingStep === "saving"
-                        ? "font-medium text-[#F5F5F5]"
-                        : analyzingProgress >= 100
-                          ? "text-[#9CA3AF]"
-                          : "text-[#6B7280]"
-                    }
-                  >
-                    Salvando no banco de dados
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default MedicoUploadDescricaoCirurgica;
+                          ? "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/2
