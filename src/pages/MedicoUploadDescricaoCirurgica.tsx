@@ -3037,107 +3037,38 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       {/* Tela de Análise da IA */}
       {showAnalyzingScreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
-          <div className="flex w-full max-w-sm flex-col items-center px-6 py-10 text-center">
-            <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_60px_rgba(212,160,23,0.35)]">
-              <div className="absolute inset-1 rounded-[26px] bg-black/60 backdrop-blur-xl" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#121212] border border-[#D4A017]/20 shadow-[0_10px_40px_rgba(0,0,0,0.65)]">
-                {analyzingStep === "uploading" ? (
-                  <Upload className="h-8 w-8 text-[#D4A017] animate-pulse" />
-                ) : analyzingStep === "analyzing" ? (
-                  <Brain className="h-8 w-8 text-[#D4A017] animate-pulse" />
-                ) : (
-                  <CheckCircle2 className="h-8 w-8 text-[#D4A017]" />
-                )}
-              </div>
+          <div className="w-full max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/70 px-6 py-8 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+              {analyzingStep === "uploading" ? (
+                <Upload className="h-7 w-7" />
+              ) : analyzingStep === "analyzing" ? (
+                <Brain className="h-7 w-7" />
+              ) : (
+                <CheckCircle2 className="h-7 w-7" />
+              )}
             </div>
 
-            <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
+            <h2 className="text-base font-semibold text-[#F5F5F5]">
               {analyzingStep === "uploading"
-                ? "Enviando Imagens..."
+                ? "Enviando..."
                 : analyzingStep === "analyzing"
-                  ? "Analisando Documento"
-                  : "Salvando Dados..."}
+                  ? "Analisando..."
+                  : "Salvando..."}
             </h2>
 
-            <p className="mt-2 max-w-xs text-[11px] text-[#9CA3AF] sm:text-xs">
-              {getAnalyzingStepDescription()}
-            </p>
+            <p className="mt-2 text-xs text-[#9CA3AF]">{getAnalyzingStepDescription()}</p>
 
-            <div className="mt-6 w-full max-w-xs">
+            <div className="mt-6">
               <Progress value={analyzingProgress} className="h-2.5 rounded-full" />
-              <p className="mt-2 text-[10px] text-[#6B7280]">
-                {analyzingProgress}% concluído
-              </p>
+              <p className="mt-2 text-[11px] text-[#6B7280]">{analyzingProgress}% concluído</p>
             </div>
 
-            <p className="mt-4 text-[10px] font-medium">
-              <span className="inline-flex items-center rounded-full border border-[#D4A017]/30 bg-[#FFD700]/15 px-3 py-1 text-[#FFD700]">
-                {getAnalyzingDocTitle()}
-              </span>
-            </p>
+            <p className="mt-4 text-[11px] text-[#D4A017]">{getAnalyzingDocTitle()}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
-            <div className="mt-4 w-full max-w-xs rounded-2xl border border-[#D4A017]/15 bg-black/70 p-4 text-left text-[11px] text-[#9CA3AF] shadow-[0_18px_50px_rgba(0,0,0,0.75)] sm:text-xs">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                      analyzingProgress >= 30
-                        ? "bg-[#D4A017] text-black"
-                        : "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/25"
-                    }`}
-                  >
-                    {analyzingProgress >= 30 ? (
-                      <CheckCircle2 className="h-3 w-3" />
-                    ) : (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    )}
-                  </span>
-                  <span
-                    className={
-                      analyzingStep === "uploading"
-                        ? "font-medium text-[#F5F5F5]"
-                        : "text-[#9CA3AF]"
-                    }
-                  >
-                    Upload das imagens
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                      analyzingProgress >= 80
-                        ? "bg-[#D4A017] text-black"
-                        : analyzingStep === "analyzing"
-                          ? "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/25"
-                          : "bg-black/50 text-[#6B7280] border border-[#6B7280]/25"
-                    }`}
-                  >
-                    {analyzingProgress >= 80 ? (
-                      <CheckCircle2 className="h-3 w-3" />
-                    ) : analyzingStep === "analyzing" ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <span className="text-[8px]">2</span>
-                    )}
-                  </span>
-                  <span
-                    className={
-                      analyzingStep === "analyzing"
-                        ? "font-medium text-[#F5F5F5]"
-                        : analyzingProgress >= 80
-                          ? "text-[#9CA3AF]"
-                          : "text-[#6B7280]"
-                    }
-                  >
-                    Coletando os dados
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                      analyzingProgress >= 100
-                        ? "bg-[#D4A017] text-black"
-                        : analyzingStep === "saving"
-                          ? "bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/2
+export default MedicoUploadDescricaoCirurgica;
