@@ -1,157 +1,121 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import BillingRecordCard from "@/components/faturamento/BillingRecordCard.tsx";
-import type { BillingRecord } from "@/components/faturamento/billing-types.ts";
-import { Bell, CalendarDays, Search, User2 } from "lucide-react";
+import { CalendarDays, Search, User2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import AdminBillingCard, {
+  type AdminBillingCardRecord,
+} from "@/components/faturamento/AdminBillingCard";
+import { listAdminFaturamentos } from "@/services/admin-faturamento-service";
+import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
 
-const billingRecords: BillingRecord[] = [
-  {
-    id: "1",
-    doctorName: "Dr. Carlos Pereira",
-    patientName: "Mariana Souza",
-    procedure: "Artroplastia de Quadril",
-    surgeryDate: "04/12/2024",
-    hospital: "Hospital Sírio-Libanês",
-    billingLocation: "Sede SP",
-    value: 12500,
-    steps: [
-      {
-        id: "surgery",
-        label: "Cirurgia Realizada",
-        status: "completed",
-        date: "05/12",
-      },
-      {
-        id: "invoiced",
-        label: "Faturado",
-        status: "completed",
-        date: "08/12",
-      },
-      {
-        id: "received",
-        label: "Recebimento",
-        status: "pending",
-      },
-      {
-        id: "disallowance",
-        label: "Glosa",
-        status: "processing",
-      },
-      {
-        id: "appeal",
-        label: "Defesa de Glosa",
-        status: "waiting",
-      },
-      {
-        id: "disallowance_received",
-        label: "Recebimento da Glosa",
-        status: "nc",
-      },
-    ],
-  },
-  {
-    id: "2",
-    doctorName: "Dra. Ana Costa",
-    patientName: "Roberto Almeida",
-    procedure: "Cateterismo Cardíaco",
-    surgeryDate: "30/11/2024",
-    hospital: "Hospital Albert Einstein",
-    billingLocation: "Unidade Sul",
-    value: 8200,
-    steps: [
-      {
-        id: "surgery",
-        label: "Cirurgia Realizada",
-        status: "completed",
-        date: "01/12",
-      },
-      {
-        id: "invoiced",
-        label: "Faturado",
-        status: "completed",
-        date: "03/12",
-      },
-      {
-        id: "received",
-        label: "Recebimento",
-        status: "completed",
-        date: "20/12",
-      },
-      {
-        id: "disallowance",
-        label: "Glosa",
-        status: "nc",
-      },
-      {
-        id: "appeal",
-        label: "Defesa de Glosa",
-        status: "nc",
-      },
-      {
-        id: "disallowance_received",
-        label: "Recebimento da Glosa",
-        status: "nc",
-      },
-    ],
-  },
-  {
-    id: "3",
-    doctorName: "Dr. Ricardo Lima",
-    patientName: "Fernanda Lima",
-    procedure: "Craniotomia",
-    surgeryDate: "19/11/2024",
-    hospital: "Hospital Oswaldo Cruz",
-    billingLocation: "Sede SP",
-    value: 9800,
-    steps: [
-      {
-        id: "surgery",
-        label: "Cirurgia Realizada",
-        status: "completed",
-        date: "20/11",
-      },
-      {
-        id: "invoiced",
-        label: "Faturado",
-        status: "completed",
-        date: "22/11",
-      },
-      {
-        id: "received",
-        label: "Recebimento",
-        status: "pending",
-      },
-      {
-        id: "disallowance",
-        label: "Glosa",
-        status: "completed",
-        date: "05/12",
-      },
-      {
-        id: "appeal",
-        label: "Defesa de Glosa",
-        status: "processing",
-      },
-      {
-        id: "disallowance_received",
-        label: "Recebimento da Glosa",
-        status: "nc",
-      },
-    ],
-  },
-];
+function hasAny(arr: string[] | null | undefined): boolean {
+  return Array.isArray(arr) && arr.length > 0;
+}
+
+function buildSteps(item: {
+  guia_solicitacao_id: string | null;
+  url_guia_autorizacao: string[];
+  url_descricao_cirurgica: string[];
+  guia_honorarios_id: string | null;
+  email_status: string;
+}): BillingDocStep[] {
+  return [
+    {
+      id: "guia_solicitacao",
+      label: "Guia de Solicitação",
+      sent: Boolean(item.guia_solicitacao_id),
+    },
+    {
+      id: "guia_autorizacao",
+      label: "Guia de Autorização",
+      sent: hasAny(item.url_guia_autorizacao),
+    },
+    {
+      id: "descricao_cirurgica",
+      label: "Descrição Cirurgica",
+      sent: hasAny(item.url_descricao_cirurgica),
+    },
+    {
+      id: "guia_honorarios",
+      label: "Guia de Honorários",
+      sent: Boolean(item.guia_honorarios_id),
+    },
+    {
+      id: "email_faturamento",
+      label: "Email para Faturamento",
+      sent: item.email_status === "ENVIADO",
+    },
+  ];
+}
 
 const AdminFaturamento = () => {
+  const [items, setItems] = useState<AdminBillingCardRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // filtros simples (client-side)
+  const [doctorQuery, setDoctorQuery] = useState("");
+  const [patientQuery, setPatientQuery] = useState("");
+  const [dateQuery, setDateQuery] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await listAdminFaturamentos();
+        if (cancelled) return;
+
+        setItems(
+          data.map((d) => ({
+            id: d.id,
+            pacienteNome: d.paciente_nome,
+            dataCirurgia: d.data_cirurgia,
+            horaCirurgia: d.hora_inicio,
+            hospitalNome: d.hospital_nome,
+            steps: buildSteps(d),
+          })),
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredItems = useMemo(() => {
+    const dq = dateQuery.trim();
+    const pq = patientQuery.trim().toLowerCase();
+
+    return items.filter((i) => {
+      if (pq && !(i.pacienteNome ?? "").toLowerCase().includes(pq)) return false;
+
+      // dateQuery aceita tanto dd/mm/aaaa quanto yyyy-mm-dd (comparação por contains)
+      if (dq) {
+        const dateIso = i.dataCirurgia ?? "";
+        const datePt = dateIso
+          ? new Date(`${dateIso}T00:00:00`).toLocaleDateString("pt-BR")
+          : "";
+
+        if (!dateIso.includes(dq) && !datePt.includes(dq)) return false;
+      }
+
+      // Mantive o campo de "Médico" na UI por compatibilidade, mas ainda não há coluna médico_nome no faturamentos.
+      if (doctorQuery.trim()) return true;
+
+      return true;
+    });
+  }, [items, doctorQuery, patientQuery, dateQuery]);
+
   return (
     <div className="relative flex min-h-screen w-full bg-[#F4F6FB] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-6 py-6 lg:mx-auto lg:gap-6">
@@ -165,7 +129,7 @@ const AdminFaturamento = () => {
                 Faturamento
               </h1>
               <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
-                Extrato detalhado de procedimentos, status de glosas e recebimentos.
+                Acompanhe o envio de documentos e o disparo de e-mails do faturamento.
               </p>
             </div>
 
@@ -189,15 +153,15 @@ const AdminFaturamento = () => {
             <Card className="rounded-[22px] border-[#E0E7F5] bg-white shadow-[0_10px_35px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900/95">
               <CardHeader className="pb-4">
                 <CardTitle className="text-[14px] font-semibold text-slate-900">
-                  Filtros do extrato
+                  Filtros
                 </CardTitle>
                 <CardDescription className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
-                  Busque por médico, paciente ou data da cirurgia para localizar um procedimento.
+                  Busque por paciente ou data da cirurgia.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 pt-1">
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_auto]">
-                  {/* Médico */}
+                  {/* Médico (mantido, mas ainda sem filtro real) */}
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                       Médico
@@ -205,7 +169,9 @@ const AdminFaturamento = () => {
                     <div className="relative">
                       <User2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <Input
-                        placeholder="Buscar por médico"
+                        value={doctorQuery}
+                        onChange={(e) => setDoctorQuery(e.target.value)}
+                        placeholder="(em breve)"
                         className="h-11 rounded-[14px] border border-[#E0E7F5] bg-[#F7F9FC] pl-9 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-[#2657B5] focus:ring-2 focus:ring-[#2657B5]/20 dark:border-slate-700 dark:bg-slate-900"
                       />
                     </div>
@@ -219,6 +185,8 @@ const AdminFaturamento = () => {
                     <div className="relative">
                       <User2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <Input
+                        value={patientQuery}
+                        onChange={(e) => setPatientQuery(e.target.value)}
                         placeholder="Buscar por paciente"
                         className="h-11 rounded-[14px] border border-[#E0E7F5] bg-[#F7F9FC] pl-9 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-[#2657B5] focus:ring-2 focus:ring-[#2657B5]/20 dark:border-slate-700 dark:bg-slate-900"
                       />
@@ -228,36 +196,51 @@ const AdminFaturamento = () => {
                   {/* Data */}
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      Data
+                      Data cirurgia
                     </Label>
                     <div className="relative">
                       <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <Input
-                        placeholder="dd/mm/aaaa"
+                        value={dateQuery}
+                        onChange={(e) => setDateQuery(e.target.value)}
+                        placeholder="dd/mm/aaaa ou yyyy-mm-dd"
                         className="h-11 rounded-[14px] border border-[#E0E7F5] bg-[#F7F9FC] pl-9 pr-9 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-[#2657B5] focus:ring-2 focus:ring-[#2657B5]/20 dark:border-slate-700 dark:bg-slate-900"
                       />
                       <CalendarDays className="pointer-events-none absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-slate-400 sm:block" />
                     </div>
                   </div>
 
-                  {/* Button */}
+                  {/* Button (client-side) */}
                   <div className="flex items-end">
                     <Button
                       type="button"
                       className="h-11 w-full rounded-[14px] bg-[#163E99] px-6 text-[13px] font-semibold text-white shadow-[0_6px_18px_rgba(22,62,153,0.5)] transition hover:bg-[#102F77]"
                     >
-                      Filtrar Extrato
+                      Filtrar
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Billing records list */}
             <section className="space-y-3">
-              {billingRecords.map((record) => (
-                <BillingRecordCard key={record.id} record={record} />
-              ))}
+              {loading ? (
+                <Card className="rounded-[22px] border-[#E0E7F5] bg-white">
+                  <CardContent className="p-6 text-[13px] text-slate-600">
+                    Carregando...
+                  </CardContent>
+                </Card>
+              ) : filteredItems.length === 0 ? (
+                <Card className="rounded-[22px] border-[#E0E7F5] bg-white">
+                  <CardContent className="p-6 text-[13px] text-slate-600">
+                    Nenhum faturamento encontrado.
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredItems.map((record) => (
+                  <AdminBillingCard key={record.id} record={record} />
+                ))
+              )}
             </section>
           </main>
         </div>
