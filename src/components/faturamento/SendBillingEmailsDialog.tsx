@@ -197,6 +197,33 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
             <p className="text-sm text-[#9CA3AF]">
               Aguarde enquanto os emails são enviados para as instituições.
             </p>
+
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#D4A017]/20 bg-black/40 text-[#D4A017] animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              >
+                <Mail className="h-5 w-5" />
+              </div>
+              <div className="h-[2px] w-6 bg-gradient-to-r from-[#D4A017]/10 via-[#D4A017]/70 to-[#D4A017]/10" />
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#D4A017]/20 bg-black/40 text-[#D4A017] animate-bounce"
+                style={{ animationDelay: "140ms" }}
+              >
+                <Send className="h-5 w-5" />
+              </div>
+              <div className="h-[2px] w-6 bg-gradient-to-r from-[#D4A017]/10 via-[#D4A017]/70 to-[#D4A017]/10" />
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#D4A017]/20 bg-black/40 text-[#D4A017] animate-bounce"
+                style={{ animationDelay: "280ms" }}
+              >
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+
+            <p className="mt-3 text-[11px] text-[#6B7280]">
+              Preparando anexos e enviando via SMTP.
+            </p>
           </div>
         )}
 
