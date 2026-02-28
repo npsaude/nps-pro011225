@@ -238,9 +238,7 @@ const DashboardMedico: React.FC = () => {
               </span>
               <p className="text-sm font-semibold text-[#F5F5F5]">{saudacao}</p>
               <p className="text-[11px] text-[#9CA3AF]">
-                Acompanhe suas Descrições Cirúrgicas,
-                <br />
-                valores pagos e glosas em um só lugar.
+                Acompanhe seu faturamento de um só lugar
               </p>
             </div>
             <div className="ml-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-base font-semibold text-black shadow-[0_0_22px_rgba(212,160,23,0.45)]">
