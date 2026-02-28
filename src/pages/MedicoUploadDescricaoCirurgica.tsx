@@ -2954,24 +2954,34 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </div>
 
               {/* Botões de ação */}
-              <div className="mt-6 flex flex-col gap-3">
+              <div className="mt-6">
                 {isGeneratingPdf || (!pdfGerado && !pdfBlobUrl) ? (
                   <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Gerando PDF da guia...
                   </div>
                 ) : (
-                  <Button
-                    type="button"
-                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
-                    onClick={() => {
-                      handleBaixarPdf();
-                      void handleAvancarAposPreview();
-                    }}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Baixar PDF da guia e avançar
-                  </Button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full rounded-lg border-[#D4A017]/40 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 flex items-center justify-center"
+                      onClick={handleBaixarPdf}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar PDF
+                    </Button>
+
+                    <Button
+                      type="button"
+                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
+                      onClick={() => {
+                        void handleAvancarAposPreview();
+                      }}
+                    >
+                      Avançar
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
