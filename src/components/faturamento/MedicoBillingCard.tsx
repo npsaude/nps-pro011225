@@ -8,6 +8,7 @@ import {
   Users,
   Wallet,
   XCircle,
+  ChevronRight,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -224,7 +225,21 @@ export default function MedicoBillingCard({
         <Accordion type="single" collapsible>
           <AccordionItem value="detalhes" className="border-0">
             <AccordionTrigger className="px-4 py-3 text-sm font-semibold text-[#F5F5F5] hover:no-underline">
-              Ver detalhes
+              <div className="flex w-full items-center justify-between gap-3">
+                <span
+                  className={
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors " +
+                    "border-[#D4A017]/25 bg-[#D4A017]/10 text-[#F5F5F5] " +
+                    "hover:bg-[#D4A017]/15"
+                  }
+                >
+                  Ver detalhes
+                  <ChevronRight className="h-4 w-4 text-[#D4A017]" />
+                </span>
+                <span className="text-[11px] font-medium text-[#9CA3AF]">
+                  procedimentos, equipe e documentos
+                </span>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="space-y-4">
