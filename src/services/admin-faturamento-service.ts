@@ -55,6 +55,15 @@ type ItemGuiaSolicitacaoRow = {
   valor_total: number | null;
 };
 
+type GuiaSolicitacaoRow = {
+  id: string;
+  nome_beneficiario: string | null;
+};
+
+function hasAny(arr: string[] | null | undefined): boolean {
+  return Array.isArray(arr) && arr.length > 0;
+}
+
 export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[]> {
   // 1. Buscar faturamentos com campos de profissionais
   const { data: faturamentos, error: fatError } = await supabase
@@ -78,21 +87,41 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
   // 3. Buscar itens_faturamento
   const { data: itensFat, error: itensFatError } = await supabase
     .from("itens_faturamento")
-    .select("faturamento_id,descricao_procedimento,codigo_procedimento,quantidade,quantidade_autorizada,valor_unitario")
+    .select(
+      "faturamento_id,descricao_procedimento,codigo_procedimento,quantidade,quantidade_autorizada,valor_unitario",
+    )
     .in("faturamento_id", faturamentoIds);
 
   if (itensFatError) throw itensFatError;
 
-  // 4. Buscar itens_guia_solicitacao (se houver guias)
+  // 4. Buscar itens_guia_solicitacao e dados da guia (se houver guias)
   let itensSol: ItemGuiaSolicitacaoRow[] = [];
+  let guiasSol: GuiaSolicitacaoRow[] = [];
   if (guiaSolicitacaoIds.length > 0) {
-    const { data: solData, error: solError } = await supabase
-      .from("itens_guia_solicitacao")
-      .select("guia_id,codigo_procedimento,descricao_procedimento,quantidade,valor_unitario,valor_total")
-      .in("guia_id", guiaSolicitacaoIds);
+    const [{ data: solData, error: solError }, { data: guiaData, error: guiaError }] =
+      await Promise.all([
+        supabase
+          .from("itens_guia_solicitacao")
+          .select(
+            "guia_id,codigo_procedimento,descricao_procedimento,quantidade,valor_unitario,valor_total",
+          )
+          .in("guia_id", guiaSolicitacaoIds),
+        supabase
+          .from("guia_solicitacao")
+          .select("id,nome_beneficiario")
+          .in("id", guiaSolicitacaoIds),
+      ]);
 
     if (solError) throw solError;
+    if (guiaError) throw guiaError;
+
     itensSol = (solData ?? []) as ItemGuiaSolicitacaoRow[];
+    guiasSol = (guiaData ?? []) as GuiaSolicitacaoRow[];
+  }
+
+  const nomeBeneficiarioByGuiaId = new Map<string, string | null>();
+  for (const g of guiasSol) {
+    nomeBeneficiarioByGuiaId.set(g.id, g.nome_beneficiario);
   }
 
   // 5. Indexar itens por faturamento_id e guia_id
@@ -145,7 +174,7 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
     // Quantidade autorizada total
     const qtdAutorizada = itensAutorizados.reduce(
       (sum, item) => sum + (item.quantidade_autorizada ?? item.quantidade ?? 1),
-      0
+      0,
     );
 
     // Itens solicitados
@@ -156,7 +185,7 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
     // Quantidade solicitada total
     const qtdSolicitada = itensSolicitados.reduce(
       (sum, item) => sum + (item.quantidade ?? 1),
-      0
+      0,
     );
 
     // Valor de faturamento: usar valor_total dos itens solicitados
@@ -171,9 +200,22 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
       }
     }
 
+    // Nome do paciente: quando a guia de autorização não foi enviada,
+    // preferir o nome do beneficiário da guia de solicitação.
+    const guiaAutorizacaoEnviada = hasAny(fat.url_guia_autorizacao);
+    const nomeBeneficiario = fat.guia_solicitacao_id
+      ? nomeBeneficiarioByGuiaId.get(fat.guia_solicitacao_id) ?? null
+      : null;
+
+    let pacienteNome = fat.paciente_nome;
+    if (!guiaAutorizacaoEnviada) {
+      const fallback = nomeBeneficiario?.trim() || null;
+      if (fallback) pacienteNome = fallback;
+    }
+
     return {
       id: fat.id,
-      paciente_nome: fat.paciente_nome,
+      paciente_nome: pacienteNome,
       data_cirurgia: fat.data_cirurgia,
       hora_inicio: fat.hora_inicio,
       hospital_nome: fat.hospital_nome,
