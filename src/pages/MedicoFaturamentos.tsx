@@ -1,10 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, CalendarDays, ReceiptText } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  CalendarDays,
+  ReceiptText,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import MedicoBillingCard, {
   type MedicoBillingCardRecord,
 } from "@/components/faturamento/MedicoBillingCard";
@@ -13,6 +21,7 @@ import { listAdminFaturamentos } from "@/services/admin-faturamento-service";
 import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import MedicoFaturamentosSummary from "@/components/faturamento/MedicoFaturamentosSummary";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -54,6 +63,13 @@ function buildSteps(item: {
   ];
 }
 
+function getDocsTotals(item: MedicoBillingCardRecord) {
+  const docsSent = item.steps.filter((s) => s.sent).length;
+  const docsTotal = item.steps.length;
+  const emailSent = Boolean(item.steps.find((s) => s.id === "email_faturamento")?.sent);
+  return { docsSent, docsTotal, emailSent };
+}
+
 export default function MedicoFaturamentos() {
   const navigate = useNavigate();
 
@@ -63,6 +79,7 @@ export default function MedicoFaturamentos() {
 
   const [patientQuery, setPatientQuery] = useState("");
   const [dateQuery, setDateQuery] = useState("");
+  const [onlyPendingEmail, setOnlyPendingEmail] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,9 +150,42 @@ export default function MedicoFaturamentos() {
         if (!dateIso.includes(dq) && !datePt.includes(dq)) return false;
       }
 
+      if (onlyPendingEmail) {
+        const { emailSent } = getDocsTotals(i);
+        if (emailSent) return false;
+      }
+
       return true;
     });
-  }, [items, patientQuery, dateQuery]);
+  }, [items, patientQuery, dateQuery, onlyPendingEmail]);
+
+  const summary = useMemo(() => {
+    const totals = filteredItems.reduce(
+      (acc, item) => {
+        const t = getDocsTotals(item);
+        acc.total += 1;
+        acc.docsSent += t.docsSent;
+        acc.docsTotal += t.docsTotal;
+        acc.emailsTotal += 1;
+        acc.emailsSent += t.emailSent ? 1 : 0;
+        return acc;
+      },
+      { total: 0, docsSent: 0, docsTotal: 0, emailsSent: 0, emailsTotal: 0 },
+    );
+
+    return totals;
+  }, [filteredItems]);
+
+  const activeFiltersCount =
+    (patientQuery.trim() ? 1 : 0) +
+    (dateQuery.trim() ? 1 : 0) +
+    (onlyPendingEmail ? 1 : 0);
+
+  const clearFilters = () => {
+    setPatientQuery("");
+    setDateQuery("");
+    setOnlyPendingEmail(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
@@ -183,7 +233,7 @@ export default function MedicoFaturamentos() {
             <div className="flex flex-col">
               <h1 className="text-lg font-semibold leading-tight sm:text-xl">Faturamentos</h1>
               <p className="text-[11px] text-[#9CA3AF] sm:text-xs">
-                Veja seus casos e o status dos documentos.
+                Visão executiva e acompanhamento por caso.
               </p>
             </div>
           </div>
@@ -198,27 +248,75 @@ export default function MedicoFaturamentos() {
           </Button>
         </section>
 
-        {/* Filtros (mobile-first) */}
-        <section className="mb-4 grid gap-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
-            <Input
-              value={patientQuery}
-              onChange={(e) => setPatientQuery(e.target.value)}
-              placeholder="Buscar por paciente"
-              className="h-11 rounded-xl border border-[#D4A017]/20 bg-black/60 pl-9 text-[13px] text-[#F5F5F5] placeholder:text-[#9CA3AF] focus-visible:ring-[#D4A017]/40"
-            />
-          </div>
+        {/* KPIs */}
+        <section className="mb-4">
+          <MedicoFaturamentosSummary summary={summary} />
+        </section>
 
-          <div className="relative">
-            <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
-            <Input
-              value={dateQuery}
-              onChange={(e) => setDateQuery(e.target.value)}
-              placeholder="Data (dd/mm/aaaa ou yyyy-mm-dd)"
-              className="h-11 rounded-xl border border-[#D4A017]/20 bg-black/60 pl-9 text-[13px] text-[#F5F5F5] placeholder:text-[#9CA3AF] focus-visible:ring-[#D4A017]/40"
-            />
-          </div>
+        {/* Filtros (moderno / compacto) */}
+        <section className="mb-4">
+          <Card className="rounded-2xl border border-[#D4A017]/15 bg-black/40 backdrop-blur-xl">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-1 lg:items-center">
+                  <div className="relative lg:max-w-sm lg:flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+                    <Input
+                      value={patientQuery}
+                      onChange={(e) => setPatientQuery(e.target.value)}
+                      placeholder="Paciente"
+                      className="h-11 rounded-xl border border-[#D4A017]/15 bg-black/50 pl-9 text-[13px] text-[#F5F5F5] placeholder:text-[#9CA3AF] focus-visible:ring-[#D4A017]/40"
+                    />
+                  </div>
+
+                  <div className="relative lg:max-w-sm lg:flex-1">
+                    <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+                    <Input
+                      value={dateQuery}
+                      onChange={(e) => setDateQuery(e.target.value)}
+                      placeholder="Data (dd/mm/aaaa ou yyyy-mm-dd)"
+                      className="h-11 rounded-xl border border-[#D4A017]/15 bg-black/50 pl-9 text-[13px] text-[#F5F5F5] placeholder:text-[#9CA3AF] focus-visible:ring-[#D4A017]/40"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setOnlyPendingEmail((v) => !v)}
+                    className={
+                      "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] font-medium transition-colors " +
+                      (onlyPendingEmail
+                        ? "border-[#D4A017]/40 bg-[#D4A017]/10 text-[#F5F5F5]"
+                        : "border-[#D4A017]/15 bg-black/40 text-[#9CA3AF] hover:text-[#F5F5F5]")
+                    }
+                    aria-pressed={onlyPendingEmail}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Email pendente
+                  </button>
+
+                  {activeFiltersCount > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className="rounded-full border border-[#D4A017]/25 bg-[#D4A017]/10 text-[#D4A017] hover:bg-[#D4A017]/10">
+                        {activeFiltersCount} filtro{activeFiltersCount > 1 ? "s" : ""}
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="h-9 rounded-xl border border-[#D4A017]/15 bg-black/30 text-[#9CA3AF] hover:bg-black/40 hover:text-[#F5F5F5]"
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        Limpar
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </section>
 
         {/* Lista */}

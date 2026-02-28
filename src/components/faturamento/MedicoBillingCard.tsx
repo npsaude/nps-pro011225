@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -12,7 +12,12 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
 
@@ -70,12 +75,50 @@ function getEmailBadge(steps: BillingDocStep[]) {
   );
 }
 
-export default function MedicoBillingCard({ record }: { record: MedicoBillingCardRecord }) {
+function DocsChips({ steps }: { steps: BillingDocStep[] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {steps.map((s) => (
+        <span
+          key={s.id}
+          className={
+            "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium " +
+            (s.sent
+              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+              : "border-[#D4A017]/15 bg-black/30 text-[#9CA3AF]")
+          }
+        >
+          {s.sent ? (
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          ) : (
+            <Clock3 className="h-3.5 w-3.5" />
+          )}
+          <span className="whitespace-nowrap">{s.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export default function MedicoBillingCard({
+  record,
+}: {
+  record: MedicoBillingCardRecord;
+}) {
   const hasGuiaSolicitacao = record.qtdSolicitada > 0;
   const qtdSolicitadaLabel = hasGuiaSolicitacao ? String(record.qtdSolicitada) : "—";
 
+  const docsSent = useMemo(
+    () => record.steps.filter((s) => s.sent).length,
+    [record.steps],
+  );
+
+  const primaryValue = hasGuiaSolicitacao
+    ? formatCurrency(record.valorFaturamento ?? 0)
+    : "-";
+
   return (
-    <Card className="overflow-hidden rounded-2xl border border-[#D4A017]/20 bg-black/60 shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+    <Card className="overflow-hidden rounded-2xl border border-[#D4A017]/15 bg-black/40 shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-xl">
       <CardContent className="p-0">
         <div className="px-4 py-4">
           <div className="flex items-start justify-between gap-3">
@@ -89,6 +132,9 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {getEmailBadge(record.steps)}
+                <Badge className="border-[#D4A017]/20 bg-black/30 text-[#E5E7EB] hover:bg-black/35">
+                  {docsSent}/{record.steps.length} docs
+                </Badge>
               </div>
             </div>
 
@@ -96,20 +142,24 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
                 Valor
               </div>
-              {hasGuiaSolicitacao ? (
-                <div className="mt-1 text-sm font-semibold text-emerald-200">
-                  {formatCurrency(record.valorFaturamento ?? 0)}
-                </div>
-              ) : (
+              <div
+                className={
+                  "mt-1 text-sm font-semibold " +
+                  (hasGuiaSolicitacao ? "text-emerald-200" : "text-[#9CA3AF]")
+                }
+              >
+                {primaryValue}
+              </div>
+              {!hasGuiaSolicitacao ? (
                 <div className="mt-1 text-[11px] font-medium text-rose-200">
                   falta guia
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-[#D4A017]/15 bg-black/40 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-[#D4A017]/10 bg-black/30 px-3 py-2">
               <CalendarDays className="h-4 w-4 text-[#D4A017]" />
               <div className="min-w-0">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
@@ -121,7 +171,7 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-[#D4A017]/15 bg-black/40 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-[#D4A017]/10 bg-black/30 px-3 py-2">
               <Clock3 className="h-4 w-4 text-[#D4A017]" />
               <div className="min-w-0">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
@@ -133,7 +183,7 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
               </div>
             </div>
 
-            <div className="col-span-2 flex items-center gap-2 rounded-xl border border-[#D4A017]/15 bg-black/40 px-3 py-2">
+            <div className="col-span-2 flex items-center gap-2 rounded-xl border border-[#D4A017]/10 bg-black/30 px-3 py-2">
               <Hospital className="h-4 w-4 text-[#D4A017]" />
               <div className="min-w-0">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
@@ -165,7 +215,7 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
               <Wallet className="h-4 w-4 text-[#D4A017]" />
               <span className="font-medium">Docs:</span>
               <span className="text-[#F5F5F5]">
-                {record.steps.filter((s) => s.sent).length}/{record.steps.length}
+                {docsSent}/{record.steps.length}
               </span>
             </div>
           </div>
@@ -183,8 +233,10 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
                     <FileText className="h-4 w-4" />
                     Procedimentos
                   </div>
-                  <div className="rounded-xl border border-[#D4A017]/15 bg-black/40 px-3 py-2 text-[12px] text-[#E5E7EB]">
-                    {record.procedimentos.length > 0 ? record.procedimentos.join(", ") : "—"}
+                  <div className="rounded-xl border border-[#D4A017]/10 bg-black/30 px-3 py-2 text-[12px] text-[#E5E7EB]">
+                    {record.procedimentos.length > 0
+                      ? record.procedimentos.join(", ")
+                      : "—"}
                   </div>
                 </div>
 
@@ -193,36 +245,18 @@ export default function MedicoBillingCard({ record }: { record: MedicoBillingCar
                     <Users className="h-4 w-4" />
                     Equipe
                   </div>
-                  <div className="rounded-xl border border-[#D4A017]/15 bg-black/40 px-3 py-2 text-[12px] text-[#E5E7EB]">
-                    {record.profissionais.length > 0 ? record.profissionais.join(", ") : "—"}
+                  <div className="rounded-xl border border-[#D4A017]/10 bg-black/30 px-3 py-2 text-[12px] text-[#E5E7EB]">
+                    {record.profissionais.length > 0
+                      ? record.profissionais.join(", ")
+                      : "—"}
                   </div>
                 </div>
 
                 <div>
                   <div className="mb-2 text-[12px] font-semibold text-[#D4A017]">
-                    Progresso de documentos
+                    Documentos
                   </div>
-                  <div className="grid gap-2">
-                    {record.steps.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between rounded-xl border border-[#D4A017]/10 bg-black/40 px-3 py-2"
-                      >
-                        <span className="text-[12px] text-[#E5E7EB]">{s.label}</span>
-                        {s.sent ? (
-                          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-200">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Enviado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-rose-200">
-                            <XCircle className="h-4 w-4" />
-                            Pendente
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <DocsChips steps={record.steps} />
                 </div>
               </div>
             </AccordionContent>
