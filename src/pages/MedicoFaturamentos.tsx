@@ -336,7 +336,7 @@ export default function MedicoFaturamentos() {
 
         {/* Conteúdo (inspirado em dashboards: tabela + painel de detalhes) */}
         <section className="mb-2">
-          <Tabs defaultValue="tabela" className="w-full">
+          <Tabs defaultValue="cards" className="w-full">
             <div className="flex items-center justify-between gap-3">
               <TabsList className="h-11 rounded-2xl bg-black/40 p-1 border border-[#D4A017]/15">
                 <TabsTrigger
