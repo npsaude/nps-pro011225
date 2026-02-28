@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, FileText, ClipboardList } from "lucide-react";
 
@@ -28,6 +28,33 @@ import { useSystemUser } from "@/hooks/use-system-user";
 
 type Period = "mes" | "trimestre" | "ano";
 
+type GuiaRow = {
+  data_inicio_faturamento: string | null;
+  data_emissao: string | null;
+  data_fim_faturamento: string | null;
+  created_at: string;
+  valor_total_faturamento: string | number | null;
+};
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function toDateOrNull(value: string | null): Date | null {
+  if (!value) return null;
+  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function buildRangeStart(period: Period): Date {
+  const count = period === "mes" ? 3 : period === "trimestre" ? 6 : 12;
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
+}
+
 function getInitials(name: string): string {
   const cleaned = name
     .trim()
@@ -52,11 +79,11 @@ const DashboardMedico: React.FC = () => {
   const navigate = useNavigate();
   const { systemUser } = useSystemUser();
 
-  const faturado = "R$ 702.000,00";
-  const recebido = "R$ 668.300,00";
-  const totalAReceber = "R$ 72.500,00";
-
   const [period, setPeriod] = useState<Period>("ano");
+
+  const [faturado, setFaturado] = useState<string>("—");
+  const [recebido, setRecebido] = useState<string>("—");
+  const [totalAReceber, setTotalAReceber] = useState<string>("—");
 
   const [hospitalModalOpen, setHospitalModalOpen] = useState(false);
   const [hospitaisMedico, setHospitaisMedico] = useState<
@@ -75,6 +102,65 @@ const DashboardMedico: React.FC = () => {
     const nome = (systemUser as any)?.nome ? String((systemUser as any).nome) : "";
     return nome ? getInitials(nome) : "";
   }, [systemUser]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTotals() {
+      const start = buildRangeStart(period);
+
+      const { data, error } = await supabase
+        .from("guia_solicitacao")
+        .select(
+          "data_inicio_faturamento,data_emissao,data_fim_faturamento,created_at,valor_total_faturamento",
+        )
+        .gte("created_at", start.toISOString());
+
+      if (cancelled) return;
+
+      if (error) {
+        setFaturado("—");
+        setRecebido("—");
+        setTotalAReceber("—");
+        return;
+      }
+
+      const rows = (data ?? []) as GuiaRow[];
+      const today = new Date();
+
+      let total = 0;
+      let received = 0;
+
+      for (const r of rows) {
+        const v =
+          r.valor_total_faturamento == null
+            ? 0
+            : typeof r.valor_total_faturamento === "number"
+              ? r.valor_total_faturamento
+              : Number(r.valor_total_faturamento);
+
+        if (!Number.isFinite(v) || v <= 0) continue;
+        total += v;
+
+        // Heurística: considera recebido quando há data_fim_faturamento (fechamento) no passado.
+        // Caso o projeto passe a ter data_pagamento/status, a regra pode ser ajustada.
+        const fim = toDateOrNull(r.data_fim_faturamento);
+        if (fim && fim <= today) received += v;
+      }
+
+      const toReceive = Math.max(0, total - received);
+
+      setFaturado(formatCurrency(total));
+      setRecebido(formatCurrency(received));
+      setTotalAReceber(formatCurrency(toReceive));
+    }
+
+    void loadTotals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
 
   const carregarHospitaisDoMedico = async () => {
     setLoadingHospitais(true);
