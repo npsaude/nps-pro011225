@@ -461,7 +461,7 @@ const DashboardMedico: React.FC = () => {
               Instituições com maior volume de descrições.
             </p>
           </div>
-          <HospitalRankingChart />
+          <HospitalRankingChart period={period} />
         </section>
 
         <section className="border-t border-[#D4A017]/15 pt-3 text-[11px] text-[#6B7280]">
