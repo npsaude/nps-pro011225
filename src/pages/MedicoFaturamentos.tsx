@@ -11,6 +11,8 @@ import MedicoBillingCard, {
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { listAdminFaturamentos } from "@/services/admin-faturamento-service";
 import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -57,6 +59,7 @@ export default function MedicoFaturamentos() {
 
   const [items, setItems] = useState<MedicoBillingCardRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [patientQuery, setPatientQuery] = useState("");
   const [dateQuery, setDateQuery] = useState("");
@@ -66,6 +69,14 @@ export default function MedicoFaturamentos() {
 
     async function load() {
       setLoading(true);
+      setLoadError(null);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        navigate("/login-medico", { replace: true });
+        return;
+      }
+
       try {
         const data = await listAdminFaturamentos();
         if (cancelled) return;
@@ -85,6 +96,16 @@ export default function MedicoFaturamentos() {
             steps: buildSteps(d),
           })),
         );
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Não foi possível carregar seus faturamentos.";
+        if (!cancelled) {
+          setItems([]);
+          setLoadError(message);
+        }
+        showError(message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -95,7 +116,7 @@ export default function MedicoFaturamentos() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [navigate]);
 
   const filteredItems = useMemo(() => {
     const pq = patientQuery.trim().toLowerCase();
@@ -206,6 +227,12 @@ export default function MedicoFaturamentos() {
             <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
               <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
                 Carregando...
+              </CardContent>
+            </Card>
+          ) : loadError ? (
+            <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+              <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                {loadError}
               </CardContent>
             </Card>
           ) : filteredItems.length === 0 ? (
