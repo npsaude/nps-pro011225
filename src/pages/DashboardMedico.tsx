@@ -257,7 +257,7 @@ const DashboardMedico: React.FC = () => {
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-black/20 text-black shadow-inner">
               <Upload className="h-4.5 w-4.5" />
             </div>
-            <span className="text-sm font-semibold">Enviar Descrição</span>
+            <span className="text-sm font-semibold">Enviar Faturamento</span>
           </button>
 
           <button
@@ -269,7 +269,7 @@ const DashboardMedico: React.FC = () => {
               <FileText className="h-4.5 w-4.5" />
             </div>
             <span className="text-sm font-semibold">
-              Acompanhar Descrições
+              Acompanhar Faturamentos
             </span>
           </button>
         </section>
