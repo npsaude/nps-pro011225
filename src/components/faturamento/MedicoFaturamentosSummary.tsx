@@ -46,11 +46,17 @@ function MetricCard({
 }
 
 export default function MedicoFaturamentosSummary({ summary }: { summary: Summary }) {
-  const docsPct = summary.docsTotal > 0 ? Math.round((summary.docsSent / summary.docsTotal) * 100) : 0;
-  const emailsPct = summary.emailsTotal > 0 ? Math.round((summary.emailsSent / summary.emailsTotal) * 100) : 0;
+  const docsPct =
+    summary.docsTotal > 0
+      ? Math.round((summary.docsSent / summary.docsTotal) * 100)
+      : 0;
+  const emailsPct =
+    summary.emailsTotal > 0
+      ? Math.round((summary.emailsSent / summary.emailsTotal) * 100)
+      : 0;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3">
       <MetricCard
         icon={<ReceiptText className="h-5 w-5" />}
         label="Casos"
@@ -72,9 +78,7 @@ export default function MedicoFaturamentosSummary({ summary }: { summary: Summar
       <MetricCard
         icon={<CheckCircle2 className="h-5 w-5" />}
         label="Concluídos"
-        value={String(
-          summary.emailsTotal > 0 ? summary.emailsSent : 0,
-        )}
+        value={String(summary.emailsTotal > 0 ? summary.emailsSent : 0)}
         sub="com e-mail enviado"
       />
     </div>
