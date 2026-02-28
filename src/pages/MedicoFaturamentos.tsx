@@ -7,6 +7,8 @@ import {
   ReceiptText,
   SlidersHorizontal,
   X,
+  LayoutList,
+  Table2,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,9 @@ import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgres
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import MedicoFaturamentosSummary from "@/components/faturamento/MedicoFaturamentosSummary";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import MedicoFaturamentosTable from "@/components/faturamento/MedicoFaturamentosTable";
+import MedicoFaturamentoDetailsSheet from "@/components/faturamento/MedicoFaturamentoDetailsSheet";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -66,7 +71,9 @@ function buildSteps(item: {
 function getDocsTotals(item: MedicoBillingCardRecord) {
   const docsSent = item.steps.filter((s) => s.sent).length;
   const docsTotal = item.steps.length;
-  const emailSent = Boolean(item.steps.find((s) => s.id === "email_faturamento")?.sent);
+  const emailSent = Boolean(
+    item.steps.find((s) => s.id === "email_faturamento")?.sent,
+  );
   return { docsSent, docsTotal, emailSent };
 }
 
@@ -80,6 +87,9 @@ export default function MedicoFaturamentos() {
   const [patientQuery, setPatientQuery] = useState("");
   const [dateQuery, setDateQuery] = useState("");
   const [onlyPendingEmail, setOnlyPendingEmail] = useState(false);
+
+  const [selected, setSelected] = useState<MedicoBillingCardRecord | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -185,6 +195,11 @@ export default function MedicoFaturamentos() {
     setPatientQuery("");
     setDateQuery("");
     setOnlyPendingEmail(false);
+  };
+
+  const openDetails = (record: MedicoBillingCardRecord) => {
+    setSelected(record);
+    setDetailsOpen(true);
   };
 
   return (
@@ -319,32 +334,102 @@ export default function MedicoFaturamentos() {
           </Card>
         </section>
 
-        {/* Lista */}
-        <main className="flex-1 space-y-3 pb-10">
-          {loading ? (
-            <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
-              <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
-                Carregando...
-              </CardContent>
-            </Card>
-          ) : loadError ? (
-            <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
-              <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
-                {loadError}
-              </CardContent>
-            </Card>
-          ) : filteredItems.length === 0 ? (
-            <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
-              <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
-                Nenhum faturamento encontrado.
-              </CardContent>
-            </Card>
-          ) : (
-            filteredItems.map((record) => (
-              <MedicoBillingCard key={record.id} record={record} />
-            ))
-          )}
-        </main>
+        {/* Conteúdo (inspirado em dashboards: tabela + painel de detalhes) */}
+        <section className="mb-2">
+          <Tabs defaultValue="tabela" className="w-full">
+            <div className="flex items-center justify-between gap-3">
+              <TabsList className="h-11 rounded-2xl bg-black/40 p-1 border border-[#D4A017]/15">
+                <TabsTrigger
+                  value="tabela"
+                  className={
+                    "rounded-xl px-3 text-[13px] text-[#9CA3AF] data-[state=active]:bg-[#D4A017]/10 data-[state=active]:text-[#F5F5F5] data-[state=active]:shadow-none"
+                  }
+                >
+                  <Table2 className="mr-2 h-4 w-4" />
+                  Tabela
+                </TabsTrigger>
+                <TabsTrigger
+                  value="cards"
+                  className={
+                    "rounded-xl px-3 text-[13px] text-[#9CA3AF] data-[state=active]:bg-[#D4A017]/10 data-[state=active]:text-[#F5F5F5] data-[state=active]:shadow-none"
+                  }
+                >
+                  <LayoutList className="mr-2 h-4 w-4" />
+                  Cards
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="hidden sm:block text-[12px] text-[#9CA3AF]">
+                Clique em uma linha para ver detalhes.
+              </div>
+            </div>
+
+            <TabsContent value="tabela" className="mt-4">
+              {loading ? (
+                <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+                  <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                    Carregando...
+                  </CardContent>
+                </Card>
+              ) : loadError ? (
+                <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+                  <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                    {loadError}
+                  </CardContent>
+                </Card>
+              ) : filteredItems.length === 0 ? (
+                <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+                  <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                    Nenhum faturamento encontrado.
+                  </CardContent>
+                </Card>
+              ) : (
+                <MedicoFaturamentosTable records={filteredItems} onSelect={openDetails} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="cards" className="mt-4">
+              <main className="space-y-3 pb-10">
+                {loading ? (
+                  <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+                    <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                      Carregando...
+                    </CardContent>
+                  </Card>
+                ) : loadError ? (
+                  <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+                    <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                      {loadError}
+                    </CardContent>
+                  </Card>
+                ) : filteredItems.length === 0 ? (
+                  <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/60">
+                    <CardContent className="p-4 text-[13px] text-[#9CA3AF]">
+                      Nenhum faturamento encontrado.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredItems.map((record) => (
+                    <button
+                      key={record.id}
+                      type="button"
+                      className="block w-full text-left"
+                      onClick={() => openDetails(record)}
+                    >
+                      <MedicoBillingCard record={record} />
+                    </button>
+                  ))
+                )}
+              </main>
+            </TabsContent>
+          </Tabs>
+        </section>
+
+        <MedicoFaturamentoDetailsSheet
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          record={selected}
+        />
       </div>
     </div>
   );
