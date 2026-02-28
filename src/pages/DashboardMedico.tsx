@@ -103,6 +103,25 @@ const DashboardMedico: React.FC = () => {
     return nome ? getInitials(nome) : "";
   }, [systemUser]);
 
+  // Garante sessão no portal médico (RLS depende do auth.uid())
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ensureSession() {
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!data.session) {
+        navigate("/login-medico", { replace: true });
+      }
+    }
+
+    void ensureSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -119,6 +138,8 @@ const DashboardMedico: React.FC = () => {
       if (cancelled) return;
 
       if (error) {
+        console.error("[DashboardMedico] Erro ao buscar guia_solicitacao:", error);
+        showError("Não foi possível atualizar os indicadores de faturamento.");
         setFaturado("—");
         setRecebido("—");
         setTotalAReceber("—");
@@ -143,7 +164,6 @@ const DashboardMedico: React.FC = () => {
         total += v;
 
         // Heurística: considera recebido quando há data_fim_faturamento (fechamento) no passado.
-        // Caso o projeto passe a ter data_pagamento/status, a regra pode ser ajustada.
         const fim = toDateOrNull(r.data_fim_faturamento);
         if (fim && fim <= today) received += v;
       }

@@ -99,6 +99,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
 
       if (cancelled) return;
       if (error) {
+        console.error("[RevenueChart] Erro ao buscar guia_solicitacao:", error);
         setRows([]);
         return;
       }
