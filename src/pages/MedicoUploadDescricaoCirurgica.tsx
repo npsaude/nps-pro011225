@@ -245,6 +245,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     };
   }, [pdfBlobUrl]);
 
+  // Auto: ao entrar no preview da guia, já gera o PDF automaticamente
+  useEffect(() => {
+    if (view !== "preview_honorarios") return;
+    if (pdfGerado || isGeneratingPdf) return;
+    if (!guiaHonorariosId || !htmlGuiaPreenchida) return;
+
+    void handleGerarPdf({
+      guiaHonorariosIdOverride: guiaHonorariosId,
+      htmlOverride: htmlGuiaPreenchida,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, pdfGerado, isGeneratingPdf, guiaHonorariosId, htmlGuiaPreenchida]);
+
   // Carrega o nome do médico logado para exibir na saudação
   useEffect(() => {
     const carregarNomeMedico = async () => {
@@ -1026,6 +1039,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
+    // Reset do PDF (novo preview)
+    setPdfGerado(false);
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl(null);
+    }
+
     setView("gerando_honorarios");
 
     try {
@@ -1266,11 +1286,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   // Função para gerar PDF da guia de honorários
-  const gerarPdfGuiaHonorarios = async (): Promise<Blob | null> => {
+  const gerarPdfGuiaHonorarios = async (html: string): Promise<Blob | null> => {
     console.log("[PDF] Iniciando geração do PDF da guia de honorários");
-    console.log("[PDF] htmlGuiaPreenchida length:", htmlGuiaPreenchida?.length || 0);
+    console.log("[PDF] htmlGuiaPreenchida length:", html?.length || 0);
 
-    if (!htmlGuiaPreenchida) {
+    if (!html) {
       console.error("[PDF] HTML da guia não disponível");
       return null;
     }
@@ -1294,7 +1314,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       #pdf-capture-container table { border-collapse: collapse !important; }
     `;
     
-    tempContainer.innerHTML = htmlGuiaPreenchida;
+    tempContainer.innerHTML = html;
     tempContainer.style.cssText = `
       position: absolute;
       left: -9999px;
@@ -1431,13 +1451,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Função para gerar e salvar o PDF (chamada ao entrar na tela de preview)
-  const handleGerarPdf = async () => {
-    console.log("[handleGerarPdf] Iniciando...");
-    console.log("[handleGerarPdf] guiaHonorariosId:", guiaHonorariosId);
-    console.log("[handleGerarPdf] htmlGuiaPreenchida length:", htmlGuiaPreenchida?.length || 0);
+  // Função para gerar e salvar o PDF
+  const handleGerarPdf = async (opts?: {
+    guiaHonorariosIdOverride?: string;
+    htmlOverride?: string;
+  }) => {
+    const guiaId = opts?.guiaHonorariosIdOverride ?? guiaHonorariosId;
+    const html = opts?.htmlOverride ?? htmlGuiaPreenchida;
 
-    if (!guiaHonorariosId || !htmlGuiaPreenchida) {
+    console.log("[handleGerarPdf] Iniciando...");
+    console.log("[handleGerarPdf] guiaHonorariosId:", guiaId);
+    console.log("[handleGerarPdf] html length:", html?.length || 0);
+
+    if (!guiaId || !html) {
       console.log("[handleGerarPdf] Sem guia ou HTML, não pode gerar PDF");
       return;
     }
@@ -1458,7 +1484,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       // 1. Gerar o PDF
       console.log("[handleGerarPdf] Gerando PDF...");
-      const pdfBlob = await gerarPdfGuiaHonorarios();
+      const pdfBlob = await gerarPdfGuiaHonorarios(html);
       
       if (!pdfBlob) {
         console.error("[handleGerarPdf] Falha ao gerar PDF - blob é null");
@@ -1475,7 +1501,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       // 2. Fazer upload do PDF para o storage
       const bucketName = "NPS-pro";
       const timestamp = Date.now();
-      const pdfFileName = `guia_honorarios_${guiaHonorariosId}_${timestamp}.pdf`;
+      const pdfFileName = `guia_honorarios_${guiaId}_${timestamp}.pdf`;
       const pdfPath = `guia_honorarios/${userId}/${pdfFileName}`;
 
       console.log("[handleGerarPdf] Fazendo upload para:", pdfPath);
@@ -1506,7 +1532,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           pdf_guia_honorario: pdfPath,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", guiaHonorariosId)
+        .eq("id", guiaId)
         .select();
 
       if (updateError) {
@@ -2929,47 +2955,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
               {/* Botões de ação */}
               <div className="mt-6 flex flex-col gap-3">
-                {/* Estado inicial: mostrar botão de gerar PDF */}
-                {!pdfGerado && !isGeneratingPdf && (
+                {isGeneratingPdf || (!pdfGerado && !pdfBlobUrl) ? (
+                  <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando PDF da guia...
+                  </div>
+                ) : (
                   <Button
                     type="button"
                     className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
-                    onClick={handleGerarPdf}
+                    onClick={() => {
+                      handleBaixarPdf();
+                      void handleAvancarAposPreview();
+                    }}
                   >
-                    <FileCheck className="mr-2 h-4 w-4" />
-                    Gerar PDF da Guia
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar PDF da guia e avançar
                   </Button>
-                )}
-
-                {/* Estado gerando: mostrar loading */}
-                {isGeneratingPdf && (
-                  <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando PDF...
-                  </div>
-                )}
-
-                {/* Estado PDF gerado: mostrar botões de baixar e avançar */}
-                {pdfGerado && !isGeneratingPdf && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full rounded-lg border-[#D4A017]/40 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 flex items-center justify-center"
-                      onClick={handleBaixarPdf}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Baixar PDF
-                    </Button>
-
-                    <Button
-                      type="button"
-                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
-                      onClick={handleAvancarAposPreview}
-                    >
-                      Avançar
-                    </Button>
-                  </>
                 )}
               </div>
             </div>
