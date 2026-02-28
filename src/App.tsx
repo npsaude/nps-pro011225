@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import NotFound from "./pages/NotFound";
 import SadtEnviar from "./pages/SadtEnviar";
@@ -23,6 +23,7 @@ import DescricaoCirurgicaPage from "./pages/DescricaoCirurgica";
 import MedicoUploadDescricaoCirurgica from "./pages/MedicoUploadDescricaoCirurgica";
 import MedicoUploadGuiaAutorizacao from "./pages/MedicoUploadGuiaAutorizacao";
 import MedicoDescricoesCirurgicas from "./pages/MedicoDescricoesCirurgicas";
+import MedicoFaturamentos from "./pages/MedicoFaturamentos";
 import DescricaoCirurgicaArquivosPage from "./pages/DescricaoCirurgicaArquivos";
 import HospitaisCadastro from "./pages/HospitaisCadastro";
 import MedicoInicio from "./pages/MedicoInicio";
@@ -78,9 +79,15 @@ const App = () => (
 
           <Route path="/medico/dashboard" element={<MedicoInicio />} />
           <Route path="/medico/informacoes" element={<DashboardMedico />} />
-          <Route path="/medico/descricao-cirurgica/enviar" element={<MedicoUploadDescricaoCirurgica />} />
+
+          {/* Novo fluxo (renomeado) */}
+          <Route path="/medico/faturamentos/enviar" element={<MedicoUploadDescricaoCirurgica />} />
           <Route path="/medico/guia-autorizacao/enviar" element={<MedicoUploadGuiaAutorizacao />} />
-          <Route path="/medico/descricao-cirurgica" element={<MedicoDescricoesCirurgicas />} />
+          <Route path="/medico/faturamentos" element={<MedicoFaturamentos />} />
+
+          {/* Compatibilidade: rotas antigas */}
+          <Route path="/medico/descricao-cirurgica/enviar" element={<Navigate to="/medico/faturamentos/enviar" replace />} />
+          <Route path="/medico/descricao-cirurgica" element={<Navigate to="/medico/faturamentos" replace />} />
 
           <Route path="/cadastro/clinicas" element={<ClinicasCadastro />} />
           <Route path="/cadastro/hospitais" element={<HospitaisCadastro />} />

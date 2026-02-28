@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -70,7 +70,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
   useEffect(() => {
     if (!faturamentoId) {
       showError("Faturamento não encontrado. Inicie o fluxo novamente.");
-      navigate("/medico/descricao-cirurgica/enviar");
+      navigate("/medico/faturamentos/enviar");
     }
   }, [faturamentoId, navigate]);
 
@@ -318,7 +318,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
               if (view === "upload") {
                 setView("choice");
               } else {
-                navigate("/medico/descricao-cirurgica/enviar");
+                navigate("/medico/faturamentos/enviar");
               }
             }}
           >

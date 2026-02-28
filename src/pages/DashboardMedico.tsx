@@ -155,7 +155,7 @@ const DashboardMedico: React.FC = () => {
       return;
     }
 
-    navigate(`/medico/descricao-cirurgica/enviar?hospitalId=${selectedHospitalId}`);
+    navigate(`/medico/faturamentos/enviar?hospitalId=${selectedHospitalId}`);
     setHospitalModalOpen(false);
   };
 
@@ -262,7 +262,7 @@ const DashboardMedico: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate("/medico/descricao-cirurgica")}
+            onClick={() => navigate("/medico/faturamentos")}
             className="flex h-24 min-w-0 flex-1 flex-col justify-center rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/20 shadow-lg hover:border-[#D4A017]/40 transition-colors"
           >
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">

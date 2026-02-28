@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -46,7 +46,7 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
   useEffect(() => {
     if (!faturamentoId) {
       showError("Faturamento não encontrado. Inicie o fluxo novamente.");
-      navigate("/medico/descricao-cirurgica/enviar");
+      navigate("/medico/faturamentos/enviar");
     }
   }, [faturamentoId, navigate]);
 
@@ -264,7 +264,7 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
           <button
             type="button"
             className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
-            onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
+            onClick={() => navigate("/medico/faturamentos/enviar")}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Voltar</span>
@@ -447,7 +447,7 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
                 type="button"
                 className="mt-8 h-11 w-full max-w-sm rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold"
                 onClick={() =>
-                  navigate("/medico/descricao-cirurgica/enviar", {
+                  navigate("/medico/faturamentos/enviar", {
                     state: { faturamentoId },
                   })
                 }

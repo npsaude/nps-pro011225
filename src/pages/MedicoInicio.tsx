@@ -55,10 +55,10 @@ const MedicoInicio: React.FC = () => {
             </div>
           </section>
 
-          {/* CTA - Nova descrição */}
+          {/* CTA - Novo faturamento */}
           <button
             type="button"
-            onClick={() => navigate("/medico/descricao-cirurgica/enviar")}
+            onClick={() => navigate("/medico/faturamentos/enviar")}
             className="mb-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-4 text-left text-black shadow-[0_0_30px_rgba(212,160,23,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(212,160,23,0.2)]"
           >
             <div className="flex items-center gap-3">
@@ -73,7 +73,6 @@ const MedicoInicio: React.FC = () => {
                   Faça o upload dos documentos.
                 </span>
               </div>
-
             </div>
           </button>
 
