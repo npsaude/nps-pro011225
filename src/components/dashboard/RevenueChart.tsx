@@ -28,7 +28,6 @@ type Row = {
 type Point = {
   name: string;
   value: number; // em milhares (k)
-  highlight?: boolean;
 };
 
 const PT_MONTHS = [
@@ -139,12 +138,11 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
       totals.set(key, (totals.get(key) ?? 0) + value);
     }
 
-    return months.map((m, idx) => {
+    return months.map((m) => {
       const sum = totals.get(m.key) ?? 0;
       return {
         name: m.label,
         value: Math.round(sum / 1000),
-        highlight: idx === months.length - 1,
       };
     });
   }, [period, rows]);
@@ -157,7 +155,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
           margin={{ top: 10, right: 8, left: -20, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="#262626"
+            stroke="rgba(245,245,245,0.08)"
             vertical={false}
             strokeDasharray="3 3"
           />
@@ -165,12 +163,12 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             dataKey="name"
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#6B7280", fontSize: 11 }}
+            tick={{ fill: "#F5F5F5", fontSize: 11 }}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#6B7280", fontSize: 11 }}
+            tick={{ fill: "#F5F5F5", fontSize: 11 }}
             tickFormatter={(value) => `k${value}`}
           />
           <Tooltip
@@ -191,10 +189,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
           />
           <Bar dataKey="value" radius={[8, 8, 4, 4]}>
             {data.map((entry) => (
-              <Cell
-                key={entry.name}
-                fill={entry.highlight ? "#D4A017" : "rgba(245,245,245,0.10)"}
-              />
+              <Cell key={entry.name} fill="#D4A017" />
             ))}
           </Bar>
         </ComposedChart>

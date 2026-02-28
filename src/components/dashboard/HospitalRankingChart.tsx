@@ -128,22 +128,22 @@ export default function HospitalRankingChart({
   return (
     <div className="space-y-4">
       {items.length === 0 ? (
-        <div className="text-[12px] text-[#9CA3AF]">Sem dados para exibir.</div>
+        <div className="text-[12px] text-[#F5F5F5]/70">Sem dados para exibir.</div>
       ) : (
         items.map((item) => {
           const widthPercent = (item.valor / maxValor) * 100;
 
           return (
             <div key={item.nome} className="space-y-1.5">
-              <div className="flex justify-between text-[11px] text-[#9CA3AF]">
+              <div className="flex justify-between text-[11px] text-[#F5F5F5]">
                 <span className="truncate pr-3">{item.nome}</span>
-                <span className="shrink-0 font-semibold text-[#D4A017]">
+                <span className="shrink-0 font-semibold text-[#F5F5F5]">
                   {item.formatted}
                 </span>
               </div>
               <div className="h-2.5 w-full rounded-full bg-black/40 border border-[#D4A017]/10">
                 <div
-                  className="h-2.5 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_14px_rgba(212,160,23,0.25)]"
+                  className="h-2.5 rounded-full bg-[#D4A017] shadow-[0_0_14px_rgba(212,160,23,0.25)]"
                   style={{ width: `${widthPercent}%` }}
                 />
               </div>
