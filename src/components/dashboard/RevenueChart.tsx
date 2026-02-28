@@ -1,15 +1,16 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  ComposedChart,
   Bar,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  Line,
 } from "recharts";
+
+import { supabase } from "@/integrations/supabase/client";
 
 type Period = "mes" | "trimestre" | "ano";
 
@@ -17,32 +18,136 @@ interface RevenueChartProps {
   period: Period;
 }
 
-const baseData = [
-  { name: "Jan", value: 32, line: 6 },
-  { name: "Fev", value: 24, line: 4 },
-  { name: "Mar", value: 48, line: 8 },
-  { name: "Abr", value: 20, line: 3 },
-  { name: "Mai", value: 55, line: 9 },
-  { name: "Jun", value: 40, line: 7 },
-  { name: "Jul", value: 72, line: 12 },
-  { name: "Ago", value: 60, line: 10 },
-  { name: "Set", value: 78, line: 11 },
-  { name: "Out", value: 70, line: 9 },
-  { name: "Nov", value: 69, line: 8 },
-  { name: "Dez", value: 100, line: 14, highlight: true },
+type Row = {
+  data_inicio_faturamento: string | null;
+  data_emissao: string | null;
+  created_at: string;
+  valor_total_faturamento: string | number | null;
+};
+
+type Point = {
+  name: string;
+  value: number; // em milhares (k)
+  highlight?: boolean;
+};
+
+const PT_MONTHS = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
 ];
 
-const monthData = baseData.slice(-3); // últimos 3 meses
-const quarterData = baseData.slice(-6); // últimos 6 meses
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
-function getData(period: Period) {
-  if (period === "mes") return monthData;
-  if (period === "trimestre") return quarterData;
-  return baseData;
+function toDateOrNull(value: string | null): Date | null {
+  if (!value) return null;
+  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function monthKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function buildMonthRange(period: Period) {
+  const count = period === "mes" ? 3 : period === "trimestre" ? 6 : 12;
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
+
+  const months: { key: string; label: string }[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    months.push({
+      key: monthKey(d),
+      label: PT_MONTHS[d.getMonth()],
+    });
+  }
+
+  return { start, months };
 }
 
 const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
-  const data = getData(period);
+  const [rows, setRows] = useState<Row[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const { start } = buildMonthRange(period);
+
+      const { data, error } = await supabase
+        .from("guia_solicitacao")
+        .select(
+          "data_inicio_faturamento,data_emissao,created_at,valor_total_faturamento",
+        )
+        .gte("created_at", start.toISOString());
+
+      if (cancelled) return;
+      if (error) {
+        setRows([]);
+        return;
+      }
+
+      setRows((data ?? []) as Row[]);
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
+  const data = useMemo<Point[]>(() => {
+    const { months } = buildMonthRange(period);
+
+    const totals = new Map<string, number>();
+
+    for (const r of rows) {
+      const d =
+        toDateOrNull(r.data_inicio_faturamento) ??
+        toDateOrNull(r.data_emissao) ??
+        toDateOrNull(r.created_at);
+      if (!d) continue;
+
+      const value =
+        r.valor_total_faturamento == null
+          ? 0
+          : typeof r.valor_total_faturamento === "number"
+            ? r.valor_total_faturamento
+            : Number(r.valor_total_faturamento);
+
+      if (!Number.isFinite(value) || value <= 0) continue;
+
+      const key = monthKey(d);
+      totals.set(key, (totals.get(key) ?? 0) + value);
+    }
+
+    return months.map((m, idx) => {
+      const sum = totals.get(m.key) ?? 0;
+      return {
+        name: m.label,
+        value: Math.round(sum / 1000),
+        highlight: idx === months.length - 1,
+      };
+    });
+  }, [period, rows]);
 
   return (
     <div className="h-64 w-full sm:h-72">
@@ -79,10 +184,9 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
             }}
             labelStyle={{ color: "#F5F5F5" }}
             itemStyle={{ color: "#F5F5F5" }}
-            formatter={(value: number, key: string) => {
-              if (key === "value") return [`R$ ${value.toFixed(0)}k`, "Faturado"];
-              if (key === "line") return [`R$ ${value.toFixed(0)}k`, "Glosa"];
-              return [value, key];
+            formatter={(value: number) => {
+              const brl = Number(value) * 1000;
+              return [formatCurrency(brl), "Faturado"];
             }}
           />
           <Bar dataKey="value" radius={[8, 8, 4, 4]}>
@@ -93,15 +197,6 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
               />
             ))}
           </Bar>
-          {/* Linha vermelha representando a glosa mensal */}
-          <Line
-            type="monotone"
-            dataKey="line"
-            stroke="#EF4444"
-            strokeWidth={2}
-            dot={false}
-            strokeLinecap="round"
-          />
         </ComposedChart>
       </ResponsiveContainer>
     </div>

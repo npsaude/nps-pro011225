@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileHeart, Upload, FileText, ClipboardList } from "lucide-react";
+import { ArrowLeft, Upload, FileText, ClipboardList } from "lucide-react";
 
-import GlosaGauge from "../components/dashboard/GlosaGauge";
 import RevenueChart from "../components/dashboard/RevenueChart";
 import HospitalRankingChart from "../components/dashboard/HospitalRankingChart";
 
@@ -56,7 +55,6 @@ const DashboardMedico: React.FC = () => {
   const faturado = "R$ 702.000,00";
   const recebido = "R$ 668.300,00";
   const totalAReceber = "R$ 72.500,00";
-  const percentualGlosaRecuperadoNumero = 83;
 
   const [period, setPeriod] = useState<Period>("ano");
 
@@ -361,18 +359,6 @@ const DashboardMedico: React.FC = () => {
                 <ClipboardList className="h-5 w-5" />
               </div>
             </div>
-          </div>
-
-          <div className="rounded-2xl bg-black/70 backdrop-blur-xl px-4 py-4 shadow-lg border border-[#D4A017]/25">
-            <div className="mb-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D4A017]/90">
-                % de Glosa Recuperado
-              </span>
-              <p className="mt-1 text-[11px] text-[#9CA3AF]">
-                Percentual do valor glosado que já foi revertido em pagamento.
-              </p>
-            </div>
-            <GlosaGauge value={percentualGlosaRecuperadoNumero} />
           </div>
         </section>
 
