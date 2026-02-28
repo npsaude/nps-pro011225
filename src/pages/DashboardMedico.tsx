@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, FileHeart, Upload, FileText, ClipboardList } from "lucide-react";
 
@@ -25,11 +25,33 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { useSystemUser } from "@/hooks/use-system-user";
 
 type Period = "mes" | "trimestre" | "ano";
 
+function getInitials(name: string): string {
+  const cleaned = name
+    .trim()
+    .replace(/^\s*(dra\.?|dr\.?)\s+/i, "")
+    .trim();
+
+  const parts = cleaned.split(" ").filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function getFirstName(name: string): string {
+  const cleaned = name
+    .trim()
+    .replace(/^\s*(dra\.?|dr\.?)\s+/i, "")
+    .trim();
+  return cleaned.split(" ").filter(Boolean)[0] ?? "";
+}
+
 const DashboardMedico: React.FC = () => {
   const navigate = useNavigate();
+  const { systemUser } = useSystemUser();
 
   const faturado = "R$ 702.000,00";
   const recebido = "R$ 668.300,00";
@@ -44,6 +66,17 @@ const DashboardMedico: React.FC = () => {
   >([]);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>("");
   const [loadingHospitais, setLoadingHospitais] = useState(false);
+
+  const saudacao = useMemo(() => {
+    const nome = (systemUser as any)?.nome ? String((systemUser as any).nome) : "";
+    const firstName = nome ? getFirstName(nome) : "";
+    return firstName ? `Olá, Dr. ${firstName}.` : "Olá, Doutor(a).";
+  }, [systemUser]);
+
+  const avatarInitials = useMemo(() => {
+    const nome = (systemUser as any)?.nome ? String((systemUser as any).nome) : "";
+    return nome ? getInitials(nome) : "";
+  }, [systemUser]);
 
   const carregarHospitaisDoMedico = async () => {
     setLoadingHospitais(true);
@@ -122,10 +155,8 @@ const DashboardMedico: React.FC = () => {
       return;
     }
 
+    navigate(`/medico/descricao-cirurgica/enviar?hospitalId=${selectedHospitalId}`);
     setHospitalModalOpen(false);
-    navigate("/medico/descricao-cirurgica/enviar", {
-      state: { hospitalId: selectedHospitalId },
-    });
   };
 
   const handleChangePeriod = (value: Period) => {
@@ -134,68 +165,32 @@ const DashboardMedico: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
-      {/* Modal de seleção de hospital */}
       <Dialog open={hospitalModalOpen} onOpenChange={setHospitalModalOpen}>
-        <DialogContent className="border border-[#D4A017]/20 bg-black/80 backdrop-blur-xl text-[#F5F5F5] shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+        <DialogContent className="bg-[#0b0b0b] border border-[#D4A017]/20 text-[#F5F5F5]">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Selecione o hospital
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#9CA3AF] sm:text-sm">
-              Escolha o hospital onde a cirurgia será realizada para continuar
-              com o envio da descrição cirúrgica.
+            <DialogTitle>Selecione o hospital</DialogTitle>
+            <DialogDescription className="text-[#9CA3AF]">
+              Escolha o hospital para o qual você deseja enviar a descrição cirúrgica.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-3 space-y-2">
-            {loadingHospitais ? (
-              <p className="text-sm text-[#9CA3AF]">
-                Carregando hospitais onde você atua...
-              </p>
-            ) : hospitaisMedico.length === 0 ? (
-              <p className="text-sm text-[#9CA3AF]">
-                Não encontramos hospitais vinculados ao seu cadastro. Entre em
-                contato com o administrador do sistema.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <Label
-                  htmlFor="hospital"
-                  className="text-xs font-medium uppercase tracking-[0.18em] text-[#D4A017]/90"
-                >
-                  Hospital
-                </Label>
-                <Select
-                  value={selectedHospitalId}
-                  onValueChange={setSelectedHospitalId}
-                >
-                  <SelectTrigger
-                    id="hospital"
-                    className="border-[#D4A017]/30 bg-[#121212] text-[#F5F5F5] placeholder:text-[#6B7280] focus:ring-[#D4A017]"
-                  >
-                    <SelectValue placeholder="Selecione o hospital" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#121212] text-[#F5F5F5] border border-[#D4A017]/20">
-                    {hospitaisMedico.map((h) => (
-                      <SelectItem key={h.id} value={h.id}>
-                        {h.nome_fantasia}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label>Hospital</Label>
+            <Select value={selectedHospitalId} onValueChange={setSelectedHospitalId}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingHospitais ? "Carregando..." : "Selecione"} />
+              </SelectTrigger>
+              <SelectContent>
+                {hospitaisMedico.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.nome_fantasia}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              className="text-[#9CA3AF] hover:text-[#D4A017] hover:bg-[#D4A017]/10"
-              onClick={() => setHospitalModalOpen(false)}
-            >
-              Cancelar
-            </Button>
+          <DialogFooter>
             <Button
               type="button"
               disabled={
@@ -241,9 +236,7 @@ const DashboardMedico: React.FC = () => {
               <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#D4A017]/90">
                 Bem-vindo
               </span>
-              <p className="text-sm font-semibold text-[#F5F5F5]">
-                Olá, Dr. Adriano.
-              </p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">{saudacao}</p>
               <p className="text-[11px] text-[#9CA3AF]">
                 Acompanhe suas Descrições Cirúrgicas,
                 <br />
@@ -251,7 +244,7 @@ const DashboardMedico: React.FC = () => {
               </p>
             </div>
             <div className="ml-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-base font-semibold text-black shadow-[0_0_22px_rgba(212,160,23,0.45)]">
-              AD
+              {avatarInitials}
             </div>
           </div>
         </section>
