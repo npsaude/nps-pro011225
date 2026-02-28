@@ -18,11 +18,18 @@ interface RevenueChartProps {
   period: Period;
 }
 
-type Row = {
+type GuiaRow = {
   data_inicio_faturamento: string | null;
   data_emissao: string | null;
   created_at: string;
-  valor_total_faturamento: string | number | null;
+  valor_total_honorarios: string | number | null;
+};
+
+type FatRow = {
+  created_at: string;
+  data_atendimento: string | null;
+  data_cirurgia: string | null;
+  valor_total_faturado: string | number;
 };
 
 type Point = {
@@ -50,6 +57,15 @@ function formatCurrency(value: number): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
 }
 
 function toDateOrNull(value: string | null): Date | null {
@@ -82,29 +98,47 @@ function buildMonthRange(period: Period) {
 }
 
 const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [guiaRows, setGuiaRows] = useState<GuiaRow[]>([]);
+  const [fatRows, setFatRows] = useState<FatRow[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       const { start } = buildMonthRange(period);
+      const startIso = start.toISOString();
+      const startDate = startIso.slice(0, 10);
 
-      const { data, error } = await supabase
-        .from("guia_solicitacao")
-        .select(
-          "data_inicio_faturamento,data_emissao,created_at,valor_total_faturamento",
-        )
-        .gte("created_at", start.toISOString());
+      const [guiaRes, fatRes] = await Promise.all([
+        supabase
+          .from("guia_solicitacao")
+          .select("data_inicio_faturamento,data_emissao,created_at,valor_total_honorarios")
+          .or(
+            `data_inicio_faturamento.gte.${startDate},data_emissao.gte.${startDate},created_at.gte.${startIso}`,
+          ),
+        supabase
+          .from("faturamentos")
+          .select("created_at,data_atendimento,data_cirurgia,valor_total_faturado")
+          .or(
+            `data_atendimento.gte.${startDate},data_cirurgia.gte.${startDate},created_at.gte.${startIso}`,
+          ),
+      ]);
 
       if (cancelled) return;
-      if (error) {
-        console.error("[RevenueChart] Erro ao buscar guia_solicitacao:", error);
-        setRows([]);
-        return;
+
+      if (guiaRes.error) {
+        console.error("[RevenueChart] Erro ao buscar guia_solicitacao:", guiaRes.error);
+        setGuiaRows([]);
+      } else {
+        setGuiaRows((guiaRes.data ?? []) as GuiaRow[]);
       }
 
-      setRows((data ?? []) as Row[]);
+      if (fatRes.error) {
+        console.error("[RevenueChart] Erro ao buscar faturamentos:", fatRes.error);
+        setFatRows([]);
+      } else {
+        setFatRows((fatRes.data ?? []) as FatRow[]);
+      }
     }
 
     void load();
@@ -119,21 +153,29 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
 
     const totals = new Map<string, number>();
 
-    for (const r of rows) {
+    for (const r of guiaRows) {
       const d =
         toDateOrNull(r.data_inicio_faturamento) ??
         toDateOrNull(r.data_emissao) ??
         toDateOrNull(r.created_at);
       if (!d) continue;
 
-      const value =
-        r.valor_total_faturamento == null
-          ? 0
-          : typeof r.valor_total_faturamento === "number"
-            ? r.valor_total_faturamento
-            : Number(r.valor_total_faturamento);
+      const value = toNumber(r.valor_total_honorarios);
+      if (value <= 0) continue;
 
-      if (!Number.isFinite(value) || value <= 0) continue;
+      const key = monthKey(d);
+      totals.set(key, (totals.get(key) ?? 0) + value);
+    }
+
+    for (const r of fatRows) {
+      const d =
+        toDateOrNull(r.data_atendimento) ??
+        toDateOrNull(r.data_cirurgia) ??
+        toDateOrNull(r.created_at);
+      if (!d) continue;
+
+      const value = toNumber(r.valor_total_faturado);
+      if (value <= 0) continue;
 
       const key = monthKey(d);
       totals.set(key, (totals.get(key) ?? 0) + value);
@@ -146,26 +188,14 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ period }) => {
         value: Math.round(sum / 1000),
       };
     });
-  }, [period, rows]);
+  }, [period, guiaRows, fatRows]);
 
   return (
     <div className="h-64 w-full sm:h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
-          data={data}
-          margin={{ top: 10, right: 8, left: -20, bottom: 0 }}
-        >
-          <CartesianGrid
-            stroke="rgba(245,245,245,0.08)"
-            vertical={false}
-            strokeDasharray="3 3"
-          />
-          <XAxis
-            dataKey="name"
-            tickLine={false}
-            axisLine={false}
-            tick={{ fill: "#F5F5F5", fontSize: 11 }}
-          />
+        <ComposedChart data={data} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+          <CartesianGrid stroke="rgba(245,245,245,0.08)" vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#F5F5F5", fontSize: 11 }} />
           <YAxis
             tickLine={false}
             axisLine={false}

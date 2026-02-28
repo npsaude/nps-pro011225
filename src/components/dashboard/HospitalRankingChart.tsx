@@ -13,6 +13,8 @@ interface RankingItem {
 type FaturamentoRow = {
   hospital_nome: string | null;
   created_at: string;
+  data_atendimento: string | null;
+  data_cirurgia: string | null;
   valor_total_faturado: string | number;
 };
 
@@ -20,7 +22,9 @@ type GuiaRow = {
   executante_nome: string | null;
   contratado_nome: string | null;
   created_at: string;
-  valor_total_faturamento: string | number | null;
+  data_inicio_faturamento: string | null;
+  data_emissao: string | null;
+  valor_total_honorarios: string | number | null;
 };
 
 function formatCurrencyNoCents(value: number): string {
@@ -61,18 +65,24 @@ export default function HospitalRankingChart({
 
     async function load() {
       const start = buildRangeStart(period);
+      const startIso = start.toISOString();
+      const startDate = startIso.slice(0, 10);
 
       const [fatRes, guiaRes] = await Promise.all([
         supabase
           .from("faturamentos")
-          .select("hospital_nome,created_at,valor_total_faturado")
-          .gte("created_at", start.toISOString()),
+          .select("hospital_nome,created_at,data_atendimento,data_cirurgia,valor_total_faturado")
+          .or(
+            `data_atendimento.gte.${startDate},data_cirurgia.gte.${startDate},created_at.gte.${startIso}`,
+          ),
         supabase
           .from("guia_solicitacao")
           .select(
-            "executante_nome,contratado_nome,created_at,valor_total_faturamento",
+            "executante_nome,contratado_nome,created_at,data_inicio_faturamento,data_emissao,valor_total_honorarios",
           )
-          .gte("created_at", start.toISOString()),
+          .or(
+            `data_inicio_faturamento.gte.${startDate},data_emissao.gte.${startDate},created_at.gte.${startIso}`,
+          ),
       ]);
 
       if (cancelled) return;
@@ -87,6 +97,8 @@ export default function HospitalRankingChart({
           if (v <= 0) continue;
           totals.set(nome, (totals.get(nome) ?? 0) + v);
         }
+      } else {
+        console.error("[HospitalRankingChart] Erro ao buscar faturamentos:", fatRes.error);
       }
 
       if (!guiaRes.error) {
@@ -96,10 +108,12 @@ export default function HospitalRankingChart({
             r.executante_nome?.trim() ||
             r.contratado_nome?.trim() ||
             "Instituição não informada";
-          const v = toNumber(r.valor_total_faturamento);
+          const v = toNumber(r.valor_total_honorarios);
           if (v <= 0) continue;
           totals.set(nome, (totals.get(nome) ?? 0) + v);
         }
+      } else {
+        console.error("[HospitalRankingChart] Erro ao buscar guia_solicitacao:", guiaRes.error);
       }
 
       const ranked = Array.from(totals.entries())

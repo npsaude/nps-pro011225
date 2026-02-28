@@ -29,11 +29,17 @@ import { useSystemUser } from "@/hooks/use-system-user";
 type Period = "mes" | "trimestre" | "ano";
 
 type GuiaRow = {
-  data_inicio_faturamento: string | null;
-  data_emissao: string | null;
   data_fim_faturamento: string | null;
   created_at: string;
-  valor_total_faturamento: string | number | null;
+  valor_total_honorarios: string | number | null;
+};
+
+type FatRow = {
+  created_at: string;
+  data_pagamento: string | null;
+  status_pagamento: string;
+  valor_total_faturado: string | number;
+  valor_total_liquido: string | number;
 };
 
 function formatCurrency(value: number): string {
@@ -41,6 +47,15 @@ function formatCurrency(value: number): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
 }
 
 function toDateOrNull(value: string | null): Date | null {
@@ -127,52 +142,84 @@ const DashboardMedico: React.FC = () => {
 
     async function loadTotals() {
       const start = buildRangeStart(period);
+      const startIso = start.toISOString();
+      const startDate = startIso.slice(0, 10);
 
-      const { data, error } = await supabase
-        .from("guia_solicitacao")
-        .select(
-          "data_inicio_faturamento,data_emissao,data_fim_faturamento,created_at,valor_total_faturamento",
-        )
-        .gte("created_at", start.toISOString());
+      const [guiaRes, fatRes] = await Promise.all([
+        supabase
+          .from("guia_solicitacao")
+          .select("created_at,data_fim_faturamento,valor_total_honorarios")
+          .or(
+            `data_inicio_faturamento.gte.${startDate},data_emissao.gte.${startDate},created_at.gte.${startIso}`,
+          ),
+        supabase
+          .from("faturamentos")
+          .select(
+            "created_at,data_pagamento,status_pagamento,valor_total_faturado,valor_total_liquido,data_atendimento,data_cirurgia",
+          )
+          .or(
+            `data_atendimento.gte.${startDate},data_cirurgia.gte.${startDate},created_at.gte.${startIso}`,
+          ),
+      ]);
 
       if (cancelled) return;
 
-      if (error) {
-        console.error("[DashboardMedico] Erro ao buscar guia_solicitacao:", error);
-        showError("Não foi possível atualizar os indicadores de faturamento.");
-        setFaturado("—");
-        setRecebido("—");
-        setTotalAReceber("—");
-        return;
+      if (guiaRes.error) {
+        console.error("[DashboardMedico] Erro ao buscar guia_solicitacao:", guiaRes.error);
+      }
+      if (fatRes.error) {
+        console.error("[DashboardMedico] Erro ao buscar faturamentos:", fatRes.error);
       }
 
-      const rows = (data ?? []) as GuiaRow[];
-      const today = new Date();
+      const guiaRows = (guiaRes.data ?? []) as GuiaRow[];
+      const fatRows = (fatRes.data ?? []) as FatRow[];
 
+      // Faturado: soma guia_solicitacao.valor_total_honorarios + faturamentos.valor_total_faturado
       let total = 0;
+      for (const r of guiaRows) {
+        const v = toNumber(r.valor_total_honorarios);
+        if (v > 0) total += v;
+      }
+      for (const r of fatRows) {
+        const v = toNumber(r.valor_total_faturado);
+        if (v > 0) total += v;
+      }
+
+      // Recebido: baseado em faturamentos pagos (usa valor_total_liquido quando existir)
       let received = 0;
+      for (const r of fatRows) {
+        const paid =
+          Boolean(r.data_pagamento) ||
+          ["pago_integral", "pago_parcial"].includes(String(r.status_pagamento));
+        if (!paid) continue;
 
-      for (const r of rows) {
-        const v =
-          r.valor_total_faturamento == null
-            ? 0
-            : typeof r.valor_total_faturamento === "number"
-              ? r.valor_total_faturamento
-              : Number(r.valor_total_faturamento);
+        const v = Math.max(toNumber(r.valor_total_liquido), toNumber(r.valor_total_faturado));
+        if (v > 0) received += v;
+      }
 
-        if (!Number.isFinite(v) || v <= 0) continue;
-        total += v;
-
-        // Heurística: considera recebido quando há data_fim_faturamento (fechamento) no passado.
-        const fim = toDateOrNull(r.data_fim_faturamento);
-        if (fim && fim <= today) received += v;
+      // Heurística extra: guias com data_fim_faturamento no passado contam como recebidas (se não houver faturamentos)
+      if (received === 0) {
+        const today = new Date();
+        for (const r of guiaRows) {
+          const fim = toDateOrNull(r.data_fim_faturamento);
+          if (!fim || fim > today) continue;
+          const v = toNumber(r.valor_total_honorarios);
+          if (v > 0) received += v;
+        }
       }
 
       const toReceive = Math.max(0, total - received);
 
-      setFaturado(formatCurrency(total));
-      setRecebido(formatCurrency(received));
-      setTotalAReceber(formatCurrency(toReceive));
+      setFaturado(total > 0 ? formatCurrency(total) : "—");
+      setRecebido(received > 0 ? formatCurrency(received) : formatCurrency(0));
+      setTotalAReceber(total > 0 ? formatCurrency(toReceive) : "—");
+
+      if (guiaRes.error && fatRes.error) {
+        showError("Não foi possível atualizar os indicadores de faturamento.");
+        setFaturado("—");
+        setRecebido("—");
+        setTotalAReceber("—");
+      }
     }
 
     void loadTotals();
