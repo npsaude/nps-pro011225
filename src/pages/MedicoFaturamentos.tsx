@@ -27,7 +27,6 @@ import MedicoFaturamentosSummary from "@/components/faturamento/MedicoFaturament
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import MedicoFaturamentosTable from "@/components/faturamento/MedicoFaturamentosTable";
 import MedicoFaturamentoDetailsSheet from "@/components/faturamento/MedicoFaturamentoDetailsSheet";
-import MedicoSidebar from "@/components/medico/MedicoSidebar";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -208,13 +207,7 @@ export default function MedicoFaturamentos() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
-      <div className="relative z-10 flex min-h-screen">
-        {/* Sidebar desktop */}
-        <div className="hidden lg:flex lg:w-64 lg:shrink-0 lg:p-4">
-          <MedicoSidebar />
-        </div>
-
-        <div className="flex flex-1 flex-col min-w-0 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex min-h-screen w-full flex-col px-4 py-5 sm:px-6 lg:px-8">
         {/* Topo */}
         <header className="sticky top-0 z-40 -mx-4 mb-4 border-b border-[#D4A017]/20 bg-black/70 px-4 py-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex items-center justify-between gap-3">
@@ -437,7 +430,6 @@ export default function MedicoFaturamentos() {
           onOpenChange={setDetailsOpen}
           record={selected}
         />
-        </div>
       </div>
     </div>
   );
