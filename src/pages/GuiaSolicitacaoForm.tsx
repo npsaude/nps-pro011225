@@ -469,7 +469,7 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
                 variant="outline"
                 onClick={() => navigate("/admin/guia-solicitacao")}
                 disabled={saving}
-                className="rounded-full px-6"
+                className="rounded-full border-slate-300 bg-white px-6 text-slate-700 hover:bg-slate-50"
               >
                 Cancelar
               </Button>
