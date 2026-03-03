@@ -54,11 +54,15 @@ const AdminSidebar = ({
 }: AdminSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { systemUser } = useSystemUser();
+  const { systemUser, loading: systemUserLoading } = useSystemUser();
   const { hasFeature, isLoading: featuresLoading } = usePlanFeatures();
 
+  // Só usa o cache do localStorage se o systemUser já terminou de carregar e ainda é null.
+  // Isso evita que um role antigo (ex: MEDICO) seja usado enquanto um ADMIN está carregando.
   const cachedRole =
-    typeof window !== "undefined" ? window.localStorage.getItem("conmedic_role") : null;
+    !systemUserLoading && !systemUser && typeof window !== "undefined"
+      ? window.localStorage.getItem("conmedic_role")
+      : null;
 
   const role = String((systemUser as any)?.regra ?? cachedRole ?? "")
     .trim()
