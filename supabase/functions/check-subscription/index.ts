@@ -80,11 +80,13 @@ serve(async (req) => {
 
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+  // Filter directly in the database by email (case-insensitive) to avoid
+  // missing records when there are more than 250 total enrollments.
   const { data: rows, error: rowsError } = await adminClient
     .from("subscription_enrollments")
     .select("id,user_email,status,cancelado,current_period_end,created_at")
-    .order("created_at", { ascending: false })
-    .limit(250);
+    .ilike("user_email", authEmail)
+    .order("current_period_end", { ascending: false });
 
   if (rowsError) {
     console.error("[check-subscription] Failed to load enrollments", {
@@ -96,13 +98,11 @@ serve(async (req) => {
     });
   }
 
-  const all = (rows ?? []) as EnrollmentRow[];
-  const mine = all.filter((r) => normalizeEmail(r.user_email) === authEmail);
+  const mine = (rows ?? []) as EnrollmentRow[];
 
   console.log("[check-subscription] Loaded enrollments for user", {
     authEmail,
-    totalRows: all.length,
-    mine: mine.length,
+    count: mine.length,
   });
 
   if (!mine.length) {
@@ -117,6 +117,7 @@ serve(async (req) => {
 
   const nowMs = Date.now();
 
+  // Find the enrollment with the furthest current_period_end that is still valid
   let best: EnrollmentRow | null = null;
   let bestEndMs = -Infinity;
 
@@ -132,6 +133,10 @@ serve(async (req) => {
   }
 
   if (!best || !Number.isFinite(bestEndMs)) {
+    console.warn("[check-subscription] No enrollment with valid current_period_end", {
+      authEmail,
+      enrollments: mine.map((r) => ({ id: r.id, status: r.status, current_period_end: r.current_period_end })),
+    });
     return new Response(
       JSON.stringify({
         valid: false,
@@ -140,6 +145,16 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
+
+  console.log("[check-subscription] Best enrollment found", {
+    authEmail,
+    enrollmentId: best.id,
+    status: best.status,
+    current_period_end: best.current_period_end,
+    nowMs,
+    bestEndMs,
+    isValid: bestEndMs >= nowMs,
+  });
 
   if (bestEndMs < nowMs) {
     return new Response(
