@@ -44,6 +44,8 @@ import GuiaSolicitacaoPage from "./pages/GuiaSolicitacao";
 import GuiaSolicitacaoFormPage from "./pages/GuiaSolicitacaoForm";
 import GuiaAutorizacaoPage from "./pages/GuiaAutorizacao";
 import GuiaAutorizacaoFormPage from "./pages/GuiaAutorizacaoForm";
+import DescricaoCirurgicaAdminPage from "./pages/DescricaoCirurgicaAdmin";
+import DescricaoCirurgicaAdminFormPage from "./pages/DescricaoCirurgicaAdminForm";
 
 const queryClient = new QueryClient();
 
@@ -152,6 +154,10 @@ const App = () => (
           <Route path="/admin/guia-autorizacao" element={<GuiaAutorizacaoPage />} />
           <Route path="/admin/guia-autorizacao/nova" element={<GuiaAutorizacaoFormPage />} />
           <Route path="/admin/guia-autorizacao/editar/:id" element={<GuiaAutorizacaoFormPage />} />
+
+          <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
+          <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
+          <Route path="/admin/descricao-cirurgica/editar/:id" element={<DescricaoCirurgicaAdminFormPage />} />
 
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
           <Route
