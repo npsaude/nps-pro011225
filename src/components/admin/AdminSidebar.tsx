@@ -12,10 +12,18 @@ import {
   BarChart3,
   FolderOpen,
   LogOut,
+  Upload,
+  FileText,
+  ClipboardList,
+  ShieldCheck,
+  Building2,
+  UserRound,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
+import { usePlanFeatures } from "@/hooks/use-plan-features";
+import { LockedMenuItem } from "@/components/sidebar/LockedMenuItem";
 
 interface AdminSidebarProps {
   section?:
@@ -47,6 +55,7 @@ const AdminSidebar = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { systemUser } = useSystemUser();
+  const { hasFeature, isLoading: featuresLoading } = usePlanFeatures();
 
   const cachedRole =
     typeof window !== "undefined" ? window.localStorage.getItem("conmedic_role") : null;
@@ -55,6 +64,7 @@ const AdminSidebar = ({
     .trim()
     .toUpperCase();
 
+  const isMedico = role === "MEDICO";
   const canSeeSubscriptionsMenu = role === "SUPER_ADMIN";
 
   const handleLogout = () => {
@@ -151,254 +161,513 @@ const AdminSidebar = ({
               CONMEDIC
             </span>
             <span className="text-xs text-sidebar-foreground/70">
-              Painel administrativo
+              {isMedico ? "Portal do Médico" : "Painel administrativo"}
             </span>
           </div>
         </div>
 
-        <nav className="flex flex-col gap-1 text-sm">
-          {/* Gestão de Assinaturas (somente SUPER_ADMIN) */}
-          {canSeeSubscriptionsMenu ? (
+        {/* ── MENU MÉDICO ── */}
+        {isMedico ? (
+          <nav className="flex flex-col gap-1 text-sm">
+            {/* Dashboard — sempre visível */}
+            <button
+              className={currentSection === "home" ? activeMain : inactiveMain}
+              onClick={() => navigate("/medico/dashboard")}
+            >
+              <span className="flex items-center gap-3">
+                <span className={currentSection === "home" ? iconWrapperActive : iconWrapperInactive}>
+                  <Home className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Dashboard</span>
+              </span>
+            </button>
+
+            {/* Faturamento */}
+            {featuresLoading || hasFeature("menu_faturamento") ? (
+              <button
+                className={currentSection === "faturamento" ? activeMain : inactiveMain}
+                onClick={() => navigate("/medico/faturamentos")}
+              >
+                <span className="flex items-center gap-3">
+                  <span className={currentSection === "faturamento" ? iconWrapperActive : iconWrapperInactive}>
+                    <LineChart className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Faturamento</span>
+                </span>
+              </button>
+            ) : (
+              <LockedMenuItem
+                label="Faturamento"
+                icon={
+                  <span className={iconWrapperInactive}>
+                    <LineChart className="h-4 w-4" />
+                  </span>
+                }
+                className={inactiveMain}
+              />
+            )}
+
+            {/* Documentos */}
             <div className={blockContainer}>
               <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-                  <CreditCard className="h-4 w-4" />
+                  <FolderOpen className="h-4 w-4" />
                 </span>
                 <span className="text-xs font-semibold text-sidebar-foreground">
-                  Gestão de Assinaturas
+                  Documentos
                 </span>
               </div>
+              <div className="mt-1 space-y-1">
+                {/* Guia de Solicitação */}
+                {featuresLoading || hasFeature("menu_documentos_guia_solicitacao") ? (
+                  <button
+                    className={currentDocumentosSub === "guia-solicitacao" ? blockItemActive : blockItemInactive}
+                    onClick={() => navigate("/medico/guia-solicitacao/enviar")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <ClipboardList className="h-3.5 w-3.5 opacity-70" />
+                      Guia de Solicitação
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Guia de Solicitação"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
 
+                {/* Guia de Autorização */}
+                {featuresLoading || hasFeature("menu_documentos_guia_autorizacao") ? (
+                  <button
+                    className={currentDocumentosSub === "guia-autorizacao" ? blockItemActive : blockItemInactive}
+                    onClick={() => navigate("/medico/guia-autorizacao/enviar")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 opacity-70" />
+                      Guia de Autorização
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Guia de Autorização"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
+
+                {/* Descrição Cirúrgica */}
+                {featuresLoading || hasFeature("menu_documentos_descricao_cirurgica") ? (
+                  <button
+                    className={currentDocumentosSub === "descricao-cirurgica" ? blockItemActive : blockItemInactive}
+                    onClick={() => navigate("/medico/faturamentos/enviar")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 opacity-70" />
+                      Descrição Cirúrgica
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Descrição Cirúrgica"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
+
+                {/* Guia de Honorários */}
+                {featuresLoading || hasFeature("menu_documentos_guia_honorarios") ? (
+                  <button
+                    className={currentDocumentosSub === "guia-honorarios" ? blockItemActive : blockItemInactive}
+                    onClick={() => navigate("/medico/guia-honorarios/enviar")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <Upload className="h-3.5 w-3.5 opacity-70" />
+                      Guia de Honorários
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Guia de Honorários"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
+
+                {/* Relatório de Repasse */}
+                {featuresLoading || hasFeature("menu_documentos_relatorio_repasse") ? (
+                  <button
+                    className={currentDocumentosSub === "relatorio-repasse" ? blockItemActive : blockItemInactive}
+                    onClick={() => navigate("/medico/relatorio-repasse/enviar")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <BarChart3 className="h-3.5 w-3.5 opacity-70" />
+                      Relatório de Repasse
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Relatório de Repasse"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Cadastro */}
+            <div className={blockContainer}>
+              <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                  <Users className="h-4 w-4" />
+                </span>
+                <span className="text-xs font-semibold text-sidebar-foreground">
+                  Cadastro
+                </span>
+              </div>
+              <div className="mt-1 space-y-1">
+                {/* Clínicas / Hospitais */}
+                {featuresLoading || hasFeature("menu_cadastro_clinicas_hospitais") ? (
+                  <button
+                    className={
+                      currentCadastroSub === "clinicas" || currentCadastroSub === "hospitais"
+                        ? blockItemActive
+                        : blockItemInactive
+                    }
+                    onClick={() => navigate("/cadastro/clinicas")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 opacity-70" />
+                      Clínicas / Hospitais
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Clínicas / Hospitais"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
+
+                {/* Médicos */}
+                {featuresLoading || hasFeature("menu_cadastro_medicos") ? (
+                  <button
+                    className={currentCadastroSub === "medicos" ? blockItemActive : blockItemInactive}
+                    onClick={() => navigate("/cadastro/medicos")}
+                  >
+                    <span className="ml-7 flex items-center gap-1.5">
+                      <UserRound className="h-3.5 w-3.5 opacity-70" />
+                      Médicos
+                    </span>
+                  </button>
+                ) : (
+                  <LockedMenuItem
+                    label="Médicos"
+                    isSubItem
+                    className={blockItemInactive}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Recursos */}
+            {featuresLoading || hasFeature("menu_recursos") ? (
+              <button className={inactiveMain}>
+                <span className="flex items-center gap-3">
+                  <span className={iconWrapperInactive}>
+                    <Stethoscope className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium">Recursos</span>
+                </span>
+              </button>
+            ) : (
+              <LockedMenuItem
+                label="Recursos"
+                icon={
+                  <span className={iconWrapperInactive}>
+                    <Stethoscope className="h-4 w-4" />
+                  </span>
+                }
+                className={inactiveMain}
+              />
+            )}
+
+            {/* Mensagens — sempre visível */}
+            <button className={inactiveMain}>
+              <span className="flex items-center gap-3">
+                <span className={iconWrapperInactive}>
+                  <MessageCircle className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Mensagens</span>
+              </span>
+            </button>
+
+            {/* Configurações — sempre visível */}
+            <button className={inactiveMain}>
+              <span className="flex items-center gap-3">
+                <span className={iconWrapperInactive}>
+                  <Settings className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Configurações</span>
+              </span>
+            </button>
+
+            {/* Ajuda — sempre visível */}
+            <button className={inactiveMain}>
+              <span className="flex items-center gap-3">
+                <span className={iconWrapperInactive}>
+                  <HelpCircle className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Ajuda</span>
+              </span>
+            </button>
+          </nav>
+        ) : (
+          /* ── MENU ADMIN ── */
+          <nav className="flex flex-col gap-1 text-sm">
+            {/* Gestão de Assinaturas (somente SUPER_ADMIN) */}
+            {canSeeSubscriptionsMenu ? (
+              <div className={blockContainer}>
+                <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                    <CreditCard className="h-4 w-4" />
+                  </span>
+                  <span className="text-xs font-semibold text-sidebar-foreground">
+                    Gestão de Assinaturas
+                  </span>
+                </div>
+
+                <div className="mt-1 space-y-1">
+                  <button
+                    className={
+                      currentAssinaturasSub === "dashboard"
+                        ? blockItemActive
+                        : blockItemInactive
+                    }
+                    onClick={() => navigate("/admin/assinaturas/dashboard")}
+                  >
+                    <span className="ml-7 inline-flex items-center gap-2">
+                      <BarChart3 className="h-3.5 w-3.5 opacity-80" />
+                      Dashboard
+                    </span>
+                  </button>
+
+                  <button
+                    className={
+                      currentAssinaturasSub === "assinantes"
+                        ? blockItemActive
+                        : blockItemInactive
+                    }
+                    onClick={() => navigate("/admin/assinaturas/assinantes")}
+                  >
+                    <span className="ml-7">Assinantes</span>
+                  </button>
+
+                  <button
+                    className={
+                      currentAssinaturasSub === "planos"
+                        ? blockItemActive
+                        : blockItemInactive
+                    }
+                    onClick={() => navigate("/admin/assinaturas/planos")}
+                  >
+                    <span className="ml-7">Planos</span>
+                  </button>
+
+                  <button
+                    className={
+                      currentAssinaturasSub === "formulario-site"
+                        ? blockItemActive
+                        : blockItemInactive
+                    }
+                    onClick={() => navigate("/admin/assinaturas/formulario-site")}
+                  >
+                    <span className="ml-7 inline-flex items-center gap-2">
+                      <MessageCircle className="h-3.5 w-3.5 opacity-80" />
+                      Formulário do Site
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Dashboard */}
+            <button
+              className={currentSection === "home" ? activeMain : inactiveMain}
+              onClick={() => navigate("/admin/dashboard")}
+            >
+              <span className="flex items-center gap-3">
+                <span className={currentSection === "home" ? iconWrapperActive : iconWrapperInactive}>
+                  <Home className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Dashboard</span>
+              </span>
+            </button>
+
+            {/* Faturamento */}
+            <button
+              className={currentSection === "faturamento" ? activeMain : inactiveMain}
+              onClick={() => navigate("/admin/faturamento")}
+            >
+              <span className="flex items-center gap-3">
+                <span className={currentSection === "faturamento" ? iconWrapperActive : iconWrapperInactive}>
+                  <LineChart className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Faturamento</span>
+              </span>
+            </button>
+
+            {/* Documentos */}
+            <div className={blockContainer}>
+              <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                  <FolderOpen className="h-4 w-4" />
+                </span>
+                <span className="text-xs font-semibold text-sidebar-foreground">
+                  Documentos
+                </span>
+              </div>
               <div className="mt-1 space-y-1">
                 <button
                   className={
-                    currentAssinaturasSub === "dashboard"
+                    currentDocumentosSub === "guia-solicitacao"
                       ? blockItemActive
                       : blockItemInactive
                   }
-                  onClick={() => navigate("/admin/assinaturas/dashboard")}
+                  onClick={() => navigate("/documentos/guia-solicitacao")}
                 >
-                  <span className="ml-7 inline-flex items-center gap-2">
-                    <BarChart3 className="h-3.5 w-3.5 opacity-80" />
-                    Dashboard
-                  </span>
+                  <span className="ml-7">Guia de Solicitação</span>
                 </button>
 
                 <button
                   className={
-                    currentAssinaturasSub === "assinantes"
+                    currentDocumentosSub === "guia-autorizacao"
                       ? blockItemActive
                       : blockItemInactive
                   }
-                  onClick={() => navigate("/admin/assinaturas/assinantes")}
+                  onClick={() => navigate("/documentos/guia-autorizacao")}
                 >
-                  <span className="ml-7">Assinantes</span>
+                  <span className="ml-7">Guia de Autorização</span>
                 </button>
 
                 <button
                   className={
-                    currentAssinaturasSub === "planos"
+                    currentDocumentosSub === "descricao-cirurgica"
                       ? blockItemActive
                       : blockItemInactive
                   }
-                  onClick={() => navigate("/admin/assinaturas/planos")}
+                  onClick={() => navigate("/documentos/descricao-cirurgica")}
                 >
-                  <span className="ml-7">Planos</span>
+                  <span className="ml-7">Descrição Cirúrgica</span>
                 </button>
 
                 <button
                   className={
-                    currentAssinaturasSub === "formulario-site"
+                    currentDocumentosSub === "guia-honorarios"
                       ? blockItemActive
                       : blockItemInactive
                   }
-                  onClick={() => navigate("/admin/assinaturas/formulario-site")}
+                  onClick={() => navigate("/documentos/guia-honorarios")}
                 >
-                  <span className="ml-7 inline-flex items-center gap-2">
-                    <MessageCircle className="h-3.5 w-3.5 opacity-80" />
-                    Formulário do Site
-                  </span>
+                  <span className="ml-7">Guia de Honorários</span>
+                </button>
+
+                <button
+                  className={
+                    currentDocumentosSub === "relatorio-repasse"
+                      ? blockItemActive
+                      : blockItemInactive
+                  }
+                  onClick={() => navigate("/documentos/relatorio-repasse")}
+                >
+                  <span className="ml-7">Relatório de Repasse</span>
                 </button>
               </div>
             </div>
-          ) : null}
 
-          {/* Dashboard */}
-          <button
-            className={currentSection === "home" ? activeMain : inactiveMain}
-            onClick={() => navigate("/admin/dashboard")}
-          >
-            <span className="flex items-center gap-3">
-              <span className={currentSection === "home" ? iconWrapperActive : iconWrapperInactive}>
-                <Home className="h-4 w-4" />
-              </span>
-              <span className="font-medium">Dashboard</span>
-            </span>
-          </button>
+            {/* Cadastro */}
+            <div className={blockContainer}>
+              <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                  <Users className="h-4 w-4" />
+                </span>
+                <span className="text-xs font-semibold text-sidebar-foreground">
+                  Cadastro
+                </span>
+              </div>
+              <div className="mt-1 space-y-1">
+                <button
+                  className={
+                    currentCadastroSub === "clinicas" || currentCadastroSub === "hospitais"
+                      ? blockItemActive
+                      : blockItemInactive
+                  }
+                  onClick={() => navigate("/cadastro/clinicas")}
+                >
+                  <span className="ml-7">Clínicas / Hospitais</span>
+                </button>
 
-          {/* Faturamento */}
-          <button
-            className={currentSection === "faturamento" ? activeMain : inactiveMain}
-            onClick={() => navigate("/admin/faturamento")}
-          >
-            <span className="flex items-center gap-3">
-              <span className={currentSection === "faturamento" ? iconWrapperActive : iconWrapperInactive}>
-                <LineChart className="h-4 w-4" />
-              </span>
-              <span className="font-medium">Faturamento</span>
-            </span>
-          </button>
-
-          {/* Documentos */}
-          <div className={blockContainer}>
-            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-                <FolderOpen className="h-4 w-4" />
-              </span>
-              <span className="text-xs font-semibold text-sidebar-foreground">
-                Documentos
-              </span>
+                <button
+                  className={
+                    currentCadastroSub === "medicos" ? blockItemActive : blockItemInactive
+                  }
+                  onClick={() => navigate("/cadastro/medicos")}
+                >
+                  <span className="ml-7">Médicos</span>
+                </button>
+              </div>
             </div>
-            <div className="mt-1 space-y-1">
-              <button
-                className={
-                  currentDocumentosSub === "guia-solicitacao"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/documentos/guia-solicitacao")}
-              >
-                <span className="ml-7">Guia de Solicitação</span>
-              </button>
 
-              <button
-                className={
-                  currentDocumentosSub === "guia-autorizacao"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/documentos/guia-autorizacao")}
-              >
-                <span className="ml-7">Guia de Autorização</span>
-              </button>
-
-              <button
-                className={
-                  currentDocumentosSub === "descricao-cirurgica"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/documentos/descricao-cirurgica")}
-              >
-                <span className="ml-7">Descrição Cirúrgica</span>
-              </button>
-
-              <button
-                className={
-                  currentDocumentosSub === "guia-honorarios"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/documentos/guia-honorarios")}
-              >
-                <span className="ml-7">Guia de Honorários</span>
-              </button>
-
-              <button
-                className={
-                  currentDocumentosSub === "relatorio-repasse"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/documentos/relatorio-repasse")}
-              >
-                <span className="ml-7">Relatório de Repasse</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Cadastro */}
-          <div className={blockContainer}>
-            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-                <Users className="h-4 w-4" />
+            {/* Recursos (sem rota por ora) */}
+            <button className={inactiveMain}>
+              <span className="flex items-center gap-3">
+                <span className={iconWrapperInactive}>
+                  <Stethoscope className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Recursos</span>
               </span>
-              <span className="text-xs font-semibold text-sidebar-foreground">
-                Cadastro
-              </span>
-            </div>
-            <div className="mt-1 space-y-1">
-              <button
-                className={
-                  currentCadastroSub === "clinicas" || currentCadastroSub === "hospitais"
-                    ? blockItemActive
-                    : blockItemInactive
-                }
-                onClick={() => navigate("/cadastro/clinicas")}
-              >
-                <span className="ml-7">Clínicas / Hospitais</span>
-              </button>
+            </button>
 
-              <button
-                className={
-                  currentCadastroSub === "medicos" ? blockItemActive : blockItemInactive
-                }
-                onClick={() => navigate("/cadastro/medicos")}
-              >
-                <span className="ml-7">Médicos</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Recursos (sem rota por ora) */}
-          <button className={inactiveMain}>
-            <span className="flex items-center gap-3">
-              <span className={iconWrapperInactive}>
-                <Stethoscope className="h-4 w-4" />
+            {/* Mensagens */}
+            <button className={inactiveMain}>
+              <span className="flex items-center gap-3">
+                <span className={iconWrapperInactive}>
+                  <MessageCircle className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Mensagens</span>
               </span>
-              <span className="font-medium">Recursos</span>
-            </span>
-          </button>
-
-          {/* Mensagens */}
-          <button className={inactiveMain}>
-            <span className="flex items-center gap-3">
-              <span className={iconWrapperInactive}>
-                <MessageCircle className="h-4 w-4" />
+              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive text-[11px] font-semibold text-destructive-foreground">
+                2
               </span>
-              <span className="font-medium">Mensagens</span>
-            </span>
-            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive text-[11px] font-semibold text-destructive-foreground">
-              2
-            </span>
-          </button>
+            </button>
 
-          {/* Configurações */}
-          <button
-            className={currentSection === "config" ? activeMain : inactiveMain}
-            onClick={() => navigate("/admin/configuracoes")}
-          >
-            <span className="flex items-center gap-3">
-              <span className={currentSection === "config" ? iconWrapperActive : iconWrapperInactive}>
-                <Settings className="h-4 w-4" />
+            {/* Configurações */}
+            <button
+              className={currentSection === "config" ? activeMain : inactiveMain}
+              onClick={() => navigate("/admin/configuracoes")}
+            >
+              <span className="flex items-center gap-3">
+                <span className={currentSection === "config" ? iconWrapperActive : iconWrapperInactive}>
+                  <Settings className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Configurações</span>
               </span>
-              <span className="font-medium">Configurações</span>
-            </span>
-          </button>
+            </button>
 
-          {/* Ajuda (sem rota por ora) */}
-          <button className={inactiveMain}>
-            <span className="flex items-center gap-3">
-              <span className={iconWrapperInactive}>
-                <HelpCircle className="h-4 w-4" />
+            {/* Ajuda (sem rota por ora) */}
+            <button className={inactiveMain}>
+              <span className="flex items-center gap-3">
+                <span className={iconWrapperInactive}>
+                  <HelpCircle className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Ajuda</span>
               </span>
-              <span className="font-medium">Ajuda</span>
-            </span>
-          </button>
-        </nav>
+            </button>
+          </nav>
+        )}
       </div>
 
-      {/* Sair */}
+      {/* Sair — sempre visível */}
       <button
         type="button"
         onClick={handleLogout}
