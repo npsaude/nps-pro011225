@@ -212,7 +212,7 @@ const GuiaAutorizacaoPage: React.FC = () => {
             <div className="overflow-x-auto rounded-xl border border-slate-100">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400">
+                  <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
                     <TableHead className="py-3 pl-4">Nº Autorização</TableHead>
                     <TableHead>Nº Guia Honorários</TableHead>
                     <TableHead>Paciente</TableHead>
