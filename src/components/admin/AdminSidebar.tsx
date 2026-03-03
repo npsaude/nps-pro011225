@@ -7,11 +7,11 @@ import {
   MessageCircle,
   Settings,
   HelpCircle,
-  FileSignature,
   LineChart,
-  Wallet,
   CreditCard,
   BarChart3,
+  FolderOpen,
+  LogOut,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -20,13 +20,18 @@ import { useSystemUser } from "@/hooks/use-system-user";
 interface AdminSidebarProps {
   section?:
     | "home"
-    | "descricao"
     | "faturamento"
-    | "financas"
+    | "documentos"
     | "cadastro"
     | "config"
     | "assinaturas";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft";
+  documentosSubsection?:
+    | "guia-solicitacao"
+    | "guia-autorizacao"
+    | "descricao-cirurgica"
+    | "guia-honorarios"
+    | "relatorio-repasse";
   assinaturasSubsection?: "dashboard" | "assinantes" | "planos" | "formulario-site";
 }
 
@@ -36,6 +41,7 @@ const LOGO_URL =
 const AdminSidebar = ({
   section,
   cadastroSubsection,
+  documentosSubsection,
   assinaturasSubsection,
 }: AdminSidebarProps) => {
   const location = useLocation();
@@ -69,9 +75,8 @@ const AdminSidebar = ({
     const path = location.pathname;
 
     if (path.startsWith("/admin/assinaturas")) return "assinaturas";
-    if (path.startsWith("/descricao-cirurgica")) return "descricao";
     if (path.startsWith("/admin/faturamento")) return "faturamento";
-    if (path.startsWith("/admin/financas")) return "financas";
+    if (path.startsWith("/documentos/")) return "documentos";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
@@ -90,6 +95,17 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/gft")) return "gft";
     return undefined;
   }, [location.pathname, cadastroSubsection]);
+
+  const currentDocumentosSub: AdminSidebarProps["documentosSubsection"] = useMemo(() => {
+    if (documentosSubsection) return documentosSubsection;
+    const path = location.pathname;
+    if (path.startsWith("/documentos/guia-solicitacao")) return "guia-solicitacao";
+    if (path.startsWith("/documentos/guia-autorizacao")) return "guia-autorizacao";
+    if (path.startsWith("/documentos/descricao-cirurgica")) return "descricao-cirurgica";
+    if (path.startsWith("/documentos/guia-honorarios")) return "guia-honorarios";
+    if (path.startsWith("/documentos/relatorio-repasse")) return "relatorio-repasse";
+    return undefined;
+  }, [location.pathname, documentosSubsection]);
 
   const currentAssinaturasSub: AdminSidebarProps["assinaturasSubsection"] = useMemo(() => {
     if (assinaturasSubsection) return assinaturasSubsection;
@@ -209,7 +225,7 @@ const AdminSidebar = ({
             </div>
           ) : null}
 
-          {/* Home */}
+          {/* Dashboard */}
           <button
             className={currentSection === "home" ? activeMain : inactiveMain}
             onClick={() => navigate("/admin/dashboard")}
@@ -218,20 +234,7 @@ const AdminSidebar = ({
               <span className={currentSection === "home" ? iconWrapperActive : iconWrapperInactive}>
                 <Home className="h-4 w-4" />
               </span>
-              <span className="font-medium">Home</span>
-            </span>
-          </button>
-
-          {/* Desc. Cirúrgica */}
-          <button
-            className={currentSection === "descricao" ? activeMain : inactiveMain}
-            onClick={() => navigate("/descricao-cirurgica")}
-          >
-            <span className="flex items-center gap-3">
-              <span className={currentSection === "descricao" ? iconWrapperActive : iconWrapperInactive}>
-                <FileSignature className="h-4 w-4" />
-              </span>
-              <span className="font-medium">Desc. Cirúrgica</span>
+              <span className="font-medium">Dashboard</span>
             </span>
           </button>
 
@@ -248,28 +251,73 @@ const AdminSidebar = ({
             </span>
           </button>
 
-          {/* Finanças */}
-          <button
-            className={currentSection === "financas" ? activeMain : inactiveMain}
-            onClick={() => navigate("/admin/financas")}
-          >
-            <span className="flex items-center gap-3">
-              <span className={currentSection === "financas" ? iconWrapperActive : iconWrapperInactive}>
-                <Wallet className="h-4 w-4" />
+          {/* Documentos */}
+          <div className={blockContainer}>
+            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+                <FolderOpen className="h-4 w-4" />
               </span>
-              <span className="font-medium">Finanças</span>
-            </span>
-          </button>
+              <span className="text-xs font-semibold text-sidebar-foreground">
+                Documentos
+              </span>
+            </div>
+            <div className="mt-1 space-y-1">
+              <button
+                className={
+                  currentDocumentosSub === "guia-solicitacao"
+                    ? blockItemActive
+                    : blockItemInactive
+                }
+                onClick={() => navigate("/documentos/guia-solicitacao")}
+              >
+                <span className="ml-7">Guia de Solicitação</span>
+              </button>
 
-          {/* Recursos (placeholder) */}
-          <button className={inactiveMain}>
-            <span className="flex items-center gap-3">
-              <span className={iconWrapperInactive}>
-                <Stethoscope className="h-4 w-4" />
-              </span>
-              <span className="font-medium">Recursos</span>
-            </span>
-          </button>
+              <button
+                className={
+                  currentDocumentosSub === "guia-autorizacao"
+                    ? blockItemActive
+                    : blockItemInactive
+                }
+                onClick={() => navigate("/documentos/guia-autorizacao")}
+              >
+                <span className="ml-7">Guia de Autorização</span>
+              </button>
+
+              <button
+                className={
+                  currentDocumentosSub === "descricao-cirurgica"
+                    ? blockItemActive
+                    : blockItemInactive
+                }
+                onClick={() => navigate("/documentos/descricao-cirurgica")}
+              >
+                <span className="ml-7">Descrição Cirúrgica</span>
+              </button>
+
+              <button
+                className={
+                  currentDocumentosSub === "guia-honorarios"
+                    ? blockItemActive
+                    : blockItemInactive
+                }
+                onClick={() => navigate("/documentos/guia-honorarios")}
+              >
+                <span className="ml-7">Guia de Honorários</span>
+              </button>
+
+              <button
+                className={
+                  currentDocumentosSub === "relatorio-repasse"
+                    ? blockItemActive
+                    : blockItemInactive
+                }
+                onClick={() => navigate("/documentos/relatorio-repasse")}
+              >
+                <span className="ml-7">Relatório de Repasse</span>
+              </button>
+            </div>
+          </div>
 
           {/* Cadastro */}
           <div className={blockContainer}>
@@ -313,6 +361,16 @@ const AdminSidebar = ({
             </div>
           </div>
 
+          {/* Recursos (sem rota por ora) */}
+          <button className={inactiveMain}>
+            <span className="flex items-center gap-3">
+              <span className={iconWrapperInactive}>
+                <Stethoscope className="h-4 w-4" />
+              </span>
+              <span className="font-medium">Recursos</span>
+            </span>
+          </button>
+
           {/* Mensagens */}
           <button className={inactiveMain}>
             <span className="flex items-center gap-3">
@@ -339,7 +397,7 @@ const AdminSidebar = ({
             </span>
           </button>
 
-          {/* Ajuda */}
+          {/* Ajuda (sem rota por ora) */}
           <button className={inactiveMain}>
             <span className="flex items-center gap-3">
               <span className={iconWrapperInactive}>
@@ -351,14 +409,14 @@ const AdminSidebar = ({
         </nav>
       </div>
 
-      {/* Logout */}
+      {/* Sair */}
       <button
         type="button"
         onClick={handleLogout}
         className="mt-4 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60"
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
-          <HelpCircle className="h-4 w-4" />
+          <LogOut className="h-4 w-4" />
         </span>
         <span>Sair</span>
       </button>
