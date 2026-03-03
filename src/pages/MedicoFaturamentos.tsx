@@ -214,7 +214,7 @@ export default function MedicoFaturamentos() {
           <MedicoSidebar />
         </div>
 
-      <div className="flex flex-1 flex-col min-w-0 px-4 py-5 sm:px-6 lg:px-8">
+        <div className="flex flex-1 flex-col min-w-0 px-4 py-5 sm:px-6 lg:px-8">
         {/* Topo */}
         <header className="sticky top-0 z-40 -mx-4 mb-4 border-b border-[#D4A017]/20 bg-black/70 px-4 py-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex items-center justify-between gap-3">
@@ -437,6 +437,7 @@ export default function MedicoFaturamentos() {
           onOpenChange={setDetailsOpen}
           record={selected}
         />
+        </div>
       </div>
     </div>
   );
