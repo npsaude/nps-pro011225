@@ -262,7 +262,7 @@ export async function registerUser(params: {
         role,
         nome,
       },
-      emailRedirectTo: window.location.origin + "/login",
+      emailRedirectTo: "https://conmedic.com.br/login",
     },
   });
 
@@ -442,7 +442,7 @@ export async function sendPasswordReset(email: string): Promise<void> {
   // IMPORTANTE: o redirectTo DEVE apontar para /reset-password
   // para que o Supabase redirecione diretamente para a tela correta.
   const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: `https://conmedic.com.br/reset-password`,
   });
 
   if (error) {
