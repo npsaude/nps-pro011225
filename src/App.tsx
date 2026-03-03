@@ -42,6 +42,8 @@ import Profile from "./pages/Profile";
 import AdminSiteContactMessages from "./pages/AdminSiteContactMessages";
 import GuiaSolicitacaoPage from "./pages/GuiaSolicitacao";
 import GuiaSolicitacaoFormPage from "./pages/GuiaSolicitacaoForm";
+import GuiaAutorizacaoPage from "./pages/GuiaAutorizacao";
+import GuiaAutorizacaoFormPage from "./pages/GuiaAutorizacaoForm";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +148,10 @@ const App = () => (
           <Route path="/admin/guia-solicitacao" element={<GuiaSolicitacaoPage />} />
           <Route path="/admin/guia-solicitacao/nova" element={<GuiaSolicitacaoFormPage />} />
           <Route path="/admin/guia-solicitacao/editar/:id" element={<GuiaSolicitacaoFormPage />} />
+
+          <Route path="/admin/guia-autorizacao" element={<GuiaAutorizacaoPage />} />
+          <Route path="/admin/guia-autorizacao/nova" element={<GuiaAutorizacaoFormPage />} />
+          <Route path="/admin/guia-autorizacao/editar/:id" element={<GuiaAutorizacaoFormPage />} />
 
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
           <Route

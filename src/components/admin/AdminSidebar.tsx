@@ -31,6 +31,7 @@ interface AdminSidebarProps {
     | "faturamento"
     | "documentos"
     | "guia-solicitacao"
+    | "guia-autorizacao"
     | "cadastro"
     | "config"
     | "assinaturas";
@@ -99,6 +100,7 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/assinaturas")) return "assinaturas";
     if (path.startsWith("/admin/faturamento")) return "faturamento";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
+    if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
     if (path.startsWith("/descricao-cirurgica")) return "documentos";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
@@ -121,6 +123,7 @@ const AdminSidebar = ({
     if (documentosSubsection) return documentosSubsection;
     const path = location.pathname;
     if (path.startsWith("/admin/guia-solicitacao")) return "guia-solicitacao";
+    if (path.startsWith("/admin/guia-autorizacao")) return "guia-autorizacao";
     return undefined;
   }, [location.pathname, documentosSubsection]);
 
@@ -289,7 +292,7 @@ const AdminSidebar = ({
               {featureEnabled("menu_documentos_guia_autorizacao") ? (
                 <button
                   className={currentDocumentosSub === "guia-autorizacao" ? blockItemActive : blockItemInactive}
-                  onClick={() => navigate("/descricao-cirurgica")}
+                  onClick={() => navigate("/admin/guia-autorizacao")}
                 >
                   <span className="ml-7 flex items-center gap-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 opacity-70" />
