@@ -30,6 +30,7 @@ interface AdminSidebarProps {
     | "home"
     | "faturamento"
     | "documentos"
+    | "guia-solicitacao"
     | "cadastro"
     | "config"
     | "assinaturas";
@@ -97,6 +98,7 @@ const AdminSidebar = ({
     const path = location.pathname;
     if (path.startsWith("/admin/assinaturas")) return "assinaturas";
     if (path.startsWith("/admin/faturamento")) return "faturamento";
+    if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/descricao-cirurgica")) return "documentos";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
@@ -117,7 +119,8 @@ const AdminSidebar = ({
 
   const currentDocumentosSub: AdminSidebarProps["documentosSubsection"] = useMemo(() => {
     if (documentosSubsection) return documentosSubsection;
-    // Todos os sub-itens de documentos apontam para /descricao-cirurgica no desktop
+    const path = location.pathname;
+    if (path.startsWith("/admin/guia-solicitacao")) return "guia-solicitacao";
     return undefined;
   }, [location.pathname, documentosSubsection]);
 
@@ -271,7 +274,7 @@ const AdminSidebar = ({
               {featureEnabled("menu_documentos_guia_solicitacao") ? (
                 <button
                   className={currentDocumentosSub === "guia-solicitacao" ? blockItemActive : blockItemInactive}
-                  onClick={() => navigate("/descricao-cirurgica")}
+                  onClick={() => navigate("/admin/guia-solicitacao")}
                 >
                   <span className="ml-7 flex items-center gap-1.5">
                     <ClipboardList className="h-3.5 w-3.5 opacity-70" />

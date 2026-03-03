@@ -40,6 +40,8 @@ import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
 import InactivityLogout from "@/components/auth/InactivityLogout";
 import Profile from "./pages/Profile";
 import AdminSiteContactMessages from "./pages/AdminSiteContactMessages";
+import GuiaSolicitacaoPage from "./pages/GuiaSolicitacao";
+import GuiaSolicitacaoFormPage from "./pages/GuiaSolicitacaoForm";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +142,10 @@ const App = () => (
               </SuperAdminGuard>
             }
           />
+
+          <Route path="/admin/guia-solicitacao" element={<GuiaSolicitacaoPage />} />
+          <Route path="/admin/guia-solicitacao/nova" element={<GuiaSolicitacaoFormPage />} />
+          <Route path="/admin/guia-solicitacao/editar/:id" element={<GuiaSolicitacaoFormPage />} />
 
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
           <Route
