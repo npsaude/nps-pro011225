@@ -479,14 +479,14 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
               <TabsList className="w-fit rounded-full bg-slate-100 p-1">
                 <TabsTrigger
                   value="dados"
-                  className="rounded-full px-5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="rounded-full px-5 text-sm text-slate-500 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   Dados da Guia
                 </TabsTrigger>
                 <TabsTrigger
                   value="documentos"
-                  className="rounded-full px-5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="rounded-full px-5 text-sm text-slate-500 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
                 >
                   <FolderOpen className="mr-2 h-4 w-4" />
                   Documentos
