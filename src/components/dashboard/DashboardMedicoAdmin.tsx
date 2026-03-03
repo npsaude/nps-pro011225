@@ -82,27 +82,39 @@ export default function DashboardMedicoAdmin() {
     async function load() {
       setLoading(true);
 
-      const { data, error } = await supabase
+      // ── Busca faturamentos (para qtd, emails e hospital_nome) ──
+      const { data: fats, error: fatError } = await supabase
         .from("faturamentos")
         .select(
-          "id, valor_total_faturado, email_status, hospital_nome, data_cirurgia, created_at, status"
+          "id, email_status, hospital_nome, data_cirurgia, created_at, guia_solicitacao_id"
         )
         .eq("status", "ATIVO");
 
       if (cancelled) return;
+      if (fatError || !fats) { setLoading(false); return; }
 
-      if (error || !data) {
-        setLoading(false);
-        return;
-      }
+      // ── Busca itens via guia_solicitacao para somar valor_total ──
+      const { data: itens, error: itensError } = await supabase
+        .from("itens_guia_solicitacao")
+        .select("valor_total, data_procedimento, guia_id");
+
+      if (cancelled) return;
+
+      const itensData = itensError ? [] : (itens ?? []);
+
+      // Mapa guia_id → faturamento (para cruzar datas e hospital)
+      const guiaToFat: Record<string, typeof fats[0]> = {};
+      fats.forEach((f) => {
+        if (f.guia_solicitacao_id) guiaToFat[f.guia_solicitacao_id] = f;
+      });
 
       // ── KPIs ──
-      const qtdFaturamentos = data.length;
-      const valorFaturado = data.reduce(
-        (acc, r) => acc + toNumber(r.valor_total_faturado),
+      const qtdFaturamentos = fats.length;
+      const valorFaturado = itensData.reduce(
+        (acc, r) => acc + toNumber(r.valor_total),
         0
       );
-      const emailsNaoEnviados = data.filter(
+      const emailsNaoEnviados = fats.filter(
         (r) => r.email_status === "NAO_ENVIADO"
       ).length;
 
@@ -113,12 +125,17 @@ export default function DashboardMedicoAdmin() {
       const monthMap: Record<string, number> = {};
       months.forEach(({ key }) => (monthMap[key] = 0));
 
-      data.forEach((r) => {
-        const dateStr = r.data_cirurgia ?? r.created_at?.slice(0, 10);
+      itensData.forEach((item) => {
+        // Tenta usar data_procedimento do item; fallback para data_cirurgia do faturamento
+        let dateStr = item.data_procedimento as string | null;
+        if (!dateStr && item.guia_id) {
+          const fat = guiaToFat[item.guia_id];
+          dateStr = fat?.data_cirurgia ?? fat?.created_at?.slice(0, 10) ?? null;
+        }
         if (!dateStr) return;
-        const key = dateStr.slice(0, 7); // "YYYY-MM"
+        const key = dateStr.slice(0, 7);
         if (key in monthMap) {
-          monthMap[key] += toNumber(r.valor_total_faturado);
+          monthMap[key] += toNumber(item.valor_total);
         }
       });
 
@@ -131,7 +148,7 @@ export default function DashboardMedicoAdmin() {
 
       // ── Principais instituições (por número de faturamentos) ──
       const instMap: Record<string, number> = {};
-      data.forEach((r) => {
+      fats.forEach((r) => {
         const nome = r.hospital_nome?.trim() || "Não informado";
         instMap[nome] = (instMap[nome] ?? 0) + 1;
       });
@@ -146,9 +163,7 @@ export default function DashboardMedicoAdmin() {
     }
 
     void load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const kpis = [
