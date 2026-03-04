@@ -423,18 +423,26 @@ const AdminSidebar = ({
             </span>
           </button>
 
-          {/* ── Configurações ── sempre visível */}
-          <button
-            className={currentSection === "config" ? activeMain : inactiveMain}
-            onClick={() => navigate("/admin/configuracoes")}
-          >
-            <span className="flex items-center gap-3">
-              <span className={currentSection === "config" ? iconWrapperActive : iconWrapperInactive}>
-                <Settings className="h-4 w-4" />
+          {/* ── Configurações ── */}
+          {featureEnabled("menu_configuracoes") ? (
+            <button
+              className={currentSection === "config" ? activeMain : inactiveMain}
+              onClick={() => navigate("/admin/configuracoes")}
+            >
+              <span className="flex items-center gap-3">
+                <span className={currentSection === "config" ? iconWrapperActive : iconWrapperInactive}>
+                  <Settings className="h-4 w-4" />
+                </span>
+                <span className="font-medium">Configurações</span>
               </span>
-              <span className="font-medium">Configurações</span>
-            </span>
-          </button>
+            </button>
+          ) : (
+            <LockedMenuItem
+              label="Configurações"
+              icon={<span className={iconWrapperInactive}><Settings className="h-4 w-4" /></span>}
+              className={inactiveMain}
+            />
+          )}
 
           {/* ── Ajuda ── sempre visível */}
           <button className={inactiveMain}>
