@@ -280,20 +280,19 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                       <TableHead>Cirurgião</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                        <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
                           Carregando...
                         </TableCell>
                       </TableRow>
                     ) : paginated.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                        <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
                           Nenhuma descrição cirúrgica encontrada.
                         </TableCell>
                       </TableRow>
@@ -306,7 +305,6 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                           <TableCell className="text-slate-600">{d.cirurgiao_principal_nome || "—"}</TableCell>
                           <TableCell className="text-xs text-slate-500">{d.tipo_cirurgia || "—"}</TableCell>
                           <TableCell className="text-xs text-slate-500">{formatDate(d.data_cirurgia)}</TableCell>
-                          <TableCell className="text-xs">{statusBadge(d.status_pagamento)}</TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-1">
                               <button
