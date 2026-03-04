@@ -36,7 +36,7 @@ interface AdminSidebarProps {
     | "cadastro"
     | "config"
     | "assinaturas";
-  cadastroSubsection?: "clinicas" | "hospitais" | "medicos";
+  cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft";
   documentosSubsection?:
     | "guia-solicitacao"
     | "guia-autorizacao"
@@ -119,6 +119,7 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/clinicas")) return "clinicas";
     if (path.startsWith("/cadastro/hospitais")) return "hospitais";
     if (path.startsWith("/cadastro/medicos")) return "medicos";
+    if (path.startsWith("/cadastro/gft")) return "gft";
     return undefined;
   }, [location.pathname, cadastroSubsection]);
 
@@ -390,6 +391,19 @@ const AdminSidebar = ({
                 </button>
               ) : (
                 <LockedMenuItem label="Médicos" isSubItem className={blockItemInactive} />
+              )}
+
+              {/* Modelos de Guia de Honorários (GFT) — apenas ADMIN/SUPER_ADMIN */}
+              {!isMedico && (
+                <button
+                  className={currentCadastroSub === "gft" ? blockItemActive : blockItemInactive}
+                  onClick={() => navigate("/cadastro/gft")}
+                >
+                  <span className="ml-7 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 opacity-70" />
+                    Modelos GFT
+                  </span>
+                </button>
               )}
 
             </div>
