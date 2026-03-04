@@ -219,8 +219,8 @@ export default function DashboardMedicoAdmin() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* KPIs */}
-      <section className="grid gap-4 sm:grid-cols-3">
+      {/* KPIs + Gráfico pizza */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -251,6 +251,70 @@ export default function DashboardMedicoAdmin() {
             </Card>
           );
         })}
+
+        {/* 4º card: Gráfico pizza tipos de cirurgia */}
+        <Card className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]">
+          <CardContent className="flex h-36 flex-col rounded-3xl p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
+              Tipos de Cirurgia
+            </p>
+            <div className="flex-1 mt-1">
+              {loading ? (
+                <div className="flex h-full items-center justify-center text-[11px] text-slate-400">
+                  Carregando...
+                </div>
+              ) : tipoCirurgiaData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-[11px] text-slate-400">
+                  Sem dados
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={tipoCirurgiaData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={20}
+                      outerRadius={38}
+                      paddingAngle={2}
+                      dataKey="value"
+                      nameKey="name"
+                      stroke="none"
+                    >
+                      {tipoCirurgiaData.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: 10,
+                        border: "1px solid #334155",
+                        backgroundColor: "#1e293b",
+                        fontSize: 11,
+                        color: "#e2e8f0",
+                      }}
+                      formatter={(value: number, name: string) => [
+                        `${value}`,
+                        name,
+                      ]}
+                    />
+                    <Legend
+                      verticalAlign="middle"
+                      align="right"
+                      layout="vertical"
+                      iconType="circle"
+                      iconSize={6}
+                      wrapperStyle={{ fontSize: 10, color: "#94a3b8", lineHeight: "16px", right: 0 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Gráfico + Instituições */}
@@ -364,74 +428,6 @@ export default function DashboardMedicoAdmin() {
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Gráfico pizza: Tipos de Cirurgia */}
-      <section>
-        <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-              Tipos de Cirurgia
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-400">
-              Distribuição por tipo de cirurgia nos faturamentos ativos
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-80 px-2 pb-6 pt-2">
-            {loading ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                Carregando...
-              </div>
-            ) : tipoCirurgiaData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                Nenhum dado de tipo de cirurgia encontrado.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={tipoCirurgiaData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={110}
-                    paddingAngle={3}
-                    dataKey="value"
-                    nameKey="name"
-                    label={({ name, percent }) =>
-                      `${name} (${(percent * 100).toFixed(0)}%)`
-                    }
-                    labelLine={{ strokeWidth: 1 }}
-                  >
-                    {tipoCirurgiaData.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={PIE_COLORS[index % PIE_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    contentStyle={{
-                      borderRadius: 12,
-                      borderColor: "#E2E8F0",
-                      fontSize: 12,
-                    }}
-                    formatter={(value: number, name: string) => [
-                      `${value} faturamento(s)`,
-                      name,
-                    ]}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
