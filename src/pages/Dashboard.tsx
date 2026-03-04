@@ -217,14 +217,14 @@ const Dashboard = () => {
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="home" />
 
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
-          {/* Header */}
-          <header className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
+          {/* Header (fora do retângulo) */}
+          <header className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col">
-              <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
+              <h1 className="text-[26px] font-semibold tracking-tight text-slate-900 dark:text-slate-50">
                 Dashboard
               </h1>
-              <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+              <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                 {isMedico
                   ? "Visão geral dos seus faturamentos."
                   : "Visão geral das GHIs, descrições cirúrgicas e faturamento."}
@@ -243,215 +243,218 @@ const Dashboard = () => {
             </div>
           </header>
 
-          {/* ── Aguardando carregamento do perfil ── */}
-          {systemUserLoading && (
-            <div className="flex flex-1 items-center justify-center py-32">
-              <Loader2 className="mr-2 h-6 w-6 animate-spin text-slate-400" />
-              <span className="text-sm text-slate-400">Carregando dashboard...</span>
-            </div>
-          )}
+          {/* Conteúdo (dentro do retângulo) */}
+          <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:bg-slate-900/90">
+            {/* ── Aguardando carregamento do perfil ── */}
+            {systemUserLoading && (
+              <div className="flex flex-1 items-center justify-center py-32">
+                <Loader2 className="mr-2 h-6 w-6 animate-spin text-slate-400" />
+                <span className="text-sm text-slate-400">Carregando dashboard...</span>
+              </div>
+            )}
 
-          {/* ── Dashboard do MÉDICO ── */}
-          {!systemUserLoading && isMedico && <DashboardMedicoAdmin />}
+            {/* ── Dashboard do MÉDICO ── */}
+            {!systemUserLoading && isMedico && <DashboardMedicoAdmin />}
 
-          {/* ── Dashboard do ADMIN / SUPER_ADMIN ── */}
-          {!systemUserLoading && !isMedico && (
-            <>
-              {/* Filtros principais */}
-              <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-2">
-                <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
-                      Clínica
-                    </CardTitle>
-                    <CardDescription className="text-[11px] text-slate-400">
-                      Filtrar por unidade
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-1">
-                    <Select value={selectedClinic} onValueChange={setSelectedClinic}>
-                      <SelectTrigger className="h-10 w-full rounded-2xl text-sm">
-                        <SelectValue placeholder="Selecione a clínica" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clinicOptions.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </CardContent>
-                </Card>
+            {/* ── Dashboard do ADMIN / SUPER_ADMIN ── */}
+            {!systemUserLoading && !isMedico && (
+              <>
+                {/* Filtros principais */}
+                <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-2">
+                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                        Clínica
+                      </CardTitle>
+                      <CardDescription className="text-[11px] text-slate-400">
+                        Filtrar por unidade
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-1">
+                      <Select value={selectedClinic} onValueChange={setSelectedClinic}>
+                        <SelectTrigger className="h-10 w-full rounded-2xl text-sm">
+                          <SelectValue placeholder="Selecione a clínica" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clinicOptions.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </CardContent>
+                  </Card>
 
-                <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
-                      Médico
-                    </CardTitle>
-                    <CardDescription className="text-[11px] text-slate-400">
-                      Filtrar por médico
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-1">
-                    <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                      <SelectTrigger className="h-10 w-full rounded-2xl text-sm">
-                        <SelectValue placeholder="Selecione o médico" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {doctorOptions.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </CardContent>
-                </Card>
-              </section>
+                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                        Médico
+                      </CardTitle>
+                      <CardDescription className="text-[11px] text-slate-400">
+                        Filtrar por médico
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-1">
+                      <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                        <SelectTrigger className="h-10 w-full rounded-2xl text-sm">
+                          <SelectValue placeholder="Selecione o médico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {doctorOptions.map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </CardContent>
+                  </Card>
+                </section>
 
-              {/* Cards de métricas */}
-              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {topMetrics.map((metric) => {
-                  const Icon = metric.icon;
-                  const isGauge = metric.isGauge;
-                  return (
-                    <Card
-                      key={metric.id}
-                      className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
-                    >
-                      <CardContent className="flex h-44 flex-col rounded-3xl p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
-                              {metric.title}
-                            </p>
-                            {!isGauge && (
-                              <p className="mt-1 text-2xl font-semibold">
-                                {metric.value}
+                {/* Cards de métricas */}
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {topMetrics.map((metric) => {
+                    const Icon = metric.icon;
+                    const isGauge = metric.isGauge;
+                    return (
+                      <Card
+                        key={metric.id}
+                        className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
+                      >
+                        <CardContent className="flex h-44 flex-col rounded-3xl p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
+                                {metric.title}
                               </p>
-                            )}
+                              {!isGauge && (
+                                <p className="mt-1 text-2xl font-semibold">
+                                  {metric.value}
+                                </p>
+                              )}
+                            </div>
+                            <div
+                              className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${metric.iconBg} text-white shadow-md`}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
                           </div>
-                          <div
-                            className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${metric.iconBg} text-white shadow-md`}
-                          >
-                            <Icon className="h-5 w-5" />
+                          {isGauge ? (
+                            <div className="mt-3 flex flex-1 items-center justify-center">
+                              <GlosaGauge value={metric.gaugeValue ?? 0} />
+                            </div>
+                          ) : (
+                            <div className="flex-1" />
+                          )}
+                          <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300">
+                            <ArrowUpRight className="h-3 w-3" />
+                            <span>{metric.helper}</span>
                           </div>
-                        </div>
-                        {isGauge ? (
-                          <div className="mt-3 flex flex-1 items-center justify-center">
-                            <GlosaGauge value={metric.gaugeValue ?? 0} />
-                          </div>
-                        ) : (
-                          <div className="flex-1" />
-                        )}
-                        <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300">
-                          <ArrowUpRight className="h-3 w-3" />
-                          <span>{metric.helper}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </section>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </section>
 
-              {/* Gráfico + ranking */}
-              <section className="grid gap-4 lg:grid-cols-5">
-                <Card className="lg:col-span-3 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                      GHIs enviadas x pagas x glosa
-                    </CardTitle>
-                    <CardDescription className="text-xs text-slate-400">
-                      Visão consolidada dos últimos 12 meses
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={yearlySadtData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                        <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
-                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
-                        <RechartsTooltip contentStyle={{ borderRadius: 12, borderColor: "#E2E8F0", fontSize: 11 }} />
-                        <Bar dataKey="enviadas" name="GHIs enviadas" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
-                        <Bar dataKey="pagas" name="GHIs pagas" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
-                        <Line type="monotone" dataKey="glosa" name="Glosa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
+                {/* Gráfico + ranking */}
+                <section className="grid gap-4 lg:grid-cols-5">
+                  <Card className="lg:col-span-3 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        GHIs enviadas x pagas x glosa
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-400">
+                        Visão consolidada dos últimos 12 meses
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={yearlySadtData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                          <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
+                          <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
+                          <RechartsTooltip contentStyle={{ borderRadius: 12, borderColor: "#E2E8F0", fontSize: 11 }} />
+                          <Bar dataKey="enviadas" name="GHIs enviadas" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
+                          <Bar dataKey="pagas" name="GHIs pagas" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
+                          <Line type="monotone" dataKey="glosa" name="Glosa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
 
-                <Card className="lg:col-span-2 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                      Médicos com maior faturamento
-                    </CardTitle>
-                    <CardDescription className="text-xs text-slate-400">
-                      Top 5 médicos por valor faturado no período selecionado
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="overflow-x-auto pt-0 pb-3">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                          <TableHead>Médico</TableHead>
-                          <TableHead className="text-right">Faturamento</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {topDoctorsByRevenue.map((doctor, index) => (
-                          <TableRow
-                            key={doctor.id}
-                            className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60 [&>td]:py-1.5"
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span className="w-5 text-[11px] font-semibold text-slate-400">
-                                  {index + 1}º
-                                </span>
-                                <Avatar className="h-7 w-7">
-                                  <AvatarImage src={doctor.avatar} alt={doctor.name} />
-                                  <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex flex-col">
-                                  <span className="text-xs font-medium text-slate-900 dark:text-slate-50">
-                                    {doctor.name}
-                                  </span>
-                                  <span className="text-[11px] text-slate-400">
-                                    {doctor.specialty}
-                                  </span>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-xs font-semibold text-slate-900 dark:text-slate-50">
-                              {doctor.revenue}
-                            </TableCell>
+                  <Card className="lg:col-span-2 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        Médicos com maior faturamento
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-400">
+                        Top 5 médicos por valor faturado no período selecionado
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto pt-0 pb-3">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                            <TableHead>Médico</TableHead>
+                            <TableHead className="text-right">Faturamento</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </section>
+                        </TableHeader>
+                        <TableBody>
+                          {topDoctorsByRevenue.map((doctor, index) => (
+                            <TableRow
+                              key={doctor.id}
+                              className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60 [&>td]:py-1.5"
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 text-[11px] font-semibold text-slate-400">
+                                    {index + 1}º
+                                  </span>
+                                  <Avatar className="h-7 w-7">
+                                    <AvatarImage src={doctor.avatar} alt={doctor.name} />
+                                    <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-medium text-slate-900 dark:text-slate-50">
+                                      {doctor.name}
+                                    </span>
+                                    <span className="text-[11px] text-slate-400">
+                                      {doctor.specialty}
+                                    </span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right text-xs font-semibold text-slate-900 dark:text-slate-50">
+                                {doctor.revenue}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </section>
 
-              {/* Mapa */}
-              <section className="mt-2">
-                <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                      Médicos atendidos por região
-                    </CardTitle>
-                    <CardDescription className="text-xs text-slate-400">
-                      Distribuição por densidade
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-2">
-                    <RegionBubbleMap />
-                  </CardContent>
-                </Card>
-              </section>
-            </>
-          )}
+                {/* Mapa */}
+                <section className="mt-2">
+                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        Médicos atendidos por região
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-400">
+                        Distribuição por densidade
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      <RegionBubbleMap />
+                    </CardContent>
+                  </Card>
+                </section>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
