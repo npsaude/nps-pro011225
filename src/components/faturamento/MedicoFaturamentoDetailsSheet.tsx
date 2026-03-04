@@ -1,20 +1,25 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   CheckCircle2,
   Clock3,
   FileText,
   Hospital,
+  Mail,
+  Upload,
   Users,
   Wallet,
   XCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { MedicoBillingCardRecord } from "@/components/faturamento/MedicoBillingCard";
+import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
 
 function formatDatePtBr(dateIso: string | null): string {
   if (!dateIso) return "-";
@@ -49,26 +54,63 @@ function EmailBadge({ record }: { record: MedicoBillingCardRecord }) {
   );
 }
 
-function DocChips({ record }: { record: MedicoBillingCardRecord }) {
+function DocRows({ steps }: { steps: BillingDocStep[] }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {record.steps.map((s) => (
-        <span
+    <div className="flex flex-col gap-2">
+      {steps.map((s) => (
+        <div
           key={s.id}
           className={
-            "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium " +
+            "flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 " +
             (s.sent
-              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
-              : "border-[#D4A017]/15 bg-black/30 text-[#9CA3AF]")
+              ? "border-emerald-500/25 bg-emerald-500/10"
+              : "border-[#D4A017]/15 bg-black/30")
           }
         >
-          {s.sent ? (
-            <CheckCircle2 className="h-3.5 w-3.5" />
-          ) : (
-            <Clock3 className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 min-w-0">
+            {s.sent ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            ) : (
+              <Clock3 className="h-4 w-4 shrink-0 text-[#9CA3AF]" />
+            )}
+            <span
+              className={
+                "text-[12px] font-medium " +
+                (s.sent ? "text-emerald-200" : "text-[#9CA3AF]")
+              }
+            >
+              {s.label}
+            </span>
+          </div>
+
+          {!s.sent && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => navigate("/medico/faturamentos/enviar")}
+              className={
+                "h-7 shrink-0 rounded-lg px-2.5 text-[11px] font-semibold " +
+                (s.id === "email_faturamento"
+                  ? "bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40"
+                  : "bg-[#D4A017]/15 hover:bg-[#D4A017]/25 text-[#D4A017] border border-[#D4A017]/30")
+              }
+            >
+              {s.id === "email_faturamento" ? (
+                <>
+                  <Mail className="mr-1 h-3 w-3" />
+                  Enviar Email
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-1 h-3 w-3" />
+                  Enviar documento
+                </>
+              )}
+            </Button>
           )}
-          <span className="whitespace-nowrap">{s.label}</span>
-        </span>
+        </div>
       ))}
     </div>
   );
@@ -192,7 +234,7 @@ export default function MedicoFaturamentoDetailsSheet({
                   <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">
                     Documentos
                   </div>
-                  <DocChips record={record} />
+                  <DocRows steps={record.steps} />
                 </CardContent>
               </Card>
 

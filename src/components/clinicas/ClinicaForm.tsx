@@ -3,38 +3,94 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Building2,
+  Landmark,
+  FileText,
   MapPin,
   Phone,
-  User,
   Mail,
-  Building2,
-  Hash,
-  FileText,
-  Network,
-  Landmark,
-  Home,
-  Navigation,
-  Globe,
-  Briefcase,
-  CreditCard,
+  Save,
 } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormField,
-  FormMessage,
-} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import type {
   ClinicaInput,
   Clinica,
   TipoUnidade,
 } from "@/services/clinicas-service";
 
+// ── Estilos compartilhados (mesmo padrão do GuiaSolicitacaoForm) ──────────────
+const inputCls =
+  "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors";
+
+// ── Seção visual ──────────────────────────────────────────────────────────────
+function Section({
+  icon: Icon,
+  color,
+  title,
+  subtitle,
+  children,
+  cols = 2,
+}: {
+  icon: React.ElementType;
+  color: string;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  cols?: 2 | 3;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-2">
+        <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-white ${color}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
+          {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
+        </div>
+      </div>
+      <div className={`grid gap-4 ${cols === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Campo com label ───────────────────────────────────────────────────────────
+function Field({
+  label,
+  required,
+  children,
+  span,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  span?: "full" | "2";
+}) {
+  return (
+    <div
+      className={
+        span === "full"
+          ? "sm:col-span-2 lg:col-span-3"
+          : span === "2"
+          ? "sm:col-span-2"
+          : ""
+      }
+    >
+      <Label className="mb-1 block text-xs font-medium text-slate-500">
+        {label}
+        {required && <span className="ml-0.5 text-rose-500">*</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+// ── Schema ────────────────────────────────────────────────────────────────────
 const clinicaSchema = z.object({
   tipo_unidade: z.enum(["CLINICA", "HOSPITAL"], {
     required_error: "Selecione se é clínica ou hospital.",
@@ -70,8 +126,16 @@ interface ClinicaFormProps {
   isSubmitting?: boolean;
 }
 
+// ── Componente principal ──────────────────────────────────────────────────────
 const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormProps) => {
-  const form = useForm<ClinicaFormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<ClinicaFormValues>({
     resolver: zodResolver(clinicaSchema),
     defaultValues: {
       tipo_unidade: "CLINICA",
@@ -94,9 +158,11 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
     },
   });
 
+  const tipoUnidade = watch("tipo_unidade");
+
   useEffect(() => {
     if (clinica) {
-      const mapped: ClinicaFormValues = {
+      reset({
         tipo_unidade: clinica.tipo_unidade,
         codigo_referencial_got: clinica.codigo_referencial_got ?? "",
         razao_social: clinica.razao_social,
@@ -114,12 +180,11 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
         nome_contato_faturamento: clinica.nome_contato_faturamento ?? "",
         email_contato_faturamento: clinica.email_contato_faturamento ?? "",
         telefone_contato_faturamento: clinica.telefone_contato_faturamento ?? "",
-      };
-      form.reset(mapped);
+      });
     }
-  }, [clinica, form]);
+  }, [clinica, reset]);
 
-  const handleSubmit = (values: ClinicaFormValues) => {
+  const handleFormSubmit = (values: ClinicaFormValues) => {
     const payload: ClinicaInput = {
       tipo_unidade: values.tipo_unidade as TipoUnidade,
       codigo_referencial_got: values.codigo_referencial_got?.trim() || null,
@@ -139,566 +204,280 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
       email_contato_faturamento: values.email_contato_faturamento || null,
       telefone_contato_faturamento: values.telefone_contato_faturamento || null,
     };
-
     void onSubmit(payload);
   };
 
-  const tipoUnidade = form.watch("tipo_unidade");
-
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(handleSubmit)}
-        className="space-y-5"
-      >
-        {/* ── Seção 1: Tipo de Unidade ── */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
-              <Building2 className="h-3.5 w-3.5" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">Tipo de unidade</h3>
-              <p className="text-[11px] text-slate-400">Selecione se é uma clínica ou hospital</p>
-            </div>
-          </div>
-
-          <div className="px-5 py-4">
-            <FormField
-              control={form.control}
-              name="tipo_unidade"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => field.onChange("CLINICA")}
-                        className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
-                          tipoUnidade === "CLINICA"
-                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${
-                          tipoUnidade === "CLINICA" ? "bg-indigo-100" : "bg-slate-100"
-                        }`}>
-                          <Building2 className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold">Clínica</p>
-                          <p className="text-[11px] opacity-70">Unidade ambulatorial</p>
-                        </div>
-                        {tipoUnidade === "CLINICA" && (
-                          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white">
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => field.onChange("HOSPITAL")}
-                        className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
-                          tipoUnidade === "HOSPITAL"
-                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${
-                          tipoUnidade === "HOSPITAL" ? "bg-indigo-100" : "bg-slate-100"
-                        }`}>
-                          <Landmark className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold">Hospital</p>
-                          <p className="text-[11px] opacity-70">Unidade hospitalar</p>
-                        </div>
-                        {tipoUnidade === "HOSPITAL" && (
-                          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white">
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <form
+      onSubmit={handleSubmit(handleFormSubmit)}
+      className="flex flex-col gap-4 pb-6"
+    >
+      {/* ── 1. Tipo de unidade ── */}
+      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white">
+            <Building2 className="h-4 w-4" />
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Tipo de unidade</h2>
+            <p className="text-[11px] text-slate-400">Selecione se é uma clínica ou hospital</p>
           </div>
         </div>
 
-        {/* ── Seção 2: Identificação ── */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
-              <FileText className="h-3.5 w-3.5" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">Identificação</h3>
-              <p className="text-[11px] text-slate-400">Dados cadastrais da unidade</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 px-5 py-4">
-            {/* Razão social + Nome fantasia */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="razao_social"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Razão social <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <FileText className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Razão social completa"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="nome_fantasia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Nome fantasia <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Building2 className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Nome fantasia"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* CNPJ + Cód. GOT */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="cnpj"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">CNPJ <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <CreditCard className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="00.000.000/0000-00"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="codigo_referencial_got"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Cód. Referencial (GOT)</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Hash className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Ex: GOT-001"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Nome da rede */}
-            <FormField
-              control={form.control}
-              name="nome_rede"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium text-slate-600">Nome da rede</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                        <Network className="h-3.5 w-3.5" />
-                      </span>
-                      <Input
-                        {...field}
-                        placeholder="Ex: Rede Vida Saudável"
-                        className="h-10 pl-9 text-sm"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        {/* ── Seção 3: Localização ── */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-              <MapPin className="h-3.5 w-3.5" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">Localização</h3>
-              <p className="text-[11px] text-slate-400">Endereço completo da unidade</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 px-5 py-4">
-            {/* Endereço + Complemento */}
-            <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
-              <FormField
-                control={form.control}
-                name="endereco"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Endereço <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Home className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Rua, número"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="complemento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Complemento</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Sala, bloco..."
-                        className="h-10 text-sm"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Bairro + Cidade + UF */}
-            <div className="grid gap-3 sm:grid-cols-[1.2fr_1.2fr_0.5fr]">
-              <FormField
-                control={form.control}
-                name="bairro"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Bairro <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Navigation className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Bairro"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="cidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Cidade <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Globe className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Cidade"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="uf"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">UF <span className="text-red-400">*</span></FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="UF"
-                        maxLength={2}
-                        className="h-10 uppercase text-sm"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Seção 4: Contato Geral ── */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <Phone className="h-3.5 w-3.5" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">Contato geral</h3>
-              <p className="text-[11px] text-slate-400">Telefone e responsável pelo contato da unidade</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 px-5 py-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="telefone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Telefone principal</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Phone className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="(00) 0000-0000"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contato"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Pessoa de contato</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <User className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="Nome da pessoa de contato"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="cargo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium text-slate-600">Cargo do contato</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                        <Briefcase className="h-3.5 w-3.5" />
-                      </span>
-                      <Input
-                        {...field}
-                        placeholder="Ex: Gerente de Operações"
-                        className="h-10 pl-9 text-sm"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        {/* ── Seção 5: Contato de Faturamento ── */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
-              <Mail className="h-3.5 w-3.5" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">Contato de faturamento</h3>
-              <p className="text-[11px] text-slate-400">Responsável pelo setor de faturamento</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 px-5 py-4">
-            <FormField
-              control={form.control}
-              name="nome_contato_faturamento"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium text-slate-600">Nome do responsável</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                        <User className="h-3.5 w-3.5" />
-                      </span>
-                      <Input
-                        {...field}
-                        placeholder="Nome completo"
-                        className="h-10 pl-9 text-sm"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="email_contato_faturamento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">E-mail</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Mail className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="faturamento@clinica.com.br"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="telefone_contato_faturamento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-medium text-slate-600">Telefone</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                          <Phone className="h-3.5 w-3.5" />
-                        </span>
-                        <Input
-                          {...field}
-                          placeholder="(00) 00000-0000"
-                          className="h-10 pl-9 text-sm"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Ações ── */}
-        <div className="flex items-center justify-end gap-3 pt-1 pb-2">
-          {onCancel && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="h-10 rounded-full px-6 text-sm"
-            >
-              Cancelar
-            </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="h-10 rounded-full bg-indigo-600 px-8 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setValue("tipo_unidade", "CLINICA")}
+            className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all ${
+              tipoUnidade === "CLINICA"
+                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
+            }`}
           >
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
+              tipoUnidade === "CLINICA" ? "bg-indigo-100" : "bg-white"
+            }`}>
+              <Building2 className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">Clínica</p>
+              <p className="text-[11px] opacity-60">Unidade ambulatorial</p>
+            </div>
+            {tipoUnidade === "CLINICA" && (
+              <span className="ml-auto flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500 text-white">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                Salvando...
               </span>
-            ) : clinica ? "Salvar alterações" : "Cadastrar"}
-          </Button>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setValue("tipo_unidade", "HOSPITAL")}
+            className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all ${
+              tipoUnidade === "HOSPITAL"
+                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
+            }`}
+          >
+            <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
+              tipoUnidade === "HOSPITAL" ? "bg-indigo-100" : "bg-white"
+            }`}>
+              <Landmark className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">Hospital</p>
+              <p className="text-[11px] opacity-60">Unidade hospitalar</p>
+            </div>
+            {tipoUnidade === "HOSPITAL" && (
+              <span className="ml-auto flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500 text-white">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+            )}
+          </button>
         </div>
-      </form>
-    </Form>
+        {errors.tipo_unidade && (
+          <p className="mt-1.5 text-xs text-rose-500">{errors.tipo_unidade.message}</p>
+        )}
+      </div>
+
+      {/* ── 2. Identificação ── */}
+      <Section icon={FileText} color="bg-sky-600" title="Identificação" subtitle="Dados cadastrais da unidade" cols={2}>
+        <Field label="Razão social" required>
+          <input
+            {...register("razao_social")}
+            className={inputCls}
+            placeholder="Razão social completa"
+          />
+          {errors.razao_social && (
+            <p className="mt-1 text-xs text-rose-500">{errors.razao_social.message}</p>
+          )}
+        </Field>
+
+        <Field label="Nome fantasia" required>
+          <input
+            {...register("nome_fantasia")}
+            className={inputCls}
+            placeholder="Nome fantasia"
+          />
+          {errors.nome_fantasia && (
+            <p className="mt-1 text-xs text-rose-500">{errors.nome_fantasia.message}</p>
+          )}
+        </Field>
+
+        <Field label="CNPJ" required>
+          <input
+            {...register("cnpj")}
+            className={inputCls}
+            placeholder="00.000.000/0000-00"
+          />
+          {errors.cnpj && (
+            <p className="mt-1 text-xs text-rose-500">{errors.cnpj.message}</p>
+          )}
+        </Field>
+
+        <Field label="Cód. Referencial (GOT)">
+          <input
+            {...register("codigo_referencial_got")}
+            className={inputCls}
+            placeholder="Ex: GOT-001"
+          />
+        </Field>
+
+        <Field label="Nome da rede" span="2">
+          <input
+            {...register("nome_rede")}
+            className={inputCls}
+            placeholder="Ex: Rede Vida Saudável"
+          />
+        </Field>
+      </Section>
+
+      {/* ── 3. Localização ── */}
+      <Section icon={MapPin} color="bg-emerald-600" title="Localização" subtitle="Endereço completo da unidade" cols={3}>
+        <Field label="Endereço" required span="2">
+          <input
+            {...register("endereco")}
+            className={inputCls}
+            placeholder="Rua, número"
+          />
+          {errors.endereco && (
+            <p className="mt-1 text-xs text-rose-500">{errors.endereco.message}</p>
+          )}
+        </Field>
+
+        <Field label="Complemento">
+          <input
+            {...register("complemento")}
+            className={inputCls}
+            placeholder="Sala, bloco..."
+          />
+        </Field>
+
+        <Field label="Bairro" required>
+          <input
+            {...register("bairro")}
+            className={inputCls}
+            placeholder="Bairro"
+          />
+          {errors.bairro && (
+            <p className="mt-1 text-xs text-rose-500">{errors.bairro.message}</p>
+          )}
+        </Field>
+
+        <Field label="Cidade" required>
+          <input
+            {...register("cidade")}
+            className={inputCls}
+            placeholder="Cidade"
+          />
+          {errors.cidade && (
+            <p className="mt-1 text-xs text-rose-500">{errors.cidade.message}</p>
+          )}
+        </Field>
+
+        <Field label="UF" required>
+          <input
+            {...register("uf")}
+            className={inputCls}
+            placeholder="UF"
+            maxLength={2}
+            style={{ textTransform: "uppercase" }}
+          />
+          {errors.uf && (
+            <p className="mt-1 text-xs text-rose-500">{errors.uf.message}</p>
+          )}
+        </Field>
+      </Section>
+
+      {/* ── 4. Contato geral ── */}
+      <Section icon={Phone} color="bg-amber-500" title="Contato geral" subtitle="Telefone e responsável pelo contato da unidade" cols={2}>
+        <Field label="Telefone principal">
+          <input
+            {...register("telefone")}
+            className={inputCls}
+            placeholder="(00) 0000-0000"
+          />
+        </Field>
+
+        <Field label="Pessoa de contato">
+          <input
+            {...register("contato")}
+            className={inputCls}
+            placeholder="Nome da pessoa de contato"
+          />
+        </Field>
+
+        <Field label="Cargo do contato" span="2">
+          <input
+            {...register("cargo")}
+            className={inputCls}
+            placeholder="Ex: Gerente de Operações"
+          />
+        </Field>
+      </Section>
+
+      {/* ── 5. Contato de faturamento ── */}
+      <Section icon={Mail} color="bg-violet-600" title="Contato de faturamento" subtitle="Responsável pelo setor de faturamento" cols={2}>
+        <Field label="Nome do responsável" span="2">
+          <input
+            {...register("nome_contato_faturamento")}
+            className={inputCls}
+            placeholder="Nome completo"
+          />
+        </Field>
+
+        <Field label="E-mail">
+          <input
+            {...register("email_contato_faturamento")}
+            className={inputCls}
+            placeholder="faturamento@clinica.com.br"
+            type="email"
+          />
+          {errors.email_contato_faturamento && (
+            <p className="mt-1 text-xs text-rose-500">{errors.email_contato_faturamento.message}</p>
+          )}
+        </Field>
+
+        <Field label="Telefone">
+          <input
+            {...register("telefone_contato_faturamento")}
+            className={inputCls}
+            placeholder="(00) 00000-0000"
+          />
+        </Field>
+      </Section>
+
+      {/* ── Rodapé ── */}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="rounded-full border-slate-300 bg-white px-6 text-slate-700 hover:bg-slate-50"
+          >
+            Cancelar
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="gap-2 rounded-full bg-indigo-600 px-6 text-white hover:bg-indigo-700"
+        >
+          <Save className="h-4 w-4" />
+          {isSubmitting
+            ? "Salvando..."
+            : clinica
+            ? "Salvar alterações"
+            : "Cadastrar"}
+        </Button>
+      </div>
+    </form>
   );
 };
 
