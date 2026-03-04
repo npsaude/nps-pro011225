@@ -339,19 +339,7 @@ const AdminSidebar = ({
               )}
 
               {/* Relatório de Repasse */}
-              {featureEnabled("menu_documentos_relatorio_repasse") ? (
-                <button
-                  className={currentDocumentosSub === "relatorio-repasse" ? blockItemActive : blockItemInactive}
-                  onClick={() => navigate("/descricao-cirurgica")}
-                >
-                  <span className="ml-7 flex items-center gap-1.5">
-                    <BarChart3 className="h-3.5 w-3.5 opacity-70" />
-                    Relatório de Repasse
-                  </span>
-                </button>
-              ) : (
-                <LockedMenuItem label="Relatório de Repasse" isSubItem className={blockItemInactive} />
-              )}
+              <LockedMenuItem label="Relatório de Repasse" isSubItem className={blockItemInactive} />
 
             </div>
           </div>
