@@ -144,9 +144,9 @@ const GuiaAutorizacaoPage: React.FC = () => {
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="guia-autorizacao" />
 
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl">
+        <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
           {/* Header */}
-          <header className="flex items-center justify-between gap-3">
+          <header className="mb-1 flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-900 sm:text-2xl">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
@@ -173,146 +173,151 @@ const GuiaAutorizacaoPage: React.FC = () => {
             </div>
           </header>
 
-          {/* Card principal */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-500">
-                  Guias de autorização cadastradas
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Total:{" "}
-                  <span className="font-medium text-violet-600">
-                    {filtered.length} registro(s)
-                  </span>
-                </p>
+          {/* Conteúdo (retângulo) */}
+          <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl">
+            {/* Card principal */}
+            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-500">
+                    Guias de autorização cadastradas
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Total:{" "}
+                    <span className="font-medium text-violet-600">
+                      {filtered.length} registro(s)
+                    </span>
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate("/admin/guia-autorizacao/nova")}
+                  className="gap-2 rounded-full bg-violet-600 px-5 text-sm font-semibold text-white hover:bg-violet-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nova Guia
+                </Button>
               </div>
-              <Button
-                onClick={() => navigate("/admin/guia-autorizacao/nova")}
-                className="gap-2 rounded-full bg-violet-600 px-5 text-sm font-semibold text-white hover:bg-violet-700"
-              >
-                <Plus className="h-4 w-4" />
-                Nova Guia
-              </Button>
-            </div>
 
-            {/* Busca mobile */}
-            <div className="mb-3 flex items-center rounded-full bg-slate-100 px-3 py-1 ring-1 ring-slate-200/80 sm:hidden">
-              <Search className="mr-2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar guia..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="h-7 w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
-              />
-            </div>
+              {/* Busca mobile */}
+              <div className="mb-3 flex items-center rounded-full bg-slate-100 px-3 py-1 ring-1 ring-slate-200/80 sm:hidden">
+                <Search className="mr-2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar guia..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="h-7 w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                />
+              </div>
 
-            {/* Tabela */}
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
-                    <TableHead className="py-3 pl-4">Nº Autorização</TableHead>
-                    <TableHead>Nº Guia Honorários</TableHead>
-                    <TableHead>Paciente</TableHead>
-                    <TableHead>Hospital / Clínica</TableHead>
-                    <TableHead>Data Cirurgia</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-center">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
-                        Carregando...
-                      </TableCell>
+              {/* Tabela */}
+              <div className="overflow-x-auto rounded-xl border border-slate-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
+                      <TableHead className="py-3 pl-4">Nº Autorização</TableHead>
+                      <TableHead>Nº Guia Honorários</TableHead>
+                      <TableHead>Paciente</TableHead>
+                      <TableHead>Hospital / Clínica</TableHead>
+                      <TableHead>Data Cirurgia</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
-                  ) : paginated.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
-                        Nenhuma guia de autorização encontrada.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginated.map((g) => (
-                      <TableRow
-                        key={g.id}
-                        className="border-b border-slate-50 text-sm hover:bg-slate-50/60"
-                      >
-                        <TableCell className="pl-4 font-medium text-slate-800">
-                          {g.numero_autorizacao || "—"}
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {g.numero_guia_honorarios || "—"}
-                        </TableCell>
-                        <TableCell className="text-slate-800">
-                          {g.paciente_nome || "—"}
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {g.hospital_nome || "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-500">
-                          {formatDate(g.data_cirurgia ?? g.data_atendimento)}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-500">
-                          {g.tipo_cirurgia || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              title="Visualizar"
-                              onClick={() => setViewTarget(g)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-violet-50 hover:text-violet-600"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              title="Editar"
-                              onClick={() => navigate(`/admin/guia-autorizacao/editar/${g.id}`)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              title="Excluir"
-                              onClick={() => setDeleteTarget(g)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
+                          Carregando...
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Paginação */}
-            {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                <span>Página {page} de {totalPages}</span>
-                <div className="flex gap-1">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage((p) => p - 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                    ) : paginated.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
+                          Nenhuma guia de autorização encontrada.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginated.map((g) => (
+                        <TableRow
+                          key={g.id}
+                          className="border-b border-slate-50 text-sm hover:bg-slate-50/60"
+                        >
+                          <TableCell className="pl-4 font-medium text-slate-800">
+                            {g.numero_autorizacao || "—"}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {g.numero_guia_honorarios || "—"}
+                          </TableCell>
+                          <TableCell className="text-slate-800">
+                            {g.paciente_nome || "—"}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {g.hospital_nome || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-500">
+                            {formatDate(g.data_cirurgia ?? g.data_atendimento)}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-500">
+                            {g.tipo_cirurgia || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                title="Visualizar"
+                                onClick={() => setViewTarget(g)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-violet-50 hover:text-violet-600"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                title="Editar"
+                                onClick={() => navigate(`/admin/guia-autorizacao/editar/${g.id}`)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                title="Excluir"
+                                onClick={() => setDeleteTarget(g)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-            )}
+
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    Página {page} de {totalPages}
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => p - 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      disabled={page === totalPages}
+                      onClick={() => setPage((p) => p + 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
