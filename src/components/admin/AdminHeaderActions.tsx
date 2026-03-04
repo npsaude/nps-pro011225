@@ -6,6 +6,10 @@ import { useSystemUser } from "@/hooks/use-system-user";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import { showError, showSuccess } from "@/utils/toast";
 import { subscribeAvatarUpdated } from "@/utils/avatar-events";
+import {
+  getCachedAvatarSignedUrl,
+  setCachedAvatarSignedUrl,
+} from "@/utils/avatar-signed-url-cache";
 
 import {
   DropdownMenu,
@@ -54,6 +58,12 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
         return;
       }
 
+      const cached = getCachedAvatarSignedUrl(path);
+      if (cached) {
+        setAvatarUrl(cached);
+        return;
+      }
+
       const { data, error } = await supabase.storage
         .from("NPS-pro")
         .createSignedUrl(path, 60 * 60);
@@ -65,7 +75,11 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
         return;
       }
 
-      setAvatarUrl(data?.signedUrl ?? null);
+      const signedUrl = data?.signedUrl ?? null;
+      setAvatarUrl(signedUrl);
+      if (signedUrl) {
+        setCachedAvatarSignedUrl(path, signedUrl, 60 * 60);
+      }
     };
 
     void load();
