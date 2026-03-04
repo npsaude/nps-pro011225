@@ -14,6 +14,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 import {
   Card,
@@ -34,6 +38,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 type MonthBar = { month: string; valor: number };
 type InstituicaoRow = { nome: string; quantidade: number };
+type TipoCirurgiaSlice = { name: string; value: number };
+
+const PIE_COLORS = [
+  "#38bdf8", "#22c55e", "#f97316", "#a78bfa", "#f43f5e",
+  "#facc15", "#14b8a6", "#e879f9", "#fb923c", "#6366f1",
+];
 
 type Stats = {
   qtdFaturamentos: number;
@@ -74,6 +84,7 @@ export default function DashboardMedicoAdmin() {
   });
   const [chartData, setChartData] = useState<MonthBar[]>([]);
   const [instituicoes, setInstituicoes] = useState<InstituicaoRow[]>([]);
+  const [tipoCirurgiaData, setTipoCirurgiaData] = useState<TipoCirurgiaSlice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -86,7 +97,7 @@ export default function DashboardMedicoAdmin() {
       const { data: fats, error: fatError } = await supabase
         .from("faturamentos")
         .select(
-          "id, email_status, hospital_nome, data_cirurgia, created_at, guia_solicitacao_id"
+          "id, email_status, hospital_nome, data_cirurgia, created_at, guia_solicitacao_id, tipo_cirurgia"
         )
         .eq("status", "ATIVO");
 
@@ -126,7 +137,6 @@ export default function DashboardMedicoAdmin() {
       months.forEach(({ key }) => (monthMap[key] = 0));
 
       itensData.forEach((item) => {
-        // Tenta usar data_procedimento do item; fallback para data_cirurgia do faturamento
         let dateStr = item.data_procedimento as string | null;
         if (!dateStr && item.guia_id) {
           const fat = guiaToFat[item.guia_id];
@@ -159,6 +169,20 @@ export default function DashboardMedicoAdmin() {
         .slice(0, 5);
 
       setInstituicoes(sorted);
+
+      // ── Gráfico pizza: tipos de cirurgia ──
+      const tipoMap: Record<string, number> = {};
+      fats.forEach((r) => {
+        const tipo = r.tipo_cirurgia?.trim() || "Não informado";
+        tipoMap[tipo] = (tipoMap[tipo] ?? 0) + 1;
+      });
+
+      const tipoSlices = Object.entries(tipoMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+      setTipoCirurgiaData(tipoSlices);
+
       setLoading(false);
     }
 
@@ -340,6 +364,74 @@ export default function DashboardMedicoAdmin() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Gráfico pizza: Tipos de Cirurgia */}
+      <section>
+        <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              Tipos de Cirurgia
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-400">
+              Distribuição por tipo de cirurgia nos faturamentos ativos
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-80 px-2 pb-6 pt-2">
+            {loading ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                Carregando...
+              </div>
+            ) : tipoCirurgiaData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                Nenhum dado de tipo de cirurgia encontrado.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={tipoCirurgiaData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={110}
+                    paddingAngle={3}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percent }) =>
+                      `${name} (${(percent * 100).toFixed(0)}%)`
+                    }
+                    labelLine={{ strokeWidth: 1 }}
+                  >
+                    {tipoCirurgiaData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={PIE_COLORS[index % PIE_COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    contentStyle={{
+                      borderRadius: 12,
+                      borderColor: "#E2E8F0",
+                      fontSize: 12,
+                    }}
+                    formatter={(value: number, name: string) => [
+                      `${value} faturamento(s)`,
+                      name,
+                    ]}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
