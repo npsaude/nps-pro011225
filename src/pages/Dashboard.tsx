@@ -51,6 +51,7 @@ import GlosaGauge from "@/components/dashboard/GlosaGauge";
 import RegionBubbleMap from "@/components/dashboard/RegionBubbleMap";
 import DashboardMedicoAdmin from "@/components/dashboard/DashboardMedicoAdmin";
 import { useSystemUser } from "@/hooks/use-system-user";
+import { Loader2 } from "lucide-react";
 
 const clinicOptions = [
   { id: "todas", name: "Todas as clínicas" },
@@ -184,7 +185,7 @@ const Dashboard = () => {
   const [selectedClinic, setSelectedClinic] = useState<string>("todas");
   const [selectedDoctor, setSelectedDoctor] = useState<string>("todos");
   const [pendingDescricoes, setPendingDescricoes] = useState<number>(0);
-  const { systemUser } = useSystemUser();
+  const { systemUser, loading: systemUserLoading } = useSystemUser();
 
   const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
@@ -242,11 +243,19 @@ const Dashboard = () => {
             </div>
           </header>
 
+          {/* ── Aguardando carregamento do perfil ── */}
+          {systemUserLoading && (
+            <div className="flex flex-1 items-center justify-center py-32">
+              <Loader2 className="mr-2 h-6 w-6 animate-spin text-slate-400" />
+              <span className="text-sm text-slate-400">Carregando dashboard...</span>
+            </div>
+          )}
+
           {/* ── Dashboard do MÉDICO ── */}
-          {isMedico && <DashboardMedicoAdmin />}
+          {!systemUserLoading && isMedico && <DashboardMedicoAdmin />}
 
           {/* ── Dashboard do ADMIN / SUPER_ADMIN ── */}
-          {!isMedico && (
+          {!systemUserLoading && !isMedico && (
             <>
               {/* Filtros principais */}
               <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-2">
