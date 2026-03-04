@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Search,
-  Plus,
   Eye,
-  Pencil,
   Trash2,
   FileSignature,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -34,18 +32,26 @@ import { showError, showSuccess } from "@/utils/toast";
 
 type DescricaoRow = {
   id: string;
-  prontuario: string | null;
-  nome_social: string | null;
-  registro_civil: string | null;
-  cirurgiao_responsavel: string | null;
+  numero_guia_internacao: string | null;
+  paciente_nome: string | null;
+  paciente_cpf: string | null;
+  cirurgiao_principal_nome: string | null;
   tipo_cirurgia: string | null;
-  data_fim_procedimento: string | null;
-  data_inicio_procedimento: string | null;
-  status: string | null;
+  data_cirurgia: string | null;
+  status_pagamento: string | null;
+  hospital_nome: string | null;
+  url_descricao_cirurgica: string[];
   created_at: string;
 };
 
+type SignedFile = {
+  path: string;
+  signedUrl: string | null;
+  fileName: string;
+};
+
 const PAGE_SIZE = 10;
+const bucketName = "NPS-pro";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -53,14 +59,18 @@ function formatDate(d: string | null) {
   return `${day}/${m}/${y}`;
 }
 
+function hasAny(arr: string[] | null | undefined): boolean {
+  return Array.isArray(arr) && arr.length > 0;
+}
+
 function statusBadge(status: string | null) {
   const map: Record<string, { label: string; cls: string }> = {
-    AGUARDANDO: { label: "Aguardando", cls: "bg-amber-100 text-amber-700" },
-    APROVADO: { label: "Aprovado", cls: "bg-emerald-100 text-emerald-700" },
-    REPROVADO: { label: "Reprovado", cls: "bg-rose-100 text-rose-700" },
-    FATURADO: { label: "Faturado", cls: "bg-blue-100 text-blue-700" },
+    pendente: { label: "Pendente", cls: "bg-amber-100 text-amber-700" },
+    pago: { label: "Pago", cls: "bg-emerald-100 text-emerald-700" },
+    glosado: { label: "Glosado", cls: "bg-rose-100 text-rose-700" },
+    cancelado: { label: "Cancelado", cls: "bg-slate-100 text-slate-500" },
   };
-  const s = (status ?? "AGUARDANDO").toUpperCase();
+  const s = (status ?? "pendente").toLowerCase();
   const { label, cls } = map[s] ?? { label: status ?? "—", cls: "bg-slate-100 text-slate-500" };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cls}`}>
@@ -79,7 +89,6 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
 }
 
 const DescricaoCirurgicaAdminPage: React.FC = () => {
-  const navigate = useNavigate();
   const [items, setItems] = useState<DescricaoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -87,33 +96,87 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<DescricaoRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [viewTarget, setViewTarget] = useState<DescricaoRow | null>(null);
+  const [viewFiles, setViewFiles] = useState<SignedFile[]>([]);
+  const [viewFilesLoading, setViewFilesLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from("descricoes_cirurgicas")
+      .from("faturamentos")
       .select(
-        "id, prontuario, nome_social, registro_civil, cirurgiao_responsavel, tipo_cirurgia, data_fim_procedimento, data_inicio_procedimento, status, created_at"
+        "id, numero_guia_internacao, paciente_nome, paciente_cpf, cirurgiao_principal_nome, tipo_cirurgia, data_cirurgia, status_pagamento, hospital_nome, url_descricao_cirurgica, created_at",
       )
       .order("created_at", { ascending: false });
 
     if (error) {
       showError("Não foi possível carregar as descrições cirúrgicas.");
     } else {
-      setItems((data as DescricaoRow[]) ?? []);
+      const rows = ((data as DescricaoRow[]) ?? []).filter((r) =>
+        hasAny(r.url_descricao_cirurgica),
+      );
+      setItems(rows);
     }
     setLoading(false);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFiles = async () => {
+      if (!viewTarget) {
+        setViewFiles([]);
+        setViewFilesLoading(false);
+        return;
+      }
+
+      const paths = viewTarget.url_descricao_cirurgica ?? [];
+      if (!hasAny(paths)) {
+        setViewFiles([]);
+        setViewFilesLoading(false);
+        return;
+      }
+
+      setViewFilesLoading(true);
+      try {
+        const files = await Promise.all(
+          paths.map(async (path) => {
+            const { data } = await supabase.storage
+              .from(bucketName)
+              .createSignedUrl(path, 60 * 60);
+            const fileName = path.split("/").pop() || path;
+            return {
+              path,
+              signedUrl: data?.signedUrl ?? null,
+              fileName,
+            } satisfies SignedFile;
+          }),
+        );
+
+        if (!cancelled) setViewFiles(files);
+      } finally {
+        if (!cancelled) setViewFilesLoading(false);
+      }
+    };
+
+    void loadFiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewTarget]);
 
   const filtered = items.filter((d) => {
     const q = search.toLowerCase();
     return (
-      (d.prontuario ?? "").toLowerCase().includes(q) ||
-      (d.nome_social ?? "").toLowerCase().includes(q) ||
-      (d.registro_civil ?? "").toLowerCase().includes(q) ||
-      (d.cirurgiao_responsavel ?? "").toLowerCase().includes(q)
+      (d.numero_guia_internacao ?? "").toLowerCase().includes(q) ||
+      (d.paciente_nome ?? "").toLowerCase().includes(q) ||
+      (d.paciente_cpf ?? "").toLowerCase().includes(q) ||
+      (d.cirurgiao_principal_nome ?? "").toLowerCase().includes(q) ||
+      (d.hospital_nome ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -123,16 +186,19 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+
     const { error } = await supabase
-      .from("descricoes_cirurgicas")
-      .delete()
+      .from("faturamentos")
+      .update({ url_descricao_cirurgica: [] })
       .eq("id", deleteTarget.id);
+
     setDeleting(false);
     setDeleteTarget(null);
+
     if (error) {
-      showError("Não foi possível excluir a descrição.");
+      showError("Não foi possível remover os anexos da descrição.");
     } else {
-      showSuccess("Descrição cirúrgica excluída com sucesso.");
+      showSuccess("Anexos da descrição cirúrgica removidos com sucesso.");
       void load();
     }
   };
@@ -153,7 +219,7 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                 Descrição Cirúrgica
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Gerencie as descrições cirúrgicas cadastradas.
+                Documentos de descrição cirúrgica enviados no faturamento.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -163,7 +229,10 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                   type="text"
                   placeholder="Buscar..."
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                   className="h-7 w-40 bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none sm:w-52 sm:text-sm"
                 />
               </div>
@@ -183,13 +252,6 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                     <span className="font-medium text-blue-600">{filtered.length} registro(s)</span>
                   </p>
                 </div>
-                <Button
-                  onClick={() => navigate("/admin/descricao-cirurgica/nova")}
-                  className="gap-2 rounded-full bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nova Descrição
-                </Button>
               </div>
 
               {/* Busca mobile */}
@@ -199,7 +261,10 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                   type="text"
                   placeholder="Buscar..."
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                   className="h-7 w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
                 />
               </div>
@@ -214,7 +279,7 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                       <TableHead>Registro Civil</TableHead>
                       <TableHead>Cirurgião</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Período</TableHead>
+                      <TableHead>Data</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
@@ -235,17 +300,13 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                     ) : (
                       paginated.map((d) => (
                         <TableRow key={d.id} className="border-b border-slate-50 text-sm hover:bg-slate-50/60">
-                          <TableCell className="pl-4 font-medium text-slate-800">{d.prontuario || "—"}</TableCell>
-                          <TableCell className="text-slate-800">{d.nome_social || "—"}</TableCell>
-                          <TableCell className="text-slate-600">{d.registro_civil || "—"}</TableCell>
-                          <TableCell className="text-slate-600">{d.cirurgiao_responsavel || "—"}</TableCell>
+                          <TableCell className="pl-4 font-medium text-slate-800">{d.numero_guia_internacao || "—"}</TableCell>
+                          <TableCell className="text-slate-800">{d.paciente_nome || "—"}</TableCell>
+                          <TableCell className="text-slate-600">{d.paciente_cpf || "—"}</TableCell>
+                          <TableCell className="text-slate-600">{d.cirurgiao_principal_nome || "—"}</TableCell>
                           <TableCell className="text-xs text-slate-500">{d.tipo_cirurgia || "—"}</TableCell>
-                          <TableCell className="text-xs text-slate-500">
-                            {d.data_inicio_procedimento || d.data_fim_procedimento
-                              ? `${formatDate(d.data_inicio_procedimento)} – ${formatDate(d.data_fim_procedimento)}`
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-xs">{statusBadge(d.status)}</TableCell>
+                          <TableCell className="text-xs text-slate-500">{formatDate(d.data_cirurgia)}</TableCell>
+                          <TableCell className="text-xs">{statusBadge(d.status_pagamento)}</TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-1">
                               <button
@@ -256,14 +317,7 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
                                 <Eye className="h-4 w-4" />
                               </button>
                               <button
-                                title="Editar"
-                                onClick={() => navigate(`/admin/descricao-cirurgica/editar/${d.id}`)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                title="Excluir"
+                                title="Remover anexos"
                                 onClick={() => setDeleteTarget(d)}
                                 className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                               >
@@ -281,7 +335,9 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
               {/* Paginação */}
               {totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                  <span>Página {page} de {totalPages}</span>
+                  <span>
+                    Página {page} de {totalPages}
+                  </span>
                   <div className="flex gap-1">
                     <button
                       disabled={page === 1}
@@ -310,61 +366,97 @@ const DescricaoCirurgicaAdminPage: React.FC = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detalhes da Descrição Cirúrgica</DialogTitle>
-            <DialogDescription>Informações resumidas da descrição selecionada.</DialogDescription>
+            <DialogDescription>
+              Informações do faturamento e links dos arquivos enviados.
+            </DialogDescription>
           </DialogHeader>
           {viewTarget && (
-            <div className="grid gap-3 text-sm">
-              <InfoRow label="Prontuário" value={viewTarget.prontuario} />
-              <InfoRow label="Paciente" value={viewTarget.nome_social || viewTarget.registro_civil} />
-              <InfoRow label="Cirurgião" value={viewTarget.cirurgiao_responsavel} />
-              <InfoRow label="Tipo de Cirurgia" value={viewTarget.tipo_cirurgia} />
-              <InfoRow label="Data Início" value={formatDate(viewTarget.data_inicio_procedimento)} />
-              <InfoRow label="Data Fim" value={formatDate(viewTarget.data_fim_procedimento)} />
-              <div className="flex justify-between gap-4 border-b border-slate-50 pb-2">
-                <span className="text-xs text-slate-400">Status</span>
-                {statusBadge(viewTarget.status)}
+            <div className="grid gap-4 text-sm">
+              <div className="grid gap-3">
+                <InfoRow label="Prontuário" value={viewTarget.numero_guia_internacao} />
+                <InfoRow label="Paciente" value={viewTarget.paciente_nome} />
+                <InfoRow label="CPF" value={viewTarget.paciente_cpf} />
+                <InfoRow label="Hospital" value={viewTarget.hospital_nome} />
+                <InfoRow label="Cirurgião" value={viewTarget.cirurgiao_principal_nome} />
+                <InfoRow label="Tipo de Cirurgia" value={viewTarget.tipo_cirurgia} />
+                <InfoRow label="Data" value={formatDate(viewTarget.data_cirurgia)} />
+                <div className="flex justify-between gap-4 border-b border-slate-50 pb-2">
+                  <span className="text-xs text-slate-400">Status pagamento</span>
+                  {statusBadge(viewTarget.status_pagamento)}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Arquivos
+                </div>
+                {viewFilesLoading ? (
+                  <div className="text-xs text-slate-500">Carregando arquivos...</div>
+                ) : viewFiles.length === 0 ? (
+                  <div className="text-xs text-slate-500">Nenhum arquivo encontrado.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {viewFiles.map((f) => (
+                      <div key={f.path} className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-medium text-slate-800">{f.fileName}</div>
+                          <div className="truncate text-[11px] text-slate-500">{f.path}</div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 gap-2"
+                          disabled={!f.signedUrl}
+                          onClick={() => {
+                            if (!f.signedUrl) return;
+                            window.open(f.signedUrl, "_blank", "noopener,noreferrer");
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Abrir
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewTarget(null)}
-              className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+            <Button
+              variant="outline"
+              onClick={() => setViewTarget(null)}
+              className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            >
               Fechar
             </Button>
-            {viewTarget && (
-              <Button
-                className="bg-teal-600 text-white hover:bg-teal-700"
-                onClick={() => {
-                  navigate(`/admin/descricao-cirurgica/editar/${viewTarget.id}`);
-                  setViewTarget(null);
-                }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Confirmar Exclusão */}
+      {/* Modal Confirmar Remoção */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogTitle>Confirmar remoção</DialogTitle>
             <DialogDescription>
-              Deseja realmente excluir a descrição do prontuário{" "}
-              <strong>{deleteTarget?.prontuario || deleteTarget?.id}</strong>?
-              Esta ação não pode ser desfeita.
+              Deseja realmente remover os anexos da descrição cirúrgica do registro{" "}
+              <strong>{deleteTarget?.numero_guia_internacao || deleteTarget?.id}</strong>?
+              Esta ação não exclui o faturamento.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}
-              className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+              className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            >
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Excluindo..." : "Excluir"}
+              {deleting ? "Removendo..." : "Remover"}
             </Button>
           </DialogFooter>
         </DialogContent>
