@@ -44,6 +44,8 @@ import GuiaSolicitacaoPage from "./pages/GuiaSolicitacao";
 import GuiaSolicitacaoFormPage from "./pages/GuiaSolicitacaoForm";
 import GuiaAutorizacaoPage from "./pages/GuiaAutorizacao";
 import GuiaAutorizacaoFormPage from "./pages/GuiaAutorizacaoForm";
+import GuiaHonorariosPage from "./pages/GuiaHonorarios";
+import GuiaHonorariosFormPage from "./pages/GuiaHonorariosForm";
 import DescricaoCirurgicaAdminPage from "./pages/DescricaoCirurgicaAdmin";
 import DescricaoCirurgicaAdminFormPage from "./pages/DescricaoCirurgicaAdminForm";
 
@@ -154,6 +156,10 @@ const App = () => (
           <Route path="/admin/guia-autorizacao" element={<GuiaAutorizacaoPage />} />
           <Route path="/admin/guia-autorizacao/nova" element={<GuiaAutorizacaoFormPage />} />
           <Route path="/admin/guia-autorizacao/editar/:id" element={<GuiaAutorizacaoFormPage />} />
+
+          <Route path="/admin/guia-honorarios" element={<GuiaHonorariosPage />} />
+          <Route path="/admin/guia-honorarios/nova" element={<GuiaHonorariosFormPage />} />
+          <Route path="/admin/guia-honorarios/editar/:id" element={<GuiaHonorariosFormPage />} />
 
           <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
           <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />

@@ -102,6 +102,7 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/faturamento")) return "faturamento";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
+    if (path.startsWith("/admin/guia-honorarios")) return "documentos";
     if (path.startsWith("/admin/descricao-cirurgica")) return "documentos";
     if (path.startsWith("/descricao-cirurgica")) return "documentos";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
@@ -126,6 +127,7 @@ const AdminSidebar = ({
     const path = location.pathname;
     if (path.startsWith("/admin/guia-solicitacao")) return "guia-solicitacao";
     if (path.startsWith("/admin/guia-autorizacao")) return "guia-autorizacao";
+    if (path.startsWith("/admin/guia-honorarios")) return "guia-honorarios";
     if (path.startsWith("/admin/descricao-cirurgica")) return "descricao-cirurgica";
     return undefined;
   }, [location.pathname, documentosSubsection]);
@@ -325,7 +327,7 @@ const AdminSidebar = ({
               {featureEnabled("menu_documentos_guia_honorarios") ? (
                 <button
                   className={currentDocumentosSub === "guia-honorarios" ? blockItemActive : blockItemInactive}
-                  onClick={() => navigate("/descricao-cirurgica")}
+                  onClick={() => navigate("/admin/guia-honorarios")}
                 >
                   <span className="ml-7 flex items-center gap-1.5">
                     <Upload className="h-3.5 w-3.5 opacity-70" />
