@@ -14,8 +14,6 @@ import {
   ImageIcon,
   ExternalLink,
   Loader2,
-  Eye,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -239,7 +237,6 @@ function DocumentosTab({ guiaId }: { guiaId: string }) {
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const [pdfViewer, setPdfViewer] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -325,23 +322,13 @@ function DocumentosTab({ guiaId }: { guiaId: string }) {
                   alt={doc.fileName}
                   className="h-full w-full object-cover transition group-hover:scale-105"
                 />
-              ) : doc.isPdf ? (
-                <div className="flex flex-col items-center gap-2">
-                  {/* Ícone PDF vermelho */}
-                  <div className="flex h-16 w-14 flex-col items-center justify-center rounded-lg bg-rose-50 shadow-sm ring-1 ring-rose-100">
-                    <FileIcon className="h-8 w-8 text-rose-500" />
-                    <span className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-rose-500">PDF</span>
-                  </div>
-                  {doc.signedUrl && (
-                    <button
-                      onClick={() => setPdfViewer({ url: doc.signedUrl!, name: doc.fileName })}
-                      className="flex items-center gap-1.5 rounded-full bg-rose-500 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-rose-600"
-                    >
-                      <Eye className="h-3 w-3" />
-                      Visualizar PDF
-                    </button>
-                  )}
-                </div>
+              ) : doc.isPdf && doc.signedUrl ? (
+                <iframe
+                  src={doc.signedUrl}
+                  title={doc.fileName}
+                  className="h-full w-full border-0 pointer-events-none"
+                  scrolling="no"
+                />
               ) : (
                 <div className="flex flex-col items-center gap-2 text-slate-300">
                   <FileIcon className="h-12 w-12" />
@@ -355,8 +342,6 @@ function DocumentosTab({ guiaId }: { guiaId: string }) {
               <div className="flex min-w-0 items-center gap-2">
                 {doc.isImage ? (
                   <ImageIcon className="h-4 w-4 flex-shrink-0 text-emerald-400" />
-                ) : doc.isPdf ? (
-                  <FileIcon className="h-4 w-4 flex-shrink-0 text-rose-400" />
                 ) : (
                   <FileIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
                 )}
@@ -385,11 +370,22 @@ function DocumentosTab({ guiaId }: { guiaId: string }) {
                 aria-label="Ampliar imagem"
               />
             )}
+
+            {/* Clique para abrir PDF em nova aba */}
+            {doc.isPdf && doc.signedUrl && (
+              <a
+                href={doc.signedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute inset-0 h-40 w-full cursor-pointer"
+                aria-label="Abrir PDF"
+              />
+            )}
           </div>
         ))}
       </div>
 
-      {/* Lightbox imagem */}
+      {/* Lightbox simples */}
       {lightbox && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
@@ -407,49 +403,6 @@ function DocumentosTab({ guiaId }: { guiaId: string }) {
           >
             ✕
           </button>
-        </div>
-      )}
-
-      {/* Modal PDF inline */}
-      {pdfViewer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div
-            className="relative flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header do modal */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <FileIcon className="h-4 w-4 text-rose-500" />
-                <span className="max-w-xs truncate text-sm font-medium text-slate-700">
-                  {pdfViewer.name}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={pdfViewer.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Abrir em nova aba
-                </a>
-                <button
-                  onClick={() => setPdfViewer(null)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            {/* iframe PDF */}
-            <iframe
-              src={pdfViewer.url}
-              title={pdfViewer.name}
-              className="h-full w-full flex-1 border-0"
-            />
-          </div>
         </div>
       )}
     </>
