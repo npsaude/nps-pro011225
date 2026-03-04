@@ -154,7 +154,11 @@ const expandFilesToUploadItems = async (files: File[]): Promise<UploadItem[]> =>
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hospitalId } = (location.state ?? {}) as { hospitalId?: string };
+  const { hospitalId, faturamentoId: initialFaturamentoId, initialView } = (location.state ?? {}) as {
+    hospitalId?: string;
+    faturamentoId?: string;
+    initialView?: ViewState | "email_faturamento";
+  };
 
   // Arquivos da Guia de Autorização
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
@@ -285,6 +289,45 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     };
 
     void carregarNomeMedico();
+  }, []);
+
+  // Retomar faturamento existente (vindo dos botões de "Enviar documento")
+  useEffect(() => {
+    if (!initialFaturamentoId || !initialView) return;
+
+    const retomar = async () => {
+      // Carregar dados do faturamento para pré-preencher hospital/clínica
+      const { data, error } = await supabase
+        .from("faturamentos")
+        .select("id, instituicao_cirurgia_id, instituicao_faturamento_id, hospital_nome")
+        .eq("id", initialFaturamentoId)
+        .single();
+
+      if (error || !data) return;
+
+      setFaturamentoId(data.id as string);
+
+      if (data.instituicao_cirurgia_id) {
+        setSelectedHospitalId(data.instituicao_cirurgia_id as string);
+      }
+      if (data.hospital_nome) {
+        setSelectedHospitalName(data.hospital_nome as string);
+      }
+      if (data.instituicao_faturamento_id) {
+        setSelectedClinicaId(data.instituicao_faturamento_id as string);
+      }
+
+      if (initialView === "email_faturamento") {
+        // Mostrar o diálogo de email diretamente
+        setView("start");
+        setShowEmailDialog(true);
+      } else {
+        setView(initialView as ViewState);
+      }
+    };
+
+    void retomar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const carregarHospitaisDoMedico = async () => {
@@ -643,7 +686,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Guia de solicitação processada com sucesso!");
       setFilesSolicitacao([]);
       setShowAnalyzingScreen(false);
-      setView("pergunta_guia_autorizacao");
+      if (initialFaturamentoId) {
+        navigate("/medico/faturamentos");
+      } else {
+        setView("pergunta_guia_autorizacao");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -706,7 +753,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (error) throw error;
 
       showSuccess("Tipo de cirurgia salvo. Continuando sem guia de autorização.");
-      setView("upload_descricao");
+      if (initialFaturamentoId) {
+        navigate("/medico/faturamentos");
+      } else {
+        setView("upload_descricao");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -879,7 +930,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Guia de autorização processada com sucesso!");
       setFilesGuia([]);
       setShowAnalyzingScreen(false);
-      setView("upload_descricao");
+      if (initialFaturamentoId) {
+        navigate("/medico/faturamentos");
+      } else {
+        setView("upload_descricao");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -1019,7 +1074,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Descrição cirúrgica processada com sucesso!");
       setFilesDescricao([]);
       setShowAnalyzingScreen(false);
-      setView("pergunta_honorarios");
+      if (initialFaturamentoId) {
+        navigate("/medico/faturamentos");
+      } else {
+        setView("pergunta_honorarios");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -1577,14 +1636,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleEmailsSent = async () => {
     console.log("[handleEmailsSent] Emails enviados, finalizando faturamento...");
     setShowEmailDialog(false);
-    await finalizarFaturamento();
+    if (initialFaturamentoId) {
+      // Veio do fluxo de retomada — voltar para a lista de faturamentos
+      navigate("/medico/faturamentos");
+    } else {
+      await finalizarFaturamento();
+    }
   };
 
   // Callback quando usuário pula o envio de emails
   const handleSkipEmails = async () => {
     console.log("[handleSkipEmails] Usuário pulou envio de emails, finalizando faturamento...");
     setShowEmailDialog(false);
-    await finalizarFaturamento();
+    if (initialFaturamentoId) {
+      navigate("/medico/faturamentos");
+    } else {
+      await finalizarFaturamento();
+    }
   };
 
   // Função para finalizar o faturamento (mudar status para ATIVO)

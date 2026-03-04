@@ -81,8 +81,26 @@ function getEmailBadge(steps: BillingDocStep[]) {
   );
 }
 
-function DocsRows({ steps }: { steps: BillingDocStep[] }) {
+function DocsRows({ steps, faturamentoId }: { steps: BillingDocStep[]; faturamentoId: string }) {
   const navigate = useNavigate();
+
+  const getTargetView = (stepId: string) => {
+    switch (stepId) {
+      case "guia_solicitacao": return "upload_solicitacao";
+      case "guia_autorizacao": return "pergunta_guia_autorizacao";
+      case "descricao_cirurgica": return "upload_descricao";
+      case "email_faturamento": return "email_faturamento";
+      default: return null;
+    }
+  };
+
+  const handleAction = (stepId: string) => {
+    const targetView = getTargetView(stepId);
+    if (!targetView) return;
+    navigate("/medico/faturamentos/enviar", {
+      state: { faturamentoId, initialView: targetView },
+    });
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -112,24 +130,15 @@ function DocsRows({ steps }: { steps: BillingDocStep[] }) {
             </span>
           </div>
 
-          {!s.sent && (
+          {!s.sent && s.id !== "guia_honorarios" && (
             <Button
               type="button"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                if (s.id === "email_faturamento") {
-                  navigate("/medico/faturamentos/enviar");
-                } else {
-                  navigate("/medico/faturamentos/enviar");
-                }
+                handleAction(s.id);
               }}
-              className={
-                "h-7 shrink-0 rounded-lg px-2.5 text-[11px] font-semibold " +
-                (s.id === "email_faturamento"
-                  ? "bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40"
-                  : "bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40")
-              }
+              className="h-7 shrink-0 rounded-lg px-2.5 text-[11px] font-semibold bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40"
             >
               {s.id === "email_faturamento" ? (
                 <>
@@ -320,7 +329,7 @@ export default function MedicoBillingCard({
                   <div className="mb-2 text-[12px] font-semibold text-[#D4A017]">
                     Documentos
                   </div>
-                  <DocsRows steps={record.steps} />
+                  <DocsRows steps={record.steps} faturamentoId={record.id} />
                 </div>
               </div>
             </AccordionContent>
