@@ -156,8 +156,6 @@ const AdminSidebar = ({
 
   const blockContainer =
     "mt-1 rounded-2xl bg-sidebar-accent/40 p-2 text-xs text-sidebar-foreground ring-1 ring-sidebar-border";
-  const blockContainerActive =
-    "mt-1 rounded-2xl bg-primary/15 p-2 text-xs text-sidebar-foreground ring-1 ring-primary/30";
 
   const blockItemBase =
     "flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs transition-colors";
@@ -271,24 +269,12 @@ const AdminSidebar = ({
           )}
 
           {/* ── Documentos ── */}
-          <div className={currentSection === "documentos" ? blockContainerActive : blockContainer}>
-            <div
-              className={
-                "flex items-center gap-3 rounded-2xl px-1.5 py-1.5 " +
-                (currentSection === "documentos" ? "bg-primary text-primary-foreground shadow-md" : "")
-              }
-            >
-              <span
-                className={
-                  "flex h-8 w-8 items-center justify-center rounded-xl " +
-                  (currentSection === "documentos"
-                    ? "bg-primary/20 text-primary-foreground"
-                    : "bg-sidebar-accent text-sidebar-foreground")
-                }
-              >
+          <div className={blockContainer}>
+            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
                 <FolderOpen className="h-4 w-4" />
               </span>
-              <span className={"text-xs font-semibold " + (currentSection === "documentos" ? "text-primary-foreground" : "text-sidebar-foreground")}>
+              <span className="text-xs font-semibold text-sidebar-foreground">
                 Documentos
               </span>
             </div>
@@ -361,24 +347,12 @@ const AdminSidebar = ({
           </div>
 
           {/* ── Cadastro ── */}
-          <div className={currentSection === "cadastro" ? blockContainerActive : blockContainer}>
-            <div
-              className={
-                "flex items-center gap-3 rounded-2xl px-1.5 py-1.5 " +
-                (currentSection === "cadastro" ? "bg-primary text-primary-foreground shadow-md" : "")
-              }
-            >
-              <span
-                className={
-                  "flex h-8 w-8 items-center justify-center rounded-xl " +
-                  (currentSection === "cadastro"
-                    ? "bg-primary/20 text-primary-foreground"
-                    : "bg-sidebar-accent text-sidebar-foreground")
-                }
-              >
+          <div className={blockContainer}>
+            <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
                 <Users className="h-4 w-4" />
               </span>
-              <span className={"text-xs font-semibold " + (currentSection === "cadastro" ? "text-primary-foreground" : "text-sidebar-foreground")}>
+              <span className="text-xs font-semibold text-sidebar-foreground">
                 Cadastro
               </span>
             </div>
