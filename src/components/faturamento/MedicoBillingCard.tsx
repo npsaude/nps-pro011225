@@ -128,7 +128,7 @@ function DocsRows({ steps }: { steps: BillingDocStep[] }) {
                 "h-7 shrink-0 rounded-lg px-2.5 text-[11px] font-semibold " +
                 (s.id === "email_faturamento"
                   ? "bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40"
-                  : "bg-[#D4A017]/15 hover:bg-[#D4A017]/25 text-[#D4A017] border border-[#D4A017]/30")
+                  : "bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40")
               }
             >
               {s.id === "email_faturamento" ? (
