@@ -1331,7 +1331,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         .update({ guia_honorarios_id: guiaCreated.id })
         .eq("id", faturamentoId);
 
-      setView("preview_honorarios");
+      if (initialFaturamentoId) {
+        // Fluxo de retomada: após gerar, volta para a lista
+        navigate("/medico/faturamentos");
+      } else {
+        setView("preview_honorarios");
+      }
     } catch (err) {
       console.error("Erro ao gerar guia de honorários:", err);
       showError("Erro ao gerar a guia de honorários.");
@@ -1341,7 +1346,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Função para pular a guia de honorários e finalizar
   const handlePularGuiaHonorarios = async () => {
-    await finalizarFaturamento();
+    if (initialFaturamentoId) {
+      navigate("/medico/faturamentos");
+    } else {
+      await finalizarFaturamento();
+    }
   };
 
   // Função para gerar PDF da guia de honorários

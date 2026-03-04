@@ -62,6 +62,7 @@ function DocRows({ steps, faturamentoId }: { steps: BillingDocStep[]; faturament
       case "guia_solicitacao": return "upload_solicitacao";
       case "guia_autorizacao": return "pergunta_guia_autorizacao";
       case "descricao_cirurgica": return "upload_descricao";
+      case "guia_honorarios": return "pergunta_honorarios";
       case "email_faturamento": return "email_faturamento";
       default: return null;
     }
@@ -103,7 +104,7 @@ function DocRows({ steps, faturamentoId }: { steps: BillingDocStep[]; faturament
             </span>
           </div>
 
-          {!s.sent && s.id !== "guia_honorarios" && (
+          {!s.sent && (
             <Button
               type="button"
               size="sm"
@@ -114,6 +115,11 @@ function DocRows({ steps, faturamentoId }: { steps: BillingDocStep[]; faturament
                 <>
                   <Mail className="mr-1 h-3 w-3" />
                   Enviar Email
+                </>
+              ) : s.id === "guia_honorarios" ? (
+                <>
+                  <FileText className="mr-1 h-3 w-3" />
+                  Gerar Guia
                 </>
               ) : (
                 <>
