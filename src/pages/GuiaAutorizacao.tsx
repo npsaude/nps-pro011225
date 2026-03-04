@@ -219,20 +219,19 @@ const GuiaAutorizacaoPage: React.FC = () => {
                     <TableHead>Hospital / Clínica</TableHead>
                     <TableHead>Data Cirurgia</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                      <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
                         Carregando...
                       </TableCell>
                     </TableRow>
                   ) : paginated.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                      <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-400">
                         Nenhuma guia de autorização encontrada.
                       </TableCell>
                     </TableRow>
@@ -259,9 +258,6 @@ const GuiaAutorizacaoPage: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-xs text-slate-500">
                           {g.tipo_cirurgia || "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {statusBadge(g.status_pagamento)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
