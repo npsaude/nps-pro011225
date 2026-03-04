@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import BellButton from "@/components/admin/BellButton";
 import UserAvatarButton from "@/components/admin/UserAvatarButton";
+import SurgeryQuotaBadge from "@/components/admin/SurgeryQuotaBadge";
 
 export default function AdminHeaderActions(props: { notificationsCount?: number }) {
   const { notificationsCount = 0 } = props;
@@ -24,6 +25,9 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
   const { systemUser } = useSystemUser();
   const { status: subscriptionStatus } = useSubscriptionStatus();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const isMedico = role === "MEDICO";
 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";
@@ -84,6 +88,8 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
   return (
     <div className="flex items-center gap-2">
       <BellButton count={notificationsCount} onClick={() => {}} />
+
+      {isMedico && <SurgeryQuotaBadge />}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
