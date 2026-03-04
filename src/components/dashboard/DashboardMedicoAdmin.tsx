@@ -38,12 +38,28 @@ import { supabase } from "@/integrations/supabase/client";
 
 type MonthBar = { month: string; valor: number };
 type InstituicaoRow = { nome: string; quantidade: number };
-type TipoCirurgiaSlice = { name: string; value: number };
+type AtuacaoSlice = { name: string; value: number };
 
 const PIE_COLORS = [
-  "#38bdf8", "#22c55e", "#f97316", "#a78bfa", "#f43f5e",
-  "#facc15", "#14b8a6", "#e879f9", "#fb923c", "#6366f1",
+  "#38bdf8",
+  "#22c55e",
+  "#f97316",
+  "#a78bfa",
+  "#f43f5e",
+  "#facc15",
+  "#14b8a6",
+  "#e879f9",
+  "#fb923c",
+  "#6366f1",
 ];
+
+const ATUACAO_LABEL: Record<string, string> = {
+  CIRURGIAO: "Cirurgião",
+  PRIMEIRO_AUXILIAR: "Auxiliar 1",
+  SEGUNDO_AUXILIAR: "Auxiliar 2",
+  TERCEIRO_AUXILIAR: "Auxiliar 3",
+  ANESTESISTA: "Anestesista",
+};
 
 type Stats = {
   qtdFaturamentos: number;
@@ -70,7 +86,9 @@ function buildLast12Months(): { key: string; label: string }[] {
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+    const label = d
+      .toLocaleDateString("pt-BR", { month: "short" })
+      .replace(".", "");
     months.push({ key, label });
   }
   return months;
@@ -84,7 +102,7 @@ export default function DashboardMedicoAdmin() {
   });
   const [chartData, setChartData] = useState<MonthBar[]>([]);
   const [instituicoes, setInstituicoes] = useState<InstituicaoRow[]>([]);
-  const [tipoCirurgiaData, setTipoCirurgiaData] = useState<TipoCirurgiaSlice[]>([]);
+  const [atuacaoData, setAtuacaoData] = useState<AtuacaoSlice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -93,16 +111,19 @@ export default function DashboardMedicoAdmin() {
     async function load() {
       setLoading(true);
 
-      // ── Busca faturamentos (para qtd, emails e hospital_nome) ──
+      // ── Busca faturamentos (para qtd, emails, hospital e atuação) ──
       const { data: fats, error: fatError } = await supabase
         .from("faturamentos")
         .select(
-          "id, email_status, hospital_nome, data_cirurgia, created_at, guia_solicitacao_id, tipo_cirurgia"
+          "id, email_status, hospital_nome, data_cirurgia, created_at, guia_solicitacao_id, atuou_como",
         )
         .eq("status", "ATIVO");
 
       if (cancelled) return;
-      if (fatError || !fats) { setLoading(false); return; }
+      if (fatError || !fats) {
+        setLoading(false);
+        return;
+      }
 
       // ── Busca itens via guia_solicitacao para somar valor_total ──
       const { data: itens, error: itensError } = await supabase
@@ -114,20 +135,15 @@ export default function DashboardMedicoAdmin() {
       const itensData = itensError ? [] : (itens ?? []);
 
       // Mapa guia_id → faturamento (para cruzar datas e hospital)
-      const guiaToFat: Record<string, typeof fats[0]> = {};
+      const guiaToFat: Record<string, (typeof fats)[0]> = {};
       fats.forEach((f) => {
         if (f.guia_solicitacao_id) guiaToFat[f.guia_solicitacao_id] = f;
       });
 
       // ── KPIs ──
       const qtdFaturamentos = fats.length;
-      const valorFaturado = itensData.reduce(
-        (acc, r) => acc + toNumber(r.valor_total),
-        0
-      );
-      const emailsNaoEnviados = fats.filter(
-        (r) => r.email_status === "NAO_ENVIADO"
-      ).length;
+      const valorFaturado = itensData.reduce((acc, r) => acc + toNumber(r.valor_total), 0);
+      const emailsNaoEnviados = fats.filter((r) => r.email_status === "NAO_ENVIADO").length;
 
       setStats({ qtdFaturamentos, valorFaturado, emailsNaoEnviados });
 
@@ -153,7 +169,7 @@ export default function DashboardMedicoAdmin() {
         months.map(({ key, label }) => ({
           month: label.charAt(0).toUpperCase() + label.slice(1),
           valor: monthMap[key],
-        }))
+        })),
       );
 
       // ── Principais instituições (por número de faturamentos) ──
@@ -170,24 +186,27 @@ export default function DashboardMedicoAdmin() {
 
       setInstituicoes(sorted);
 
-      // ── Gráfico pizza: tipos de cirurgia ──
-      const tipoMap: Record<string, number> = {};
+      // ── Gráfico pizza: atuação (atuou_como) ──
+      const atuacaoMap: Record<string, number> = {};
       fats.forEach((r) => {
-        const tipo = r.tipo_cirurgia?.trim() || "Não informado";
-        tipoMap[tipo] = (tipoMap[tipo] ?? 0) + 1;
+        const raw = String(r.atuou_como ?? "").trim().toUpperCase();
+        const label = ATUACAO_LABEL[raw] ?? "Não informado";
+        atuacaoMap[label] = (atuacaoMap[label] ?? 0) + 1;
       });
 
-      const tipoSlices = Object.entries(tipoMap)
+      const atuacaoSlices = Object.entries(atuacaoMap)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value);
 
-      setTipoCirurgiaData(tipoSlices);
+      setAtuacaoData(atuacaoSlices);
 
       setLoading(false);
     }
 
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const kpis = [
@@ -252,18 +271,18 @@ export default function DashboardMedicoAdmin() {
           );
         })}
 
-        {/* 4º card: Gráfico pizza tipos de cirurgia */}
+        {/* 4º card: Gráfico pizza atuação */}
         <Card className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]">
           <CardContent className="flex h-36 flex-col rounded-3xl p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
-              Tipos de Cirurgia
+              Atuação
             </p>
-            <div className="flex-1 mt-1">
+            <div className="mt-1 flex-1">
               {loading ? (
                 <div className="flex h-full items-center justify-center text-[11px] text-slate-400">
                   Carregando...
                 </div>
-              ) : tipoCirurgiaData.length === 0 ? (
+              ) : atuacaoData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-[11px] text-slate-400">
                   Sem dados
                 </div>
@@ -271,7 +290,7 @@ export default function DashboardMedicoAdmin() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={tipoCirurgiaData}
+                      data={atuacaoData}
                       cx="50%"
                       cy="50%"
                       innerRadius={20}
@@ -281,7 +300,7 @@ export default function DashboardMedicoAdmin() {
                       nameKey="name"
                       stroke="none"
                     >
-                      {tipoCirurgiaData.map((_, index) => (
+                      {atuacaoData.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={PIE_COLORS[index % PIE_COLORS.length]}
@@ -296,10 +315,7 @@ export default function DashboardMedicoAdmin() {
                         fontSize: 11,
                         color: "#e2e8f0",
                       }}
-                      formatter={(value: number, name: string) => [
-                        `${value}`,
-                        name,
-                      ]}
+                      formatter={(value: number, name: string) => [`${value}`, name]}
                     />
                     <Legend
                       verticalAlign="middle"
@@ -307,7 +323,12 @@ export default function DashboardMedicoAdmin() {
                       layout="vertical"
                       iconType="circle"
                       iconSize={6}
-                      wrapperStyle={{ fontSize: 10, color: "#94a3b8", lineHeight: "16px", right: 0 }}
+                      wrapperStyle={{
+                        fontSize: 10,
+                        color: "#94a3b8",
+                        lineHeight: "16px",
+                        right: 0,
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -352,9 +373,7 @@ export default function DashboardMedicoAdmin() {
                     tickLine={false}
                     axisLine={false}
                     tick={{ fontSize: 11, fill: "#64748B" }}
-                    tickFormatter={(v) =>
-                      v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
-                    }
+                    tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
                   />
                   <RechartsTooltip
                     contentStyle={{
@@ -389,11 +408,9 @@ export default function DashboardMedicoAdmin() {
           </CardHeader>
           <CardContent className="overflow-x-auto pt-0 pb-3">
             {loading ? (
-              <p className="text-xs text-slate-400 px-2 py-4">Carregando...</p>
+              <p className="px-2 py-4 text-xs text-slate-400">Carregando...</p>
             ) : instituicoes.length === 0 ? (
-              <p className="text-xs text-slate-400 px-2 py-4">
-                Nenhum faturamento encontrado.
-              </p>
+              <p className="px-2 py-4 text-xs text-slate-400">Nenhum faturamento encontrado.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -416,7 +433,7 @@ export default function DashboardMedicoAdmin() {
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
                             <Building2 className="h-3.5 w-3.5 text-slate-500" />
                           </div>
-                          <span className="text-xs font-medium text-slate-900 dark:text-slate-50 truncate max-w-[120px]">
+                          <span className="max-w-[120px] truncate text-xs font-medium text-slate-900 dark:text-slate-50">
                             {inst.nome}
                           </span>
                         </div>
