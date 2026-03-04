@@ -185,33 +185,14 @@ const DashboardMedico: React.FC = () => {
         if (v > 0) total += v;
       }
 
-      // Recebido: baseado em faturamentos pagos (usa valor_total_liquido quando existir)
-      let received = 0;
-      for (const r of fatRows) {
-        const paid =
-          Boolean(r.data_pagamento) ||
-          ["pago_integral", "pago_parcial"].includes(String(r.status_pagamento));
-        if (!paid) continue;
+      // Recebido: ainda não implementada a etapa de conciliação — sempre 0
+      const received = 0;
 
-        const v = Math.max(toNumber(r.valor_total_liquido), toNumber(r.valor_total_faturado));
-        if (v > 0) received += v;
-      }
-
-      // Heurística extra: guias com data_fim_faturamento no passado contam como recebidas (se não houver faturamentos)
-      if (received === 0) {
-        const today = new Date();
-        for (const r of guiaRows) {
-          const fim = toDateOrNull(r.data_fim_faturamento);
-          if (!fim || fim > today) continue;
-          const v = toNumber(r.valor_total_honorarios);
-          if (v > 0) received += v;
-        }
-      }
-
-      const toReceive = Math.max(0, total - received);
+      // Total a Receber = valor faturado (conciliação pendente)
+      const toReceive = total;
 
       setFaturado(total > 0 ? formatCurrency(total) : "—");
-      setRecebido(received > 0 ? formatCurrency(received) : formatCurrency(0));
+      setRecebido(formatCurrency(0));
       setTotalAReceber(total > 0 ? formatCurrency(toReceive) : "—");
 
       if (guiaRes.error && fatRes.error) {
