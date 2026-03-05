@@ -313,8 +313,33 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (data.hospital_nome) {
         setSelectedHospitalName(data.hospital_nome as string);
       }
+
+      // Buscar nome da instituição de faturamento
       if (data.instituicao_faturamento_id) {
         setSelectedClinicaId(data.instituicao_faturamento_id as string);
+
+        const { data: clinicaData } = await supabase
+          .from("clinicas")
+          .select("nome_fantasia")
+          .eq("id", data.instituicao_faturamento_id)
+          .maybeSingle();
+
+        if (clinicaData?.nome_fantasia) {
+          setSelectedClinicaName(clinicaData.nome_fantasia as string);
+        }
+      }
+
+      // Se hospital_nome não veio, buscar pelo instituicao_cirurgia_id
+      if (!data.hospital_nome && data.instituicao_cirurgia_id) {
+        const { data: hospitalData } = await supabase
+          .from("clinicas")
+          .select("nome_fantasia")
+          .eq("id", data.instituicao_cirurgia_id)
+          .maybeSingle();
+
+        if (hospitalData?.nome_fantasia) {
+          setSelectedHospitalName(hospitalData.nome_fantasia as string);
+        }
       }
 
       if (initialView === "email_faturamento") {
