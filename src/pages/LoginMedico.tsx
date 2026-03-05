@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -22,6 +22,33 @@ import {
 import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
 import { SUBSCRIPTION_EXPIRED_CODE } from "@/services/subscription-validity-service";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
+import { carregarAppSettings } from "@/services/app-settings-service";
+
+const FALLBACK_YOUTUBE_VIDEO_ID = "5w1NdK6GtEE";
+
+function extractYouTubeId(input: string | null | undefined): string | null {
+  const raw = String(input ?? "").trim();
+  if (!raw) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) return raw;
+  try {
+    const url = new URL(raw);
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.replace("/", "").trim();
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (url.hostname.includes("youtube.com")) {
+      const v = url.searchParams.get("v");
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+      const embedMatch = url.pathname.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+      if (embedMatch?.[1]) return embedMatch[1];
+      const shortsMatch = url.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+      if (shortsMatch?.[1]) return shortsMatch[1];
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 type Mode = "login" | "register";
 
@@ -47,7 +74,38 @@ const LoginMedico = () => {
   const [registerPasswordVisible, setRegisterPasswordVisible] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
 
+  // Video background
+  const [youtubeSetting, setYoutubeSetting] = useState<string | null>(null);
+
   const isLogin = mode === "login";
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const settings = await carregarAppSettings();
+        if (!alive) return;
+        setYoutubeSetting(settings?.videoYoutube ?? null);
+      } catch {
+        if (!alive) return;
+        setYoutubeSetting(null);
+      }
+    };
+    void load();
+    return () => { alive = false; };
+  }, []);
+
+  const videoId = useMemo(() => {
+    return (
+      extractYouTubeId(youtubeSetting) ??
+      extractYouTubeId(FALLBACK_YOUTUBE_VIDEO_ID)
+    );
+  }, [youtubeSetting]);
+
+  const youtubeEmbedUrl = useMemo(() => {
+    if (!videoId) return null;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1`;
+  }, [videoId]);
 
   const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -204,18 +262,35 @@ const LoginMedico = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#0b0b0b] text-[#F5F5F5]">
       <SubscriptionExpiredDialog
         open={subscriptionExpiredOpen}
         onOpenChange={setSubscriptionExpiredOpen}
       />
 
-      {/* Overlay + glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-[#121212]/90 backdrop-blur-sm" />
-      <div className="pointer-events-none absolute -top-24 -right-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(212,160,23,0.18)_0,transparent_62%)] blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(212,160,23,0.10)_0,transparent_60%)] blur-3xl" />
+      {/* Background video */}
+      {youtubeEmbedUrl ? (
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <iframe
+            className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
+            src={youtubeEmbedUrl}
+            title="CONMEDIC background"
+            frameBorder={0}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            tabIndex={-1}
+          />
+        </div>
+      ) : null}
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-sm flex-col items-stretch justify-center px-4 py-10">
+      {/* Máscara transparente */}
+      <div className="absolute inset-0 z-10 h-full w-full bg-transparent" />
+
+      {/* Overlays visuais */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-black/5" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.10)_0,rgba(0,0,0,0.25)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.06)_0,rgba(0,0,0,0.25)_55%)]" />
+
+      <div className="relative z-20 mx-auto flex min-h-screen w-full max-w-sm flex-col items-stretch justify-center px-4 py-10">
         {/* Marca */}
         <div className="mb-7 flex flex-col items-center">
           <div className="mb-3 flex items-center gap-3">
@@ -480,7 +555,7 @@ const LoginMedico = () => {
           )}
         </div>
 
-        <div className="mt-6 text-center text-[11px] text-[#9CA3AF]">
+        <div className="mt-6 text-center text-[11px] text-white/80 drop-shadow-sm">
           <button
             type="button"
             className="hover:text-[#D4A017] transition-colors"
