@@ -540,7 +540,7 @@ const Login = () => {
           </div>
 
           <p className="text-[10px] font-medium text-white/90 drop-shadow-md">
-            © 2025 NP Saúde Pró. Plataforma segura.
+            © ConMedic. Plataforma segura.
           </p>
         </div>
       </div>
