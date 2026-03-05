@@ -33,6 +33,8 @@ interface SendBillingEmailsDialogProps {
   instituicaoCirurgiaNome?: string;
   instituicaoFaturamentoNome?: string;
   instituicoesDiferentes: boolean;
+  /** Quando true, pula a tela de atuação e vai direto para confirmação de envio */
+  skipAtuacaoScreen?: boolean;
   onEmailsSent: () => void;
   onSkip: () => void;
 }
@@ -68,6 +70,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
   instituicaoCirurgiaNome,
   instituicaoFaturamentoNome,
   instituicoesDiferentes,
+  skipAtuacaoScreen = false,
   onEmailsSent,
   onSkip,
 }) => {
@@ -109,6 +112,25 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
     const run = async () => {
       try {
+        // Se skipAtuacaoScreen=true, verificar se já tem atuou_como salvo no banco
+        if (skipAtuacaoScreen) {
+          const { data: fat } = await supabase
+            .from("faturamentos")
+            .select("atuou_como")
+            .eq("id", faturamentoId)
+            .maybeSingle();
+
+          if (cancelled) return;
+
+          if (fat?.atuou_como) {
+            setAtuacao(fat.atuou_como as Atuacao);
+          }
+
+          // Pular direto para confirmação de envio
+          setScreen("confirm-send");
+          return;
+        }
+
         const functionUrl =
           "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
 
@@ -178,7 +200,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     return () => {
       cancelled = true;
     };
-  }, [open, faturamentoId, userEmail, userName, userCrm, descricaoCirurgicaTexto]);
+  }, [open, faturamentoId, userEmail, userName, userCrm, descricaoCirurgicaTexto, skipAtuacaoScreen]);
 
   const isAtuacaoReconhecida = !!atuacaoReconhecida;
 

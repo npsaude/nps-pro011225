@@ -3118,6 +3118,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           instituicaoCirurgiaNome={selectedHospitalName}
           instituicaoFaturamentoNome={selectedClinicaName}
           instituicoesDiferentes={selectedHospitalId !== selectedClinicaId}
+          skipAtuacaoScreen={!!initialFaturamentoId}
           onEmailsSent={handleEmailsSent}
           onSkip={handleSkipEmails}
         />
