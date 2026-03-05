@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -81,13 +81,24 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     return norm.length > 0;
   });
 
+  // Track whether the dry-run already ran for this open session
+  const dryRunDoneRef = useRef(false);
+
   const atuacaoLabel = useMemo(() => {
     if (!atuacao) return "";
     return ATUACAO_LABEL[atuacao];
   }, [atuacao]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // Reset when dialog closes
+      dryRunDoneRef.current = false;
+      return;
+    }
+
+    // Only run once per open session
+    if (dryRunDoneRef.current) return;
+    dryRunDoneRef.current = true;
 
     setScreen("atuacao");
     setResultMessage("");
@@ -128,31 +139,30 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         const reconhecida = (result?.atuacao_reconhecida ?? null) as Atuacao | null;
         setAtuacaoReconhecida(reconhecida);
 
-        if (reconhecida && !atuacao) {
+        if (reconhecida) {
           setAtuacao(reconhecida);
-          return;
-        }
+        } else {
+          const team = (result?.team ?? null) as TeamInfo | null;
 
-        const team = (result?.team ?? null) as TeamInfo | null;
+          if (team && userCrm) {
+            const guess = reconhecerAtuacao({
+              descricaoCirurgicaTexto,
+              userNome: userName,
+              userCrm,
+              cirurgiaoNome: team.cirurgiao_principal_nome,
+              cirurgiaoCrm: team.cirurgiao_principal_crm,
+              auxiliar1Nome: team.auxiliar1_nome,
+              auxiliar1Crm: team.auxiliar1_crm,
+              auxiliar2Nome: team.auxiliar2_nome,
+              auxiliar2Crm: team.auxiliar2_crm,
+              auxiliar3Nome: team.auxiliar3_nome,
+              auxiliar3Crm: team.auxiliar3_crm,
+              anestesistaNome: team.anestesista_nome,
+              anestesistaCrm: team.anestesista_crm,
+            });
 
-        if (team && userCrm && !atuacao) {
-          const guess = reconhecerAtuacao({
-            descricaoCirurgicaTexto,
-            userNome: userName,
-            userCrm,
-            cirurgiaoNome: team.cirurgiao_principal_nome,
-            cirurgiaoCrm: team.cirurgiao_principal_crm,
-            auxiliar1Nome: team.auxiliar1_nome,
-            auxiliar1Crm: team.auxiliar1_crm,
-            auxiliar2Nome: team.auxiliar2_nome,
-            auxiliar2Crm: team.auxiliar2_crm,
-            auxiliar3Nome: team.auxiliar3_nome,
-            auxiliar3Crm: team.auxiliar3_crm,
-            anestesistaNome: team.anestesista_nome,
-            anestesistaCrm: team.anestesista_crm,
-          });
-
-          if (guess) setAtuacao(guess);
+            if (guess) setAtuacao(guess);
+          }
         }
 
         // Se não precisa atuação, pula direto para a confirmação de envio.
@@ -168,15 +178,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
     return () => {
       cancelled = true;
     };
-  }, [
-    open,
-    faturamentoId,
-    userEmail,
-    userName,
-    userCrm,
-    descricaoCirurgicaTexto,
-    atuacao,
-  ]);
+  }, [open, faturamentoId, userEmail, userName, userCrm, descricaoCirurgicaTexto]);
 
   const isAtuacaoReconhecida = !!atuacaoReconhecida;
 
@@ -186,8 +188,8 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
       return;
     }
 
-    // Salva a atuação no faturamento já na confirmação.
-    if (requiresAtuacao && atuacao) {
+    // Salva a atuação no faturamento já na confirmação (sempre que houver atuação selecionada).
+    if (atuacao) {
       const { error } = await supabase
         .from("faturamentos")
         .update({
