@@ -548,6 +548,101 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     );
   }
 
+  // 5.1) Reconhecer atuação do médico logado e salvar em atuou_como
+  try {
+    // Buscar nome e CRM do médico logado (id_user = auth.uid)
+    const { data: usuarioData } = await supabase
+      .from("usuarios_sistema")
+      .select("nome, crm")
+      .eq("id_user", userId)
+      .maybeSingle();
+
+    const userNome = usuarioData?.nome ?? "";
+    const userCrm = usuarioData?.crm ? String(usuarioData.crm) : "";
+
+    if (userNome || userCrm) {
+      // Dados da equipe extraídos pela IA
+      const cirurgiaoNome = faturamentoData.cirurgiao_nome ?? null;
+      const cirurgiaoCrm = faturamentoData.cirurgiao_crm ?? null;
+      const auxiliar1Nome = faturamentoData.auxiliar1_nome ?? null;
+      const auxiliar1Crm = faturamentoData.auxiliar1_crm ?? null;
+      const auxiliar2Nome = faturamentoData.auxiliar2_nome ?? null;
+      const auxiliar2Crm = faturamentoData.auxiliar2_crm ?? null;
+      const anestesistaNome = faturamentoData.anestesista_nome ?? null;
+      const anestesistaCrm = faturamentoData.anestesista_crm ?? null;
+
+      // Funções auxiliares de normalização (inline)
+      const normalizeDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
+      const normalizeTextLocal = (s: string) =>
+        String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+      const cleanToken = (s: string) => normalizeTextLocal(s).replace(/[^a-z0-9]/g, "");
+      const firstNameFn = (input: string): string => {
+        const parts = normalizeTextLocal(input).split(" ").filter(Boolean);
+        if (parts.length === 0) return "";
+        const first = cleanToken(parts[0]);
+        if (["dr", "dra", "doutor", "doutora"].includes(first)) return cleanToken(parts[1] ?? "");
+        return first;
+      };
+
+      type Atuacao = "CIRURGIAO" | "PRIMEIRO_AUXILIAR" | "SEGUNDO_AUXILIAR" | "TERCEIRO_AUXILIAR" | "ANESTESISTA";
+
+      const candidates: Array<{ atuacao: Atuacao; nome: string | null; crm: string | null }> = [
+        { atuacao: "CIRURGIAO", nome: cirurgiaoNome, crm: cirurgiaoCrm },
+        { atuacao: "PRIMEIRO_AUXILIAR", nome: auxiliar1Nome, crm: auxiliar1Crm },
+        { atuacao: "SEGUNDO_AUXILIAR", nome: auxiliar2Nome, crm: auxiliar2Crm },
+        { atuacao: "ANESTESISTA", nome: anestesistaNome, crm: anestesistaCrm },
+      ];
+
+      const crmUser = normalizeDigits(userCrm);
+      let atuacaoReconhecida: Atuacao | null = null;
+
+      // 1) Match por CRM
+      if (crmUser) {
+        for (const c of candidates) {
+          if (c.crm && normalizeDigits(c.crm) === crmUser) {
+            atuacaoReconhecida = c.atuacao;
+            break;
+          }
+        }
+      }
+
+      // 2) Fallback: match por primeiro nome
+      if (!atuacaoReconhecida && userNome) {
+        const userFirst = firstNameFn(userNome);
+        if (userFirst) {
+          for (const c of candidates) {
+            const nomeFirst = firstNameFn(c.nome ?? "");
+            if (nomeFirst && nomeFirst === userFirst) {
+              atuacaoReconhecida = c.atuacao;
+              break;
+            }
+          }
+        }
+      }
+
+      if (atuacaoReconhecida) {
+        console.log("[process-descricao-cirurgica] Atuação reconhecida:", atuacaoReconhecida, "para userId:", userId);
+        const { error: atuacaoError } = await supabase
+          .from("faturamentos")
+          .update({
+            atuou_como: atuacaoReconhecida,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", faturamentoId);
+
+        if (atuacaoError) {
+          console.error("[process-descricao-cirurgica] Erro ao salvar atuou_como:", atuacaoError);
+        } else {
+          console.log("[process-descricao-cirurgica] atuou_como salvo com sucesso:", atuacaoReconhecida);
+        }
+      } else {
+        console.log("[process-descricao-cirurgica] Atuação não reconhecida para userId:", userId, "crm:", userCrm, "nome:", userNome);
+      }
+    }
+  } catch (atuacaoErr) {
+    console.error("[process-descricao-cirurgica] Erro ao reconhecer atuação:", atuacaoErr);
+  }
+
   // 6) Atualizar os itens de faturamento existentes com quantidade_executada
   // ou inserir novos procedimentos se não existirem - COM VALIDAÇÃO CBHPM
   if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
