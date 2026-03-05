@@ -1,9 +1,43 @@
-import { AlertTriangle, MailCheck } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, MailCheck, Send, Loader2, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { showError, showSuccess } from "@/utils/toast";
 
 const LOGO_URL =
   "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc3MTAwMjQxMywiZXhwIjoyNDAxNzIyNDEzfQ.EFdbCwJ0scnjf4oFCJRg5YA_JtHfA2LZf_gugIB4WcY";
 
 export default function Welcome() {
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleResend = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user?.email) {
+        showError("Não foi possível identificar seu e-mail. Faça login novamente.");
+        return;
+      }
+
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: user.email,
+      });
+
+      if (error) throw error;
+
+      setSent(true);
+      showSuccess("Link de confirmação reenviado! Verifique sua caixa de entrada.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao reenviar o link.";
+      showError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.14)_0,rgba(18,18,18,1)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.10)_0,rgba(18,18,18,1)_55%)]" />
@@ -62,6 +96,30 @@ export default function Welcome() {
                 </p>
               </div>
             </div>
+
+            {/* Botão Reenviar Link */}
+            <Button
+              onClick={handleResend}
+              disabled={loading || sent}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.3)] hover:shadow-[0_0_30px_rgba(212,160,23,0.5)] transition-shadow disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Reenviando...
+                </>
+              ) : sent ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Link Reenviado!
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Reenviar Link
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
