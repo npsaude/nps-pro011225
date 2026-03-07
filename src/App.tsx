@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { SystemUserProvider } from "@/contexts/SystemUserContext";
 
 import NotFound from "./pages/NotFound";
 import SadtEnviar from "./pages/SadtEnviar";
@@ -59,6 +60,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SystemUserProvider>
         <AuthUrlRouter />
         <InactivityLogout timeoutMinutes={60} />
         <Routes>
@@ -183,6 +185,7 @@ const App = () => (
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </SystemUserProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
