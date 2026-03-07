@@ -88,7 +88,7 @@ const topMetrics: TopMetric[] = [
   },
   {
     id: "sadts-atendidos",
-    title: "GHIs atendidos",
+    title: "Faturamentos atendidos",
     value: "2,8 mil",
     helper: "320 vs. mês anterior",
     icon: Activity,
@@ -227,7 +227,7 @@ const Dashboard = () => {
               <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                 {isMedico
                   ? "Visão geral dos seus faturamentos."
-                  : "Visão geral das GHIs, descrições cirúrgicas e faturamento."}
+                  : "Visão geral dos Faturamentos, descrições cirúrgicas e faturamento."}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -362,7 +362,7 @@ const Dashboard = () => {
                   <Card className="lg:col-span-3 rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        GHIs enviadas x pagas x glosa
+                        Faturamentos enviados x pagos x glosa
                       </CardTitle>
                       <CardDescription className="text-xs text-slate-400">
                         Visão consolidada dos últimos 12 meses
@@ -375,8 +375,8 @@ const Dashboard = () => {
                           <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
                           <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
                           <RechartsTooltip contentStyle={{ borderRadius: 12, borderColor: "#E2E8F0", fontSize: 11 }} />
-                          <Bar dataKey="enviadas" name="GHIs enviadas" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
-                          <Bar dataKey="pagas" name="GHIs pagas" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
+                          <Bar dataKey="enviadas" name="Faturamentos enviados" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
+                          <Bar dataKey="pagas" name="Faturamentos pagos" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
                           <Line type="monotone" dataKey="glosa" name="Glosa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
                         </ComposedChart>
                       </ResponsiveContainer>
