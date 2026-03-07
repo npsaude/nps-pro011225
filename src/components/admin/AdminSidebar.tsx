@@ -138,13 +138,19 @@ function SuperAdminMenu({
             className={currentAssinaturasSub === "assinantes" ? blockItemActive : blockItemInactive}
             onClick={() => navigate("/admin/assinaturas/assinantes")}
           >
-            <span className="ml-7">Assinantes</span>
+            <span className="ml-7 inline-flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 opacity-80" />
+              Assinantes
+            </span>
           </button>
           <button
             className={currentAssinaturasSub === "planos" ? blockItemActive : blockItemInactive}
             onClick={() => navigate("/admin/assinaturas/planos")}
           >
-            <span className="ml-7">Planos</span>
+            <span className="ml-7 inline-flex items-center gap-2">
+              <CreditCard className="h-3.5 w-3.5 opacity-80" />
+              Planos
+            </span>
           </button>
           <button
             className={currentAssinaturasSub === "formulario-site" ? blockItemActive : blockItemInactive}
