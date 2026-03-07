@@ -53,6 +53,7 @@ import RegionBubbleMap from "@/components/dashboard/RegionBubbleMap";
 import DashboardMedicoAdmin from "@/components/dashboard/DashboardMedicoAdmin";
 import { useSystemUser } from "@/hooks/use-system-user";
 import { useSuperAdminMetrics } from "@/hooks/use-superadmin-metrics";
+import { useSuperAdminChartData } from "@/hooks/use-superadmin-chart-data";
 
 const clinicOptions = [
   { id: "todas", name: "Todas as clínicas" },
@@ -195,6 +196,15 @@ const Dashboard = () => {
   const { metrics: saMetrics, loading: saLoading } = useSuperAdminMetrics(
     !systemUserLoading && isSuperAdmin
   );
+
+  const { chartData: saChartData, topDoctors: saTopDoctors, loading: saChartLoading } =
+    useSuperAdminChartData(!systemUserLoading && isSuperAdmin);
+
+  // Dados do gráfico: reais para super_admin, mock para outros
+  const activeChartData = isSuperAdmin ? saChartData : yearlySadtData;
+
+  // Ranking de médicos: reais para super_admin, mock para outros
+  const activeTopDoctors = isSuperAdmin ? saTopDoctors : topDoctorsByRevenue;
 
   // Formata número grande: 2800 → "2,8 mil"
   const formatCount = (n: number | null): string => {
@@ -422,17 +432,33 @@ const Dashboard = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={yearlySadtData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                          <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
-                          <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
-                          <RechartsTooltip contentStyle={{ borderRadius: 12, borderColor: "#E2E8F0", fontSize: 11 }} />
-                          <Bar dataKey="enviadas" name="Faturamentos enviados" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
-                          <Bar dataKey="pagas" name="Faturamentos pagos" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
-                          <Line type="monotone" dataKey="glosa" name="Glosa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                      {isSuperAdmin && saChartLoading ? (
+                        <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Carregando...
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={activeChartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                            <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
+                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }}
+                              tickFormatter={(v) => isSuperAdmin && v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}
+                            />
+                            <RechartsTooltip
+                              contentStyle={{ borderRadius: 12, borderColor: "#E2E8F0", fontSize: 11 }}
+                              formatter={(value: number, name: string) =>
+                                isSuperAdmin
+                                  ? [value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), name]
+                                  : [value, name]
+                              }
+                            />
+                            <Bar dataKey="enviadas" name="Faturamentos enviados" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
+                            <Bar dataKey="pagas" name="Faturamentos pagos" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
+                            <Line type="monotone" dataKey="glosa" name="Glosa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -446,45 +472,60 @@ const Dashboard = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="overflow-x-auto pt-0 pb-3">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                            <TableHead>Médico</TableHead>
-                            <TableHead className="text-right">Faturamento</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {topDoctorsByRevenue.map((doctor, index) => (
-                            <TableRow
-                              key={doctor.id}
-                              className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60 [&>td]:py-1.5"
-                            >
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <span className="w-5 text-[11px] font-semibold text-slate-400">
-                                    {index + 1}º
-                                  </span>
-                                  <Avatar className="h-7 w-7">
-                                    <AvatarImage src={doctor.avatar} alt={doctor.name} />
-                                    <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-medium text-slate-900 dark:text-slate-50">
-                                      {doctor.name}
-                                    </span>
-                                    <span className="text-[11px] text-slate-400">
-                                      {doctor.specialty}
-                                    </span>
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right text-xs font-semibold text-slate-900 dark:text-slate-50">
-                                {doctor.revenue}
-                              </TableCell>
+                      {isSuperAdmin && saChartLoading ? (
+                        <div className="flex items-center justify-center py-10 text-sm text-slate-400">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Carregando...
+                        </div>
+                      ) : activeTopDoctors.length === 0 ? (
+                        <div className="flex items-center justify-center py-10 text-sm text-slate-400">
+                          Sem dados disponíveis
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-b border-[#D9DEE3] text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                              <TableHead>Médico</TableHead>
+                              <TableHead className="text-right">Faturamento</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {activeTopDoctors.map((doctor, index) => (
+                              <TableRow
+                                key={doctor.id}
+                                className="border-b border-slate-50 text-xs hover:bg-[#F5F7F9] dark:border-slate-800 dark:hover:bg-slate-800/60 [&>td]:py-1.5"
+                              >
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-5 text-[11px] font-semibold text-slate-400">
+                                      {index + 1}º
+                                    </span>
+                                    <Avatar className="h-7 w-7">
+                                      {(doctor as any).avatar ? (
+                                        <AvatarImage src={(doctor as any).avatar} alt={doctor.name} />
+                                      ) : null}
+                                      <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-medium text-slate-900 dark:text-slate-50">
+                                        {doctor.name}
+                                      </span>
+                                      {(doctor as any).specialty && (
+                                        <span className="text-[11px] text-slate-400">
+                                          {(doctor as any).specialty}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right text-xs font-semibold text-slate-900 dark:text-slate-50">
+                                  {doctor.revenue}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
                     </CardContent>
                   </Card>
                 </section>
