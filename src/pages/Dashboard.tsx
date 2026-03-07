@@ -5,6 +5,7 @@ import {
   MessageCircle,
   Search,
   ArrowUpRight,
+  Loader2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -51,7 +52,7 @@ import GlosaGauge from "@/components/dashboard/GlosaGauge";
 import RegionBubbleMap from "@/components/dashboard/RegionBubbleMap";
 import DashboardMedicoAdmin from "@/components/dashboard/DashboardMedicoAdmin";
 import { useSystemUser } from "@/hooks/use-system-user";
-import { Loader2 } from "lucide-react";
+import { useSuperAdminMetrics } from "@/hooks/use-superadmin-metrics";
 
 const clinicOptions = [
   { id: "todas", name: "Todas as clínicas" },
@@ -189,6 +190,60 @@ const Dashboard = () => {
 
   const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
+  const isSuperAdmin = role === "SUPER_ADMIN";
+
+  const { metrics: saMetrics, loading: saLoading } = useSuperAdminMetrics(
+    !systemUserLoading && isSuperAdmin
+  );
+
+  // Formata número grande: 2800 → "2,8 mil"
+  const formatCount = (n: number | null): string => {
+    if (n === null) return "—";
+    if (n >= 1000) return `${(n / 1000).toFixed(1).replace(".", ",")} mil`;
+    return String(n);
+  };
+
+  // Cards dinâmicos para super_admin
+  const superAdminMetrics = [
+    {
+      id: "medicos",
+      title: "Quantidade de médicos",
+      value: saLoading ? "..." : formatCount(saMetrics.totalMedicos),
+      helper: "Total de médicos cadastrados",
+      icon: Users,
+      iconBg: "bg-sky-500",
+      isGauge: false,
+    },
+    {
+      id: "faturamentos",
+      title: "Faturamentos atendidos",
+      value: saLoading ? "..." : formatCount(saMetrics.totalFaturamentos),
+      helper: "Total geral da base",
+      icon: Activity,
+      iconBg: "bg-violet-500",
+      isGauge: false,
+    },
+    {
+      id: "glosa-recuperada",
+      title: "Glosa recuperada",
+      value: "—",
+      helper: "Sem dados disponíveis",
+      icon: CheckCircle2,
+      iconBg: "bg-slate-500",
+      isGauge: false,
+    },
+    {
+      id: "valor-glosa-recuperado",
+      title: "Valor de glosa recuperado",
+      value: "—",
+      helper: "Sem dados disponíveis",
+      icon: MessageCircle,
+      iconBg: "bg-slate-500",
+      isGauge: false,
+    },
+  ];
+
+  const activeMetrics = isSuperAdmin ? superAdminMetrics : topMetrics;
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
@@ -218,7 +273,7 @@ const Dashboard = () => {
         <AdminSidebar section="home" />
 
         <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
-          {/* Header (fora do retângulo) */}
+          {/* Header */}
           <header className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col">
               <h1 className="text-[26px] font-semibold tracking-tight text-slate-900 dark:text-slate-50">
@@ -243,9 +298,8 @@ const Dashboard = () => {
             </div>
           </header>
 
-          {/* Conteúdo (dentro do retângulo) */}
+          {/* Conteúdo */}
           <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:bg-slate-900/90">
-            {/* ── Aguardando carregamento do perfil ── */}
             {systemUserLoading && (
               <div className="flex flex-1 items-center justify-center py-32">
                 <Loader2 className="mr-2 h-6 w-6 animate-spin text-slate-400" />
@@ -253,10 +307,8 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* ── Dashboard do MÉDICO ── */}
             {!systemUserLoading && isMedico && <DashboardMedicoAdmin />}
 
-            {/* ── Dashboard do ADMIN / SUPER_ADMIN ── */}
             {!systemUserLoading && !isMedico && (
               <>
                 {/* Filtros principais */}
@@ -314,9 +366,10 @@ const Dashboard = () => {
 
                 {/* Cards de métricas */}
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {topMetrics.map((metric) => {
+                  {activeMetrics.map((metric) => {
                     const Icon = metric.icon;
                     const isGauge = metric.isGauge;
+                    const noData = metric.value === "—";
                     return (
                       <Card
                         key={metric.id}
@@ -329,7 +382,7 @@ const Dashboard = () => {
                                 {metric.title}
                               </p>
                               {!isGauge && (
-                                <p className="mt-1 text-2xl font-semibold">
+                                <p className={`mt-1 text-2xl font-semibold ${noData ? "text-slate-500" : ""}`}>
                                   {metric.value}
                                 </p>
                               )}
@@ -342,13 +395,13 @@ const Dashboard = () => {
                           </div>
                           {isGauge ? (
                             <div className="mt-3 flex flex-1 items-center justify-center">
-                              <GlosaGauge value={metric.gaugeValue ?? 0} />
+                              <GlosaGauge value={(metric as any).gaugeValue ?? 0} />
                             </div>
                           ) : (
                             <div className="flex-1" />
                           )}
-                          <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300">
-                            <ArrowUpRight className="h-3 w-3" />
+                          <div className={`mt-3 flex items-center gap-2 text-[11px] ${noData ? "text-slate-600" : "text-emerald-300"}`}>
+                            {!noData && <ArrowUpRight className="h-3 w-3" />}
                             <span>{metric.helper}</span>
                           </div>
                         </CardContent>
