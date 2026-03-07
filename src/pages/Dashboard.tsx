@@ -209,7 +209,7 @@ const Dashboard = () => {
       id: "medicos",
       title: "Quantidade de médicos",
       value: saLoading ? "..." : formatCount(saMetrics.totalMedicos),
-      helper: "Total de médicos cadastrados",
+      helper: "Assinaturas ativas / em trial",
       icon: Users,
       iconBg: "bg-sky-500",
       isGauge: false,

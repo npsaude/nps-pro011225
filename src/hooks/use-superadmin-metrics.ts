@@ -21,8 +21,15 @@ export function useSuperAdminMetrics(enabled: boolean) {
 
     const fetch = async () => {
       const [medicosRes, faturamentosRes] = await Promise.all([
-        supabase.from("medicos").select("id", { count: "exact", head: true }),
-        supabase.from("faturamentos").select("id", { count: "exact", head: true }),
+        // Médicos ativos = assinaturas ACTIVE ou TRIAL não canceladas
+        supabase
+          .from("subscription_enrollments")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["ACTIVE", "TRIAL"])
+          .or("cancelado.is.null,cancelado.eq.false"),
+        supabase
+          .from("faturamentos")
+          .select("id", { count: "exact", head: true }),
       ]);
 
       if (cancelled) return;
