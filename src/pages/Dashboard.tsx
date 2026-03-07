@@ -542,7 +542,7 @@ const Dashboard = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-2">
-                      <RegionBubbleMap />
+                      <RegionBubbleMap liveData={isSuperAdmin} />
                     </CardContent>
                   </Card>
                 </section>
