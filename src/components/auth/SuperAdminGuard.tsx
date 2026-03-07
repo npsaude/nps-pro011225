@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { useSystemUser } from "@/hooks/use-system-user";
 
 type Props = {
   children: React.ReactNode;
@@ -14,52 +13,31 @@ export default function SuperAdminGuard({
   redirectTo = "/admin/dashboard",
 }: Props) {
   const navigate = useNavigate();
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const { systemUser, loading } = useSystemUser();
+
+  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const isSuperAdmin = role === "SUPER_ADMIN";
 
   useEffect(() => {
-    const check = async () => {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (loading) return;
 
-      if (userError || !userData?.user) {
-        showError("Faça login novamente para acessar esta área.");
-        navigate("/login");
-        setAllowed(false);
-        return;
-      }
+    if (!systemUser) {
+      showError("Faça login novamente para acessar esta área.");
+      navigate("/login");
+      return;
+    }
 
-      const { data: isSuperAdmin, error } = await supabase.rpc("is_super_admin", {
-        p_user_id: userData.user.id,
-      });
+    if (!isSuperAdmin) {
+      showError("Acesso restrito: apenas super_admin.");
+      navigate(redirectTo);
+    }
+  }, [loading, systemUser, isSuperAdmin, navigate, redirectTo]);
 
-      if (error) {
-        showError("Não foi possível validar seu acesso (super_admin).");
-        navigate(redirectTo);
-        setAllowed(false);
-        return;
-      }
+  // Enquanto carrega o contexto, renderiza nada (sem flash de texto)
+  if (loading) return null;
 
-      if (!isSuperAdmin) {
-        showError("Acesso restrito: apenas super_admin.");
-        navigate(redirectTo);
-        setAllowed(false);
-        return;
-      }
-
-      setAllowed(true);
-    };
-
-    void check();
-  }, [navigate, redirectTo]);
-
-  if (allowed === null) {
-    return (
-      <div className="flex min-h-[50vh] w-full items-center justify-center text-sm text-muted-foreground">
-        Validando permissões...
-      </div>
-    );
-  }
-
-  if (!allowed) return null;
+  // Não autorizado — o useEffect já redireciona
+  if (!isSuperAdmin) return null;
 
   return <>{children}</>;
 }
