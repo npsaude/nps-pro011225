@@ -1328,6 +1328,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_cod_sist\}\}/g, "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_cpf\}\}/g, "");
 
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_anestesista_medico\}\}/g, fatData.anestesista_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_anestesista_crm\}\}/g, fatData.anestesista_crm || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_anestesista_cod_sist\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_anestesista_cpf\}\}/g, "");
+
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_medico\}\}/g, fatData.instrumentador_nome || "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_crm\}\}/g, fatData.instrumentador_crm || "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_cod_sist\}\}/g, "");
@@ -1377,6 +1382,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         equipe_aux2_crm: fatData.auxiliar2_crm || null,
         equipe_aux3_medico: fatData.auxiliar3_nome || null,
         equipe_aux3_crm: fatData.auxiliar3_crm || null,
+        equipe_anestesista_medico: fatData.anestesista_nome || null,
+        equipe_anestesista_crm: fatData.anestesista_crm || null,
         equipe_instrumentador_medico: fatData.instrumentador_nome || null,
         equipe_instrumentador_crm: fatData.instrumentador_crm || null,
       };
@@ -2844,7 +2851,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="ghost"
                     className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={handleNovaDescricao}
+                    onClick={() => setView("pergunta_solicitacao")}
                     disabled={isUploading}
                   >
                     Voltar para Novo Faturamento

@@ -75,6 +75,10 @@ type FormValues = {
   equipe_aux3_cod_sist: string;
   equipe_aux3_cpf: string;
   equipe_aux3_crm: string;
+  equipe_anestesista_medico: string;
+  equipe_anestesista_cod_sist: string;
+  equipe_anestesista_cpf: string;
+  equipe_anestesista_crm: string;
   equipe_instrumentador_medico: string;
   equipe_instrumentador_cod_sist: string;
   equipe_instrumentador_cpf: string;
@@ -155,6 +159,10 @@ const defaultValues: FormValues = {
   equipe_aux3_cod_sist: "",
   equipe_aux3_cpf: "",
   equipe_aux3_crm: "",
+  equipe_anestesista_medico: "",
+  equipe_anestesista_cod_sist: "",
+  equipe_anestesista_cpf: "",
+  equipe_anestesista_crm: "",
   equipe_instrumentador_medico: "",
   equipe_instrumentador_cod_sist: "",
   equipe_instrumentador_cpf: "",
@@ -518,8 +526,8 @@ function FormFields({
           { label: "Auxiliar 1", prefix: "equipe_aux1" },
           { label: "Auxiliar 2", prefix: "equipe_aux2" },
           { label: "Auxiliar 3", prefix: "equipe_aux3" },
+          { label: "Anestesista", prefix: "equipe_anestesista" },
           { label: "Instrumentador", prefix: "equipe_instrumentador" },
-          { label: "Perfusionista", prefix: "equipe_perfusionista" },
         ].map(({ label, prefix }) => (
           <div key={prefix} className="sm:col-span-2 lg:col-span-3">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
@@ -731,6 +739,10 @@ const GuiaHonorariosFormPage: React.FC = () => {
         equipe_aux3_cod_sist: str(data.equipe_aux3_cod_sist),
         equipe_aux3_cpf: str(data.equipe_aux3_cpf),
         equipe_aux3_crm: str(data.equipe_aux3_crm),
+        equipe_anestesista_medico: str(data.equipe_anestesista_medico),
+        equipe_anestesista_cod_sist: str(data.equipe_anestesista_cod_sist),
+        equipe_anestesista_cpf: str(data.equipe_anestesista_cpf),
+        equipe_anestesista_crm: str(data.equipe_anestesista_crm),
         equipe_instrumentador_medico: str(data.equipe_instrumentador_medico),
         equipe_instrumentador_cod_sist: str(data.equipe_instrumentador_cod_sist),
         equipe_instrumentador_cpf: str(data.equipe_instrumentador_cpf),
@@ -818,6 +830,10 @@ const GuiaHonorariosFormPage: React.FC = () => {
       equipe_aux3_cod_sist: n(values.equipe_aux3_cod_sist),
       equipe_aux3_cpf: n(values.equipe_aux3_cpf),
       equipe_aux3_crm: n(values.equipe_aux3_crm),
+      equipe_anestesista_medico: n(values.equipe_anestesista_medico),
+      equipe_anestesista_cod_sist: n(values.equipe_anestesista_cod_sist),
+      equipe_anestesista_cpf: n(values.equipe_anestesista_cpf),
+      equipe_anestesista_crm: n(values.equipe_anestesista_crm),
       equipe_instrumentador_medico: n(values.equipe_instrumentador_medico),
       equipe_instrumentador_cod_sist: n(values.equipe_instrumentador_cod_sist),
       equipe_instrumentador_cpf: n(values.equipe_instrumentador_cpf),
