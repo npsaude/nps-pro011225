@@ -29,11 +29,15 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
   const [systemUser, setSystemUser] = useState<DbSystemUser | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const loadedOnceRef = useRef(false);
+  const systemUserRef = useRef<DbSystemUser | null>(null);
+
+  // Mantém o ref sincronizado
+  systemUserRef.current = systemUser;
 
   const load = useCallback(async (force = false) => {
     // Evita setar loading: true se já temos dados (evita flash nos guards)
-    if (!force && loadedOnceRef.current && systemUser) {
-      // Reload silencioso em background
+    if (!force && loadedOnceRef.current && systemUserRef.current) {
+      // Reload silencioso em background — não seta loading
     } else {
       setLoading(true);
     }
@@ -105,7 +109,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
         );
       }
     }
-  }, [systemUser]);
+  }, []);
 
   useEffect(() => {
     void load(true);
@@ -127,8 +131,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
     });
 
     return () => sub.subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   return (
     <SystemUserContext.Provider value={{ loading, systemUser, error, reload: () => void load(true) }}>
