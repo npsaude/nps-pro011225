@@ -41,6 +41,13 @@ interface ProcedimentoCirurgico {
   via_acesso?: string;
 }
 
+interface ItenFaturamento {
+  id: string;
+  codigo_procedimento: string | null;
+  descricao_procedimento: string | null;
+  quantidade_executada: number | null;
+}
+
 interface FaturamentoData {
   id: string;
   paciente_nome: string | null;
@@ -65,9 +72,6 @@ interface FaturamentoData {
   auxiliar3_crm: string | null;
   anestesista_nome: string | null;
   anestesista_crm: string | null;
-
-  procedimentos: ProcedimentoCirurgico[] | null;
-  quantidade_procedimentos_realizados: number | null;
 }
 
 interface ModeloEmailRow {
@@ -578,9 +582,7 @@ serve(async (req) => {
       auxiliar3_nome,
       auxiliar3_crm,
       anestesista_nome,
-      anestesista_crm,
-      procedimentos,
-      quantidade_procedimentos_realizados
+      anestesista_crm
     `,
     )
     .eq("id", faturamentoId)
@@ -945,6 +947,27 @@ serve(async (req) => {
     );
   }
 
+  // 4.1) Buscar itens de faturamento para montar linhas da tabela de procedimentos cirúrgicos
+  const { data: itensFaturamento } = await supabase
+    .from("itens_faturamento")
+    .select("id, codigo_procedimento, descricao_procedimento, quantidade_executada")
+    .eq("faturamento_id", faturamentoId);
+
+  const itens = (itensFaturamento ?? []) as ItenFaturamento[];
+
+  console.log("[send-billing-emails] Itens de faturamento encontrados:", itens.length);
+
+  const procedimentosRows = itens.length > 0
+    ? itens.map((item) => `
+        <tr>
+          <td>${item.descricao_procedimento ?? ""}</td>
+          <td style="text-align:center">${item.codigo_procedimento ?? ""}</td>
+          <td style="text-align:center">${item.quantidade_executada ?? ""}</td>
+          <td style="text-align:center"></td>
+        </tr>
+      `).join("")
+    : '<tr><td colspan="4" style="text-align:center;color:#888;padding:4mm">Nenhum procedimento registrado</td></tr>';
+
   const commonVars = {
     paciente_nome: fat.paciente_nome || "N/A",
     convenio: fat.paciente_convenio || "N/A",
@@ -960,6 +983,8 @@ serve(async (req) => {
     usuario_crm: usuarioCrm || "",
 
     atuou_como: atuacaoLabel(atuacaoFinal) || "",
+
+    procedimentos_cirurgicos_rows: procedimentosRows,
   };
 
   // 5) Enviar emails
