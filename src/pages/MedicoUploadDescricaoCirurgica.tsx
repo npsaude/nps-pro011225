@@ -66,8 +66,12 @@ interface FaturamentoData {
   auxiliar1_crm?: string;
   auxiliar2_nome?: string;
   auxiliar2_crm?: string;
+  auxiliar3_nome?: string;
+  auxiliar3_crm?: string;
   anestesista_nome?: string;
   anestesista_crm?: string;
+  instrumentador_nome?: string;
+  instrumentador_crm?: string;
 }
 
 interface ItemFaturamento {
@@ -1182,8 +1186,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           auxiliar1_crm,
           auxiliar2_nome,
           auxiliar2_crm,
+          auxiliar3_nome,
+          auxiliar3_crm,
           anestesista_nome,
-          anestesista_crm
+          anestesista_crm,
+          instrumentador_nome,
+          instrumentador_crm
         `)
         .eq("id", faturamentoId)
         .single();
@@ -1279,13 +1287,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux2_cod_sist\}\}/g, "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux2_cpf\}\}/g, "");
 
-      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_medico\}\}/g, "");
-      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_crm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_medico\}\}/g, fatData.auxiliar3_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_crm\}\}/g, fatData.auxiliar3_crm || "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_cod_sist\}\}/g, "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_aux3_cpf\}\}/g, "");
 
-      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_medico\}\}/g, "");
-      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_crm\}\}/g, "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_medico\}\}/g, fatData.instrumentador_nome || "");
+      htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_crm\}\}/g, fatData.instrumentador_crm || "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_cod_sist\}\}/g, "");
       htmlPreenchido = htmlPreenchido.replace(/\{\{equipe_instrumentador_cpf\}\}/g, "");
 
@@ -1331,6 +1339,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         equipe_aux1_crm: fatData.auxiliar1_crm || null,
         equipe_aux2_medico: fatData.auxiliar2_nome || null,
         equipe_aux2_crm: fatData.auxiliar2_crm || null,
+        equipe_aux3_medico: fatData.auxiliar3_nome || null,
+        equipe_aux3_crm: fatData.auxiliar3_crm || null,
+        equipe_instrumentador_medico: fatData.instrumentador_nome || null,
+        equipe_instrumentador_crm: fatData.instrumentador_crm || null,
       };
 
       // Adicionar procedimentos

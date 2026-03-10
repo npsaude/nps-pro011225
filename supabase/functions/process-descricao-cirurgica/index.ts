@@ -390,7 +390,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         Authorization: `Bearer ${openaiToken}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4.1",
         temperature: 0,
         max_tokens: 4096,
         response_format: { type: "json_object" },
