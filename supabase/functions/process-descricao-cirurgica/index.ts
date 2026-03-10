@@ -811,7 +811,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         supabase,
         codigoOriginal,
         descricaoOriginal,
-        0.6 // limiar de similaridade 60%
+        0.7 // limiar de similaridade 70% (aumentado para reduzir falsos positivos)
       );
 
       if (!validacao.valido || !validacao.codigo_validado) {
@@ -824,8 +824,14 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       const codigoProcedimento = validacao.codigo_validado;
       const descricaoProcedimento = validacao.descricao_validada;
 
+      // Log detalhado: mostrar se houve mudança entre o que a IA extraiu e o que foi validado
+      if (codigoOriginal !== codigoProcedimento) {
+        console.log(
+          `[process-descricao-cirurgica] ⚠️ Código CORRIGIDO pela validação CBHPM: "${codigoOriginal}" → "${codigoProcedimento}" (${validacao.metodo_validacao}, similaridade: ${validacao.similaridade ? (validacao.similaridade * 100).toFixed(1) + '%' : 'N/A'})`
+        );
+      }
       console.log(
-        `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
+        `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento} - ${descricaoProcedimento?.slice(0, 60)}`
       );
 
       if (semItensPreExistentes) {

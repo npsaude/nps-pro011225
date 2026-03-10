@@ -133,6 +133,47 @@ export async function validarProcedimentoCbhpm(
     }
 
     console.log(`[cbhpm-validator] ❌ Código "${codigoLimpo}" não encontrado na CBHPM`);
+
+    // 1.5. Tentar busca por código aproximado (prefixo similar)
+    // A IA pode ter errado 1-2 dígitos do código. Buscar códigos com mesmo prefixo (primeiros 5 dígitos).
+    if (codigoLimpo.length >= 5) {
+      const prefixo = codigoLimpo.slice(0, 5);
+      const { data: candidatosPorPrefixo, error: prefixError } = await supabase
+        .from("cbhpm_cirurgias")
+        .select("codigo, descricao, porte, valor_porte")
+        .like("codigo", `${prefixo}%`);
+
+      if (!prefixError && candidatosPorPrefixo && candidatosPorPrefixo.length > 0 && descricaoLimpa) {
+        // Entre os candidatos com prefixo similar, encontrar o que tem descrição mais parecida
+        let melhorCandidato: CbhpmProcedimento | null = null;
+        let melhorScore = 0;
+
+        for (const cand of candidatosPorPrefixo) {
+          const simDesc = verificarPalavrasChave(descricaoLimpa, cand.descricao);
+          const simLev = calcularSimilaridade(descricaoLimpa, cand.descricao);
+          const score = simLev * 0.4 + simDesc * 0.6;
+
+          if (score > melhorScore) {
+            melhorScore = score;
+            melhorCandidato = cand;
+          }
+        }
+
+        if (melhorCandidato && melhorScore >= 0.5) {
+          console.log(
+            `[cbhpm-validator] ✅ Match por código aproximado (prefixo ${prefixo}, score ${(melhorScore * 100).toFixed(1)}%): "${melhorCandidato.codigo}" - "${melhorCandidato.descricao.slice(0, 50)}..."`
+          );
+          return {
+            valido: true,
+            codigo_validado: melhorCandidato.codigo,
+            descricao_validada: melhorCandidato.descricao,
+            cbhpm_match: melhorCandidato,
+            metodo_validacao: "codigo_exato",
+            similaridade: melhorScore,
+          };
+        }
+      }
+    }
   }
 
   // 2. Se não encontrou por código, tentar por similaridade de descrição
