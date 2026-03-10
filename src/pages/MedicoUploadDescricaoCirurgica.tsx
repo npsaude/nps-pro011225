@@ -1265,7 +1265,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const formatarData = (data: string | null | undefined) => {
         if (!data) return "";
         try {
-          const d = new Date(data);
+          // Se a data já está no formato DD/MM/YYYY, retorna direto
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(data)) return data;
+          // Se está no formato YYYY-MM-DD (ISO), faz split para evitar problema de fuso horário
+          const match = data.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            return `${match[3]}/${match[2]}/${match[1]}`;
+          }
+          // Fallback: tenta parsear com Date usando horário local (meio-dia para evitar shift de fuso)
+          const d = new Date(data + "T12:00:00");
           return d.toLocaleDateString("pt-BR");
         } catch {
           return data;
