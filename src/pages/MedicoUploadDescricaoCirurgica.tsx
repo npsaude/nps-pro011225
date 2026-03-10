@@ -89,6 +89,12 @@ type UploadItem = {
 const isPdfFile = (file: File) =>
   file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
+const isUnsupportedRawFormat = (file: File) => {
+  const rawExtensions = [".dng", ".cr2", ".cr3", ".nef", ".arw", ".orf", ".rw2", ".raf", ".raw"];
+  const name = file.name.toLowerCase();
+  return rawExtensions.some((ext) => name.endsWith(ext));
+};
+
 const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
 const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> => {
@@ -457,13 +463,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
+    const hasRawFiles = selectedFiles.some(isUnsupportedRawFormat);
+    if (hasRawFiles) {
+      showError(
+        "Arquivos RAW (.DNG, .CR2, .NEF, etc.) não são suportados. Por favor, tire fotos no formato JPEG/PNG ou exporte como PDF.",
+      );
+    }
+
     const allowedFiles = selectedFiles.filter(
       (file) =>
-        file.type.startsWith("image/") || file.type === "application/pdf",
+        (file.type.startsWith("image/") || file.type === "application/pdf") &&
+        !isUnsupportedRawFormat(file),
     );
     const ignoredCount = selectedFiles.length - allowedFiles.length;
 
-    if (ignoredCount > 0) {
+    if (ignoredCount > 0 && !hasRawFiles) {
       showError(
         "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
       );
@@ -471,9 +485,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
     if (allowedFiles.length === 0) {
       setFilesGuia([]);
-      showError(
-        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
+      if (!hasRawFiles) {
+        showError(
+          "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+        );
+      }
       return;
     }
 
@@ -486,13 +502,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
+    const hasRawFiles = selectedFiles.some(isUnsupportedRawFormat);
+    if (hasRawFiles) {
+      showError(
+        "Arquivos RAW (.DNG, .CR2, .NEF, etc.) não são suportados. Por favor, tire fotos no formato JPEG/PNG ou exporte como PDF.",
+      );
+    }
+
     const allowedFiles = selectedFiles.filter(
       (file) =>
-        file.type.startsWith("image/") || file.type === "application/pdf",
+        (file.type.startsWith("image/") || file.type === "application/pdf") &&
+        !isUnsupportedRawFormat(file),
     );
     const ignoredCount = selectedFiles.length - allowedFiles.length;
 
-    if (ignoredCount > 0) {
+    if (ignoredCount > 0 && !hasRawFiles) {
       showError(
         "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
       );
@@ -500,9 +524,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
     if (allowedFiles.length === 0) {
       setFilesDescricao([]);
-      showError(
-        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
+      if (!hasRawFiles) {
+        showError(
+          "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+        );
+      }
       return;
     }
 
@@ -515,13 +541,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
+    const hasRawFiles = selectedFiles.some(isUnsupportedRawFormat);
+    if (hasRawFiles) {
+      showError(
+        "Arquivos RAW (.DNG, .CR2, .NEF, etc.) não são suportados. Por favor, tire fotos no formato JPEG/PNG ou exporte como PDF.",
+      );
+    }
+
     const allowedFiles = selectedFiles.filter(
       (file) =>
-        file.type.startsWith("image/") || file.type === "application/pdf",
+        (file.type.startsWith("image/") || file.type === "application/pdf") &&
+        !isUnsupportedRawFormat(file),
     );
     const ignoredCount = selectedFiles.length - allowedFiles.length;
 
-    if (ignoredCount > 0) {
+    if (ignoredCount > 0 && !hasRawFiles) {
       showError(
         "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
       );
@@ -529,9 +563,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
     if (allowedFiles.length === 0) {
       setFilesSolicitacao([]);
-      showError(
-        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
+      if (!hasRawFiles) {
+        showError(
+          "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
+        );
+      }
       return;
     }
 

@@ -542,6 +542,9 @@ const Login = () => {
           <p className="text-[10px] font-medium text-white/90 drop-shadow-md">
             © ConMedic. Plataforma segura.
           </p>
+          <p className="text-[9px] font-medium text-white/50 mt-1">
+            Versão 1.2.2
+          </p>
         </div>
       </div>
     </div>
