@@ -74,38 +74,35 @@ serve(async (req) => {
     );
   }
 
-  // 1) Buscar token da OpenAI em app_settings
+  // 1) Buscar token e modelo da OpenAI em app_settings
   const { data: settings, error: settingsError } = await supabase
     .from("app_settings")
-    .select("openai_api_token")
+    .select("openai_api_token, openai_model")
     .limit(1)
     .maybeSingle();
 
   if (settingsError) {
-    console.error("Erro ao carregar app_settings:", settingsError);
+    console.error(
+      "[process-extrato-pagamento] Erro ao buscar app_settings:",
+      settingsError,
+    );
     return new Response(
       JSON.stringify({
-        error: "Erro ao carregar configurações da aplicação (app_settings).",
-        details: settingsError.message,
+        error: "Erro ao buscar configurações da aplicação.",
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
   const openaiToken =
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
-
-  ﻿
+  const openaiModel =
+    (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
 
   if (!openaiToken) {
-    const msg =
-      "Token da OpenAI não configurado em app_settings (campo openai_api_token).";
-    console.error(msg);
+    console.error("[process-extrato-pagamento] Token da OpenAI não configurado.");
     return new Response(
-      JSON.stringify({ error: msg }),
+      JSON.stringify({ error: "Token da OpenAI não configurado." }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -283,7 +280,9 @@ serve(async (req) => {
         Authorization: `Bearer ${openaiToken}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
+        model: openaiModel,
+        temperature: 0,
+        max_tokens: 16384,
         input: [
           {
             role: "user",
@@ -320,13 +319,13 @@ serve(async (req) => {
 
     const respJson = await resp.json();
 
-    // Registrar uso de tokens da OpenAI
+    // Registrar uso de tokens
     await logOpenAIUsage({
       supabase,
       userId: null,
       faturamentoId: null,
       edgeFunction: "process-extrato-pagamento",
-      model: "gpt-4.1-mini",
+      model: openaiModel,
       usage: respJson?.usage,
     });
 

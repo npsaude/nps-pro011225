@@ -39,6 +39,7 @@ export interface DbAppUser {
 export interface DbAppSettings {
   id: string;
   openaiApiToken: string | null;
+  openaiModel: string | null;
   asaasToken: string | null;
   videoYoutube: string | null;
   createdAt: string;

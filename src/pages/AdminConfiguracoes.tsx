@@ -25,6 +25,7 @@ import {
 import {
   carregarAppSettings,
   salvarTokenOpenAI,
+  salvarModeloOpenAI,
   salvarTokenAsaas,
 } from "@/services/app-settings-service";
 import {
@@ -74,9 +75,11 @@ const ensureDefaults = (templates: { tipo: string; assunto: string; corpo_html: 
 const AdminConfiguracoes = () => {
   const navigate = useNavigate();
   const [token, setToken] = useState("");
+  const [openaiModel, setOpenaiModel] = useState("gpt-4");
   const [asaasToken, setAsaasToken] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [salvandoModelo, setSalvandoModelo] = useState(false);
   const [salvandoAsaas, setSalvandoAsaas] = useState(false);
   const [criandoDemo, setCriandoDemo] = useState(false);
 
@@ -102,6 +105,9 @@ const AdminConfiguracoes = () => {
 
         if (settings?.openaiApiToken) {
           setToken(settings.openaiApiToken);
+        }
+        if (settings?.openaiModel) {
+          setOpenaiModel(settings.openaiModel);
         }
         if (settings?.asaasToken) {
           setAsaasToken(settings.asaasToken);
@@ -152,6 +158,22 @@ const AdminConfiguracoes = () => {
       showError(message);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const handleSalvarModelo = async () => {
+    setSalvandoModelo(true);
+    try {
+      await salvarModeloOpenAI(openaiModel);
+      showSuccess("Modelo OpenAI salvo com sucesso.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o Modelo OpenAI.";
+      showError(message);
+    } finally {
+      setSalvandoModelo(false);
     }
   };
 
@@ -280,33 +302,131 @@ const AdminConfiguracoes = () => {
 
               {/* Submenu/atalhos de Configurações */}
               <div className="grid gap-3 md:grid-cols-2">
-                {/* Bloco para criação de dados de exemplo */}
                 <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
-                        <Database className="h-4 w-4" />
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                        <KeyRound className="h-4 w-4" />
                       </span>
-                      <span>Dados de exemplo</span>
+                      <span>Token da API da OpenAI</span>
                     </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                      Crie automaticamente clínicas, médicos e uma descrição cirúrgica aprovada para demonstrar o funcionamento do sistema.
+                      Insira o token gerado na plataforma da OpenAI para processamento de guias e descrições cirúrgicas.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col items-start justify-between gap-3 text-xs sm:flex-row sm:items-center sm:text-sm">
-                      <p className="max-w-xl text-slate-500 dark:text-slate-400">
-                        Este recurso cria registros apenas se as tabelas ainda estiverem vazias. Você pode utilizá-lo com segurança em ambiente de desenvolvimento para popular os cadastros com exemplos reais.
-                      </p>
+                    <form onSubmit={handleSalvar} className="flex flex-col gap-3">
+                      <Input
+                        type="password"
+                        placeholder="sk-..."
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        className="h-9 w-full bg-white/50 text-xs sm:text-sm"
+                      />
+                      <Button
+                        type="submit"
+                        disabled={salvando}
+                        className="h-9 w-full rounded-full sm:w-auto self-end"
+                      >
+                        {salvando ? "Salvando..." : "Salvar Token"}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200">
+                        <KeyRound className="h-4 w-4" />
+                      </span>
+                      <span>Modelo OpenAI</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Selecione a versão do GPT para utilizar nas requisições.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col gap-3">
+                      <select
+                        value={openaiModel}
+                        onChange={(e) => setOpenaiModel(e.target.value)}
+                        className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white/50 px-3 py-2 text-xs sm:text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:ring-offset-slate-950 dark:placeholder:text-slate-400 dark:focus:ring-slate-300"
+                      >
+                        <option value="gpt-4">gpt-4</option>
+                        <option value="gpt-4-32k">gpt-4-32k</option>
+                        <option value="gpt-4-turbo">gpt-4-turbo</option>
+                        <option value="gpt-4-vision">gpt-4-vision</option>
+                        <option value="gpt-4o">gpt-4o</option>
+                        <option value="gpt-4o-mini">gpt-4o-mini</option>
+                        <option value="gpt-4.1">gpt-4.1</option>
+                        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                        <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+                        <option value="gpt-5">gpt-5</option>
+                        <option value="gpt-5.1">gpt-5.1</option>
+                        <option value="gpt-5.2">gpt-5.2</option>
+                        <option value="gpt-5.3">gpt-5.3</option>
+                        <option value="gpt-5-turbo">gpt-5-turbo</option>
+                        <option value="gpt-5-mini">gpt-5-mini</option>
+                        <option value="gpt-5-nano">gpt-5-nano</option>
+                      </select>
                       <Button
                         type="button"
-                        className="h-9 rounded-full px-4 text-xs sm:text-sm"
-                        onClick={handleCriarDadosExemplo}
-                        disabled={criandoDemo}
+                        onClick={handleSalvarModelo}
+                        disabled={salvandoModelo}
+                        className="h-9 w-full rounded-full sm:w-auto self-end"
                       >
-                        {criandoDemo ? "Criando dados..." : "Criar dados de exemplo"}
+                        {salvandoModelo ? "Salvando..." : "Salvar Modelo"}
                       </Button>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Bloco para Asaas */}
+                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                        <KeyRound className="h-4 w-4" />
+                      </span>
+                      <span>Token Asaas (Sandbox)</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Token do ambiente sandbox que será usado pelo motor de assinatura (Edge Functions).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      className="space-y-4 text-xs sm:text-sm"
+                      onSubmit={handleSalvarAsaas}
+                    >
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                          Token Asaas
+                        </label>
+                        <Input
+                          type="password"
+                          value={asaasToken}
+                          onChange={(e) => setAsaasToken(e.target.value)}
+                          placeholder="$aact_..."
+                          className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
+                          disabled={carregando}
+                        />
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          Este token não é exposto para o fluxo de assinatura no front-end; apenas a Edge Function usa.
+                        </p>
+                      </div>
+
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          type="submit"
+                          disabled={salvandoAsaas || carregando}
+                          className="h-9 rounded-full px-5 text-xs sm:text-sm"
+                        >
+                          {salvandoAsaas ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
+                    </form>
                   </CardContent>
                 </Card>
 

@@ -156,7 +156,7 @@ serve(async (req) => {
   // 1) Buscar token da OpenAI em app_settings
   const { data: settings, error: settingsError } = await supabase
     .from("app_settings")
-    .select("openai_api_token")
+    .select("openai_api_token, openai_model")
     .limit(1)
     .maybeSingle();
 
@@ -175,6 +175,8 @@ serve(async (req) => {
 
   const openaiToken =
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
+  const openaiModel =
+    (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
 
   if (!openaiToken) {
     console.error("[process-descricao-cirurgica] Token da OpenAI não configurado.");
@@ -391,7 +393,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         Authorization: `Bearer ${openaiToken}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1",
+        model: openaiModel,
         temperature: 0,
         max_tokens: 4096,
         response_format: { type: "json_object" },
@@ -448,7 +450,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
     userId,
     faturamentoId,
     edgeFunction: "process-descricao-cirurgica",
-    model: "gpt-4.1",
+    model: openaiModel,
     usage: completion?.usage,
   });
 

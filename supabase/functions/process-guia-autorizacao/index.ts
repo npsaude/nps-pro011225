@@ -105,7 +105,7 @@ serve(async (req) => {
     console.error("[process-guia-autorizacao] Parâmetros obrigatórios faltando.");
     return new Response(
       JSON.stringify({
-        error: "Parâmetros obrigatórios: userId, faturamentoId e files (com ao menos 1 item).",
+        error: "Parâmetros obrigatórios: userId, faturamentoId e files.",
       }),
       {
         status: 400,
@@ -114,15 +114,18 @@ serve(async (req) => {
     );
   }
 
-  // 1) Buscar token da OpenAI em app_settings
+  // 1) Buscar token e modelo da OpenAI em app_settings
   const { data: settings, error: settingsError } = await supabase
     .from("app_settings")
-    .select("openai_api_token")
+    .select("openai_api_token, openai_model")
     .limit(1)
     .maybeSingle();
 
   if (settingsError) {
-    console.error("[process-guia-autorizacao] Erro ao carregar app_settings:", settingsError);
+    console.error(
+      "[process-guia-autorizacao] Erro ao carregar app_settings:",
+      settingsError,
+    );
     return new Response(
       JSON.stringify({
         error: "Erro ao carregar configurações da aplicação.",
@@ -136,6 +139,8 @@ serve(async (req) => {
 
   const openaiToken =
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
+  const openaiModel =
+    (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
 
   if (!openaiToken) {
     console.error("[process-guia-autorizacao] Token da OpenAI não configurado.");
@@ -290,7 +295,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         Authorization: `Bearer ${openaiToken}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1",
+        model: openaiModel,
         temperature: 0,
         max_tokens: 4096,
         response_format: { type: "json_object" },
@@ -339,13 +344,13 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   const completion = await openaiResponse.json();
   const messageContent = completion?.choices?.[0]?.message?.content;
 
-  // Registrar uso de tokens da OpenAI
+  // Registrar uso de tokens
   await logOpenAIUsage({
     supabase,
     userId,
     faturamentoId,
     edgeFunction: "process-guia-autorizacao",
-    model: "gpt-4.1",
+    model: openaiModel,
     usage: completion?.usage,
   });
 

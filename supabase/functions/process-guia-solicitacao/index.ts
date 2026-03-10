@@ -117,11 +117,11 @@ serve(async (req) => {
 
   const { userId, faturamentoId, files } = body;
 
-  if (!userId || !faturamentoId || !Array.isArray(files) || files.length === 0) {
+  if (!userId || !faturamentoId || !files || !Array.isArray(files) || files.length === 0) {
     console.error("[process-guia-solicitacao] Parâmetros obrigatórios faltando.");
     return new Response(
       JSON.stringify({
-        error: "Parâmetros obrigatórios: userId, faturamentoId e files (com ao menos 1 item).",
+        error: "Parâmetros obrigatórios: userId, faturamentoId e files.",
       }),
       {
         status: 400,
@@ -130,10 +130,10 @@ serve(async (req) => {
     );
   }
 
-  // 1) Buscar token da OpenAI em app_settings
+  // 1) Buscar token e modelo da OpenAI em app_settings
   const { data: settings, error: settingsError } = await supabase
     .from("app_settings")
-    .select("openai_api_token")
+    .select("openai_api_token, openai_model")
     .limit(1)
     .maybeSingle();
 
@@ -143,7 +143,9 @@ serve(async (req) => {
       settingsError,
     );
     return new Response(
-      JSON.stringify({ error: "Erro ao carregar configurações da aplicação." }),
+      JSON.stringify({
+        error: "Erro ao carregar configurações da aplicação.",
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -153,6 +155,8 @@ serve(async (req) => {
 
   const openaiToken =
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
+  const openaiModel =
+    (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
 
   if (!openaiToken) {
     console.error("[process-guia-solicitacao] Token da OpenAI não configurado.");
@@ -313,7 +317,7 @@ Retorne no formato:
         Authorization: `Bearer ${openaiToken}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1",
+        model: openaiModel,
         temperature: 0,
         max_tokens: 4096,
         response_format: { type: "json_object" },
@@ -353,13 +357,13 @@ Retorne no formato:
   const completion = await openaiResponse.json();
   const messageContent = completion?.choices?.[0]?.message?.content;
 
-  // Registrar uso de tokens da OpenAI
+  // Registrar uso de tokens
   await logOpenAIUsage({
     supabase,
     userId,
     faturamentoId,
     edgeFunction: "process-guia-solicitacao",
-    model: "gpt-4.1",
+    model: openaiModel,
     usage: completion?.usage,
   });
 

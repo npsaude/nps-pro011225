@@ -22,6 +22,8 @@ export async function carregarAppSettings(): Promise<DbAppSettings | null> {
     id: (data as any).id,
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    openaiModel:
+      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
@@ -67,6 +69,8 @@ export async function salvarTokenOpenAI(
       id: (data as any).id,
       openaiApiToken:
         (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+      openaiModel:
+        (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
       asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
       videoYoutube:
         (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
@@ -104,6 +108,92 @@ export async function salvarTokenOpenAI(
     id: (data as any).id,
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    openaiModel:
+      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
+    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+    videoYoutube:
+      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+    createdAt:
+      (data as any).createdAt ??
+      (data as any).created_at ??
+      new Date().toISOString(),
+    updatedAt:
+      (data as any).updatedAt ??
+      (data as any).updated_at ??
+      new Date().toISOString(),
+  };
+
+  return mapped;
+}
+
+export async function salvarModeloOpenAI(
+  modelo: string,
+): Promise<DbAppSettings> {
+  // Primeiro tenta carregar o registro existente
+  const existente = await carregarAppSettings();
+
+  if (existente) {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .update({
+        openai_model: modelo,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existente.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      throw new Error(
+        error.message ||
+          "Não foi possível salvar o Modelo OpenAI nas configurações.",
+      );
+    }
+
+    const mapped: DbAppSettings = {
+      id: (data as any).id,
+      openaiApiToken:
+        (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+      openaiModel:
+        (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
+      asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+      videoYoutube:
+        (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+      createdAt:
+        (data as any).createdAt ??
+        (data as any).created_at ??
+        new Date().toISOString(),
+      updatedAt:
+        (data as any).updatedAt ??
+        (data as any).updated_at ??
+        new Date().toISOString(),
+    };
+
+    return mapped;
+  }
+
+  // Se não existir, cria um novo registro
+  const { data, error } = await supabase
+    .from("app_settings")
+    .insert({
+      openai_model: modelo,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível criar o registro de configurações com o Modelo OpenAI.",
+    );
+  }
+
+  const mapped: DbAppSettings = {
+    id: (data as any).id,
+    openaiApiToken:
+      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    openaiModel:
+      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
@@ -146,6 +236,8 @@ export async function salvarTokenAsaas(
       id: (data as any).id,
       openaiApiToken:
         (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+      openaiModel:
+        (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
       asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
       videoYoutube:
         (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
@@ -180,6 +272,8 @@ export async function salvarTokenAsaas(
     id: (data as any).id,
     openaiApiToken:
       (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    openaiModel:
+      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
