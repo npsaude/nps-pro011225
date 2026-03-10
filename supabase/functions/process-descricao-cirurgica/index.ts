@@ -267,6 +267,7 @@ IMPORTANTE:
 Campos a extrair:
 
 DADOS DA EXECUÇÃO (tabela faturamentos):
+- paciente_nome: Nome completo do paciente
 - data_cirurgia: Data da cirurgia (formato DD/MM/YYYY ou YYYY-MM-DD)
 - hora_inicio: Hora de início da cirurgia (formato HH:MM)
 - hora_fim: Hora de término da cirurgia (formato HH:MM)
@@ -285,23 +286,28 @@ EQUIPE CIRÚRGICA (MUITO IMPORTANTE - extrair todos os membros da equipe):
 - auxiliar1_crm: CRM do 1º auxiliar (apenas o número)
 - auxiliar2_nome: Nome completo do 2º auxiliar
 - auxiliar2_crm: CRM do 2º auxiliar (apenas o número)
+- auxiliar3_nome: Nome completo do 3º auxiliar
+- auxiliar3_crm: CRM do 3º auxiliar (apenas o número)
 - anestesista_nome: Nome completo do anestesista
 - anestesista_crm: CRM do anestesista (apenas o número)
+- instrumentador_nome: Nome completo do instrumentador cirúrgico
+- instrumentador_crm: CRM do instrumentador (apenas o número, se disponível)
 
 VALIDAÇÃO:
 - assinatura_medica: Se há assinatura do médico no documento (true/false)
 - data_assinatura: Data da assinatura (formato DD/MM/YYYY ou YYYY-MM-DD)
 
-PROCEDIMENTOS EXECUTADOS (tabela itens_faturamento):
-- procedimentos: Array de procedimentos realizados, cada um com:
-  - codigo_procedimento: Código TUSS ou código do procedimento
-  - descricao_procedimento: Descrição do procedimento realizado
-  - quantidade_executada: Quantidade executada (número)
+PROCEDIMENTOS EXECUTADOS (MUITO IMPORTANTE - extrair TODOS os procedimentos listados):
+- procedimentos: Array com TODOS os procedimentos realizados, cada um com:
+  - codigo_procedimento: Código TUSS ou código do procedimento (extraia exatamente como está no documento)
+  - descricao_procedimento: Descrição completa do procedimento realizado
+  - quantidade_executada: Quantidade executada (número, padrão 1 se não informado)
 
 Responda APENAS com um JSON válido, sem comentários ou explicações extras, no formato abaixo:
 
 {
   "faturamento": {
+    "paciente_nome": string | null,
     "data_cirurgia": string | null,
     "hora_inicio": string | null,
     "hora_fim": string | null,
@@ -316,8 +322,12 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     "auxiliar1_crm": string | null,
     "auxiliar2_nome": string | null,
     "auxiliar2_crm": string | null,
+    "auxiliar3_nome": string | null,
+    "auxiliar3_crm": string | null,
     "anestesista_nome": string | null,
     "anestesista_crm": string | null,
+    "instrumentador_nome": string | null,
+    "instrumentador_crm": string | null,
     "assinatura_medica": boolean | null,
     "data_assinatura": string | null
   },
@@ -441,6 +451,10 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   };
 
   // Dados da execução
+  if (faturamentoData.paciente_nome) {
+    updateData.paciente_nome = faturamentoData.paciente_nome;
+  }
+
   const dataCirurgia = normalizeDate(faturamentoData.data_cirurgia);
   if (dataCirurgia) {
     updateData.data_cirurgia = dataCirurgia;
@@ -508,12 +522,28 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     updateData.auxiliar2_crm = faturamentoData.auxiliar2_crm;
   }
 
+  // Equipe Cirúrgica - 3º Auxiliar
+  if (faturamentoData.auxiliar3_nome) {
+    updateData.auxiliar3_nome = faturamentoData.auxiliar3_nome;
+  }
+  if (faturamentoData.auxiliar3_crm) {
+    updateData.auxiliar3_crm = faturamentoData.auxiliar3_crm;
+  }
+
   // Equipe Cirúrgica - Anestesista
   if (faturamentoData.anestesista_nome) {
     updateData.anestesista_nome = faturamentoData.anestesista_nome;
   }
   if (faturamentoData.anestesista_crm) {
     updateData.anestesista_crm = faturamentoData.anestesista_crm;
+  }
+
+  // Instrumentador
+  if (faturamentoData.instrumentador_nome) {
+    updateData.instrumentador_nome = faturamentoData.instrumentador_nome;
+  }
+  if (faturamentoData.instrumentador_crm) {
+    updateData.instrumentador_crm = faturamentoData.instrumentador_crm;
   }
 
   // Validação/Assinatura
@@ -568,8 +598,12 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
       const auxiliar1Crm = faturamentoData.auxiliar1_crm ?? null;
       const auxiliar2Nome = faturamentoData.auxiliar2_nome ?? null;
       const auxiliar2Crm = faturamentoData.auxiliar2_crm ?? null;
+      const auxiliar3Nome = faturamentoData.auxiliar3_nome ?? null;
+      const auxiliar3Crm = faturamentoData.auxiliar3_crm ?? null;
       const anestesistaNome = faturamentoData.anestesista_nome ?? null;
       const anestesistaCrm = faturamentoData.anestesista_crm ?? null;
+      const instrumentadorNome = faturamentoData.instrumentador_nome ?? null;
+      const instrumentadorCrm = faturamentoData.instrumentador_crm ?? null;
 
       // Funções auxiliares de normalização (inline)
       const normalizeDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
@@ -590,6 +624,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         { atuacao: "CIRURGIAO", nome: cirurgiaoNome, crm: cirurgiaoCrm },
         { atuacao: "PRIMEIRO_AUXILIAR", nome: auxiliar1Nome, crm: auxiliar1Crm },
         { atuacao: "SEGUNDO_AUXILIAR", nome: auxiliar2Nome, crm: auxiliar2Crm },
+        { atuacao: "TERCEIRO_AUXILIAR", nome: auxiliar3Nome, crm: auxiliar3Crm },
         { atuacao: "ANESTESISTA", nome: anestesistaNome, crm: anestesistaCrm },
       ];
 
@@ -669,6 +704,16 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
 
     const existingItemsList = existingItems || [];
 
+    // Se não há itens pré-existentes (cenário sem guia de autorização/solicitação),
+    // todos os procedimentos extraídos devem ser inseridos diretamente.
+    const semItensPreExistentes = existingItemsList.length === 0;
+    console.log(
+      "[process-descricao-cirurgica] Itens pré-existentes:",
+      existingItemsList.length,
+      "| Modo inserção direta:",
+      semItensPreExistentes
+    );
+
     // Função para normalizar texto para comparação (remove acentos, lowercase, trim)
     const normalizeText = (text: string | null | undefined): string => {
       if (!text) return "";
@@ -680,17 +725,14 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         .replace(/\s+/g, " ");
     };
 
-    // Função para verificar se um procedimento já existe
+    // Função para verificar se um procedimento já existe (só usada quando há itens pré-existentes)
     const findExistingItem = (codigo: string | null, descricao: string | null) => {
-      // Primeiro, tentar encontrar por código
       if (codigo) {
         const byCode = existingItemsList.find(
           (item) => item.codigo_procedimento === codigo
         );
         if (byCode) return byCode;
       }
-
-      // Se não encontrou por código, tentar por descrição normalizada
       if (descricao) {
         const normalizedDescricao = normalizeText(descricao);
         const byDescription = existingItemsList.find(
@@ -698,7 +740,6 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         );
         if (byDescription) return byDescription;
       }
-
       return null;
     };
 
@@ -729,45 +770,8 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento}`
       );
 
-      // Verificar se já existe (por código OU por descrição)
-      const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
-
-      if (existingItem) {
-        // Atualizar item existente com quantidade_executada
-        const updateFields: Record<string, unknown> = {
-          quantidade_executada: quantidadeExecutada,
-          medico_id: medicoId,
-          updated_at: new Date().toISOString(),
-        };
-
-        // Atualizar descrição se não tinha e agora tem
-        if (descricaoProcedimento && !existingItem.descricao_procedimento) {
-          updateFields.descricao_procedimento = descricaoProcedimento;
-        }
-
-        // Atualizar código se não tinha e agora tem
-        if (codigoProcedimento && !existingItem.codigo_procedimento) {
-          updateFields.codigo_procedimento = codigoProcedimento;
-        }
-
-        const { error: updateItemError } = await supabase
-          .from("itens_faturamento")
-          .update(updateFields)
-          .eq("id", existingItem.id);
-
-        if (updateItemError) {
-          console.error(
-            "[process-descricao-cirurgica] Erro ao atualizar item:",
-            updateItemError
-          );
-        } else {
-          console.log(
-            "[process-descricao-cirurgica] Item atualizado:",
-            codigoProcedimento || descricaoProcedimento
-          );
-        }
-      } else if (codigoProcedimento || descricaoProcedimento) {
-        // Inserir novo item apenas se tem código OU descrição
+      if (semItensPreExistentes) {
+        // Sem guia de autorização: inserir todos os procedimentos diretamente
         const { data: newItem, error: insertError } = await supabase
           .from("itens_faturamento")
           .insert({
@@ -784,15 +788,68 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
           .single();
 
         if (insertError) {
-          console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
+          console.error("[process-descricao-cirurgica] Erro ao inserir item (modo direto):", insertError);
         } else {
           console.log(
-            "[process-descricao-cirurgica] Novo item inserido:",
+            "[process-descricao-cirurgica] Novo item inserido (modo direto):",
             codigoProcedimento || descricaoProcedimento
           );
-          // Adicionar à lista de existentes para evitar duplicatas no mesmo lote
           if (newItem) {
             existingItemsList.push(newItem);
+          }
+        }
+      } else {
+        // Com itens pré-existentes (veio de guia de autorização): atualizar ou inserir se novo
+        const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
+
+        if (existingItem) {
+          const updateFields: Record<string, unknown> = {
+            quantidade_executada: quantidadeExecutada,
+            medico_id: medicoId,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (descricaoProcedimento && !existingItem.descricao_procedimento) {
+            updateFields.descricao_procedimento = descricaoProcedimento;
+          }
+          if (codigoProcedimento && !existingItem.codigo_procedimento) {
+            updateFields.codigo_procedimento = codigoProcedimento;
+          }
+
+          const { error: updateItemError } = await supabase
+            .from("itens_faturamento")
+            .update(updateFields)
+            .eq("id", existingItem.id);
+
+          if (updateItemError) {
+            console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
+          } else {
+            console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento || descricaoProcedimento);
+          }
+        } else if (codigoProcedimento || descricaoProcedimento) {
+          // Procedimento novo não presente na guia de autorização: inserir
+          const { data: newItem, error: insertError } = await supabase
+            .from("itens_faturamento")
+            .insert({
+              faturamento_id: faturamentoId,
+              medico_id: medicoId,
+              codigo_procedimento: codigoProcedimento ?? null,
+              descricao_procedimento: descricaoProcedimento ?? null,
+              quantidade_autorizada: quantidadeExecutada,
+              quantidade_executada: quantidadeExecutada,
+              quantidade: quantidadeExecutada,
+              status_item: "pendente",
+            })
+            .select("id, codigo_procedimento, descricao_procedimento")
+            .single();
+
+          if (insertError) {
+            console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
+          } else {
+            console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento || descricaoProcedimento);
+            if (newItem) {
+              existingItemsList.push(newItem);
+            }
           }
         }
       }
