@@ -41,7 +41,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
   onConfirm,
   onClose,
 }) => {
-  // State for each procedure's corrected code
+  // Corrections keyed by the index in the FULL procedimentos array
   const [corrections, setCorrections] = useState<
     Record<number, { codigo: string; descricao: string }>
   >({});
@@ -55,12 +55,10 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
 
   if (!open) return null;
 
-  const procedimentosRevisao = procedimentos.filter(
-    (p) => p.necessita_revisao
-  );
+  const totalProcedimentos = procedimentos.length;
+  const qtdInconsistentes = procedimentos.filter((p) => p.necessita_revisao).length;
 
-  if (procedimentosRevisao.length === 0) {
-    // No procedures need review, auto-confirm
+  if (totalProcedimentos === 0) {
     onConfirm();
     return null;
   }
@@ -74,9 +72,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     setSearching((prev) => ({ ...prev, [index]: true }));
 
     try {
-      // Search by code or description
       const isCodeSearch = /^\d+$/.test(query.trim());
-
       let results: CbhpmSearchResult[] = [];
 
       if (isCodeSearch) {
@@ -85,21 +81,14 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
           .select("codigo, descricao, porte")
           .like("codigo", `${query.trim()}%`)
           .limit(10);
-
-        if (!error && data) {
-          results = data as CbhpmSearchResult[];
-        }
+        if (!error && data) results = data as CbhpmSearchResult[];
       } else {
-        // Search by description using ilike
         const { data, error } = await supabase
           .from("cbhpm_cirurgias")
           .select("codigo, descricao, porte")
           .ilike("descricao", `%${query.trim()}%`)
           .limit(10);
-
-        if (!error && data) {
-          results = data as CbhpmSearchResult[];
-        }
+        if (!error && data) results = data as CbhpmSearchResult[];
       }
 
       setSearchResults((prev) => ({ ...prev, [index]: results }));
@@ -110,10 +99,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     }
   };
 
-  const handleSelectResult = (
-    index: number,
-    result: CbhpmSearchResult
-  ) => {
+  const handleSelectResult = (index: number, result: CbhpmSearchResult) => {
     setCorrections((prev) => ({
       ...prev,
       [index]: { codigo: result.codigo, descricao: result.descricao },
@@ -123,38 +109,18 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     setSearchQuery((prev) => ({ ...prev, [index]: "" }));
   };
 
-  const handleAcceptSuggestion = (index: number, proc: ProcedimentoRevisao) => {
-    if (proc.codigo_validado && proc.descricao_validada) {
-      setCorrections((prev) => ({
-        ...prev,
-        [index]: {
-          codigo: proc.codigo_validado!,
-          descricao: proc.descricao_validada!,
-        },
-      }));
-    }
-  };
-
   const handleConfirm = async () => {
     setSaving(true);
 
     try {
-      // For each procedure that needs review, update the itens_faturamento
-      for (let i = 0; i < procedimentosRevisao.length; i++) {
-        const proc = procedimentosRevisao[i];
+      for (let i = 0; i < procedimentos.length; i++) {
+        const proc = procedimentos[i];
         const correction = corrections[i];
 
-        if (!correction) {
-          // Doctor didn't provide a correction and didn't accept suggestion
-          // If there's a validated code, use it; otherwise skip
-          if (proc.codigo_validado && proc.item_faturamento_id) {
-            continue; // Already saved with the validated code
-          }
-          continue;
-        }
+        // Only process procedures that need review AND have a correction
+        if (!proc.necessita_revisao || !correction) continue;
 
         if (proc.item_faturamento_id) {
-          // Update existing item
           const { error } = await supabase
             .from("itens_faturamento")
             .update({
@@ -165,22 +131,17 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
             .eq("id", proc.item_faturamento_id);
 
           if (error) {
-            console.error(
-              "Erro ao atualizar procedimento:",
-              error
-            );
+            console.error("Erro ao atualizar procedimento:", error);
             showError(
               `Erro ao atualizar procedimento ${correction.codigo}: ${error.message}`
             );
           }
         } else if (correction.codigo) {
-          // This was a rejected procedure - we need to insert it
-          // We need the faturamento_id from the first procedure that has one
+          // Rejected procedure — insert new
           const faturamentoItem = procedimentos.find(
             (p) => p.item_faturamento_id
           );
           if (faturamentoItem?.item_faturamento_id) {
-            // Get faturamento_id from existing item
             const { data: itemData } = await supabase
               .from("itens_faturamento")
               .select("faturamento_id, medico_id")
@@ -202,10 +163,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
                 });
 
               if (error) {
-                console.error(
-                  "Erro ao inserir procedimento corrigido:",
-                  error
-                );
+                console.error("Erro ao inserir procedimento corrigido:", error);
               }
             }
           }
@@ -224,9 +182,9 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl p-4">
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[#D4A017]/20 bg-[#0f0f0f] shadow-[0_0_60px_rgba(212,160,23,0.15)]">
+      <div className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-[#D4A017]/20 bg-[#0f0f0f] shadow-[0_0_60px_rgba(212,160,23,0.15)]">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-[#0f0f0f] border-b border-[#D4A017]/15 px-6 py-5">
+        <div className="flex-shrink-0 border-b border-[#D4A017]/15 px-6 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/20">
@@ -237,8 +195,8 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
                   Revisão de Procedimentos
                 </h2>
                 <p className="text-xs text-[#9CA3AF] mt-0.5">
-                  {procedimentosRevisao.length} procedimento(s) precisam da sua
-                  confirmação
+                  {qtdInconsistentes} de {totalProcedimentos} procedimento(s)
+                  precisam da sua confirmação
                 </p>
               </div>
             </div>
@@ -252,75 +210,92 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-4 space-y-4">
+        {/* Body — scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
           <p className="text-xs text-[#9CA3AF] leading-relaxed">
-            O sistema identificou procedimentos cujos códigos podem estar
-            incorretos. Por favor, confirme ou corrija cada procedimento abaixo.
+            Confira os procedimentos extraídos. Os itens destacados em{" "}
+            <span className="text-amber-400 font-semibold">amarelo</span> podem
+            estar com o código incorreto — corrija-os antes de gerar a guia.
           </p>
 
-          {procedimentosRevisao.map((proc, index) => {
+          {procedimentos.map((proc, index) => {
+            const needsReview = proc.necessita_revisao;
             const correction = corrections[index];
-            const isResolved = !!correction;
+            const isResolved = needsReview && !!correction;
             const isSearchOpen = expandedSearch === index;
 
+            // ── Procedure OK (no review needed) ──
+            if (!needsReview) {
+              return (
+                <div
+                  key={index}
+                  className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-block rounded bg-emerald-500/15 px-2 py-0.5 text-xs font-mono text-emerald-300 border border-emerald-500/20">
+                          {proc.codigo_validado || proc.codigo_original || "—"}
+                        </span>
+                        <span className="text-[10px] text-emerald-400/70 uppercase font-semibold tracking-wider">
+                          OK
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[#E5E5E5] leading-snug">
+                        {proc.descricao_validada ||
+                          proc.descricao_original ||
+                          "Sem descrição"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // ── Procedure needs review ──
             return (
               <div
                 key={index}
-                className={`rounded-xl border p-4 transition-colors ${
+                className={`rounded-xl border p-3.5 transition-colors ${
                   isResolved
                     ? "border-emerald-500/30 bg-emerald-500/5"
-                    : "border-amber-500/30 bg-amber-500/5"
+                    : "border-amber-500/40 bg-amber-500/[0.07]"
                 }`}
               >
-                {/* Original info from AI */}
-                <div className="mb-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#9CA3AF] mb-1">
+                {/* Header label */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  {isResolved ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                  )}
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-wider ${
+                      isResolved ? "text-emerald-400" : "text-amber-400"
+                    }`}
+                  >
+                    {isResolved ? "Corrigido" : "Verificar código"}
+                  </span>
+                </div>
+
+                {/* Original extracted data */}
+                <div className="mb-2.5">
+                  <p className="text-[10px] text-[#6B7280] uppercase tracking-wider mb-1">
                     Extraído da descrição cirúrgica
                   </p>
                   <div className="flex items-start gap-2">
-                    <span className="inline-block rounded bg-[#D4A017]/15 px-2 py-0.5 text-xs font-mono text-[#D4A017] border border-[#D4A017]/20">
-                      {proc.codigo_original || "Sem código"}
+                    <span className="inline-block rounded bg-[#D4A017]/15 px-2 py-0.5 text-xs font-mono text-[#D4A017] border border-[#D4A017]/25 flex-shrink-0">
+                      {proc.codigo_original || "???"}
                     </span>
-                    <p className="text-xs text-[#F5F5F5] flex-1">
+                    <p className="text-xs text-[#F5F5F5] leading-snug uppercase">
                       {proc.descricao_original || "Sem descrição"}
                     </p>
                   </div>
                 </div>
 
-                {/* Suggestion from CBHPM validator */}
-                {proc.codigo_validado && (
-                  <div className="mb-3 rounded-lg bg-black/40 border border-[#D4A017]/10 p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400 mb-1">
-                      Sugestão do sistema{" "}
-                      {proc.similaridade
-                        ? `(${(proc.similaridade * 100).toFixed(0)}% similar)`
-                        : ""}
-                    </p>
-                    <div className="flex items-start gap-2">
-                      <span className="inline-block rounded bg-amber-500/15 px-2 py-0.5 text-xs font-mono text-amber-300 border border-amber-500/20">
-                        {proc.codigo_validado}
-                      </span>
-                      <p className="text-xs text-[#F5F5F5] flex-1">
-                        {proc.descricao_validada}
-                      </p>
-                    </div>
-                    {!isResolved && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="mt-2 h-7 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 text-[11px]"
-                        onClick={() => handleAcceptSuggestion(index, proc)}
-                      >
-                        <CheckCircle2 className="mr-1 h-3 w-3" />
-                        Aceitar sugestão
-                      </Button>
-                    )}
-                  </div>
-                )}
-
                 {/* Resolved state */}
-                {isResolved && (
+                {isResolved && correction && (
                   <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -328,8 +303,8 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
                         {correction.codigo}
                       </span>
                       <span className="text-xs text-emerald-200">
-                        {correction.descricao.length > 60
-                          ? correction.descricao.slice(0, 60) + "..."
+                        {correction.descricao.length > 55
+                          ? correction.descricao.slice(0, 55) + "..."
                           : correction.descricao}
                       </span>
                     </div>
@@ -447,7 +422,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-[#0f0f0f] border-t border-[#D4A017]/15 px-6 py-4 flex gap-3">
+        <div className="flex-shrink-0 border-t border-[#D4A017]/15 px-6 py-4 flex gap-3">
           <Button
             type="button"
             variant="outline"
