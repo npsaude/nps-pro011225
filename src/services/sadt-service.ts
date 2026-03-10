@@ -1,4 +1,5 @@
 import type { SadtResumo } from "@/components/sadt/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export type SadtStatus = "AGUARDANDO_APROVACAO";
 
@@ -101,6 +102,33 @@ async function extrairDadosSadtComGpt(
   const data = (await response.json()) as any;
   const content: string | undefined =
     data?.choices?.[0]?.message?.content ?? undefined;
+
+  // Registrar uso de tokens da OpenAI
+  if (data?.usage) {
+    const usage = data.usage;
+    const promptTokens = usage.prompt_tokens ?? 0;
+    const completionTokens = usage.completion_tokens ?? 0;
+    const totalTokens = usage.total_tokens ?? (promptTokens + completionTokens);
+    // Preço gpt-4o-mini: input $0.00015/1K, output $0.0006/1K
+    const estimatedCost = (promptTokens / 1000) * 0.00015 + (completionTokens / 1000) * 0.0006;
+
+    console.log(
+      `[sadt-service] 📊 Tokens usados: prompt=${promptTokens}, completion=${completionTokens}, total=${totalTokens}, custo_estimado=$${estimatedCost.toFixed(6)} (gpt-4o-mini)`,
+    );
+
+    supabase.from("openai_usage_logs").insert({
+      user_id: null,
+      faturamento_id: null,
+      edge_function: "sadt-service-client",
+      model: "gpt-4o-mini",
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+      estimated_cost_usd: estimatedCost,
+    }).then(({ error }) => {
+      if (error) console.error("[sadt-service] Erro ao salvar log de tokens:", error);
+    });
+  }
 
   if (!content) {
     return {};

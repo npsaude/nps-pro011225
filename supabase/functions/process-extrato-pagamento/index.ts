@@ -2,6 +2,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -318,6 +319,16 @@ serve(async (req) => {
     }
 
     const respJson = await resp.json();
+
+    // Registrar uso de tokens da OpenAI
+    await logOpenAIUsage({
+      supabase,
+      userId: null,
+      faturamentoId: null,
+      edgeFunction: "process-extrato-pagamento",
+      model: "gpt-4.1-mini",
+      usage: respJson?.usage,
+    });
 
     let csvText = "";
     try {

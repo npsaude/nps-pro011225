@@ -5,6 +5,7 @@ import {
   validarProcedimentoCbhpm,
   normalizeText as normalizeTextCbhpm,
 } from "../_shared/cbhpm-validator.ts";
+import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -440,6 +441,16 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
 
   const completion = await openaiResponse.json();
   const messageContent = completion?.choices?.[0]?.message?.content;
+
+  // Registrar uso de tokens da OpenAI
+  await logOpenAIUsage({
+    supabase,
+    userId,
+    faturamentoId,
+    edgeFunction: "process-descricao-cirurgica",
+    model: "gpt-4.1",
+    usage: completion?.usage,
+  });
 
   if (!messageContent) {
     console.error("[process-descricao-cirurgica] Resposta da OpenAI sem conteúdo:", completion);

@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   validarProcedimentoCbhpm,
 } from "../_shared/cbhpm-validator.ts";
+import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -362,6 +363,16 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
 
   const completion = await openaiResponse.json();
   const messageContent = completion?.choices?.[0]?.message?.content;
+
+  // Registrar uso de tokens da OpenAI
+  await logOpenAIUsage({
+    supabase,
+    userId,
+    faturamentoId,
+    edgeFunction: "process-guia-honorarios",
+    model: "gpt-4.1",
+    usage: completion?.usage,
+  });
 
   if (!messageContent) {
     console.error("[process-guia-honorarios] Resposta da OpenAI sem conteúdo:", completion);

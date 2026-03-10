@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logOpenAIUsage } from "./_shared/openai-usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -392,6 +393,16 @@ Regras importantes:
     const completion = await openaiResponse.json();
     const messageContent = completion?.choices?.[0]?.message?.content;
 
+    // Registrar uso de tokens da OpenAI (fluxo visão)
+    await logOpenAIUsage({
+      supabase,
+      userId,
+      faturamentoId: null,
+      edgeFunction: "process-descricao-cirurgica-legado",
+      model: "gpt-4o-mini",
+      usage: completion?.usage,
+    });
+
     if (!messageContent) {
       console.error("Resposta da OpenAI sem conteúdo (visão):", completion);
       return new Response(
@@ -544,6 +555,16 @@ Regras importantes:
     }
 
     const respJson = await responsesResp.json();
+
+    // Registrar uso de tokens da OpenAI (fluxo PDF)
+    await logOpenAIUsage({
+      supabase,
+      userId,
+      faturamentoId: null,
+      edgeFunction: "process-descricao-cirurgica-legado-pdf",
+      model: "gpt-4.1-mini",
+      usage: respJson?.usage,
+    });
 
     let textContent = "";
     try {
