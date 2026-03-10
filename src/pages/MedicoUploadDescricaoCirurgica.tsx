@@ -237,10 +237,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Estado para o diálogo de envio de emails
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
-  // Zoom do preview da guia de honorários
-  const [guiaZoom, setGuiaZoom] = useState(1);
+  // Zoom do preview da guia de honorários (inicia em 50%)
+  const [guiaZoom, setGuiaZoom] = useState(0.5);
   const ZOOM_STEP = 0.15;
-  const ZOOM_MIN = 0.4;
+  const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 2.0;
 
   // Tipo de cirurgia (eletiva ou emergencial)
@@ -1763,8 +1763,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setHtmlGuiaPreenchida("");
     setGuiaHonorariosId(null);
     setTipoCirurgia(null);
-    // Resetar zoom do preview
-    setGuiaZoom(1);
+    // Resetar zoom do preview para 50%
+    setGuiaZoom(0.5);
     // Resetar estados do PDF
     setPdfGerado(false);
     if (pdfBlobUrl) {
@@ -3081,9 +3081,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGuiaZoom(1)}
+                    onClick={() => setGuiaZoom(0.5)}
                     className="ml-1 text-[10px] text-[#9CA3AF] hover:text-[#D4A017] transition-colors"
-                    title="Resetar zoom"
+                    title="Resetar zoom para 50%"
                   >
                     Reset
                   </button>

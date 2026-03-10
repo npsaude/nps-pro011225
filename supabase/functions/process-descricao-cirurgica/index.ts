@@ -251,52 +251,96 @@ serve(async (req) => {
 
   // 3) Instruções de extração para Descrição Cirúrgica
   const jsonFormatInstructions = `
-Você é um assistente especializado em faturamento médico hospitalar brasileiro.
-Sua tarefa é extrair dados de imagens de descrições cirúrgicas com MÁXIMA PRECISÃO E COMPLETUDE.
+Você é um especialista em faturamento médico hospitalar brasileiro. Analise TODAS as imagens fornecidas e extraia os dados com MÁXIMA PRECISÃO.
 
-REGRAS ABSOLUTAS — SIGA RIGOROSAMENTE:
-1. Analise CADA PIXEL de TODAS as imagens antes de responder.
-2. Para PROCEDIMENTOS: varra a imagem linha por linha, de cima para baixo. Cada linha que contenha um código numérico ou nome de procedimento cirúrgico DEVE ser incluída no array. NÃO OMITA NENHUM.
-3. NUNCA truncar o array de procedimentos. Se houver 10 procedimentos no documento, retorne 10 objetos no array.
-4. Use APENAS dados visíveis no documento. Não invente. Se não encontrar, use null.
-5. Se um campo aparecer em múltiplas imagens, use o valor mais completo.
+═══════════════════════════════════════════════════════
+REGRAS ABSOLUTAS — VIOLAÇÃO DESTAS REGRAS É INACEITÁVEL
+═══════════════════════════════════════════════════════
+1. Leia TODAS as imagens completamente, de cima para baixo, antes de responder.
+2. PROCEDIMENTOS: Conte cada linha da tabela "PROCEDIMENTOS REALIZADOS" ou "PROCEDIMENTOS CIRÚRGICOS". Se a tabela tem 5 linhas com procedimentos, o array deve ter 5 objetos. NUNCA omita nenhum.
+3. NUNCA truncar ou resumir o array de procedimentos. Retorne TODOS.
+4. Use APENAS dados visíveis. Não invente. Se não encontrar, use null.
+5. Se um dado aparecer em múltiplas imagens, use o valor mais completo.
 
-DADOS DA EXECUÇÃO:
-- paciente_nome: Nome completo do paciente (campo "Paciente", "Nome" ou similar)
-- data_cirurgia: Data da cirurgia (formato DD/MM/YYYY ou YYYY-MM-DD)
-- hora_inicio: Hora de início (formato HH:MM)
-- hora_fim: Hora de término (formato HH:MM)
-- paciente_cpf: CPF do paciente (apenas 11 dígitos numéricos)
-- numero_guia_honorarios: Número da guia de honorários
-- numero_guia_internacao: Número da guia de internação
+═══════════════════════════════════════════════════════
+DADOS DA EXECUÇÃO (campo "faturamento")
+═══════════════════════════════════════════════════════
+- paciente_nome: Nome completo do paciente (campo "Registro Civil", "Paciente" ou "Nome")
+- data_cirurgia: Data inicial do procedimento (formato DD/MM/YYYY)
+- hora_inicio: Hora de início do procedimento (formato HH:MM)
+- hora_fim: Hora de término do procedimento (formato HH:MM)
+- paciente_cpf: CPF do paciente (apenas 11 dígitos numéricos, sem pontos ou traços)
+- numero_guia_honorarios: Número da guia de honorários (se houver)
+- numero_guia_internacao: Número da guia de internação / registro (se houver)
 
 DIAGNÓSTICO:
-- cid_codigo: Código CID (ex: "K80.2")
-- diagnostico_descricao: Descrição do diagnóstico
+- cid_codigo: Código CID (ex: "M75.1")
+- diagnostico_descricao: Diagnóstico pós-operatório ou pré-operatório
 
-EQUIPE CIRÚRGICA — extraia TODOS os membros listados:
-- cirurgiao_nome / cirurgiao_crm: Cirurgião principal
-- auxiliar1_nome / auxiliar1_crm: 1º auxiliar
-- auxiliar2_nome / auxiliar2_crm: 2º auxiliar
-- auxiliar3_nome / auxiliar3_crm: 3º auxiliar
-- anestesista_nome / anestesista_crm: Anestesista
-- instrumentador_nome / instrumentador_crm: Instrumentador cirúrgico
+═══════════════════════════════════════════════════════
+EQUIPE CIRÚRGICA — ATENÇÃO ESPECIAL AOS CAMPOS ABAIXO
+═══════════════════════════════════════════════════════
+Procure a seção "EQUIPE PRESENTE NO ATO OPERATÓRIO" ou "EQUIPE CIRÚRGICA".
+
+CIRURGIÃO:
+- cirurgiao_nome: Nome do CIRURGIÃO (linha com rótulo "CIRURGIÃO" ou "CIRURGIAO")
+- cirurgiao_crm: CRM do cirurgião (número após "CRM" na linha do cirurgião)
+
+1º AUXILIAR:
+- auxiliar1_nome: Nome do 1º AUXILIAR (linha com rótulo "1º AUXILIAR" ou "1 AUXILIAR")
+- auxiliar1_crm: CRM do 1º auxiliar
+
+2º AUXILIAR:
+- auxiliar2_nome: Nome do 2º AUXILIAR
+- auxiliar2_crm: CRM do 2º auxiliar
+
+3º AUXILIAR:
+- auxiliar3_nome: Nome do 3º AUXILIAR
+- auxiliar3_crm: CRM do 3º auxiliar
+
+INSTRUMENTADOR — ATENÇÃO: Este campo usa COREN, não CRM:
+- instrumentador_nome: Nome do INSTRUMENTADOR (linha com rótulo "INSTRUMENTADOR" ou "INSTRUMENTADOR COREN")
+  EXEMPLO: Se a linha mostrar "INSTRUMENTADOR | LIDIANE ROCHA", extraia "LIDIANE ROCHA"
+- instrumentador_crm: Número do COREN do instrumentador (número após "COREN" ou "CONS. REG. ENFERMAGEM")
+  EXEMPLO: Se mostrar "COREN - CONS. REG. ENFERMAGEM | 25444", extraia "25444"
+
+ANESTESISTA — ATENÇÃO: Este campo pode usar CRM ou número de conselho diferente:
+- anestesista_nome: Nome do ANESTESISTA (linha com rótulo "ANESTESISTA" ou "ANESTESISTA CRM")
+  EXEMPLO: Se a linha mostrar "ANESTESISTA | MIRELLA TAVARES", extraia "MIRELLA TAVARES"
+- anestesista_crm: Número do CRM ou conselho do anestesista
+  EXEMPLO: Se mostrar "CRM - CONS. REG. MEDICINA | 18007", extraia "18007"
 
 VALIDAÇÃO:
-- assinatura_medica: true se há assinatura do médico, false caso contrário
-- data_assinatura: Data da assinatura (DD/MM/YYYY ou YYYY-MM-DD)
+- assinatura_medica: true se há assinatura do médico visível, false caso contrário
+- data_assinatura: Data da assinatura (DD/MM/YYYY)
 
-PROCEDIMENTOS CIRÚRGICOS — ATENÇÃO MÁXIMA:
-- Localize a tabela ou lista de procedimentos no documento.
-- Inclua ABSOLUTAMENTE TODOS os procedimentos listados, sem exceção.
-- Para cada procedimento, extraia:
-  - codigo_procedimento: código numérico exatamente como aparece (ex: "30729137", "31309186")
-  - descricao_procedimento: nome/descrição completa do procedimento
-  - quantidade_executada: número (use 1 se não informado)
-- NÃO pare na primeira linha. Continue até o fim da tabela/lista.
-- Se houver procedimentos em páginas/imagens diferentes, inclua todos no mesmo array.
+═══════════════════════════════════════════════════════
+PROCEDIMENTOS CIRÚRGICOS — REGRA CRÍTICA
+═══════════════════════════════════════════════════════
+Localize a tabela "PROCEDIMENTOS REALIZADOS" ou "PROCEDIMENTOS CIRÚRGICOS".
 
-Responda SOMENTE com JSON válido e completo, sem texto adicional:
+PASSO A PASSO OBRIGATÓRIO:
+1. Identifique o cabeçalho da tabela (ex: "Tipo | Código | Procedimento | Quantidade")
+2. Leia CADA LINHA de dados abaixo do cabeçalho
+3. Para CADA linha com código numérico ou nome de procedimento, crie um objeto no array
+4. Continue até a ÚLTIMA linha da tabela — não pare antes
+
+Para cada procedimento extraia:
+- codigo_procedimento: código numérico exatamente como aparece (ex: "30718058", "30731127")
+- descricao_procedimento: descrição completa do procedimento (ex: "FRATURA (INCLUINDO DESCOLAMENTO EPIFISARIO) - TRATAMENTO CIRURGICO")
+- quantidade_executada: número da coluna "Quantidade" (use 1 se não informado)
+
+EXEMPLO de tabela com 5 procedimentos → array deve ter 5 objetos:
+  Linha 1: 30718058 - FRATURA... → objeto 1
+  Linha 2: 30731127 - TENOPLASTIA... → objeto 2
+  Linha 3: 30717167 - TRANSFERENCIAS... → objeto 3
+  Linha 4: 30718090 - PSEUDARTROSES... → objeto 4
+  Linha 5: 31403239 - MICRONEUROLISE... → objeto 5
+
+═══════════════════════════════════════════════════════
+FORMATO DE RESPOSTA — JSON VÁLIDO E COMPLETO
+═══════════════════════════════════════════════════════
+Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
 
 {
   "faturamento": {
