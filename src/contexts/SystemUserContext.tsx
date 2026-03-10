@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,9 +28,15 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [systemUser, setSystemUser] = useState<DbSystemUser | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const loadedOnceRef = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (force = false) => {
+    // Evita setar loading: true se já temos dados (evita flash nos guards)
+    if (!force && loadedOnceRef.current && systemUser) {
+      // Reload silencioso em background
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -39,6 +46,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
       }
       setSystemUser(null);
       setLoading(false);
+      loadedOnceRef.current = true;
       return;
     }
 
@@ -55,6 +63,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
     if (byIdError) {
       setError(byIdError);
       setLoading(false);
+      loadedOnceRef.current = true;
       return;
     }
 
@@ -79,6 +88,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
 
     setSystemUser(user);
     setLoading(false);
+    loadedOnceRef.current = true;
 
     // Carrega avatar em background sem bloquear o menu
     if (user) {
@@ -95,23 +105,33 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
         );
       }
     }
-  }, []);
+  }, [systemUser]);
 
   useEffect(() => {
-    void load();
+    void load(true);
 
     // Re-carrega quando a sessão muda (login / logout)
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+      if (event === "SIGNED_OUT") {
+        // Logout: limpa imediatamente
+        setSystemUser(null);
+        setLoading(false);
+        loadedOnceRef.current = false;
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("conmedic_role");
+        }
+      } else if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        // Reload silencioso (não seta loading: true se já temos dados)
         void load();
       }
     });
 
     return () => sub.subscription.unsubscribe();
-  }, [load]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <SystemUserContext.Provider value={{ loading, systemUser, error, reload: load }}>
+    <SystemUserContext.Provider value={{ loading, systemUser, error, reload: () => void load(true) }}>
       {children}
     </SystemUserContext.Provider>
   );
