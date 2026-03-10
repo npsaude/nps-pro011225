@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
- * Modelos que suportam response_format: json_object e image_url via URL.
- * Modelos legados (gpt-4, gpt-3.5-turbo, etc.) não suportam esses recursos.
+ * Modelos que suportam response_format: json_object.
+ * Modelos legados (gpt-4, gpt-3.5-turbo, etc.) não suportam esse recurso.
  */
 const MODELS_WITH_JSON_FORMAT = [
   "gpt-4o",
@@ -13,10 +13,24 @@ const MODELS_WITH_JSON_FORMAT = [
   "gpt-4.1",
   "gpt-4.1-mini",
   "gpt-4.1-nano",
+  "gpt-5",
   "o1",
   "o1-mini",
   "o3",
   "o3-mini",
+];
+
+/**
+ * Modelos que usam max_completion_tokens em vez de max_tokens.
+ * Inclui modelos o1/o3 e gpt-5+.
+ */
+const MODELS_WITH_MAX_COMPLETION_TOKENS = [
+  "o1",
+  "o1-mini",
+  "o1-preview",
+  "o3",
+  "o3-mini",
+  "gpt-5",
 ];
 
 /**
@@ -25,6 +39,14 @@ const MODELS_WITH_JSON_FORMAT = [
 export function modelSupportsJsonFormat(model: string): boolean {
   const m = model.toLowerCase();
   return MODELS_WITH_JSON_FORMAT.some((supported) => m.startsWith(supported));
+}
+
+/**
+ * Verifica se o modelo usa max_completion_tokens em vez de max_tokens
+ */
+export function modelUsesMaxCompletionTokens(model: string): boolean {
+  const m = model.toLowerCase();
+  return MODELS_WITH_MAX_COMPLETION_TOKENS.some((supported) => m.startsWith(supported));
 }
 
 /**
@@ -61,7 +83,8 @@ export function extractJson(text: string): any {
 /**
  * Chama a API de chat completions da OpenAI com compatibilidade entre modelos.
  * - Modelos legados (gpt-4): sem response_format, parse robusto do JSON
- * - Modelos novos (gpt-4o, etc.): com response_format: json_object
+ * - Modelos novos (gpt-4o, gpt-5, etc.): com response_format: json_object
+ * - Modelos o1/o3/gpt-5: usam max_completion_tokens em vez de max_tokens
  */
 export async function openaiChatWithImages(params: {
   apiKey: string;
@@ -74,6 +97,7 @@ export async function openaiChatWithImages(params: {
   const { apiKey, model, systemPrompt, userText, imageBase64List, maxTokens = 4096 } = params;
 
   const supportsJsonFormat = modelSupportsJsonFormat(model);
+  const useMaxCompletionTokens = modelUsesMaxCompletionTokens(model);
 
   // Para modelos legados, reforçar no prompt que a resposta deve ser JSON puro
   const finalUserText = supportsJsonFormat
@@ -83,7 +107,6 @@ export async function openaiChatWithImages(params: {
   const body: any = {
     model,
     temperature: 0,
-    max_tokens: maxTokens,
     messages: [
       {
         role: "system",
@@ -102,12 +125,21 @@ export async function openaiChatWithImages(params: {
     ],
   };
 
+  // Usar o parâmetro correto de tokens conforme o modelo
+  if (useMaxCompletionTokens) {
+    body.max_completion_tokens = maxTokens;
+  } else {
+    body.max_tokens = maxTokens;
+  }
+
   // Apenas adicionar response_format se o modelo suportar
   if (supportsJsonFormat) {
     body.response_format = { type: "json_object" };
   }
 
-  console.log(`[openai-chat] Chamando modelo: ${model} | json_format: ${supportsJsonFormat} | imagens: ${imageBase64List.length}`);
+  console.log(
+    `[openai-chat] modelo: ${model} | json_format: ${supportsJsonFormat} | max_completion_tokens: ${useMaxCompletionTokens} | imagens: ${imageBase64List.length}`
+  );
 
   const resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
