@@ -35,6 +35,12 @@ interface ClinicaData {
   email_contato_faturamento: string | null;
 }
 
+interface ProcedimentoCirurgico {
+  descricao_procedimento: string;
+  codigo_procedimento: string;
+  via_acesso?: string;
+}
+
 interface FaturamentoData {
   id: string;
   paciente_nome: string | null;
@@ -59,6 +65,9 @@ interface FaturamentoData {
   auxiliar3_crm: string | null;
   anestesista_nome: string | null;
   anestesista_crm: string | null;
+
+  procedimentos: ProcedimentoCirurgico[] | null;
+  quantidade_procedimentos_realizados: number | null;
 }
 
 interface ModeloEmailRow {
@@ -569,7 +578,9 @@ serve(async (req) => {
       auxiliar3_nome,
       auxiliar3_crm,
       anestesista_nome,
-      anestesista_crm
+      anestesista_crm,
+      procedimentos,
+      quantidade_procedimentos_realizados
     `,
     )
     .eq("id", faturamentoId)
