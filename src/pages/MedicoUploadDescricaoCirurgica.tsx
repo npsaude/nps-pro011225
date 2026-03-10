@@ -1280,7 +1280,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       // 3. Buscar itens do faturamento (procedimentos)
       const { data: itensData, error: itensError } = await supabase
         .from("itens_faturamento")
-        .select("codigo_procedimento, descricao_procedimento, quantidade")
+        .select("codigo_procedimento, descricao_procedimento, quantidade, quantidade_executada")
         .eq("faturamento_id", faturamentoId)
         .order("created_at", { ascending: true });
 
@@ -1342,8 +1342,24 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       htmlPreenchido = htmlPreenchido.replace(/\{\{hora\}\}/g, formatarHora(fatData.hora_inicio));
       htmlPreenchido = htmlPreenchido.replace(/\{\{convenio\}\}/g, fatData.paciente_convenio || "");
 
-      // Substituir placeholders - Procedimentos Cirúrgicos (até 5)
+      // Substituir placeholder dinâmico de procedimentos cirúrgicos
       const procedimentos = itensData || [];
+
+      // Suporte ao novo placeholder {{ procedimentos_cirurgicos_rows }}
+      const procedimentosRows = procedimentos.length > 0
+        ? procedimentos.map((proc: any) => `
+            <tr>
+              <td>${proc.descricao_procedimento ?? ""}</td>
+              <td style="text-align:center">${proc.codigo_procedimento ?? ""}</td>
+              <td style="text-align:center">${proc.quantidade_executada ?? proc.quantidade ?? ""}</td>
+              <td style="text-align:center"></td>
+            </tr>
+          `).join("")
+        : '<tr><td colspan="4" style="text-align:center;color:#888;padding:4mm">Nenhum procedimento registrado</td></tr>';
+
+      htmlPreenchido = htmlPreenchido.replace(/\{\{\s*procedimentos_cirurgicos_rows\s*\}\}/g, procedimentosRows);
+
+      // Suporte ao padrão legado {{proc_cir_N_*}} (compatibilidade com modelos antigos)
       for (let i = 1; i <= 5; i++) {
         const proc = procedimentos[i - 1];
         htmlPreenchido = htmlPreenchido.replace(new RegExp(`\\{\\{proc_cir_${i}_descricao\\}\\}`, "g"), proc?.descricao_procedimento || "");
