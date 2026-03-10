@@ -487,6 +487,9 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
   const faturamentoData = parsed?.faturamento ?? {};
   const procedimentosData = Array.isArray(parsed?.procedimentos) ? parsed.procedimentos : [];
 
+  // Quantidade total de procedimentos extraídos da descrição cirúrgica
+  const quantidadeProcedimentosRealizados = procedimentosData.length;
+
   console.log(
     "[process-descricao-cirurgica] Procedimentos extraídos pela IA:",
     procedimentosData.length,
@@ -499,6 +502,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
 
   const updateData: Record<string, unknown> = {
     url_descricao_cirurgica: filePaths,
+    quantidade_procedimentos_realizados: quantidadeProcedimentosRealizados,
     updated_at: new Date().toISOString(),
   };
 
