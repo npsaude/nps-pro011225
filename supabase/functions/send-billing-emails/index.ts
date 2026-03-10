@@ -133,11 +133,11 @@ function reconhecerAtuacao(params: {
     { atuacao: "ANESTESISTA", nome: params.anestesistaNome, crm: params.anestesistaCrm },
   ];
 
-  // 1) Match forte por CRM nos campos extraídos
+  // 1) Match forte por CRM nos campos extraídos (includes para lidar com sufixo de estado)
   if (crmUser) {
     for (const c of candidates) {
       const crm = normalizeDigits(c.crm ?? "");
-      if (crm && crm === crmUser) return c.atuacao;
+      if (crm && (crm === crmUser || crm.includes(crmUser) || crmUser.includes(crm))) return c.atuacao;
     }
   }
 
@@ -165,6 +165,20 @@ function reconhecerAtuacao(params: {
     for (const c of candidates) {
       const nomeFirst = firstName(c.nome ?? "");
       if (nomeFirst && nomeFirst === userFirst) return c.atuacao;
+    }
+  }
+
+  // 4) Fallback: último nome ou qualquer palavra significativa do nome
+  const userNomeNorm = normalizeText(params.userNome);
+  if (userNomeNorm) {
+    const userWords = userNomeNorm.split(" ").filter(w => w.length >= 4);
+    for (const c of candidates) {
+      if (!c.nome) continue;
+      const candidateNorm = normalizeText(c.nome);
+      // Check if any significant word from user name appears in candidate name
+      for (const word of userWords) {
+        if (candidateNorm.includes(word)) return c.atuacao;
+      }
     }
   }
 
@@ -202,7 +216,19 @@ function equipeBateComUsuario(params: {
   for (const c of candidates) {
     const crm = normalizeDigits(c.crm ?? "");
     const fn = firstName(c.nome ?? "");
-    if (crm && fn && crm === crmUser && fn === fUser) return true;
+    // CRM match (includes for state suffix) AND first name match
+    const crmMatch = crm && (crm === crmUser || crm.includes(crmUser) || crmUser.includes(crm));
+    if (crmMatch && fn && fn === fUser) return true;
+    // Also match by CRM alone (without name) if CRM is exact
+    if (crm && crm === crmUser) return true;
+  }
+
+  // Fallback: match by first name alone (if no CRM match found)
+  if (fUser) {
+    for (const c of candidates) {
+      const fn = firstName(c.nome ?? "");
+      if (fn && fn === fUser) return true;
+    }
   }
 
   return false;

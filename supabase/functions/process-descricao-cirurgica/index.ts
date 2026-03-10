@@ -639,14 +639,20 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
   // 5.1) Reconhecer atuação do médico logado e salvar em atuou_como
   try {
     // Buscar nome e CRM do médico logado (id_user = auth.uid)
-    const { data: usuarioData } = await supabase
+    const { data: usuarioData, error: usuarioError } = await supabase
       .from("usuarios_sistema")
       .select("nome, crm")
       .eq("id_user", userId)
       .maybeSingle();
 
+    if (usuarioError) {
+      console.error("[process-descricao-cirurgica] Erro ao buscar usuario_sistema:", usuarioError);
+    }
+
     const userNome = usuarioData?.nome ?? "";
     const userCrm = usuarioData?.crm ? String(usuarioData.crm) : "";
+
+    console.log("[process-descricao-cirurgica] Dados do médico logado - nome:", userNome, "crm:", userCrm, "userId:", userId);
 
     if (userNome || userCrm) {
       // Dados da equipe extraídos pela IA
@@ -663,6 +669,15 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       const instrumentadorNome = faturamentoData.instrumentador_nome ?? null;
       const instrumentadorCrm = faturamentoData.instrumentador_crm ?? null;
 
+      console.log("[process-descricao-cirurgica] Equipe extraída pela IA:", JSON.stringify({
+        cirurgiao: { nome: cirurgiaoNome, crm: cirurgiaoCrm },
+        aux1: { nome: auxiliar1Nome, crm: auxiliar1Crm },
+        aux2: { nome: auxiliar2Nome, crm: auxiliar2Crm },
+        aux3: { nome: auxiliar3Nome, crm: auxiliar3Crm },
+        anestesista: { nome: anestesistaNome, crm: anestesistaCrm },
+        instrumentador: { nome: instrumentadorNome, crm: instrumentadorCrm },
+      }));
+
       // Funções auxiliares de normalização (inline)
       const normalizeDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
       const normalizeTextLocal = (s: string) =>
@@ -674,6 +689,12 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         const first = cleanToken(parts[0]);
         if (["dr", "dra", "doutor", "doutora"].includes(first)) return cleanToken(parts[1] ?? "");
         return first;
+      };
+      // Compare last names as well for better matching
+      const lastNameFn = (input: string): string => {
+        const parts = normalizeTextLocal(input).split(" ").filter(Boolean);
+        if (parts.length <= 1) return "";
+        return cleanToken(parts[parts.length - 1]);
       };
 
       type Atuacao = "CIRURGIAO" | "PRIMEIRO_AUXILIAR" | "SEGUNDO_AUXILIAR" | "TERCEIRO_AUXILIAR" | "ANESTESISTA";
@@ -689,11 +710,16 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       const crmUser = normalizeDigits(userCrm);
       let atuacaoReconhecida: Atuacao | null = null;
 
-      // 1) Match por CRM
+      // 1) Match por CRM (comparar apenas dígitos)
       if (crmUser) {
+        console.log("[process-descricao-cirurgica] Tentando match por CRM. CRM do usuário (dígitos):", crmUser);
         for (const c of candidates) {
-          if (c.crm && normalizeDigits(c.crm) === crmUser) {
+          const crmCandidate = normalizeDigits(c.crm ?? "");
+          console.log(`[process-descricao-cirurgica]   Comparando com ${c.atuacao}: crm="${c.crm}" -> dígitos="${crmCandidate}"`);
+          // Match if CRM digits are equal, OR if one contains the other (handles state suffix like "15126 - PE" vs "15126")
+          if (crmCandidate && (crmCandidate === crmUser || crmCandidate.includes(crmUser) || crmUser.includes(crmCandidate))) {
             atuacaoReconhecida = c.atuacao;
+            console.log(`[process-descricao-cirurgica]   ✅ Match por CRM! ${c.atuacao}`);
             break;
           }
         }
@@ -702,14 +728,53 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       // 2) Fallback: match por primeiro nome
       if (!atuacaoReconhecida && userNome) {
         const userFirst = firstNameFn(userNome);
+        const userLast = lastNameFn(userNome);
+        console.log("[process-descricao-cirurgica] Tentando match por nome. Primeiro nome:", userFirst, "Último nome:", userLast);
         if (userFirst) {
           for (const c of candidates) {
-            const nomeFirst = firstNameFn(c.nome ?? "");
+            if (!c.nome) continue;
+            const nomeFirst = firstNameFn(c.nome);
+            const nomeLast = lastNameFn(c.nome);
+            console.log(`[process-descricao-cirurgica]   Comparando com ${c.atuacao}: nome="${c.nome}" -> primeiro="${nomeFirst}", último="${nomeLast}"`);
+            // Match by first name
             if (nomeFirst && nomeFirst === userFirst) {
               atuacaoReconhecida = c.atuacao;
+              console.log(`[process-descricao-cirurgica]   ✅ Match por primeiro nome! ${c.atuacao}`);
+              break;
+            }
+            // Match by last name (if first name didn't match)
+            if (userLast && nomeLast && nomeLast === userLast) {
+              atuacaoReconhecida = c.atuacao;
+              console.log(`[process-descricao-cirurgica]   ✅ Match por último nome! ${c.atuacao}`);
               break;
             }
           }
+        }
+      }
+
+      // 3) Fallback: match por qualquer parte do nome (substring)
+      if (!atuacaoReconhecida && userNome) {
+        const userNomeNorm = normalizeTextLocal(userNome);
+        console.log("[process-descricao-cirurgica] Tentando match por substring do nome:", userNomeNorm);
+        for (const c of candidates) {
+          if (!c.nome) continue;
+          const candidateNomeNorm = normalizeTextLocal(c.nome);
+          // Check if user name contains candidate name or vice versa
+          if (candidateNomeNorm && (candidateNomeNorm.includes(userNomeNorm) || userNomeNorm.includes(candidateNomeNorm))) {
+            atuacaoReconhecida = c.atuacao;
+            console.log(`[process-descricao-cirurgica]   ✅ Match por substring! ${c.atuacao} ("${candidateNomeNorm}" <-> "${userNomeNorm}")`);
+            break;
+          }
+          // Check if any word from user name (>= 4 chars) appears in candidate name
+          const userWords = userNomeNorm.split(" ").filter(w => w.length >= 4);
+          for (const word of userWords) {
+            if (candidateNomeNorm.includes(word)) {
+              atuacaoReconhecida = c.atuacao;
+              console.log(`[process-descricao-cirurgica]   ✅ Match por palavra "${word}"! ${c.atuacao}`);
+              break;
+            }
+          }
+          if (atuacaoReconhecida) break;
         }
       }
 
@@ -729,8 +794,11 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
           console.log("[process-descricao-cirurgica] atuou_como salvo com sucesso:", atuacaoReconhecida);
         }
       } else {
-        console.log("[process-descricao-cirurgica] Atuação não reconhecida para userId:", userId, "crm:", userCrm, "nome:", userNome);
+        console.log("[process-descricao-cirurgica] ❌ Atuação NÃO reconhecida para userId:", userId, "crm:", userCrm, "nome:", userNome);
+        console.log("[process-descricao-cirurgica] Candidatos avaliados:", JSON.stringify(candidates.map(c => ({ atuacao: c.atuacao, nome: c.nome, crm: c.crm }))));
       }
+    } else {
+      console.log("[process-descricao-cirurgica] ⚠️ Médico logado sem nome e sem CRM cadastrado. Não é possível reconhecer atuação.");
     }
   } catch (atuacaoErr) {
     console.error("[process-descricao-cirurgica] Erro ao reconhecer atuação:", atuacaoErr);
