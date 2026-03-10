@@ -265,7 +265,7 @@ const AdminConverterPdf = () => {
           <main className="flex-1 overflow-y-auto pb-2">
             <div className="mt-2 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               {/* Upload e status */}
-              <Card className="rounded-3xl border border-slate-100 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+              <Card className="rounded-3xl border border-slate-100 bg-white/95 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-50">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
@@ -348,7 +348,7 @@ const AdminConverterPdf = () => {
               </Card>
 
               {/* Tabela de resultado */}
-              <Card className="rounded-3xl border border-slate-100 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+              <Card className="rounded-3xl border border-slate-100 bg-white/95 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-50">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">

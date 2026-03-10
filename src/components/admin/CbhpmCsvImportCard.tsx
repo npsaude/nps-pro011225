@@ -303,27 +303,31 @@ export default function CbhpmCsvImportCard() {
   };
 
   return (
-    <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-            <Upload className="h-4 w-4" />
-          </span>
-          <span>Importar tabela CBHPM (CSV)</span>
-        </CardTitle>
-        <CardDescription className="text-xs sm:text-sm">
-          Envie um arquivo .csv para gravar em <span className="font-mono">public.cbhpm_cirurgias</span>. Duplicadas (mesmo código) serão substituídas.
-        </CardDescription>
-      </CardHeader>
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <Upload className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="font-semibold text-foreground text-sm">Importar tabela CBHPM (CSV)</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Envie um arquivo .csv para gravar em{" "}
+            <code className="rounded bg-primary/10 px-1 py-0.5 font-mono text-[11px] text-primary">
+              public.cbhpm_cirurgias
+            </code>
+            . Duplicadas (mesmo código) serão substituídas.
+          </p>
+        </div>
+      </div>
 
-      <CardContent className="space-y-4">
+      <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-900 dark:text-slate-50">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Arquivo
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {fileName ?? "Nenhum arquivo selecionado"}
+            <p className="text-sm text-foreground">
+              {fileName ?? <span className="text-muted-foreground">Nenhum arquivo selecionado</span>}
             </p>
           </div>
 
@@ -339,7 +343,7 @@ export default function CbhpmCsvImportCard() {
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-full border-slate-200 px-4 text-xs sm:text-sm dark:border-slate-700"
+              className="h-9 px-4 text-xs sm:text-sm"
               onClick={handlePickFile}
               disabled={isParsing || isImporting}
             >
@@ -347,7 +351,7 @@ export default function CbhpmCsvImportCard() {
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-full px-4 text-xs sm:text-sm"
+              className="h-9 px-4 text-xs sm:text-sm"
               onClick={() => void handleImport()}
               disabled={isParsing || isImporting || !parsedRows?.length}
             >
@@ -357,33 +361,33 @@ export default function CbhpmCsvImportCard() {
         </div>
 
         {stats && (
-          <div className="rounded-2xl bg-slate-50/70 p-4 ring-1 ring-slate-200/70 dark:bg-slate-950/40 dark:ring-slate-800">
+          <div className="rounded-xl border border-border bg-muted/40 p-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Linhas válidas</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{stats.total}</p>
+                <p className="text-[11px] text-muted-foreground">Linhas válidas</p>
+                <p className="text-sm font-semibold text-foreground">{stats.total}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Códigos únicos</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{stats.unique}</p>
+                <p className="text-[11px] text-muted-foreground">Códigos únicos</p>
+                <p className="text-sm font-semibold text-foreground">{stats.unique}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Duplicadas no arquivo</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{stats.duplicatesInFile}</p>
+                <p className="text-[11px] text-muted-foreground">Duplicadas no arquivo</p>
+                <p className="text-sm font-semibold text-foreground">{stats.duplicatesInFile}</p>
               </div>
             </div>
 
-            <div className="mt-3 flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <div className="mt-3 flex items-start gap-2 text-[11px] text-muted-foreground">
               {stats.duplicatesInFile > 0 ? (
                 <>
-                  <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <AlertCircle className="mt-0.5 h-4 w-4 text-amber-400" />
                   <p>
                     Encontramos duplicadas no CSV. O sistema mantém a <strong>última ocorrência</strong> de cada código antes de enviar.
                   </p>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-400" />
                   <p>Arquivo sem duplicadas por código. Pronto para importar.</p>
                 </>
               )}
@@ -393,7 +397,7 @@ export default function CbhpmCsvImportCard() {
 
         {(isImporting || processed > 0) && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 Progresso: {processed}/{total}
               </span>
@@ -402,7 +406,7 @@ export default function CbhpmCsvImportCard() {
             <Progress value={progress} />
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

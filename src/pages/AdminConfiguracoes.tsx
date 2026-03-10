@@ -1,26 +1,23 @@
 import { useEffect, useState } from "react";
 import {
-  Bell,
-  Search,
   KeyRound,
   FileSignature,
   Database,
   FileType2,
   Mail,
   Save,
+  Upload,
+  Bot,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 import {
   carregarAppSettings,
@@ -72,6 +69,66 @@ const ensureDefaults = (templates: { tipo: string; assunto: string; corpo_html: 
   };
 };
 
+// ─── Componente de seção com título ──────────────────────────────────────────
+function SectionHeader({
+  icon,
+  title,
+  description,
+  badge,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  badge?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 pb-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+        {icon}
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          {badge && (
+            <Badge variant="secondary" className="text-[10px]">
+              {badge}
+            </Badge>
+          )}
+        </div>
+        {description && (
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Card de configuração ─────────────────────────────────────────────────────
+function ConfigCard({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─── Label de campo ───────────────────────────────────────────────────────────
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </label>
+  );
+}
+
 const AdminConfiguracoes = () => {
   const navigate = useNavigate();
   const [token, setToken] = useState("");
@@ -103,28 +160,19 @@ const AdminConfiguracoes = () => {
           carregarModelosEmail(),
         ]);
 
-        if (settings?.openaiApiToken) {
-          setToken(settings.openaiApiToken);
-        }
-        if (settings?.openaiModel) {
-          setOpenaiModel(settings.openaiModel);
-        }
-        if (settings?.asaasToken) {
-          setAsaasToken(settings.asaasToken);
-        }
+        if (settings?.openaiApiToken) setToken(settings.openaiApiToken);
+        if (settings?.openaiModel) setOpenaiModel(settings.openaiModel);
+        if (settings?.asaasToken) setAsaasToken(settings.asaasToken);
 
         setEmailModels(ensureDefaults(templates));
       } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : "Não foi possível carregar as configurações.";
-        showError(message);
+        showError(
+          err instanceof Error ? err.message : "Não foi possível carregar as configurações."
+        );
       } finally {
         setCarregando(false);
       }
     };
-
     void load();
   }, []);
 
@@ -134,11 +182,7 @@ const AdminConfiguracoes = () => {
       await criarDadosExemplo();
       showSuccess("Dados de exemplo criados/atualizados com sucesso.");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível criar os dados de exemplo.";
-      showError(message);
+      showError(err instanceof Error ? err.message : "Não foi possível criar os dados de exemplo.");
     } finally {
       setCriandoDemo(false);
     }
@@ -151,11 +195,7 @@ const AdminConfiguracoes = () => {
       await salvarTokenOpenAI(token.trim());
       showSuccess("Token OpenAI salvo com sucesso.");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível salvar o Token OpenAI.";
-      showError(message);
+      showError(err instanceof Error ? err.message : "Não foi possível salvar o Token OpenAI.");
     } finally {
       setSalvando(false);
     }
@@ -167,11 +207,7 @@ const AdminConfiguracoes = () => {
       await salvarModeloOpenAI(openaiModel);
       showSuccess("Modelo OpenAI salvo com sucesso.");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível salvar o Modelo OpenAI.";
-      showError(message);
+      showError(err instanceof Error ? err.message : "Não foi possível salvar o Modelo OpenAI.");
     } finally {
       setSalvandoModelo(false);
     }
@@ -184,11 +220,7 @@ const AdminConfiguracoes = () => {
       await salvarTokenAsaas(asaasToken.trim());
       showSuccess("Token Asaas salvo com sucesso.");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível salvar o Token Asaas.";
-      showError(message);
+      showError(err instanceof Error ? err.message : "Não foi possível salvar o Token Asaas.");
     } finally {
       setSalvandoAsaas(false);
     }
@@ -204,11 +236,7 @@ const AdminConfiguracoes = () => {
       });
       showSuccess("Modelo de email salvo com sucesso.");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível salvar o modelo de email.";
-      showError(message);
+      showError(err instanceof Error ? err.message : "Não foi possível salvar o modelo de email.");
     } finally {
       setSalvandoEmails(null);
     }
@@ -229,488 +257,389 @@ const AdminConfiguracoes = () => {
       });
       showSuccess("Modelos de email salvos com sucesso.");
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível salvar os modelos de email.";
-      showError(message);
+      showError(err instanceof Error ? err.message : "Não foi possível salvar os modelos de email.");
     } finally {
       setSalvandoEmails(null);
     }
   };
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+    <div className="relative flex min-h-screen w-full bg-background text-foreground">
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="config" />
 
         {/* Área principal */}
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl dark:bg-slate-900/90">
-          <header className="flex items-center justify-between gap-3">
-            <div className="flex flex-col">
-              <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
-                Configurações da aplicação
-              </h1>
-              <p className="text-xs text-slate-400 sm:text-sm">
-                Somente administradores podem visualizar e alterar essas informações.
-              </p>
+        <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-3xl bg-card lg:p-6 lg:shadow-[0_18px_60px_rgba(0,0,0,0.4)]">
+
+          {/* Header da página */}
+          <header className="flex flex-col gap-1 border-b border-border pb-5">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Painel</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-primary">Configurações</span>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="hidden items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200/80 focus-within:ring-[#135bec] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
-                <Search className="mr-2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar"
-                  className="h-7 w-40 bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none dark:text-slate-50 sm:w-52 sm:text-sm"
-                />
-              </div>
-
-              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-sm ring-1 ring-slate-200/70 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                <Bell className="h-4 w-4" />
-              </button>
-
-              <div className="flex items-center gap-2 rounded-full bg-slate-100/70 px-2 py-1.5 text-xs shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700 sm:px-3">
-                <img
-                  src="/perfil.jpeg"
-                  alt="Foto administrador"
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-                <div className="hidden flex-col text-left sm:flex">
-                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
-                    Administrador
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    Área administrativa
-                  </span>
-                </div>
-              </div>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Configurações da aplicação
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Somente administradores podem visualizar e alterar essas informações.
+            </p>
           </header>
 
-          <main className="flex-1 overflow-y-auto pb-2">
-            <div className="mt-2 flex flex-col gap-4">
-              <section className="rounded-3xl bg-white/80 p-4 shadow-sm ring-1 ring-slate-100/80 dark:bg-slate-900/90 dark:ring-slate-800">
-                <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-50">
-                  <FileSignature className="h-4 w-4 text-sky-600" />
-                  <span>Integrações e chaves de API</span>
-                </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Configure aqui os tokens utilizados pelas integrações do sistema (OpenAI e Asaas).
-                </p>
-              </section>
+          <main className="flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-8">
 
-              {/* Submenu/atalhos de Configurações */}
-              <div className="grid gap-3 md:grid-cols-2">
-                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                        <KeyRound className="h-4 w-4" />
-                      </span>
-                      <span>Token da API da OpenAI</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Insira o token gerado na plataforma da OpenAI para processamento de guias e descrições cirúrgicas.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSalvar} className="flex flex-col gap-3">
-                      <Input
-                        type="password"
-                        placeholder="sk-..."
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                        className="h-9 w-full bg-white/50 text-xs sm:text-sm"
-                      />
-                      <Button
-                        type="submit"
-                        disabled={salvando}
-                        className="h-9 w-full rounded-full sm:w-auto self-end"
-                      >
-                        {salvando ? "Salvando..." : "Salvar Token"}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
+              {/* ── Seção: Ferramentas ─────────────────────────────────── */}
+              <section>
+                <SectionHeader
+                  icon={<Database className="h-5 w-5" />}
+                  title="Ferramentas"
+                  description="Utilitários para gerenciamento e importação de dados."
+                />
 
-                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200">
-                        <KeyRound className="h-4 w-4" />
-                      </span>
-                      <span>Modelo OpenAI</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Selecione a versão do GPT para utilizar nas requisições.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-3">
-                      <select
-                        value={openaiModel}
-                        onChange={(e) => setOpenaiModel(e.target.value)}
-                        className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-white/50 px-3 py-2 text-xs sm:text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:ring-offset-slate-950 dark:placeholder:text-slate-400 dark:focus:ring-slate-300"
-                      >
-                        <option value="gpt-4">gpt-4</option>
-                        <option value="gpt-4-32k">gpt-4-32k</option>
-                        <option value="gpt-4-turbo">gpt-4-turbo</option>
-                        <option value="gpt-4-vision">gpt-4-vision</option>
-                        <option value="gpt-4o">gpt-4o</option>
-                        <option value="gpt-4o-mini">gpt-4o-mini</option>
-                        <option value="gpt-4.1">gpt-4.1</option>
-                        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                        <option value="gpt-4.1-nano">gpt-4.1-nano</option>
-                        <option value="gpt-5">gpt-5</option>
-                        <option value="gpt-5.1">gpt-5.1</option>
-                        <option value="gpt-5.2">gpt-5.2</option>
-                        <option value="gpt-5.3">gpt-5.3</option>
-                        <option value="gpt-5-turbo">gpt-5-turbo</option>
-                        <option value="gpt-5-mini">gpt-5-mini</option>
-                        <option value="gpt-5-nano">gpt-5-nano</option>
-                      </select>
-                      <Button
-                        type="button"
-                        onClick={handleSalvarModelo}
-                        disabled={salvandoModelo}
-                        className="h-9 w-full rounded-full sm:w-auto self-end"
-                      >
-                        {salvandoModelo ? "Salvando..." : "Salvar Modelo"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Bloco para Asaas */}
-                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                        <KeyRound className="h-4 w-4" />
-                      </span>
-                      <span>Token Asaas (Sandbox)</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Token do ambiente sandbox que será usado pelo motor de assinatura (Edge Functions).
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form
-                      className="space-y-4 text-xs sm:text-sm"
-                      onSubmit={handleSalvarAsaas}
-                    >
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          Token Asaas
-                        </label>
-                        <Input
-                          type="password"
-                          value={asaasToken}
-                          onChange={(e) => setAsaasToken(e.target.value)}
-                          placeholder="$aact_..."
-                          className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
-                          disabled={carregando}
-                        />
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Este token não é exposto para o fluxo de assinatura no front-end; apenas a Edge Function usa.
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Dados de exemplo */}
+                  <ConfigCard>
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                        <Database className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">Dados de exemplo</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Crie automaticamente clínicas, médicos e uma descrição cirúrgica aprovada para demonstrar o funcionamento do sistema.
                         </p>
                       </div>
+                    </div>
+                    <Separator className="mb-4" />
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Este recurso cria registros apenas se as tabelas ainda estiverem vazias. Você pode utilizá-lo com segurança em ambiente de desenvolvimento.
+                    </p>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={handleCriarDadosExemplo}
+                      disabled={criandoDemo}
+                    >
+                      {criandoDemo ? "Criando dados..." : "Criar dados de exemplo"}
+                    </Button>
+                  </ConfigCard>
 
-                      <div className="flex justify-end pt-1">
-                        <Button
-                          type="submit"
-                          disabled={salvandoAsaas || carregando}
-                          className="h-9 rounded-full px-5 text-xs sm:text-sm"
-                        >
-                          {salvandoAsaas ? "Salvando..." : "Salvar"}
-                        </Button>
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                {/* Novo card: Converter PDF */}
-                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-slate-50 dark:bg-slate-800">
+                  {/* Converter PDF */}
+                  <ConfigCard>
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
                         <FileType2 className="h-4 w-4" />
-                      </span>
-                      <span>Converter PDF</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Acesse a ferramenta de upload e conversão de PDFs em tabela de dados, preparada para uso com Docling ou outros motores de extração.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
-                      <p className="max-w-xs text-slate-500 dark:text-slate-400">
-                        Envie um arquivo PDF e visualize os dados estruturados em formato tabular na tela seguinte.
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">Converter PDF</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Ferramenta de upload e conversão de PDFs em tabela de dados, preparada para uso com Docling ou outros motores de extração.
+                        </p>
+                      </div>
+                    </div>
+                    <Separator className="mb-4" />
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Envie um arquivo PDF e visualize os dados estruturados em formato tabular na tela seguinte.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate("/admin/configuracoes/converter-pdf")}
+                    >
+                      Ir para Converter PDF
+                    </Button>
+                  </ConfigCard>
+                </div>
+              </section>
+
+              {/* ── Seção: Importar CBHPM ──────────────────────────────── */}
+              <section>
+                <SectionHeader
+                  icon={<Upload className="h-5 w-5" />}
+                  title="Importar tabela CBHPM"
+                  description="Importe procedimentos cirúrgicos via arquivo CSV."
+                />
+                <CbhpmCsvImportCard />
+              </section>
+
+              {/* ── Seção: Modelos de email ────────────────────────────── */}
+              <section>
+                <SectionHeader
+                  icon={<Mail className="h-5 w-5" />}
+                  title="Modelos de email (faturamento)"
+                  description="Configure os textos padrão (assunto e corpo em HTML) usados nos emails de faturamento."
+                />
+
+                <ConfigCard>
+                  {/* Variáveis disponíveis */}
+                  <div className="mb-5 rounded-xl border border-border bg-muted/40 p-4">
+                    <p className="mb-1.5 text-xs font-semibold text-foreground">
+                      Variáveis disponíveis
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Use estas variáveis no assunto e no corpo HTML:{" "}
+                      {[
+                        "{{contato}}",
+                        "{{paciente_nome}}",
+                        "{{convenio}}",
+                        "{{data_cirurgia}}",
+                        "{{hora_inicio}}",
+                        "{{hospital_nome}}",
+                        "{{nome_usuario}}",
+                      ].map((v) => (
+                        <code
+                          key={v}
+                          className="mx-0.5 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] text-primary"
+                        >
+                          {v}
+                        </code>
+                      ))}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-5 md:grid-cols-2">
+                    {/* Email faturar */}
+                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/50 p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-emerald-400" />
+                        <p className="text-sm font-semibold text-foreground">Email faturar</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground -mt-1">
+                        Será enviado para a instituição de faturamento.
                       </p>
+                      <div>
+                        <FieldLabel>Assunto</FieldLabel>
+                        <Input
+                          value={emailModels.FATURAR.assunto}
+                          onChange={(e) =>
+                            setEmailModels((prev) => ({
+                              ...prev,
+                              FATURAR: { ...prev.FATURAR, assunto: e.target.value },
+                            }))
+                          }
+                          placeholder="Assunto do email"
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel>Corpo (HTML)</FieldLabel>
+                        <Textarea
+                          value={emailModels.FATURAR.corpo_html}
+                          onChange={(e) =>
+                            setEmailModels((prev) => ({
+                              ...prev,
+                              FATURAR: { ...prev.FATURAR, corpo_html: e.target.value },
+                            }))
+                          }
+                          className="min-h-[200px] font-mono text-[11px]"
+                        />
+                      </div>
                       <Button
                         type="button"
-                        variant="outline"
-                        className="h-9 rounded-full border-slate-200 px-4 text-xs sm:text-sm dark:border-slate-700"
-                        onClick={() => navigate("/admin/configuracoes/converter-pdf")}
-                      >
-                        Ir para Converter PDF
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <CbhpmCsvImportCard />
-
-              <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <span>Modelos de email (faturamento)</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Configure os textos padrão (assunto e corpo em HTML) usados nos emails de faturamento.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-4">
-                    <div className="rounded-2xl bg-slate-50/70 p-4 ring-1 ring-slate-200/70 dark:bg-slate-950/40 dark:ring-slate-800">
-                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                        Variáveis disponíveis
-                      </p>
-                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        Use estas variáveis no assunto e no corpo HTML:{" "}
-                        <span className="font-mono">{"{{contato}}"}</span>,{" "}
-                        <span className="font-mono">{"{{paciente_nome}}"}</span>,{" "}
-                        <span className="font-mono">{"{{convenio}}"}</span>,{" "}
-                        <span className="font-mono">{"{{data_cirurgia}}"}</span>,{" "}
-                        <span className="font-mono">{"{{hora_inicio}}"}</span>,{" "}
-                        <span className="font-mono">{"{{hospital_nome}}"}</span>,{" "}
-                        <span className="font-mono">{"{{nome_usuario}}"}</span>.
-                      </p>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Card className="rounded-3xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                        <CardHeader>
-                          <CardTitle className="text-sm sm:text-base">Email faturar</CardTitle>
-                          <CardDescription className="text-xs sm:text-sm">
-                            Será enviado para a instituição de faturamento.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                              Assunto
-                            </label>
-                            <Input
-                              value={emailModels.FATURAR.assunto}
-                              onChange={(e) =>
-                                setEmailModels((prev) => ({
-                                  ...prev,
-                                  FATURAR: {
-                                    ...prev.FATURAR,
-                                    assunto: e.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder="Assunto do email"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                              Corpo (HTML)
-                            </label>
-                            <Textarea
-                              value={emailModels.FATURAR.corpo_html}
-                              onChange={(e) =>
-                                setEmailModels((prev) => ({
-                                  ...prev,
-                                  FATURAR: {
-                                    ...prev.FATURAR,
-                                    corpo_html: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="min-h-[220px] font-mono text-[11px]"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            className="h-9 w-full rounded-full"
-                            onClick={() => handleSalvarModeloEmail("FATURAR")}
-                            disabled={salvandoEmails !== null}
-                          >
-                            <Save className="mr-2 h-4 w-4" />
-                            {salvandoEmails === "FATURAR" ? "Salvando..." : "Salvar modelo"}
-                          </Button>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="rounded-3xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                        <CardHeader>
-                          <CardTitle className="text-sm sm:text-base">Email não faturar</CardTitle>
-                          <CardDescription className="text-xs sm:text-sm">
-                            Será enviado para a instituição informando o não-faturamento.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                              Assunto
-                            </label>
-                            <Input
-                              value={emailModels.NAO_FATURAR.assunto}
-                              onChange={(e) =>
-                                setEmailModels((prev) => ({
-                                  ...prev,
-                                  NAO_FATURAR: {
-                                    ...prev.NAO_FATURAR,
-                                    assunto: e.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder="Assunto do email"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                              Corpo (HTML)
-                            </label>
-                            <Textarea
-                              value={emailModels.NAO_FATURAR.corpo_html}
-                              onChange={(e) =>
-                                setEmailModels((prev) => ({
-                                  ...prev,
-                                  NAO_FATURAR: {
-                                    ...prev.NAO_FATURAR,
-                                    corpo_html: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="min-h-[220px] font-mono text-[11px]"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            className="h-9 w-full rounded-full"
-                            onClick={() => handleSalvarModeloEmail("NAO_FATURAR")}
-                            disabled={salvandoEmails !== null}
-                          >
-                            <Save className="mr-2 h-4 w-4" />
-                            {salvandoEmails === "NAO_FATURAR" ? "Salvando..." : "Salvar modelo"}
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-9 rounded-full border-slate-200 px-4 text-xs sm:text-sm dark:border-slate-700"
-                        onClick={handleSalvarTodosModelosEmail}
+                        className="w-full"
+                        onClick={() => handleSalvarModeloEmail("FATURAR")}
                         disabled={salvandoEmails !== null}
                       >
                         <Save className="mr-2 h-4 w-4" />
-                        {salvandoEmails === "ALL" ? "Salvando..." : "Salvar tudo"}
+                        {salvandoEmails === "FATURAR" ? "Salvando..." : "Salvar modelo"}
+                      </Button>
+                    </div>
+
+                    {/* Email não faturar */}
+                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/50 p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-red-400" />
+                        <p className="text-sm font-semibold text-foreground">Email não faturar</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground -mt-1">
+                        Será enviado para a instituição informando o não-faturamento.
+                      </p>
+                      <div>
+                        <FieldLabel>Assunto</FieldLabel>
+                        <Input
+                          value={emailModels.NAO_FATURAR.assunto}
+                          onChange={(e) =>
+                            setEmailModels((prev) => ({
+                              ...prev,
+                              NAO_FATURAR: { ...prev.NAO_FATURAR, assunto: e.target.value },
+                            }))
+                          }
+                          placeholder="Assunto do email"
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel>Corpo (HTML)</FieldLabel>
+                        <Textarea
+                          value={emailModels.NAO_FATURAR.corpo_html}
+                          onChange={(e) =>
+                            setEmailModels((prev) => ({
+                              ...prev,
+                              NAO_FATURAR: { ...prev.NAO_FATURAR, corpo_html: e.target.value },
+                            }))
+                          }
+                          className="min-h-[200px] font-mono text-[11px]"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={() => handleSalvarModeloEmail("NAO_FATURAR")}
+                        disabled={salvandoEmails !== null}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {salvandoEmails === "NAO_FATURAR" ? "Salvando..." : "Salvar modelo"}
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
-                        <KeyRound className="h-4 w-4" />
-                      </span>
-                      <span>Token OpenAI</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Token para habilitar a leitura automática de documentos.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form
-                      className="space-y-4 text-xs sm:text-sm"
-                      onSubmit={handleSalvar}
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSalvarTodosModelosEmail}
+                      disabled={salvandoEmails !== null}
                     >
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          Token OpenAI
-                        </label>
+                      <Save className="mr-2 h-4 w-4" />
+                      {salvandoEmails === "ALL" ? "Salvando..." : "Salvar todos os modelos"}
+                    </Button>
+                  </div>
+                </ConfigCard>
+              </section>
+
+              {/* ── Seção: Integrações de API ──────────────────────────── */}
+              <section>
+                <SectionHeader
+                  icon={<FileSignature className="h-5 w-5" />}
+                  title="Integrações e chaves de API"
+                  description="Configure aqui os tokens utilizados pelas integrações do sistema (OpenAI e Asaas)."
+                />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Token OpenAI */}
+                  <ConfigCard>
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                        <KeyRound className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">Token da API da OpenAI</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Insira o token gerado na plataforma da OpenAI para processamento de guias e descrições cirúrgicas.
+                        </p>
+                      </div>
+                    </div>
+                    <Separator className="mb-4" />
+                    <form className="flex flex-col gap-4" onSubmit={handleSalvar}>
+                      <div>
+                        <FieldLabel>Token OpenAI</FieldLabel>
                         <Input
                           type="password"
                           value={token}
                           onChange={(e) => setToken(e.target.value)}
                           disabled={carregando}
+                          placeholder="sk-..."
                         />
                       </div>
-
                       <Button
                         type="submit"
-                        className="h-9 w-full rounded-full"
+                        className="w-full"
                         disabled={salvando || carregando}
                       >
                         {salvando ? "Salvando..." : "Salvar Token"}
                       </Button>
                     </form>
-                  </CardContent>
-                </Card>
+                  </ConfigCard>
 
-                <Card className="rounded-3xl border border-slate-100 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                        <KeyRound className="h-4 w-4" />
-                      </span>
-                      <span>Token Asaas (Sandbox)</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Token do ambiente sandbox que será usado pelo motor de assinatura (Edge Functions).
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form
-                      className="space-y-4 text-xs sm:text-sm"
-                      onSubmit={handleSalvarAsaas}
-                    >
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          Token Asaas
-                        </label>
+                  {/* Modelo OpenAI */}
+                  <ConfigCard>
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">Modelo OpenAI</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Selecione a versão do GPT para utilizar nas requisições.
+                        </p>
+                      </div>
+                    </div>
+                    <Separator className="mb-4" />
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <FieldLabel>Versão do modelo</FieldLabel>
+                        <select
+                          value={openaiModel}
+                          onChange={(e) => setOpenaiModel(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="gpt-4">gpt-4</option>
+                          <option value="gpt-4-32k">gpt-4-32k</option>
+                          <option value="gpt-4-turbo">gpt-4-turbo</option>
+                          <option value="gpt-4-vision">gpt-4-vision</option>
+                          <option value="gpt-4o">gpt-4o</option>
+                          <option value="gpt-4o-mini">gpt-4o-mini</option>
+                          <option value="gpt-4.1">gpt-4.1</option>
+                          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                          <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+                          <option value="gpt-5">gpt-5</option>
+                          <option value="gpt-5-turbo">gpt-5-turbo</option>
+                          <option value="gpt-5-mini">gpt-5-mini</option>
+                        </select>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={handleSalvarModelo}
+                        disabled={salvandoModelo}
+                      >
+                        {salvandoModelo ? "Salvando..." : "Salvar Modelo"}
+                      </Button>
+                    </div>
+                  </ConfigCard>
+
+                  {/* Token Asaas */}
+                  <ConfigCard className="md:col-span-2">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                        <Zap className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">Token Asaas (Sandbox)</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Token do ambiente sandbox que será usado pelo motor de assinatura (Edge Functions).
+                        </p>
+                      </div>
+                    </div>
+                    <Separator className="mb-4" />
+                    <form className="flex flex-col gap-4" onSubmit={handleSalvarAsaas}>
+                      <div>
+                        <FieldLabel>Token Asaas</FieldLabel>
                         <Input
                           type="password"
                           value={asaasToken}
                           onChange={(e) => setAsaasToken(e.target.value)}
                           placeholder="$aact_..."
-                          className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs sm:text-sm dark:border-slate-700 dark:bg-slate-900"
                           disabled={carregando}
                         />
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                        <p className="mt-1.5 text-xs text-muted-foreground">
                           Este token não é exposto para o fluxo de assinatura no front-end; apenas a Edge Function usa.
                         </p>
                       </div>
-
-                      <div className="flex justify-end pt-1">
+                      <div className="flex justify-end">
                         <Button
                           type="submit"
                           disabled={salvandoAsaas || carregando}
-                          className="h-9 rounded-full px-5 text-xs sm:text-sm"
+                          className="min-w-[120px]"
                         >
-                          {salvandoAsaas ? "Salvando..." : "Salvar"}
+                          {salvandoAsaas ? "Salvando..." : "Salvar Token"}
                         </Button>
                       </div>
                     </form>
-                  </CardContent>
-                </Card>
-              </div>
+                  </ConfigCard>
+                </div>
+              </section>
+
             </div>
           </main>
         </div>
