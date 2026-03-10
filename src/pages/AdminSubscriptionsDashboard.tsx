@@ -122,7 +122,9 @@ function renderPieValueLabel(props: any) {
 export default function AdminSubscriptionsDashboard() {
   const { loading: userLoading, systemUser, error: userError } = useSystemUser();
   const blocked =
-    !userLoading && (!systemUser || systemUser.regra !== "SUPER_ADMIN");
+    !userLoading &&
+    (!systemUser ||
+      String(systemUser.regra ?? "").trim().toUpperCase() !== "SUPER_ADMIN");
 
   const monthsKeys = useMemo(() => nextMonthsKeys(12), []);
 
