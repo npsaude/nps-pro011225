@@ -237,6 +237,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Estado para o diálogo de envio de emails
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
+  // Zoom do preview da guia de honorários
+  const [guiaZoom, setGuiaZoom] = useState(1);
+  const ZOOM_STEP = 0.15;
+  const ZOOM_MIN = 0.4;
+  const ZOOM_MAX = 2.0;
+
   // Tipo de cirurgia (eletiva ou emergencial)
   const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
 
@@ -1757,6 +1763,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setHtmlGuiaPreenchida("");
     setGuiaHonorariosId(null);
     setTipoCirurgia(null);
+    // Resetar zoom do preview
+    setGuiaZoom(1);
     // Resetar estados do PDF
     setPdfGerado(false);
     if (pdfBlobUrl) {
@@ -3036,27 +3044,76 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
           {/* TELA 8 - PREVIEW DA GUIA DE HONORÁRIOS */}
           {view === "preview_honorarios" && (
-            <div className="mt-2 flex w-full max-w-4xl flex-col">
-              <div className="mb-4">
-                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                  Guia de Honorários Preenchida
-                </h1>
-                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  Confira os dados preenchidos automaticamente na guia abaixo.
-                </p>
+            <div className="mt-2 flex w-full max-w-5xl flex-col">
+              {/* Cabeçalho + controles de zoom */}
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                    Guia de Honorários Preenchida
+                  </h1>
+                  <p className="mt-0.5 text-xs text-[#9CA3AF]">
+                    Confira os dados preenchidos automaticamente na guia abaixo.
+                  </p>
+                </div>
+
+                {/* Controles de zoom */}
+                <div className="flex items-center gap-2 rounded-xl bg-black/60 border border-[#D4A017]/20 px-3 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setGuiaZoom((z) => Math.max(ZOOM_MIN, parseFloat((z - ZOOM_STEP).toFixed(2))))}
+                    disabled={guiaZoom <= ZOOM_MIN}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 hover:bg-[#D4A017]/25 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold leading-none transition-colors"
+                    title="Diminuir zoom"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[44px] text-center text-xs font-semibold text-[#F5F5F5]">
+                    {Math.round(guiaZoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setGuiaZoom((z) => Math.min(ZOOM_MAX, parseFloat((z + ZOOM_STEP).toFixed(2))))}
+                    disabled={guiaZoom >= ZOOM_MAX}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 hover:bg-[#D4A017]/25 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold leading-none transition-colors"
+                    title="Aumentar zoom"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGuiaZoom(1)}
+                    className="ml-1 text-[10px] text-[#9CA3AF] hover:text-[#D4A017] transition-colors"
+                    title="Resetar zoom"
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
 
-              {/* Container do HTML da guia */}
-              <div className="w-full rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto max-h-[60vh]">
+              {/* Container do HTML da guia com zoom */}
+              <div className="w-full rounded-2xl bg-[#f0f0f0] shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto"
+                style={{ maxHeight: "70vh" }}
+              >
                 <div
-                  ref={guiaPreviewRef}
-                  className="guia-preview"
-                  dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
-                />
+                  style={{
+                    transform: `scale(${guiaZoom})`,
+                    transformOrigin: "top left",
+                    width: `${(1 / guiaZoom) * 100}%`,
+                    minHeight: "400px",
+                    backgroundColor: "#ffffff",
+                    padding: "16px",
+                  }}
+                >
+                  <div
+                    ref={guiaPreviewRef}
+                    className="guia-preview"
+                    dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
+                  />
+                </div>
               </div>
 
               {/* Botões de ação */}
-              <div className="mt-6">
+              <div className="mt-4">
                 {isGeneratingPdf || (!pdfGerado && !pdfBlobUrl) ? (
                   <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
