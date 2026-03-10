@@ -251,59 +251,52 @@ serve(async (req) => {
 
   // 3) Instruções de extração para Descrição Cirúrgica
   const jsonFormatInstructions = `
-Você é um assistente especializado em faturamento médico e descrições cirúrgicas.
+Você é um assistente especializado em faturamento médico hospitalar brasileiro.
+Sua tarefa é extrair dados de imagens de descrições cirúrgicas com MÁXIMA PRECISÃO E COMPLETUDE.
 
-A partir das IMAGENS anexadas (fotos de descrições cirúrgicas),
-extraia todos os dados relevantes para preencher os campos de faturamento.
+REGRAS ABSOLUTAS — SIGA RIGOROSAMENTE:
+1. Analise CADA PIXEL de TODAS as imagens antes de responder.
+2. Para PROCEDIMENTOS: varra a imagem linha por linha, de cima para baixo. Cada linha que contenha um código numérico ou nome de procedimento cirúrgico DEVE ser incluída no array. NÃO OMITA NENHUM.
+3. NUNCA truncar o array de procedimentos. Se houver 10 procedimentos no documento, retorne 10 objetos no array.
+4. Use APENAS dados visíveis no documento. Não invente. Se não encontrar, use null.
+5. Se um campo aparecer em múltiplas imagens, use o valor mais completo.
 
-IMPORTANTE:
-- As imagens podem ser de DIFERENTES PARTES da mesma descrição cirúrgica.
-- Analise TODAS as imagens e consolide as informações em um único JSON.
-- Se um campo aparecer em múltiplas imagens, use o valor mais completo/legível.
-- Use APENAS informações que aparecem claramente nos documentos.
-- Se um campo não estiver presente ou não for possível inferir com segurança, use null nesse campo.
-- Não invente dados.
-
-Campos a extrair:
-
-DADOS DA EXECUÇÃO (tabela faturamentos):
-- paciente_nome: Nome completo do paciente
+DADOS DA EXECUÇÃO:
+- paciente_nome: Nome completo do paciente (campo "Paciente", "Nome" ou similar)
 - data_cirurgia: Data da cirurgia (formato DD/MM/YYYY ou YYYY-MM-DD)
-- hora_inicio: Hora de início da cirurgia (formato HH:MM)
-- hora_fim: Hora de término da cirurgia (formato HH:MM)
-- paciente_cpf: CPF do paciente (apenas números, 11 dígitos)
+- hora_inicio: Hora de início (formato HH:MM)
+- hora_fim: Hora de término (formato HH:MM)
+- paciente_cpf: CPF do paciente (apenas 11 dígitos numéricos)
 - numero_guia_honorarios: Número da guia de honorários
 - numero_guia_internacao: Número da guia de internação
 
-DIAGNÓSTICO FINAL:
-- cid_codigo: Código CID do diagnóstico (ex: "K80.2", "J18.9")
+DIAGNÓSTICO:
+- cid_codigo: Código CID (ex: "K80.2")
 - diagnostico_descricao: Descrição do diagnóstico
 
-EQUIPE CIRÚRGICA (MUITO IMPORTANTE - extrair todos os membros da equipe):
-- cirurgiao_nome: Nome completo do cirurgião principal
-- cirurgiao_crm: CRM do cirurgião principal (apenas o número)
-- auxiliar1_nome: Nome completo do 1º auxiliar
-- auxiliar1_crm: CRM do 1º auxiliar (apenas o número)
-- auxiliar2_nome: Nome completo do 2º auxiliar
-- auxiliar2_crm: CRM do 2º auxiliar (apenas o número)
-- auxiliar3_nome: Nome completo do 3º auxiliar
-- auxiliar3_crm: CRM do 3º auxiliar (apenas o número)
-- anestesista_nome: Nome completo do anestesista
-- anestesista_crm: CRM do anestesista (apenas o número)
-- instrumentador_nome: Nome completo do instrumentador cirúrgico
-- instrumentador_crm: CRM do instrumentador (apenas o número, se disponível)
+EQUIPE CIRÚRGICA — extraia TODOS os membros listados:
+- cirurgiao_nome / cirurgiao_crm: Cirurgião principal
+- auxiliar1_nome / auxiliar1_crm: 1º auxiliar
+- auxiliar2_nome / auxiliar2_crm: 2º auxiliar
+- auxiliar3_nome / auxiliar3_crm: 3º auxiliar
+- anestesista_nome / anestesista_crm: Anestesista
+- instrumentador_nome / instrumentador_crm: Instrumentador cirúrgico
 
 VALIDAÇÃO:
-- assinatura_medica: Se há assinatura do médico no documento (true/false)
-- data_assinatura: Data da assinatura (formato DD/MM/YYYY ou YYYY-MM-DD)
+- assinatura_medica: true se há assinatura do médico, false caso contrário
+- data_assinatura: Data da assinatura (DD/MM/YYYY ou YYYY-MM-DD)
 
-PROCEDIMENTOS EXECUTADOS (MUITO IMPORTANTE - extrair TODOS os procedimentos listados):
-- procedimentos: Array com TODOS os procedimentos realizados, cada um com:
-  - codigo_procedimento: Código TUSS ou código do procedimento (extraia exatamente como está no documento)
-  - descricao_procedimento: Descrição completa do procedimento realizado
-  - quantidade_executada: Quantidade executada (número, padrão 1 se não informado)
+PROCEDIMENTOS CIRÚRGICOS — ATENÇÃO MÁXIMA:
+- Localize a tabela ou lista de procedimentos no documento.
+- Inclua ABSOLUTAMENTE TODOS os procedimentos listados, sem exceção.
+- Para cada procedimento, extraia:
+  - codigo_procedimento: código numérico exatamente como aparece (ex: "30729137", "31309186")
+  - descricao_procedimento: nome/descrição completa do procedimento
+  - quantidade_executada: número (use 1 se não informado)
+- NÃO pare na primeira linha. Continue até o fim da tabela/lista.
+- Se houver procedimentos em páginas/imagens diferentes, inclua todos no mesmo array.
 
-Responda APENAS com um JSON válido, sem comentários ou explicações extras, no formato abaixo:
+Responda SOMENTE com JSON válido e completo, sem texto adicional:
 
 {
   "faturamento": {
@@ -337,12 +330,12 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
       "descricao_procedimento": string | null,
       "quantidade_executada": number | null
     }
-  ] | null
+  ]
 }
 `;
 
-  // 4) Chamar GPT-4 Vision para analisar as imagens
-  console.log("[process-descricao-cirurgica] Chamando GPT-4o-mini para análise de imagens...");
+  // 4) Chamar GPT-4o para analisar as imagens (modelo completo para máxima precisão)
+  console.log("[process-descricao-cirurgica] Chamando GPT-4o para análise de imagens...");
 
   const openaiResponse = await fetch(
     "https://api.openai.com/v1/chat/completions",
@@ -353,14 +346,17 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
         Authorization: `Bearer ${openaiToken}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         temperature: 0,
+        max_tokens: 4096,
         response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
             content:
-              "Você é um assistente de IA especializado em leitura de descrições cirúrgicas (imagens) e faturamento médico. Sempre responda com JSON válido.",
+              "Você é um assistente de IA especializado em leitura de descrições cirúrgicas (imagens) e faturamento médico hospitalar brasileiro. " +
+              "Sua principal responsabilidade é extrair TODOS os procedimentos cirúrgicos listados no documento, sem omitir nenhum. " +
+              "Sempre responda com JSON válido e completo.",
           },
           {
             role: "user",
@@ -440,7 +436,14 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   );
 
   const faturamentoData = parsed?.faturamento ?? {};
-  const procedimentosData = parsed?.procedimentos ?? [];
+  const procedimentosData = Array.isArray(parsed?.procedimentos) ? parsed.procedimentos : [];
+
+  console.log(
+    "[process-descricao-cirurgica] Procedimentos extraídos pela IA:",
+    procedimentosData.length,
+    "| Lista:",
+    JSON.stringify(procedimentosData.map((p: any) => ({ cod: p.codigo_procedimento, desc: p.descricao_procedimento?.slice(0, 40) })))
+  );
 
   // 5) Atualizar o faturamento existente com os dados extraídos
   const filePaths = files.map((f) => f.path);
