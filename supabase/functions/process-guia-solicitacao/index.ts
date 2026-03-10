@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
+import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -228,6 +229,25 @@ serve(async (req) => {
     );
   }
 
+  // Converter imagens para base64 (compatível com todos os modelos OpenAI)
+  console.log("[process-guia-solicitacao] Convertendo imagens para base64...");
+  const imageBase64List = await imageUrlsToBase64(imageUrls);
+
+  if (imageBase64List.length === 0) {
+    console.error("[process-guia-solicitacao] Falha ao converter imagens para base64.");
+    return new Response(
+      JSON.stringify({
+        error: "Não foi possível processar as imagens enviadas.",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  console.log("[process-guia-solicitacao] Imagens convertidas:", imageBase64List.length);
+
   // 3) Prompt e formato JSON
   const jsonFormatInstructions = `
 Você é um assistente especializado em leitura de GUIA DE SOLICITAÇÃO (TISS/ANS) e extração estruturada de dados.
@@ -331,9 +351,9 @@ Retorne no formato:
             role: "user",
             content: [
               { type: "text", text: jsonFormatInstructions },
-              ...imageUrls.map((url) => ({
+              ...imageBase64List.map((b64) => ({
                 type: "image_url",
-                image_url: { url, detail: "high" },
+                image_url: { url: b64, detail: "high" },
               })),
             ],
           },

@@ -5,6 +5,7 @@ import {
   validarProcedimentoCbhpm,
 } from "../_shared/cbhpm-validator.ts";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
+import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -236,6 +237,25 @@ serve(async (req) => {
     );
   }
 
+  // Converter imagens para base64 (compatível com todos os modelos OpenAI)
+  console.log("[process-guia-honorarios] Convertendo imagens para base64...");
+  const imageBase64List = await imageUrlsToBase64(imageUrls);
+
+  if (imageBase64List.length === 0) {
+    console.error("[process-guia-honorarios] Falha ao converter imagens para base64.");
+    return new Response(
+      JSON.stringify({
+        error: "Não foi possível processar as imagens enviadas.",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  console.log("[process-guia-honorarios] Imagens convertidas:", imageBase64List.length);
+
   // 3) Instruções de extração para Guia de Faturamento de Honorários
   const jsonFormatInstructions = `
 Você é um assistente especializado em faturamento médico e guias de honorários.
@@ -337,10 +357,10 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
                 type: "text",
                 text: jsonFormatInstructions,
               },
-              ...imageUrls.map((url) => ({
+              ...imageBase64List.map((b64) => ({
                 type: "image_url",
                 image_url: {
-                  url,
+                  url: b64,
                   detail: "high",
                 },
               })),
