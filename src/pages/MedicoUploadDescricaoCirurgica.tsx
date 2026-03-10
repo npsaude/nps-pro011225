@@ -36,6 +36,7 @@ import {
   showSuccess,
 } from "@/utils/toast";
 import { SendBillingEmailsDialog } from "@/components/faturamento/SendBillingEmailsDialog";
+import ProcedureReviewDialog, { type ProcedimentoRevisao } from "@/components/faturamento/ProcedureReviewDialog";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -246,6 +247,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Estado para o diálogo de envio de emails
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+
+  // Estado para o diálogo de revisão de procedimentos
+  const [showProcedureReview, setShowProcedureReview] = useState(false);
+  const [procedimentosRevisao, setProcedimentosRevisao] = useState<ProcedimentoRevisao[]>([]);
 
   // Zoom do preview da guia de honorários (inicia em 50%)
   const [guiaZoom, setGuiaZoom] = useState(0.5);
@@ -1145,7 +1150,17 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Descrição cirúrgica processada com sucesso!");
       setFilesDescricao([]);
       setShowAnalyzingScreen(false);
-      if (initialFaturamentoId) {
+
+      // Check if any procedures need review
+      const revisaoData = responseJson?.revisao_procedimentos as ProcedimentoRevisao[] | undefined;
+      const temRevisao = responseJson?.tem_revisao_pendente === true;
+
+      if (temRevisao && revisaoData && revisaoData.length > 0) {
+        // Show procedure review dialog before proceeding
+        setProcedimentosRevisao(revisaoData);
+        setShowProcedureReview(true);
+        // Don't navigate yet - wait for review to complete
+      } else if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
         setView("pergunta_honorarios");
@@ -1159,6 +1174,28 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setShowAnalyzingScreen(false);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Callback quando o médico confirma a revisão de procedimentos
+  const handleProcedureReviewConfirm = () => {
+    setShowProcedureReview(false);
+    setProcedimentosRevisao([]);
+    if (initialFaturamentoId) {
+      navigate("/medico/faturamentos");
+    } else {
+      setView("pergunta_honorarios");
+    }
+  };
+
+  // Callback quando o médico pula a revisão de procedimentos
+  const handleProcedureReviewClose = () => {
+    setShowProcedureReview(false);
+    setProcedimentosRevisao([]);
+    if (initialFaturamentoId) {
+      navigate("/medico/faturamentos");
+    } else {
+      setView("pergunta_honorarios");
     }
   };
 
@@ -1826,6 +1863,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setHtmlGuiaPreenchida("");
     setGuiaHonorariosId(null);
     setTipoCirurgia(null);
+    // Resetar revisão de procedimentos
+    setShowProcedureReview(false);
+    setProcedimentosRevisao([]);
     // Resetar zoom do preview para 50%
     setGuiaZoom(0.5);
     // Resetar estados do PDF
@@ -2106,7 +2146,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               </button>
 
               <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+                <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/20">
                   <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
                   <span>Passo {currentStep}/{totalSteps}</span>
                 </div>
@@ -2324,7 +2364,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={handleFecharSelecaoHospital}
+                      onClick={() => setHospitalStepView("selector")}
                       className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -3268,6 +3308,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           onSkip={handleSkipEmails}
         />
       )}
+
+      {/* Diálogo de Revisão de Procedimentos */}
+      <ProcedureReviewDialog
+        open={showProcedureReview}
+        procedimentos={procedimentosRevisao}
+        onConfirm={handleProcedureReviewConfirm}
+        onClose={handleProcedureReviewClose}
+      />
 
       {/* Tela de Análise da IA */}
       {showAnalyzingScreen && (

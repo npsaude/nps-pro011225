@@ -801,6 +801,18 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       return null;
     };
 
+    // Track procedures that need review (code was corrected or matched by description similarity)
+    const procedimentosRevisao: Array<{
+      item_faturamento_id: string | null;
+      codigo_original: string | null;
+      descricao_original: string | null;
+      codigo_validado: string | null;
+      descricao_validada: string | null;
+      metodo_validacao: string;
+      similaridade: number | null;
+      necessita_revisao: boolean;
+    }> = [];
+
     for (const proc of procedimentosData) {
       const codigoOriginal = proc.codigo_procedimento?.toString().trim() || null;
       const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
@@ -818,11 +830,27 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         console.log(
           `[process-descricao-cirurgica] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
         );
+        // Add rejected procedure to review list so doctor can provide correct code
+        procedimentosRevisao.push({
+          item_faturamento_id: null,
+          codigo_original: codigoOriginal,
+          descricao_original: descricaoOriginal,
+          codigo_validado: null,
+          descricao_validada: null,
+          metodo_validacao: "nao_encontrado",
+          similaridade: null,
+          necessita_revisao: true,
+        });
         continue;
       }
 
       const codigoProcedimento = validacao.codigo_validado;
       const descricaoProcedimento = validacao.descricao_validada;
+
+      // Determine if this procedure needs review
+      // Needs review if: code was changed AND method was not exact match
+      const foiCorrigido = codigoOriginal !== codigoProcedimento;
+      const necessitaRevisao = foiCorrigido && validacao.metodo_validacao !== "codigo_exato";
 
       // Log detalhado: mostrar se houve mudança entre o que a IA extraiu e o que foi validado
       if (codigoOriginal !== codigoProcedimento) {
@@ -833,6 +861,8 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       console.log(
         `[process-descricao-cirurgica] ✅ Procedimento validado (${validacao.metodo_validacao}): ${codigoProcedimento} - ${descricaoProcedimento?.slice(0, 60)}`
       );
+
+      let insertedItemId: string | null = null;
 
       if (semItensPreExistentes) {
         // Sem guia de autorização: inserir todos os procedimentos diretamente
@@ -860,6 +890,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
           );
           if (newItem) {
             existingItemsList.push(newItem);
+            insertedItemId = newItem.id;
           }
         }
       } else {
@@ -889,6 +920,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
             console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
           } else {
             console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento || descricaoProcedimento);
+            insertedItemId = existingItem.id;
           }
         } else if (codigoProcedimento || descricaoProcedimento) {
           // Procedimento novo não presente na guia de autorização: inserir
@@ -913,14 +945,48 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
             console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento || descricaoProcedimento);
             if (newItem) {
               existingItemsList.push(newItem);
+              insertedItemId = newItem.id;
             }
           }
         }
       }
+
+      // Add to review list
+      procedimentosRevisao.push({
+        item_faturamento_id: insertedItemId,
+        codigo_original: codigoOriginal,
+        descricao_original: descricaoOriginal,
+        codigo_validado: codigoProcedimento,
+        descricao_validada: descricaoProcedimento,
+        metodo_validacao: validacao.metodo_validacao,
+        similaridade: validacao.similaridade ?? null,
+        necessita_revisao: necessitaRevisao,
+      });
     }
+
+    const temRevisaoPendente = procedimentosRevisao.some(p => p.necessita_revisao);
+    console.log("[process-descricao-cirurgica] Processamento concluído com sucesso.",
+      temRevisaoPendente ? `${procedimentosRevisao.filter(p => p.necessita_revisao).length} procedimento(s) precisam de revisão.` : "Nenhuma revisão necessária.");
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        faturamento_id: faturamentoId,
+        dados_extraidos: {
+          faturamento: faturamentoData,
+          procedimentos: procedimentosData,
+        },
+        revisao_procedimentos: procedimentosRevisao,
+        tem_revisao_pendente: temRevisaoPendente,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
-  console.log("[process-descricao-cirurgica] Processamento concluído com sucesso.");
+  console.log("[process-descricao-cirurgica] Processamento concluído com sucesso (sem procedimentos).");
 
   return new Response(
     JSON.stringify({
@@ -930,6 +996,8 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         faturamento: faturamentoData,
         procedimentos: procedimentosData,
       },
+      revisao_procedimentos: [],
+      tem_revisao_pendente: false,
     }),
     {
       status: 200,
