@@ -6,6 +6,7 @@ import {
 } from "../_shared/cbhpm-validator.ts";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
+import { openaiChatWithImages, extractJson } from "../_shared/openai-chat.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -328,56 +329,30 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
 }
 `;
 
-  // 4) Chamar GPT-4 Vision para analisar as imagens
-  console.log("[process-guia-honorarios] Chamando GPT-4o-mini para análise de imagens...");
+  // 4) Chamar OpenAI para analisar as imagens
+  console.log("[process-guia-honorarios] Chamando OpenAI modelo:", openaiModel);
 
-  const openaiResponse = await fetch(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiToken}`,
-      },
-      body: JSON.stringify({
-        model: openaiModel,
-        temperature: 0,
-        max_tokens: 4096,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "Você é um assistente de IA especializado em leitura de guias de faturamento de honorários médicos e faturamento hospitalar brasileiro. Extraia TODOS os dados visíveis com máxima precisão. Sempre responda com JSON válido e completo.",
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: jsonFormatInstructions,
-              },
-              ...imageBase64List.map((b64) => ({
-                type: "image_url",
-                image_url: {
-                  url: b64,
-                  detail: "high",
-                },
-              })),
-            ],
-          },
-        ],
-      }),
-    },
-  );
+  let messageContent: string;
+  let openaiUsage: any;
 
-  if (!openaiResponse.ok) {
-    const errorText = await openaiResponse.text();
-    console.error("[process-guia-honorarios] Erro da OpenAI:", errorText);
+  try {
+    const result = await openaiChatWithImages({
+      apiKey: openaiToken,
+      model: openaiModel,
+      systemPrompt:
+        "Você é um assistente de IA especializado em leitura de guias de faturamento de honorários médicos e faturamento hospitalar brasileiro. Extraia TODOS os dados visíveis com máxima precisão. Sempre responda com JSON válido e completo.",
+      userText: jsonFormatInstructions,
+      imageBase64List,
+      maxTokens: 4096,
+    });
+    messageContent = result.content;
+    openaiUsage = result.usage;
+  } catch (openaiErr) {
+    console.error("[process-guia-honorarios] Erro da OpenAI:", openaiErr);
     return new Response(
       JSON.stringify({
         error: "Erro ao chamar a API da OpenAI.",
-        details: errorText,
+        details: String(openaiErr),
       }),
       {
         status: 500,
@@ -386,9 +361,6 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     );
   }
 
-  const completion = await openaiResponse.json();
-  const messageContent = completion?.choices?.[0]?.message?.content;
-
   // Registrar uso de tokens
   await logOpenAIUsage({
     supabase,
@@ -396,15 +368,13 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     faturamentoId,
     edgeFunction: "process-guia-honorarios",
     model: openaiModel,
-    usage: completion?.usage,
+    usage: openaiUsage,
   });
 
   if (!messageContent) {
-    console.error("[process-guia-honorarios] Resposta da OpenAI sem conteúdo:", completion);
+    console.error("[process-guia-honorarios] Resposta da OpenAI sem conteúdo.");
     return new Response(
-      JSON.stringify({
-        error: "Resposta da OpenAI sem conteúdo utilizável.",
-      }),
+      JSON.stringify({ error: "Resposta da OpenAI sem conteúdo utilizável." }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -414,7 +384,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
 
   let parsed: any;
   try {
-    parsed = JSON.parse(messageContent);
+    parsed = extractJson(messageContent);
   } catch (e) {
     console.error(
       "[process-guia-honorarios] Falha ao fazer parse do JSON da OpenAI:",
@@ -422,9 +392,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
       messageContent,
     );
     return new Response(
-      JSON.stringify({
-        error: "Falha ao interpretar a resposta da OpenAI como JSON.",
-      }),
+      JSON.stringify({ error: "Falha ao interpretar a resposta da OpenAI como JSON." }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

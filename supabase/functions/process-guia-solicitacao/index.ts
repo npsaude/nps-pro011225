@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
+import { openaiChatWithImages, extractJson } from "../_shared/openai-chat.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -326,56 +327,33 @@ Retorne no formato:
 }
 `;
 
-  console.log("[process-guia-solicitacao] Chamando GPT-4o-mini para análise...");
+  console.log("[process-guia-solicitacao] Chamando OpenAI modelo:", openaiModel);
 
-  const openaiResponse = await fetch(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiToken}`,
-      },
-      body: JSON.stringify({
-        model: openaiModel,
-        temperature: 0,
-        max_tokens: 4096,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "Você é um assistente de IA especializado em leitura de guias TISS/ANS e faturamento hospitalar brasileiro. Extraia TODOS os dados visíveis com máxima precisão. Sempre responda com JSON válido e completo.",
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: jsonFormatInstructions },
-              ...imageBase64List.map((b64) => ({
-                type: "image_url",
-                image_url: { url: b64, detail: "high" },
-              })),
-            ],
-          },
-        ],
-      }),
-    },
-  );
+  let messageContent: string;
+  let openaiUsage: any;
 
-  if (!openaiResponse.ok) {
-    const errorText = await openaiResponse.text();
-    console.error("[process-guia-solicitacao] Erro da OpenAI:", errorText);
+  try {
+    const result = await openaiChatWithImages({
+      apiKey: openaiToken,
+      model: openaiModel,
+      systemPrompt:
+        "Você é um assistente de IA especializado em leitura de guias TISS/ANS e faturamento hospitalar brasileiro. Extraia TODOS os dados visíveis com máxima precisão. Sempre responda com JSON válido e completo.",
+      userText: jsonFormatInstructions,
+      imageBase64List,
+      maxTokens: 4096,
+    });
+    messageContent = result.content;
+    openaiUsage = result.usage;
+  } catch (openaiErr) {
+    console.error("[process-guia-solicitacao] Erro da OpenAI:", openaiErr);
     return new Response(
-      JSON.stringify({ error: "Erro ao chamar a API da OpenAI.", details: errorText }),
+      JSON.stringify({ error: "Erro ao chamar a API da OpenAI.", details: String(openaiErr) }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
   }
-
-  const completion = await openaiResponse.json();
-  const messageContent = completion?.choices?.[0]?.message?.content;
 
   // Registrar uso de tokens
   await logOpenAIUsage({
@@ -384,14 +362,11 @@ Retorne no formato:
     faturamentoId,
     edgeFunction: "process-guia-solicitacao",
     model: openaiModel,
-    usage: completion?.usage,
+    usage: openaiUsage,
   });
 
   if (!messageContent) {
-    console.error(
-      "[process-guia-solicitacao] Resposta da OpenAI sem conteúdo:",
-      completion,
-    );
+    console.error("[process-guia-solicitacao] Resposta da OpenAI sem conteúdo.");
     return new Response(
       JSON.stringify({ error: "Resposta da OpenAI sem conteúdo utilizável." }),
       {
@@ -403,7 +378,7 @@ Retorne no formato:
 
   let parsed: any;
   try {
-    parsed = JSON.parse(messageContent);
+    parsed = extractJson(messageContent);
   } catch (e) {
     console.error(
       "[process-guia-solicitacao] Falha ao fazer parse do JSON:",
