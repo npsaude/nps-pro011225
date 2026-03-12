@@ -383,7 +383,7 @@ const DashboardMedico: React.FC = () => {
         <section className="mb-4 flex gap-3">
           <button
             type="button"
-            onClick={handleAbrirModalHospitais}
+            onClick={() => navigate("/medico/faturamentos/enviar")}
             className="flex h-24 min-w-0 flex-1 flex-col justify-center rounded-2xl bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-3 text-left text-black shadow-[0_0_30px_rgba(212,160,23,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(212,160,23,0.2)]"
           >
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-black/20 text-black shadow-inner">
