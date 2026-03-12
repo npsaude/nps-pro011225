@@ -11,6 +11,25 @@ function normalizeEmail(email: string) {
   return String(email ?? "").trim().toLowerCase();
 }
 
+/**
+ * Normalizes a PostgreSQL timestamptz string to strict ISO 8601 so that
+ * `new Date(...)` parses it reliably across all JS runtimes.
+ *
+ * Examples:
+ *   "2026-04-10 21:00:00-03"   → "2026-04-10T21:00:00-03:00"
+ *   "2026-04-10 21:00:00+00"   → "2026-04-10T21:00:00+00:00"
+ *   "2026-04-10T21:00:00-03:00" → unchanged
+ */
+function toISOTimestamp(raw: string): string {
+  // Replace first space between date and time with 'T'
+  let s = raw.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1T");
+
+  // Ensure timezone offset has a colon (e.g. -03 → -03:00)
+  s = s.replace(/([+-]\d{2})$/, "$1:00");
+
+  return s;
+}
+
 type EnrollmentRow = {
   id: string;
   user_email: string;
@@ -123,7 +142,7 @@ serve(async (req) => {
 
   for (const r of mine) {
     if (!r.current_period_end) continue;
-    const endMs = new Date(r.current_period_end).getTime();
+    const endMs = new Date(toISOTimestamp(r.current_period_end)).getTime();
     if (!Number.isFinite(endMs)) continue;
 
     if (endMs > bestEndMs) {
@@ -151,8 +170,11 @@ serve(async (req) => {
     enrollmentId: best.id,
     status: best.status,
     current_period_end: best.current_period_end,
+    current_period_end_iso: toISOTimestamp(best.current_period_end!),
     nowMs,
     bestEndMs,
+    nowISO: new Date(nowMs).toISOString(),
+    bestEndISO: new Date(bestEndMs).toISOString(),
     isValid: bestEndMs >= nowMs,
   });
 
