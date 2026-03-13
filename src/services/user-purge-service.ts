@@ -16,6 +16,17 @@ export async function purgeUserByEmail(email: string): Promise<PurgeUserResult> 
   });
 
   if (error) {
+    const anyErr = error as any;
+    const status =
+      anyErr?.context?.response?.status ??
+      anyErr?.status ??
+      anyErr?.context?.status ??
+      undefined;
+
+    if (status === 404) {
+      throw new Error("Usuário não encontrado (provavelmente já foi excluído). ");
+    }
+
     throw new Error(error.message || "Não foi possível excluir o usuário.");
   }
 
