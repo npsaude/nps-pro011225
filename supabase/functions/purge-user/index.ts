@@ -17,6 +17,15 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+type DbPurgeResult = {
+  status: "ok" | "not_found";
+  email?: string;
+  user_id?: string;
+  deleted?: unknown;
+};
+
+type StorageObj = { bucket_id: string; name: string };
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -107,102 +116,81 @@ serve(async (req) => {
     targetEmail: email,
   });
 
-  // 1) Descobre o user_id no auth
-  const { data: authUserRow, error: authLookupError } = await adminClient
-    .schema("auth")
-    .from("users")
-    .select("id, email")
-    .ilike("email", email)
-    .maybeSingle();
-
-  if (authLookupError) {
-    console.error("[purge-user] Failed to look up auth user", {
-      authLookupError,
-      email,
-    });
-    return new Response(JSON.stringify({ error: "Falha ao buscar usuário" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  if (!authUserRow?.id) {
-    return new Response(JSON.stringify({ error: "Usuário não encontrado" }), {
-      status: 404,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const targetUserId = authUserRow.id as string;
-
-  // 2) Deleta dados das tabelas (DB)
-  const { data: dbResult, error: dbError } = await adminClient.rpc(
+  // 1) Purga no banco e também descobre o user_id (consultando auth.users via SQL definer)
+  const { data: dbResultRaw, error: dbError } = await adminClient.rpc(
     "purge_user_everything",
     { p_email: email },
   );
 
   if (dbError) {
-    console.error("[purge-user] DB purge failed", { dbError, email, targetUserId });
+    console.error("[purge-user] DB purge failed", { dbError, email });
     return new Response(JSON.stringify({ error: "Falha ao excluir dados do banco" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // 3) Remove arquivos de Storage (todos os buckets, por padrão de path)
+  const dbResult = (dbResultRaw ?? null) as DbPurgeResult | null;
+
+  if (!dbResult || dbResult.status === "not_found" || !dbResult.user_id) {
+    return new Response(JSON.stringify({ error: "Usuário não encontrado" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const targetUserId = String(dbResult.user_id);
+
+  // 2) Remove arquivos de Storage (usando função SQL definer que acessa storage.objects)
+  const { data: storageRows, error: storageListError } = await adminClient.rpc(
+    "list_storage_objects_for_user",
+    { p_user_id: targetUserId },
+  );
+
+  if (storageListError) {
+    console.error("[purge-user] Failed to list storage objects", {
+      storageListError,
+      targetUserId,
+    });
+    return new Response(JSON.stringify({ error: "Falha ao listar arquivos do Storage" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const objects = ((storageRows ?? []) as StorageObj[])
+    .map((o) => ({ bucket_id: String((o as any).bucket_id), name: String((o as any).name) }))
+    .filter((o) => o.bucket_id && o.name);
+
+  const byBucket = new Map<string, string[]>();
+  for (const o of objects) {
+    const list = byBucket.get(o.bucket_id) ?? [];
+    list.push(o.name);
+    byBucket.set(o.bucket_id, list);
+  }
+
   let deletedStorageObjects = 0;
-  const { data: buckets, error: bucketsError } = await adminClient.storage
-    .listBuckets();
+  for (const [bucketId, names] of byBucket.entries()) {
+    for (const batch of chunk(names, 100)) {
+      const { error: removeError } = await adminClient.storage.from(bucketId).remove(batch);
 
-  if (bucketsError) {
-    console.error("[purge-user] Failed to list buckets", { bucketsError });
-  } else {
-    for (const b of buckets ?? []) {
-      const bucketId = (b as any).id as string;
-
-      const { data: objects, error: objectsError } = await adminClient
-        .schema("storage")
-        .from("objects")
-        .select("name")
-        .eq("bucket_id", bucketId)
-        .or(`name.ilike.%/${targetUserId}/%,name.ilike.${targetUserId}/%`)
-        .limit(5000);
-
-      if (objectsError) {
-        console.error("[purge-user] Failed to list objects", {
-          objectsError,
+      if (removeError) {
+        console.error("[purge-user] Failed to remove objects", {
+          removeError,
           bucketId,
-          targetUserId,
+          batchCount: batch.length,
         });
-        continue;
+        return new Response(JSON.stringify({ error: "Falha ao remover arquivos do Storage" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      const names = (objects ?? [])
-        .map((o: any) => String(o?.name ?? "").trim())
-        .filter(Boolean);
-
-      if (!names.length) continue;
-
-      for (const batch of chunk(names, 100)) {
-        const { error: removeError } = await adminClient.storage
-          .from(bucketId)
-          .remove(batch);
-
-        if (removeError) {
-          console.error("[purge-user] Failed to remove objects", {
-            removeError,
-            bucketId,
-            batchCount: batch.length,
-          });
-          continue;
-        }
-
-        deletedStorageObjects += batch.length;
-      }
+      deletedStorageObjects += batch.length;
     }
   }
 
-  // 4) Exclui usuário do Auth
+  // 3) Exclui usuário do Auth
   const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(
     targetUserId,
   );
