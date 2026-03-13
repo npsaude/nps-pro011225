@@ -355,10 +355,14 @@ const DashboardMedico: React.FC = () => {
             <span>Voltar</span>
           </button>
 
-          <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+          <button
+            type="button"
+            onClick={() => navigate("/admin/dashboard")}
+            className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25 hover:bg-[#D4A017]/20 hover:border-[#D4A017]/50 transition-colors cursor-pointer"
+          >
             <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
             <span>Portal do Médico</span>
-          </div>
+          </button>
         </header>
 
         {/* Card de saudação */}
