@@ -15,6 +15,8 @@ type MedicoHeaderProps = {
   onBack?: () => void;
   /** Texto do badge de status no canto direito */
   statusLabel?: string;
+  /** Callback ao clicar no badge de status */
+  onStatusClick?: () => void;
   /** Conteúdo adicional no canto direito (ex: ações) */
   right?: React.ReactNode;
   /** Controla a largura/alinhamento do conteúdo interno (ex: max-w-sm/max-w-md) */
@@ -26,6 +28,7 @@ export default function MedicoHeader({
   backTo,
   onBack,
   statusLabel,
+  onStatusClick,
   right,
   containerClassName,
 }: MedicoHeaderProps) {
@@ -76,10 +79,21 @@ export default function MedicoHeader({
 
         <div className="flex items-center gap-2">
           {statusLabel ? (
-            <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
-              <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
-              <span className="whitespace-nowrap">{statusLabel}</span>
-            </div>
+            onStatusClick ? (
+              <button
+                type="button"
+                onClick={onStatusClick}
+                className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25 hover:bg-[#D4A017]/20 hover:border-[#D4A017]/50 transition-colors cursor-pointer"
+              >
+                <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
+                <span className="whitespace-nowrap">{statusLabel}</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25">
+                <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
+                <span className="whitespace-nowrap">{statusLabel}</span>
+              </div>
+            )
           ) : null}
           {right}
         </div>

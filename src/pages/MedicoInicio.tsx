@@ -38,7 +38,11 @@ const MedicoInicio: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
       <div className="relative z-10">
-        <MedicoHeader statusLabel="Portal do Médico" containerClassName="max-w-sm" />
+        <MedicoHeader
+          statusLabel="Portal do Médico"
+          containerClassName="max-w-sm"
+          onStatusClick={() => navigate("/admin/dashboard")}
+        />
 
         <div className="mx-auto flex w-full max-w-sm flex-col px-4 py-6 sm:px-5">
           {/* Avatar + saudação */}
