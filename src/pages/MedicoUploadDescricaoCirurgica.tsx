@@ -1,3 +1,4 @@
+```typescript
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import html2canvas from "html2canvas";
@@ -255,6 +256,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Estado para o diálogo de revisão de procedimentos
   const [showProcedureReview, setShowProcedureReview] = useState(false);
   const [procedimentosRevisao, setProcedimentosRevisao] = useState<ProcedimentoRevisao[]>([]);
+
+  // Tipo de cirurgia (eletiva ou emergencial)
+  const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
 
   // Zoom do preview da guia de honorários (ajusta automaticamente para a largura da tela)
   const ZOOM_STEP = 0.15;
@@ -3226,140 +3230,3 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGuiaZoom(computeDefaultGuiaZoom())}
-                    className="ml-1 text-[10px] text-[#9CA3AF] hover:text-[#D4A017] transition-colors"
-                    title="Resetar zoom"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-
-              {/* Container do HTML da guia com zoom */}
-              <div
-                className="w-full rounded-2xl bg-[#f0f0f0] shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto"
-                style={{ maxHeight: "70vh" }}
-              >
-                <div
-                  style={{
-                    transform: `scale(${guiaZoom})`,
-                    transformOrigin: "top left",
-                    width: `${(1 / guiaZoom) * 100}%`,
-                    minHeight: "400px",
-                    backgroundColor: "#ffffff",
-                    padding: "16px",
-                  }}
-                >
-                  <div
-                    ref={guiaPreviewRef}
-                    className="guia-preview"
-                    dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
-                  />
-                </div>
-              </div>
-
-              {/* Botões de ação */}
-              <div className="mt-4">
-                {isGeneratingPdf || (!pdfGerado && !pdfBlobUrl) ? (
-                  <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando PDF da guia...
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full rounded-lg border-[#D4A017]/40 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 flex items-center justify-center"
-                      onClick={handleBaixarPdf}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Baixar PDF
-                    </Button>
-
-                    <Button
-                      type="button"
-                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
-                      onClick={() => {
-                        void handleAvancarAposPreview();
-                      }}
-                    >
-                      Avançar
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TELA 9 - SUCESSO */}
-          {view === "success" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                  <CheckCircle2 className="h-8 w-8" />
-                </div>
-
-                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
-                  Faturamento concluído
-                </h2>
-                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
-                  Seus documentos foram processados. Você pode iniciar um novo faturamento ou voltar para a lista.
-                </p>
-
-                <div className="flex flex-col gap-3">
-                  <Button
-                    type="button"
-                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                    onClick={handleNovaDescricao}
-                  >
-                    Novo faturamento
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => navigate("/medico/faturamentos")}
-                  >
-                    Ver meus faturamentos
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-
-        <SendBillingEmailsDialog
-          open={showEmailDialog}
-          onOpenChange={setShowEmailDialog}
-          faturamentoId={String(faturamentoId ?? initialFaturamentoId ?? "")}
-          userEmail={medicoEmail}
-          userName={medicoNome || "Médico"}
-          userCrm={medicoCrm || undefined}
-          descricaoCirurgicaTexto={null}
-          instituicaoCirurgiaNome={selectedHospitalName}
-          instituicaoFaturamentoNome={selectedClinicaName}
-          instituicoesDiferentes={Boolean(
-            selectedHospitalId &&
-              selectedClinicaId &&
-              selectedHospitalId !== selectedClinicaId &&
-              !useSameAsHospital,
-          )}
-          onEmailsSent={handleEmailsSent}
-          onSkip={handleSkipEmails}
-        />
-
-        <ProcedureReviewDialog
-          open={showProcedureReview}
-          procedimentos={procedimentosRevisao}
-          faturamentoId={faturamentoId}
-          userId={currentUserId}
-          onConfirm={handleProcedureReviewConfirm}
-          onClose={handleProcedureReviewClose}
-          onProcedimentosUpdated={setProcedimentosRevisao}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default MedicoUploadDescricaoCirurgica;
