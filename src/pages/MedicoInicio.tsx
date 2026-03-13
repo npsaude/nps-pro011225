@@ -25,8 +25,16 @@ const MedicoInicio: React.FC = () => {
         const primeiroNome = (data.nome as string).split(" ")[0];
         setMedicoNome(primeiroNome);
       }
-      if (data?.avatar_url) {
-        setAvatarUrl(data.avatar_url as string);
+
+      const path = data?.avatar_url as string | null | undefined;
+      if (path) {
+        const { data: signedData, error } = await supabase.storage
+          .from("NPS-pro")
+          .createSignedUrl(path, 60 * 60);
+
+        if (!error && signedData?.signedUrl) {
+          setAvatarUrl(signedData.signedUrl);
+        }
       }
     };
 
