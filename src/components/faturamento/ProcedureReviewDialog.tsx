@@ -492,7 +492,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
 
                 {/* Action buttons when not resolved */}
                 {!isResolved && mode === null && (
-                  <div className="flex gap-2 mt-1.5">
+                  <div className="flex items-center justify-between gap-3 mt-2">
                     <button
                       type="button"
                       onClick={() => setItemMode((prev) => ({ ...prev, [index]: "search" }))}
@@ -501,17 +501,19 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
                       <Search className="h-3 w-3" />
                       Buscar na CBHPM
                     </button>
-                    <span className="text-[#4B5563] text-[10px]">·</span>
                     <button
                       type="button"
                       onClick={() => {
                         setItemMode((prev) => ({ ...prev, [index]: "camera" }));
                         void startCamera(index);
                       }}
-                      className="flex items-center gap-1 text-[10px] text-[#60A5FA] hover:text-[#93C5FD] transition-colors"
+                      className="flex items-center gap-2 rounded-lg bg-[#60A5FA]/15 border border-[#60A5FA]/40 hover:bg-[#60A5FA]/25 hover:border-[#60A5FA]/60 transition-colors px-3 py-2"
                     >
-                      <Camera className="h-3 w-3" />
-                      Nova foto
+                      <Camera className="h-4 w-4 text-[#60A5FA] flex-shrink-0" />
+                      <span className="text-[11px] font-semibold text-[#60A5FA] leading-tight whitespace-nowrap">
+                        Envie nova foto<br />
+                        <span className="text-[9px] font-normal text-[#93C5FD]">do item</span>
+                      </span>
                     </button>
                   </div>
                 )}
