@@ -1,5 +1,4 @@
-```typescript
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -185,7 +184,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [medicoEmail, setMedicoEmail] = useState<string>("");
   const [medicoCrm, setMedicoCrm] = useState<string>("");
   const [view, setView] = useState<ViewState>("start");
-  const prevViewRef = useRef<ViewState | null>(null);
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefSolicitacao = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
@@ -257,29 +255,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [showProcedureReview, setShowProcedureReview] = useState(false);
   const [procedimentosRevisao, setProcedimentosRevisao] = useState<ProcedimentoRevisao[]>([]);
 
-  // Tipo de cirurgia (eletiva ou emergencial)
-  const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
-
-  // Zoom do preview da guia de honorários (ajusta automaticamente para a largura da tela)
+  // Zoom do preview da guia de honorários (inicia em 50%)
+  const [guiaZoom, setGuiaZoom] = useState(0.5);
   const ZOOM_STEP = 0.15;
   const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 2.0;
 
-  const computeDefaultGuiaZoom = useCallback(() => {
-    if (typeof window === "undefined") return 0.5;
-    // ~900px é uma boa referência para a largura "natural" do HTML da guia.
-    const z = (window.innerWidth - 48) / 900;
-    return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, parseFloat(z.toFixed(2))));
-  }, [ZOOM_MAX, ZOOM_MIN]);
-
-  const [guiaZoom, setGuiaZoom] = useState(() => computeDefaultGuiaZoom());
-
-  useEffect(() => {
-    if (view === "preview_honorarios" && prevViewRef.current !== "preview_honorarios") {
-      setGuiaZoom(computeDefaultGuiaZoom());
-    }
-    prevViewRef.current = view;
-  }, [view, computeDefaultGuiaZoom]);
+  // Tipo de cirurgia (eletiva ou emergencial)
+  const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
 
   // Limpar URL do blob quando o componente for desmontado
   useEffect(() => {
@@ -1903,8 +1886,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     // Resetar revisão de procedimentos
     setShowProcedureReview(false);
     setProcedimentosRevisao([]);
-    // Resetar zoom do preview
-    setGuiaZoom(computeDefaultGuiaZoom());
+    // Resetar zoom do preview para 50%
+    setGuiaZoom(0.5);
     // Resetar estados do PDF
     setPdfGerado(false);
     if (pdfBlobUrl) {
@@ -3200,11 +3183,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <div className="flex items-center gap-2 rounded-xl bg-black/60 border border-[#D4A017]/20 px-3 py-1.5">
                   <button
                     type="button"
-                    onClick={() =>
-                      setGuiaZoom((z) =>
-                        Math.max(ZOOM_MIN, parseFloat((z - ZOOM_STEP).toFixed(2))),
-                      )
-                    }
+                    onClick={() => setGuiaZoom((z) => Math.max(ZOOM_MIN, parseFloat((z - ZOOM_STEP).toFixed(2))))}
                     disabled={guiaZoom <= ZOOM_MIN}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 hover:bg-[#D4A017]/25 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold leading-none transition-colors"
                     title="Diminuir zoom"
@@ -3216,11 +3195,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() =>
-                      setGuiaZoom((z) =>
-                        Math.min(ZOOM_MAX, parseFloat((z + ZOOM_STEP).toFixed(2))),
-                      )
-                    }
+                    onClick={() => setGuiaZoom((z) => Math.min(ZOOM_MAX, parseFloat((z + ZOOM_STEP).toFixed(2))))}
                     disabled={guiaZoom >= ZOOM_MAX}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 hover:bg-[#D4A017]/25 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold leading-none transition-colors"
                     title="Aumentar zoom"
@@ -3229,4 +3204,177 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGuiaZoom(computeDefaultGuiaZoom())}
+                    onClick={() => setGuiaZoom(0.5)}
+                    className="ml-1 text-[10px] text-[#9CA3AF] hover:text-[#D4A017] transition-colors"
+                    title="Resetar zoom para 50%"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* Container do HTML da guia com zoom */}
+              <div className="w-full rounded-2xl bg-[#f0f0f0] shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto"
+                style={{ maxHeight: "70vh" }}
+              >
+                <div
+                  style={{
+                    transform: `scale(${guiaZoom})`,
+                    transformOrigin: "top left",
+                    width: `${(1 / guiaZoom) * 100}%`,
+                    minHeight: "400px",
+                    backgroundColor: "#ffffff",
+                    padding: "16px",
+                  }}
+                >
+                  <div
+                    ref={guiaPreviewRef}
+                    className="guia-preview"
+                    dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
+                  />
+                </div>
+              </div>
+
+              {/* Botões de ação */}
+              <div className="mt-4">
+                {isGeneratingPdf || (!pdfGerado && !pdfBlobUrl) ? (
+                  <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando PDF da guia...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full rounded-lg border-[#D4A017]/40 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 flex items-center justify-center"
+                      onClick={handleBaixarPdf}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar PDF
+                    </Button>
+
+                    <Button
+                      type="button"
+                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
+                      onClick={() => {
+                        void handleAvancarAposPreview();
+                      }}
+                    >
+                      Avançar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TELA 9 - SUCESSO */}
+          {view === "success" && (
+            <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
+              <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+                <CardContent className="space-y-6 px-6 py-8">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+                    <CheckCircle2 className="h-8 w-8" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                      {medicoNome
+                        ? `Tudo certo, Dr. ${medicoNome}!`
+                        : "Tudo certo!"}
+                    </h2>
+                    <p className="text-xs text-[#9CA3AF] sm:text-sm">
+                      Os documentos foram enviados e processados com sucesso.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 pt-2">
+                    <Button
+                      type="button"
+                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                      onClick={handleNovaDescricao}
+                    >
+                      Novo Faturamento
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                      onClick={() => navigate("/medico/dashboard")}
+                    >
+                      Ir para o Início
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Diálogo de Envio de Emails */}
+      {faturamentoId && (
+        <SendBillingEmailsDialog
+          open={showEmailDialog}
+          onOpenChange={setShowEmailDialog}
+          faturamentoId={faturamentoId}
+          userEmail={medicoEmail}
+          userName={medicoNome ? `Dr. ${medicoNome}` : "Médico"}
+          userCrm={medicoCrm || undefined}
+          instituicaoCirurgiaNome={selectedHospitalName}
+          instituicaoFaturamentoNome={selectedClinicaName}
+          instituicoesDiferentes={selectedHospitalId !== selectedClinicaId}
+          skipAtuacaoScreen={!!initialFaturamentoId}
+          onEmailsSent={handleEmailsSent}
+          onSkip={handleSkipEmails}
+        />
+      )}
+
+      {/* Diálogo de Revisão de Procedimentos */}
+      <ProcedureReviewDialog
+        open={showProcedureReview}
+        procedimentos={procedimentosRevisao}
+        faturamentoId={faturamentoId}
+        userId={currentUserId}
+        onConfirm={handleProcedureReviewConfirm}
+        onClose={handleProcedureReviewClose}
+        onProcedimentosUpdated={(novos) => setProcedimentosRevisao(novos)}
+      />
+
+      {/* Tela de Análise da IA */}
+      {showAnalyzingScreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
+          <div className="w-full max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/70 px-6 py-8 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
+              {analyzingStep === "uploading" ? (
+                <Upload className="h-7 w-7" />
+              ) : analyzingStep === "analyzing" ? (
+                <Brain className="h-7 w-7" />
+              ) : (
+                <CheckCircle2 className="h-7 w-7" />
+              )}
+            </div>
+
+            <h2 className="text-base font-semibold text-[#F5F5F5]">
+              {analyzingStep === "uploading"
+                ? "Enviando..."
+                : analyzingStep === "analyzing"
+                  ? "Analisando..."
+                  : "Salvando..."}
+            </h2>
+
+            <p className="mt-2 text-xs text-[#9CA3AF]">{getAnalyzingStepDescription()}</p>
+
+            <div className="mt-6">
+              <Progress value={analyzingProgress} className="h-2.5 rounded-full" />
+              <p className="mt-2 text-[11px] text-[#6B7280]">{analyzingProgress}% concluído</p>
+            </div>
+
+            <p className="mt-4 text-[11px] text-[#D4A017]">{getAnalyzingDocTitle()}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MedicoUploadDescricaoCirurgica;

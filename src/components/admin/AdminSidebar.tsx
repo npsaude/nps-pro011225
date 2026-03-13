@@ -34,11 +34,9 @@ interface AdminSidebarProps {
     | "guia-solicitacao"
     | "guia-autorizacao"
     | "descricao-cirurgica"
-    | "descricao"
     | "cadastro"
     | "config"
-    | "assinaturas"
-    | "financas";
+    | "assinaturas";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft";
   documentosSubsection?:
     | "guia-solicitacao"
