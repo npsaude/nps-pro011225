@@ -7,16 +7,17 @@ import MedicoHeader from "@/components/medico/MedicoHeader";
 const MedicoInicio: React.FC = () => {
   const navigate = useNavigate();
   const [medicoNome, setMedicoNome] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const carregarNomeMedico = async () => {
+    const carregarDadosMedico = async () => {
       const { data: authData } = await supabase.auth.getUser();
       const email = authData.user?.email;
       if (!email) return;
 
       const { data } = await supabase
         .from("usuarios_sistema")
-        .select("nome")
+        .select("nome, avatar_url")
         .eq("email", email)
         .maybeSingle();
 
@@ -24,9 +25,12 @@ const MedicoInicio: React.FC = () => {
         const primeiroNome = (data.nome as string).split(" ")[0];
         setMedicoNome(primeiroNome);
       }
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url as string);
+      }
     };
 
-    void carregarNomeMedico();
+    void carregarDadosMedico();
   }, []);
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, Doutor(a).";
@@ -47,8 +51,16 @@ const MedicoInicio: React.FC = () => {
         <div className="mx-auto flex w-full max-w-sm flex-col px-4 py-6 sm:px-5">
           {/* Avatar + saudação */}
           <section className="mb-6 flex flex-col gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-black/60 border border-[#D4A017]/20 text-[#D4A017] shadow-[0_18px_55px_rgba(0,0,0,0.55)]">
-              <User2 className="h-7 w-7" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-black/60 border border-[#D4A017]/20 text-[#D4A017] shadow-[0_18px_55px_rgba(0,0,0,0.55)] overflow-hidden">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Foto do médico"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User2 className="h-7 w-7" />
+              )}
             </div>
 
             <div className="space-y-1">
