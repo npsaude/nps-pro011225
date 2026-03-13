@@ -122,6 +122,11 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
           <DropdownMenuItem onClick={() => navigate("/perfil")}>
             Meu perfil
           </DropdownMenuItem>
+          {isMedico && (
+            <DropdownMenuItem onClick={() => navigate("/medico/dashboard")}>
+              Ir para mobile
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
