@@ -197,6 +197,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
 
+  // ID do usuário autenticado (preenchido ao fazer upload)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   // Dados do faturamento para preencher a guia de honorários
   const [faturamentoData, setFaturamentoData] = useState<FaturamentoData | null>(null);
   const [itensFaturamento, setItensFaturamento] = useState<ItemFaturamento[]>([]);
@@ -1054,6 +1057,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       }
 
       const userId = userData.user.id;
+      setCurrentUserId(userId);
       const bucketName = "NPS-pro";
 
       setAnalyzingProgress(10);
@@ -3329,8 +3333,11 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       <ProcedureReviewDialog
         open={showProcedureReview}
         procedimentos={procedimentosRevisao}
+        faturamentoId={faturamentoId}
+        userId={currentUserId}
         onConfirm={handleProcedureReviewConfirm}
         onClose={handleProcedureReviewClose}
+        onProcedimentosUpdated={(novos) => setProcedimentosRevisao(novos)}
       />
 
       {/* Tela de Análise da IA */}
