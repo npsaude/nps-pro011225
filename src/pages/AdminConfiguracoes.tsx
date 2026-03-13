@@ -10,6 +10,7 @@ import {
   Bot,
   Zap,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +19,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import {
   carregarAppSettings,
@@ -34,6 +46,8 @@ import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { criarDadosExemplo } from "@/services/demo-data-service";
 import CbhpmCsvImportCard from "@/components/admin/CbhpmCsvImportCard";
+import { useSystemUser } from "@/hooks/use-system-user";
+import { purgeUserByEmail } from "@/services/user-purge-service";
 
 type EmailFormState = {
   assunto: string;
@@ -131,6 +145,11 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 const AdminConfiguracoes = () => {
   const navigate = useNavigate();
+  const { systemUser } = useSystemUser();
+
+  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const isSuperAdmin = role === "SUPER_ADMIN";
+
   const [token, setToken] = useState("");
   const [openaiModel, setOpenaiModel] = useState("gpt-4");
   const [asaasToken, setAsaasToken] = useState("");
@@ -139,6 +158,10 @@ const AdminConfiguracoes = () => {
   const [salvandoModelo, setSalvandoModelo] = useState(false);
   const [salvandoAsaas, setSalvandoAsaas] = useState(false);
   const [criandoDemo, setCriandoDemo] = useState(false);
+
+  const [purgeEmail, setPurgeEmail] = useState("");
+  const [purgeConfirmEmail, setPurgeConfirmEmail] = useState("");
+  const [purgingUser, setPurgingUser] = useState(false);
 
   const [emailModels, setEmailModels] = useState<{
     FATURAR: EmailFormState;
@@ -167,7 +190,7 @@ const AdminConfiguracoes = () => {
         setEmailModels(ensureDefaults(templates));
       } catch (err) {
         showError(
-          err instanceof Error ? err.message : "Não foi possível carregar as configurações."
+          err instanceof Error ? err.message : "Não foi possível carregar as configurações.",
         );
       } finally {
         setCarregando(false);
@@ -182,7 +205,11 @@ const AdminConfiguracoes = () => {
       await criarDadosExemplo();
       showSuccess("Dados de exemplo criados/atualizados com sucesso.");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Não foi possível criar os dados de exemplo.");
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível criar os dados de exemplo.",
+      );
     } finally {
       setCriandoDemo(false);
     }
@@ -195,7 +222,11 @@ const AdminConfiguracoes = () => {
       await salvarTokenOpenAI(token.trim());
       showSuccess("Token OpenAI salvo com sucesso.");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Não foi possível salvar o Token OpenAI.");
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o Token OpenAI.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -207,7 +238,11 @@ const AdminConfiguracoes = () => {
       await salvarModeloOpenAI(openaiModel);
       showSuccess("Modelo OpenAI salvo com sucesso.");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Não foi possível salvar o Modelo OpenAI.");
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o Modelo OpenAI.",
+      );
     } finally {
       setSalvandoModelo(false);
     }
@@ -220,7 +255,11 @@ const AdminConfiguracoes = () => {
       await salvarTokenAsaas(asaasToken.trim());
       showSuccess("Token Asaas salvo com sucesso.");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Não foi possível salvar o Token Asaas.");
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o Token Asaas.",
+      );
     } finally {
       setSalvandoAsaas(false);
     }
@@ -236,7 +275,11 @@ const AdminConfiguracoes = () => {
       });
       showSuccess("Modelo de email salvo com sucesso.");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Não foi possível salvar o modelo de email.");
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar o modelo de email.",
+      );
     } finally {
       setSalvandoEmails(null);
     }
@@ -257,9 +300,38 @@ const AdminConfiguracoes = () => {
       });
       showSuccess("Modelos de email salvos com sucesso.");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Não foi possível salvar os modelos de email.");
+      showError(
+        err instanceof Error ? err.message : "Não foi possível salvar os modelos de email.",
+      );
     } finally {
       setSalvandoEmails(null);
+    }
+  };
+
+  const canPurge =
+    isSuperAdmin &&
+    purgeEmail.trim().length > 3 &&
+    purgeEmail.trim().toLowerCase() === purgeConfirmEmail.trim().toLowerCase();
+
+  const handlePurgeUser = async () => {
+    if (!canPurge) return;
+
+    setPurgingUser(true);
+    try {
+      const res = await purgeUserByEmail(purgeEmail);
+      showSuccess(
+        `Usuário excluído: ${res.email} (arquivos removidos: ${res.deletedStorageObjects}).`,
+      );
+      setPurgeEmail("");
+      setPurgeConfirmEmail("");
+    } catch (err) {
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível excluir todo o conteúdo do usuário.",
+      );
+    } finally {
+      setPurgingUser(false);
     }
   };
 
@@ -270,7 +342,6 @@ const AdminConfiguracoes = () => {
 
         {/* Área principal */}
         <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-3xl bg-card lg:p-6 lg:shadow-[0_18px_60px_rgba(0,0,0,0.4)]">
-
           {/* Header da página */}
           <header className="flex flex-col gap-1 border-b border-border pb-5">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -288,6 +359,99 @@ const AdminConfiguracoes = () => {
 
           <main className="flex-1 overflow-y-auto">
             <div className="flex flex-col gap-8">
+              {/* ── Seção: Zona de perigo (super admin) ───────────────── */}
+              <section>
+                <SectionHeader
+                  icon={<Trash2 className="h-5 w-5" />}
+                  title="Zona de perigo"
+                  description="Exclusão total de um usuário por e-mail (inclui tabelas, Auth e arquivos em Storage)."
+                  badge="SUPER_ADMIN"
+                />
+
+                <ConfigCard className="border-destructive/30">
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      Ação irreversível
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      Esta ação remove todos os registros associados ao usuário e também apaga a conta no
+                      Auth e os arquivos nos buckets (pelo padrão de pastas com o user_id). Use somente
+                      em casos extremos.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <FieldLabel>Email do usuário</FieldLabel>
+                      <Input
+                        value={purgeEmail}
+                        onChange={(e) => setPurgeEmail(e.target.value)}
+                        placeholder="usuario@exemplo.com"
+                        disabled={!isSuperAdmin || purgingUser}
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Confirmar email</FieldLabel>
+                      <Input
+                        value={purgeConfirmEmail}
+                        onChange={(e) => setPurgeConfirmEmail(e.target.value)}
+                        placeholder="repita o email"
+                        disabled={!isSuperAdmin || purgingUser}
+                      />
+                    </div>
+                  </div>
+
+                  {!isSuperAdmin && (
+                    <p className="mt-4 text-xs text-muted-foreground">
+                      Faça login como <strong>super_admin</strong> para usar esta área.
+                    </p>
+                  )}
+
+                  <div className="mt-5 flex justify-end">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={!canPurge || purgingUser}
+                        >
+                          {purgingUser ? "Excluindo..." : "Excluir usuário e todo conteúdo"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Confirmar exclusão total do usuário?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Você está prestes a excluir permanentemente o usuário:
+                            <span className="mt-2 block font-medium text-foreground">
+                              {purgeEmail.trim() || "(sem email)"}
+                            </span>
+                            <span className="mt-2 block">
+                              Isso removerá registros do banco, a conta no Auth e arquivos em Storage.
+                            </span>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={purgingUser}>
+                            Cancelar
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            disabled={!canPurge || purgingUser}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              void handlePurgeUser();
+                            }}
+                          >
+                            Confirmar exclusão
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </ConfigCard>
+              </section>
 
               {/* ── Seção: Ferramentas ─────────────────────────────────── */}
               <section>
@@ -558,40 +722,28 @@ const AdminConfiguracoes = () => {
                         <Bot className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-semibold text-foreground text-sm">Modelo OpenAI</p>
+                        <p className="font-semibold text-foreground text-sm">Modelo da OpenAI</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Selecione a versão do GPT para utilizar nas requisições.
+                          Defina o modelo base usado nos prompts de extração e revisão de documentos.
                         </p>
                       </div>
                     </div>
                     <Separator className="mb-4" />
                     <div className="flex flex-col gap-4">
                       <div>
-                        <FieldLabel>Versão do modelo</FieldLabel>
-                        <select
+                        <FieldLabel>Modelo</FieldLabel>
+                        <Input
                           value={openaiModel}
                           onChange={(e) => setOpenaiModel(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="gpt-4">gpt-4</option>
-                          <option value="gpt-4-32k">gpt-4-32k</option>
-                          <option value="gpt-4-turbo">gpt-4-turbo</option>
-                          <option value="gpt-4-vision">gpt-4-vision</option>
-                          <option value="gpt-4o">gpt-4o</option>
-                          <option value="gpt-4o-mini">gpt-4o-mini</option>
-                          <option value="gpt-4.1">gpt-4.1</option>
-                          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                          <option value="gpt-4.1-nano">gpt-4.1-nano</option>
-                          <option value="gpt-5">gpt-5</option>
-                          <option value="gpt-5-turbo">gpt-5-turbo</option>
-                          <option value="gpt-5-mini">gpt-5-mini</option>
-                        </select>
+                          disabled={carregando}
+                          placeholder="gpt-4"
+                        />
                       </div>
                       <Button
                         type="button"
                         className="w-full"
                         onClick={handleSalvarModelo}
-                        disabled={salvandoModelo}
+                        disabled={salvandoModelo || carregando}
                       >
                         {salvandoModelo ? "Salvando..." : "Salvar Modelo"}
                       </Button>
@@ -599,15 +751,15 @@ const AdminConfiguracoes = () => {
                   </ConfigCard>
 
                   {/* Token Asaas */}
-                  <ConfigCard className="md:col-span-2">
+                  <ConfigCard>
                     <div className="flex items-start gap-3 mb-4">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
                         <Zap className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="font-semibold text-foreground text-sm">Token Asaas (Sandbox)</p>
+                        <p className="font-semibold text-foreground text-sm">Token Asaas</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Token do ambiente sandbox que será usado pelo motor de assinatura (Edge Functions).
+                          Token de integração com o Asaas (assinaturas e cobranças).
                         </p>
                       </div>
                     </div>
@@ -619,27 +771,21 @@ const AdminConfiguracoes = () => {
                           type="password"
                           value={asaasToken}
                           onChange={(e) => setAsaasToken(e.target.value)}
-                          placeholder="$aact_..."
                           disabled={carregando}
+                          placeholder="..."
                         />
-                        <p className="mt-1.5 text-xs text-muted-foreground">
-                          Este token não é exposto para o fluxo de assinatura no front-end; apenas a Edge Function usa.
-                        </p>
                       </div>
-                      <div className="flex justify-end">
-                        <Button
-                          type="submit"
-                          disabled={salvandoAsaas || carregando}
-                          className="min-w-[120px]"
-                        >
-                          {salvandoAsaas ? "Salvando..." : "Salvar Token"}
-                        </Button>
-                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={salvandoAsaas || carregando}
+                      >
+                        {salvandoAsaas ? "Salvando..." : "Salvar Token"}
+                      </Button>
                     </form>
                   </ConfigCard>
                 </div>
               </section>
-
             </div>
           </main>
         </div>
