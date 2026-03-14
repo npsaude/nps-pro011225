@@ -3251,7 +3251,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <Button
                     type="button"
                     className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                    disabled={isUploading || filesDescricao.length === 0}
+                    disabled={isUploading || filesGuia.length === 0}
                     onClick={handleUploadDescricaoCirurgica}
                   >
                     {isUploading ? "Processando..." : "Processar Guia"}
