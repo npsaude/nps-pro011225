@@ -2564,13 +2564,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 {!billingQuota.loading && billingQuota.limit !== null && (
                   <div className={`mt-5 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 w-full max-w-sm ${
                     billingQuota.isOverLimit
-                      ? "border-rose-500/40 bg-rose-950/30"
+                      ? "border-rose-500/40 bg-[#2a0a0a]"
                       : billingQuota.isNearLimit
                         ? "border-amber-500/40 bg-amber-950/20"
                         : "border-[#D4A017]/20 bg-black/40"
                   }`}>
                     <div className="flex items-center gap-2">
-                      <Scissors className={`h-4 w-4 ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`} />
+                      <Scissors className={`h-4 w-4 flex-shrink-0 ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`} />
                       <div>
                         <p className="text-xs font-semibold text-[#F5F5F5]">Faturamentos do mês</p>
                         <p className="text-[11px] text-[#9CA3AF]">
@@ -2578,46 +2578,52 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <span className={`text-sm font-bold ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`}>
+                    <span className={`text-sm font-bold flex-shrink-0 ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`}>
                       {billingQuota.used}/{billingQuota.limit}
                     </span>
                   </div>
                 )}
 
-                <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3 w-full max-w-sm">
-                  <Checkbox
-                    id="consistency-check"
-                    checked={consistencyCheckEnabled}
-                    onCheckedChange={(v) => setConsistencyCheckEnabled(!!v)}
-                    className="border-[#D4A017]/50 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
-                  />
-                  <label htmlFor="consistency-check" className="text-sm text-[#F5F5F5] cursor-pointer leading-snug">
-                    Verificar consistência entre documentos
-                    <span className="block text-xs text-[#9CA3AF] mt-0.5">
-                      O sistema compara os dados de cada documento ao longo do processo
-                    </span>
-                  </label>
-                </div>
+                {/* Checkbox de consistência — oculto quando limite excedido */}
+                {(!billingQuota.isOverLimit) && (
+                  <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3 w-full max-w-sm">
+                    <Checkbox
+                      id="consistency-check"
+                      checked={consistencyCheckEnabled}
+                      onCheckedChange={(v) => setConsistencyCheckEnabled(!!v)}
+                      className="border-[#D4A017]/50 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
+                    />
+                    <label htmlFor="consistency-check" className="text-sm text-[#F5F5F5] cursor-pointer leading-snug">
+                      Verificar consistência entre documentos
+                      <span className="block text-xs text-[#9CA3AF] mt-0.5">
+                        O sistema compara os dados de cada documento ao longo do processo
+                      </span>
+                    </label>
+                  </div>
+                )}
 
                 {/* Limite excedido: bloquear e mostrar upgrade */}
                 {!billingQuota.loading && billingQuota.isOverLimit ? (
-                  <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-4">
-                    <div className="w-full rounded-2xl border border-rose-500/30 bg-rose-950/30 px-5 py-5 text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 border border-rose-500/30">
-                        <AlertCircle className="h-6 w-6 text-rose-400" />
+                  <div className="mt-5 flex w-full max-w-sm flex-col items-center gap-4">
+                    {/* Card de alerta */}
+                    <div className="w-full rounded-2xl border border-rose-500/25 bg-[#2a0a0a] px-5 py-6 text-center">
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/15">
+                        <AlertCircle className="h-7 w-7 text-rose-400" />
                       </div>
                       <p className="text-sm font-semibold text-rose-300">
                         Limite de faturamentos atingido
                       </p>
-                      <p className="mt-1 text-xs text-rose-400/80">
+                      <p className="mt-2 text-xs leading-relaxed text-rose-400/80">
                         Você utilizou {billingQuota.used} de {billingQuota.limit} faturamentos do seu plano neste mês.
                       </p>
                     </div>
+
+                    {/* Botão upgrade */}
                     <a
-                      href="https://site.conmedic.com.br/planos"
+                      href="https://site.conmedic.com.br"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-3 text-sm font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-all duration-300"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-3.5 text-sm font-semibold text-black shadow-[0_0_25px_rgba(212,160,23,0.45)] hover:shadow-[0_0_40px_rgba(212,160,23,0.65)] hover:scale-[1.01] transition-all duration-300"
                     >
                       <TrendingUp className="h-4 w-4" />
                       Fazer Upgrade do Plano
