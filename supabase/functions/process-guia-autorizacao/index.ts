@@ -393,9 +393,11 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   // 5) Atualizar o faturamento existente com os dados extraídos
   const filePaths = files.map((f) => f.path);
 
-  // Sanitiza CRM: mantém apenas dígitos numéricos
+  // Sanitiza CRM: mantém apenas dígitos numéricos e remove zeros à esquerda
   const rawCrm: string | null = faturamentoData.cirurgiao_crm ?? null;
-  const sanitizedCrm = rawCrm ? rawCrm.replace(/\D/g, "") || null : null;
+  const sanitizedCrm = rawCrm
+    ? rawCrm.replace(/\D/g, "").replace(/^0+/, "") || null
+    : null;
   console.log("[process-guia-autorizacao] CRM bruto:", rawCrm, "→ sanitizado:", sanitizedCrm);
 
   const updateData: Record<string, unknown> = {

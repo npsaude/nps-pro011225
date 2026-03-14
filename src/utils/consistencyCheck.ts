@@ -42,10 +42,10 @@ function minuteDiff(a?: string | null, b?: string | null): number {
   return Math.abs((ah * 60 + am) - (bh * 60 + bm));
 }
 
-/** Normaliza CRM: mantém só dígitos para comparação */
+/** Normaliza CRM: mantém só dígitos e remove zeros à esquerda para comparação */
 function normalizeCrm(s?: string | null): string {
   if (!s) return "";
-  return s.replace(/\D/g, "");
+  return s.replace(/\D/g, "").replace(/^0+/, "");
 }
 
 function compareProcedureSets(
