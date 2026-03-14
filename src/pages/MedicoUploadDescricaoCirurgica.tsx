@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,15 @@ import {
 } from "@/utils/toast";
 import { SendBillingEmailsDialog } from "@/components/faturamento/SendBillingEmailsDialog";
 import ProcedureReviewDialog, { type ProcedimentoRevisao } from "@/components/faturamento/ProcedureReviewDialog";
+import ConsistencyResultsTable from "@/components/faturamento/ConsistencyResultsTable";
+import {
+  checkAposSolicitacao,
+  checkAposGuiaAutorizacao,
+  checkAposDescricaoCirurgica,
+  saveConsistencyResults,
+  markResultsAsIgnored,
+  type CheckResult,
+} from "@/utils/consistencyCheck";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -264,6 +274,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Tipo de cirurgia (eletiva ou emergencial)
   const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
 
+  // Verificação de consistência entre documentos
+  const [consistencyCheckEnabled, setConsistencyCheckEnabled] = useState(false);
+  const [allConsistencyResults, setAllConsistencyResults] = useState<CheckResult[]>([]);
+  const [showConsistencyTable, setShowConsistencyTable] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
+  // Flags de controle de documentos enviados (persistem após upload)
+  const [solicitacaoEnviada, setSolicitacaoEnviada] = useState(false);
+  const [autorizacaoEnviada, setAutorizacaoEnviada] = useState(false);
+
   // Limpar URL do blob quando o componente for desmontado
   useEffect(() => {
     return () => {
@@ -273,7 +293,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     };
   }, [pdfBlobUrl]);
 
-  // Auto: ao entrar no preview da guia, já gera o PDF automaticamente
+  // Auto: ao entrar no preview da guia, já gera o PDFcy automaticamente
   useEffect(() => {
     if (view !== "preview_honorarios") return;
     if (pdfGerado || isGeneratingPdf) return;
@@ -765,6 +785,30 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Guia de solicitação processada com sucesso!");
       setFilesSolicitacao([]);
       setShowAnalyzingScreen(false);
+
+      setSolicitacaoEnviada(true);
+
+      if (consistencyCheckEnabled) {
+        const { data: solData } = await supabase
+          .from("guia_solicitacao")
+          .select("nome_beneficiario, data_inicio_faturamento, profissional_numero_conselho")
+          .eq("faturamento_id" as never, ensuredFaturamentoId)
+          .maybeSingle();
+
+        if (solData) {
+          const results = checkAposSolicitacao({
+            paciente_nome: (solData as any).nome_beneficiario,
+            data_inicio_faturamento: (solData as any).data_inicio_faturamento,
+            profissional_numero_conselho: (solData as any).profissional_numero_conselho,
+          });
+          setAllConsistencyResults(prev => [...prev, ...results]);
+          const uid = (await supabase.auth.getUser()).data.user?.id;
+          if (uid) {
+            await saveConsistencyResults(ensuredFaturamentoId, uid, "apos_solicitacao", results);
+          }
+        }
+      }
+
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
@@ -1009,6 +1053,45 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       showSuccess("Guia de autorização processada com sucesso!");
       setFilesGuia([]);
       setShowAnalyzingScreen(false);
+
+      setAutorizacaoEnviada(true);
+
+      if (consistencyCheckEnabled) {
+        const { data: fatData } = await supabase
+          .from("faturamentos")
+          .select("paciente_nome, paciente_carteirinha, hospital_codigo_cnes, data_cirurgia, cirurgiao_principal_crm")
+          .eq("id", ensuredFaturamentoId)
+          .single();
+
+        let solData: { nome_beneficiario?: string | null; numero_carteira?: string | null; contratado_cnes?: string | null } | null = null;
+        if (solicitacaoEnviada) {
+          const { data: sol } = await supabase
+            .from("guia_solicitacao")
+            .select("nome_beneficiario, numero_carteira, contratado_cnes")
+            .eq("faturamento_id" as never, ensuredFaturamentoId)
+            .maybeSingle();
+          solData = sol as typeof solData;
+        }
+
+        if (fatData) {
+          const results = checkAposGuiaAutorizacao(
+            {
+              paciente_nome: (fatData as any).paciente_nome,
+              paciente_carteirinha: (fatData as any).paciente_carteirinha,
+              hospital_codigo_cnes: (fatData as any).hospital_codigo_cnes,
+              data_cirurgia: (fatData as any).data_cirurgia,
+              cirurgiao_principal_crm: (fatData as any).cirurgiao_principal_crm,
+            },
+            solData
+          );
+          setAllConsistencyResults(prev => [...prev, ...results]);
+          const uid = (await supabase.auth.getUser()).data.user?.id;
+          if (uid) {
+            await saveConsistencyResults(ensuredFaturamentoId, uid, "apos_guia_autorizacao", results);
+          }
+        }
+      }
+
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
@@ -1158,6 +1241,77 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       // Check if any procedures need review
       const revisaoData = responseJson?.revisao_procedimentos as ProcedimentoRevisao[] | undefined;
       const temRevisao = responseJson?.tem_revisao_pendente === true;
+
+      if (consistencyCheckEnabled) {
+        // Buscar descrição cirúrgica pelo faturamento_id
+        const { data: descData } = await supabase
+          .from("descricoes_cirurgicas")
+          .select("registro_civil, nome_social, cpf, data_inicio_procedimento, hora_inicio_procedimento, hora_fim_procedimento, cirurgiao_responsavel, cirurgiao_responsavel_crm, equipe, procedimentos")
+          .eq("faturamento_id" as never, faturamentoId)
+          .order("created_at" as never, { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let autDataForCheck: Parameters<typeof checkAposDescricaoCirurgica>[1] | null = null;
+        if (autorizacaoEnviada) {
+          const { data: fatRow } = await supabase
+            .from("faturamentos")
+            .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
+            .eq("id", faturamentoId)
+            .single();
+          if (fatRow) {
+            // Buscar códigos CBHPM dos itens de faturamento
+            const { data: itens } = await supabase
+              .from("itens_faturamento")
+              .select("codigo_procedimento")
+              .eq("faturamento_id", faturamentoId);
+            const codes = (itens ?? []).map((it: any, idx: number) => ({ [`proc_cir_${idx + 1}_amb_cbhpm`]: it.codigo_procedimento }));
+            const procMap: Record<string, string | null> = {};
+            codes.slice(0, 5).forEach((obj: any) => Object.assign(procMap, obj));
+            autDataForCheck = {
+              ...(fatRow as any),
+              proc_cir_1_amb_cbhpm: procMap["proc_cir_1_amb_cbhpm"] ?? null,
+              proc_cir_2_amb_cbhpm: procMap["proc_cir_2_amb_cbhpm"] ?? null,
+              proc_cir_3_amb_cbhpm: procMap["proc_cir_3_amb_cbhpm"] ?? null,
+              proc_cir_4_amb_cbhpm: procMap["proc_cir_4_amb_cbhpm"] ?? null,
+              proc_cir_5_amb_cbhpm: procMap["proc_cir_5_amb_cbhpm"] ?? null,
+            };
+          }
+        }
+
+        let solDataForCheck: Parameters<typeof checkAposDescricaoCirurgica>[2] | null = null;
+        if (solicitacaoEnviada) {
+          const { data: sol } = await supabase
+            .from("guia_solicitacao")
+            .select("nome_beneficiario")
+            .eq("faturamento_id" as never, faturamentoId)
+            .maybeSingle();
+          solDataForCheck = sol as typeof solDataForCheck;
+        }
+
+        const descResults = checkAposDescricaoCirurgica(
+          (descData as any) ?? {},
+          autDataForCheck,
+          solDataForCheck
+        );
+        const allResults = [...allConsistencyResults, ...descResults];
+        setAllConsistencyResults(allResults);
+        await saveConsistencyResults(faturamentoId, userId, "apos_descricao_cirurgica", descResults);
+
+        // Definir navegação pendente e exibir tabela
+        if (temRevisao && revisaoData && revisaoData.length > 0) {
+          setPendingNavigation(() => () => {
+            setProcedimentosRevisao(revisaoData);
+            setShowProcedureReview(true);
+          });
+        } else if (initialFaturamentoId) {
+          setPendingNavigation(() => () => navigate("/medico/faturamentos"));
+        } else {
+          setPendingNavigation(() => () => setView("pergunta_honorarios"));
+        }
+        setShowConsistencyTable(true);
+        return;
+      }
 
       if (temRevisao && revisaoData && revisaoData.length > 0) {
         // Show procedure review dialog before proceeding
@@ -1894,6 +2048,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       URL.revokeObjectURL(pdfBlobUrl);
     }
     setPdfBlobUrl(null);
+    // Resetar estados de consistência
+    setConsistencyCheckEnabled(false);
+    setAllConsistencyResults([]);
+    setShowConsistencyTable(false);
+    setPendingNavigation(null);
+    setSolicitacaoEnviada(false);
+    setAutorizacaoEnviada(false);
   };
 
   const currentFiles =
@@ -2219,6 +2380,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 <p className="mt-3 max-w-xs text-sm text-[#9CA3AF]">
                   Vamos iniciar o processo de Acompanhamento de Faturamento
                 </p>
+
+                <div className="mt-6 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3 w-full max-w-sm">
+                  <Checkbox
+                    id="consistency-check"
+                    checked={consistencyCheckEnabled}
+                    onCheckedChange={(v) => setConsistencyCheckEnabled(!!v)}
+                    className="border-[#D4A017]/50 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
+                  />
+                  <label htmlFor="consistency-check" className="text-sm text-[#F5F5F5] cursor-pointer leading-snug">
+                    Verificar consistência entre documentos
+                    <span className="block text-xs text-[#9CA3AF] mt-0.5">
+                      O sistema compara os dados de cada documento ao longo do processo
+                    </span>
+                  </label>
+                </div>
 
                 <button
                   type="button"
@@ -2932,144 +3108,165 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {/* TELA 4 - UPLOAD DESCRIÇÃO CIRÚRGICA */}
           {view === "upload_descricao" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
-              <Input
-                id="files-upload-descricao"
-                ref={fileInputRefDescricao}
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/*,application/pdf"
-                onChange={handleFileChangeDescricao}
-              />
 
-              <div className="mb-6">
-                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                </h1>
-                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+              {/* Tabela de consistência — exibida após o processamento */}
+              {showConsistencyTable ? (
+                <ConsistencyResultsTable
+                  results={allConsistencyResults}
+                  onContinue={async () => {
+                    if (faturamentoId) {
+                      await markResultsAsIgnored(faturamentoId, "apos_descricao_cirurgica");
+                    }
+                    setShowConsistencyTable(false);
+                    pendingNavigation?.();
+                  }}
+                  onVoltar={() => {
+                    setShowConsistencyTable(false);
+                    setFilesDescricao([]);
+                  }}
+                />
+              ) : (
+                <>
+                  <Input
+                    id="files-upload-descricao"
+                    ref={fileInputRefDescricao}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                    onChange={handleFileChangeDescricao}
+                  />
+
+                  <div className="mb-6">
+                    <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
+                      {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
+                    </h1>
+                    <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
+                      {filesDescricao.length === 0 ? (
+                        <>
+                          <span>
+                            Faça upload das imagens da{" "}
+                            <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                              Descrição Cirúrgica
+                            </span>
+                            .
+                          </span>
+                          <br />
+                          <span className="text-[11px] text-[#6B7280] sm:text-xs">
+                            Obs: Tire várias imagens com os detalhes dos campos da mesma
+                            descrição para melhor análise da IA
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          Confira os arquivos antes de enviar a{" "}
+                          <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
+                            Descrição Cirúrgica
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+
                   {filesDescricao.length === 0 ? (
                     <>
-                      <span>
-                        Faça upload das imagens da{" "}
-                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                          Descrição Cirúrgica
-                        </span>
-                        .
-                      </span>
-                      <br />
-                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
-                        Obs: Tire várias imagens com os detalhes dos campos da mesma
-                        descrição para melhor análise da IA
-                      </span>
+                      <label
+                        htmlFor="files-upload-descricao"
+                        className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
+                      >
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
+                            <Upload className="h-8 w-8 text-black" />
+                          </div>
+                          <p className="text-[#F5F5F5] font-medium">
+                            Adicionar Arquivos
+                          </p>
+                          <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
+                          <p className="text-[#6B7280] text-[11px]">
+                            Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
+                          </p>
+                        </div>
+                      </label>
+
+                      <Button
+                        type="button"
+                        disabled
+                        className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
+                      >
+                        Selecione arquivos acima
+                      </Button>
                     </>
                   ) : (
                     <>
-                      Confira os arquivos antes de enviar a{" "}
-                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                        Descrição Cirúrgica
-                      </span>
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-[#F5F5F5]">
+                          Seus Arquivos ({filesDescricao.length === 1 ? "1 arquivo" : `${filesDescricao.length} arquivos`})
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
+                          onClick={handleAdicionarMaisDescricao}
+                        >
+                          + Adicionar mais
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {filesDescricao.map((file, index) => (
+                          <div
+                            key={file.name + file.lastModified + index}
+                            className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
+                          >
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
+                              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                                {isImage(file) ? (
+                                  <ImageIcon className="h-4 w-4" />
+                                ) : (
+                                  <FileText className="h-4 w-4" />
+                                )}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[11px] sm:text-xs">
+                                  {file.name}
+                                </p>
+                                <p className="mt-0.5 text-[10px] text-[#6B7280]">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverArquivoDescricao(index)}
+                              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Button
+                        type="button"
+                        className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
+                        disabled={isUploading || filesDescricao.length === 0}
+                        onClick={handleUploadDescricaoCirurgica}
+                      >
+                        {isUploading ? "Processando..." : "Continuar Envio"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
+                        onClick={() => setView("upload_guia")}
+                        disabled={isUploading}
+                      >
+                        Voltar para Guia de Autorização
+                      </Button>
                     </>
                   )}
-                </p>
-              </div>
-
-              {filesDescricao.length === 0 ? (
-                <>
-                  <label
-                    htmlFor="files-upload-descricao"
-                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
-                        <Upload className="h-8 w-8 text-black" />
-                      </div>
-                      <p className="text-[#F5F5F5] font-medium">
-                        Adicionar Arquivos
-                      </p>
-                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
-                      <p className="text-[#6B7280] text-[11px]">
-                        Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
-                      </p>
-                    </div>
-                  </label>
-
-                  <Button
-                    type="button"
-                    disabled
-                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
-                  >
-                    Selecione arquivos acima
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#F5F5F5]">
-                      Seus Arquivos ({filesDescricao.length === 1 ? "1 arquivo" : `${filesDescricao.length} arquivos`})
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                      onClick={handleAdicionarMaisDescricao}
-                    >
-                      + Adicionar mais
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {filesDescricao.map((file, index) => (
-                      <div
-                        key={file.name + file.lastModified + index}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            {isImage(file) ? (
-                              <ImageIcon className="h-4 w-4" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] sm:text-xs">
-                              {file.name}
-                            </p>
-                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoverArquivoDescricao(index)}
-                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button
-                    type="button"
-                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                    disabled={isUploading || filesDescricao.length === 0}
-                    onClick={handleUploadDescricaoCirurgica}
-                  >
-                    {isUploading ? "Processando..." : "Continuar Envio"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => setView("upload_guia")}
-                    disabled={isUploading}
-                  >
-                    Voltar para Guia de Autorização
-                  </Button>
                 </>
               )}
             </div>
