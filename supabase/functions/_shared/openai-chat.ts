@@ -13,7 +13,12 @@ const MODELS_WITH_JSON_FORMAT = [
   "gpt-4.1",
   "gpt-4.1-mini",
   "gpt-4.1-nano",
+  "gpt-4.5",
   "gpt-5",
+  "gpt-5.1",
+  "gpt-5.2",
+  "gpt-5.3",
+  "gpt-5.4",
   "o1",
   "o1-mini",
   "o3",
@@ -31,6 +36,10 @@ const MODELS_WITH_MAX_COMPLETION_TOKENS = [
   "o3",
   "o3-mini",
   "gpt-5",
+  "gpt-5.1",
+  "gpt-5.2",
+  "gpt-5.3",
+  "gpt-5.4",
 ];
 
 /**
