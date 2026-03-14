@@ -293,6 +293,25 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     };
   }, [pdfBlobUrl]);
 
+  // Pré-selecionar caráter da cirurgia ao entrar na tela de pergunta de autorização
+  useEffect(() => {
+    if (view !== "pergunta_guia_autorizacao") return;
+    if (tipoCirurgia) return; // já selecionado pelo usuário, não sobrescrever
+    if (!faturamentoId) return;
+
+    supabase
+      .from("faturamentos")
+      .select("carater_cirurgia")
+      .eq("id", faturamentoId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const carater = (data as any)?.carater_cirurgia;
+        if (carater === "ELETIVA" || carater === "EMERGENCIAL") {
+          setTipoCirurgia(carater);
+        }
+      });
+  }, [view, faturamentoId]);
+
   // Auto: ao entrar no preview da guia, já gera o PDFcy automaticamente
   useEffect(() => {
     if (view !== "preview_honorarios") return;
@@ -1076,6 +1095,19 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setShowAnalyzingScreen(false);
 
       setAutorizacaoEnviada(true);
+
+      // Sincronizar carater_cirurgia extraído pela IA com o estado local
+      {
+        const { data: fatCarater } = await supabase
+          .from("faturamentos")
+          .select("carater_cirurgia")
+          .eq("id", ensuredFaturamentoId)
+          .maybeSingle();
+        const caraterExtraido = (fatCarater as any)?.carater_cirurgia;
+        if (caraterExtraido === "ELETIVA" || caraterExtraido === "EMERGENCIAL") {
+          setTipoCirurgia(caraterExtraido);
+        }
+      }
 
       if (consistencyCheckEnabled) {
         const { data: fatData } = await supabase

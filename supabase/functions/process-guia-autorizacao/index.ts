@@ -273,6 +273,7 @@ FATURAMENTO (tabela faturamentos):
 - cirurgiao_nome: Nome completo do médico cirurgião solicitante/executante
 - cirurgiao_crm: CRM do médico cirurgião (apenas o número)
 - status_autorizacao: Status da autorização (ex: "AUTORIZADO", "PENDENTE", "NEGADO")
+- carater_cirurgia: Caráter/tipo da cirurgia. Procure por campos como "Caráter da Internação", "Tipo de Atendimento", "Caráter do Atendimento" ou similares. Retorne EXATAMENTE "ELETIVA" se for eletiva/agendada/programada, ou "EMERGENCIAL" se for emergencial/urgência/urgente. Se não encontrar, retorne null.
 
 ITENS/PROCEDIMENTOS (tabela itens_faturamento):
 - procedimentos: Array de procedimentos autorizados. ATENÇÃO: Cada procedimento deve ser ÚNICO (sem duplicatas).
@@ -292,7 +293,8 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     "hospital_solicitado": string | null,
     "cirurgiao_nome": string | null,
     "cirurgiao_crm": string | null,
-    "status_autorizacao": string | null
+    "status_autorizacao": string | null,
+    "carater_cirurgia": "ELETIVA" | "EMERGENCIAL" | null
   },
   "procedimentos": [
     {
@@ -397,6 +399,11 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     url_guia_autorizacao: filePaths,
     updated_at: new Date().toISOString(),
   };
+
+  // Caráter da cirurgia (ELETIVA ou EMERGENCIAL)
+  if (faturamentoData.carater_cirurgia === "ELETIVA" || faturamentoData.carater_cirurgia === "EMERGENCIAL") {
+    updateData.carater_cirurgia = faturamentoData.carater_cirurgia;
+  }
 
   // Se tiver data de autorização, adiciona
   const dataAutorizacao = normalizeDate(faturamentoData.data_autorizacao);
