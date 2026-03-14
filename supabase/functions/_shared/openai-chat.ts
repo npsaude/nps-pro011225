@@ -43,6 +43,22 @@ const MODELS_WITH_MAX_COMPLETION_TOKENS = [
 ];
 
 /**
+ * Modelos que NÃO suportam o parâmetro temperature (só aceitam o default 1).
+ */
+const MODELS_WITHOUT_TEMPERATURE = [
+  "o1",
+  "o1-mini",
+  "o1-preview",
+  "o3",
+  "o3-mini",
+  "gpt-5",
+  "gpt-5.1",
+  "gpt-5.2",
+  "gpt-5.3",
+  "gpt-5.4",
+];
+
+/**
  * Verifica se o modelo suporta response_format: json_object
  */
 export function modelSupportsJsonFormat(model: string): boolean {
@@ -56,6 +72,14 @@ export function modelSupportsJsonFormat(model: string): boolean {
 export function modelUsesMaxCompletionTokens(model: string): boolean {
   const m = model.toLowerCase();
   return MODELS_WITH_MAX_COMPLETION_TOKENS.some((supported) => m.startsWith(supported));
+}
+
+/**
+ * Verifica se o modelo NÃO suporta o parâmetro temperature
+ */
+export function modelDisallowsTemperature(model: string): boolean {
+  const m = model.toLowerCase();
+  return MODELS_WITHOUT_TEMPERATURE.some((supported) => m.startsWith(supported));
 }
 
 /**
@@ -107,6 +131,7 @@ export async function openaiChatWithImages(params: {
 
   const supportsJsonFormat = modelSupportsJsonFormat(model);
   const useMaxCompletionTokens = modelUsesMaxCompletionTokens(model);
+  const noTemperature = modelDisallowsTemperature(model);
 
   // Para modelos legados, reforçar no prompt que a resposta deve ser JSON puro
   const finalUserText = supportsJsonFormat
@@ -115,7 +140,7 @@ export async function openaiChatWithImages(params: {
 
   const body: any = {
     model,
-    temperature: 0,
+    ...(noTemperature ? {} : { temperature: 0 }),
     messages: [
       {
         role: "system",
@@ -147,7 +172,7 @@ export async function openaiChatWithImages(params: {
   }
 
   console.log(
-    `[openai-chat] modelo: ${model} | json_format: ${supportsJsonFormat} | max_completion_tokens: ${useMaxCompletionTokens} | imagens: ${imageBase64List.length}`
+    `[openai-chat] modelo: ${model} | json_format: ${supportsJsonFormat} | max_completion_tokens: ${useMaxCompletionTokens} | no_temperature: ${noTemperature} | imagens: ${imageBase64List.length}`
   );
 
   const resp = await fetch("https://api.openai.com/v1/chat/completions", {
