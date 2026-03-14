@@ -808,35 +808,46 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setSolicitacaoEnviada(true);
 
       if (consistencyCheckEnabled) {
-        const { data: solData } = await supabase
-          .from("guia_solicitacao")
-          .select("nome_beneficiario, hora_inicial, profissional_nome, profissional_numero_conselho")
-          .eq("faturamento_id" as never, ensuredFaturamentoId)
-          .maybeSingle();
+        // Buscar guia_solicitacao_id do faturamento
+        const { data: fatForSolCheck } = await supabase
+          .from("faturamentos")
+          .select("guia_solicitacao_id")
+          .eq("id", ensuredFaturamentoId)
+          .single();
+        const guiaSolIdCheck = (fatForSolCheck as any)?.guia_solicitacao_id;
 
-        if (solData) {
-          // Buscar códigos de procedimentos da solicitação
-          const { data: solItens } = await supabase
-            .from("guia_solicitacao_itens")
-            .select("codigo_procedimento")
-            .eq("guia_id" as never, (solData as any).id);
-          const solProcCodes = (solItens ?? [])
-            .map((it: any) => it.codigo_procedimento)
-            .filter(Boolean);
+        if (guiaSolIdCheck) {
+          const { data: solData } = await supabase
+            .from("guia_solicitacao")
+            .select("id, nome_beneficiario, profissional_nome, profissional_numero_conselho")
+            .eq("id", guiaSolIdCheck)
+            .maybeSingle();
 
-          const results = checkAposSolicitacao(
-            {
-              nome_beneficiario: (solData as any).nome_beneficiario,
-              hora_inicial: (solData as any).hora_inicial,
-              profissional_nome: (solData as any).profissional_nome,
-              profissional_numero_conselho: (solData as any).profissional_numero_conselho,
-            },
-            solProcCodes
-          );
-          setAllConsistencyResults(prev => [...prev, ...results]);
-          const uid = (await supabase.auth.getUser()).data.user?.id;
-          if (uid) {
-            await saveConsistencyResults(ensuredFaturamentoId, uid, "apos_solicitacao", results);
+          if (solData) {
+            // Buscar itens (códigos de procedimentos + hora_inicial)
+            const { data: solItens } = await supabase
+              .from("itens_guia_solicitacao")
+              .select("codigo_procedimento, hora_inicial")
+              .eq("guia_id", (solData as any).id);
+            const horaInicial = (solItens ?? []).find((it: any) => it.hora_inicial)?.hora_inicial ?? null;
+            const solProcCodes = (solItens ?? [])
+              .map((it: any) => it.codigo_procedimento)
+              .filter(Boolean);
+
+            const results = checkAposSolicitacao(
+              {
+                nome_beneficiario: (solData as any).nome_beneficiario,
+                hora_inicial: horaInicial,
+                profissional_nome: (solData as any).profissional_nome,
+                profissional_numero_conselho: (solData as any).profissional_numero_conselho,
+              },
+              solProcCodes
+            );
+            setAllConsistencyResults(prev => [...prev, ...results]);
+            const uid = (await supabase.auth.getUser()).data.user?.id;
+            if (uid) {
+              await saveConsistencyResults(ensuredFaturamentoId, uid, "apos_solicitacao", results);
+            }
           }
         }
       }
@@ -1125,18 +1136,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (consistencyCheckEnabled) {
         const { data: fatData } = await supabase
           .from("faturamentos")
-          .select("paciente_nome, paciente_carteirinha, hospital_codigo_cnes, data_cirurgia, cirurgiao_principal_crm")
+          .select("paciente_nome, cirurgiao_principal_nome, cirurgiao_principal_crm")
           .eq("id", ensuredFaturamentoId)
           .single();
 
         let solData: { nome_beneficiario?: string | null; numero_carteira?: string | null; contratado_cnes?: string | null } | null = null;
         if (solicitacaoEnviada) {
-          const { data: sol } = await supabase
-            .from("guia_solicitacao")
-            .select("nome_beneficiario, numero_carteira, contratado_cnes")
-            .eq("faturamento_id" as never, ensuredFaturamentoId)
-            .maybeSingle();
-          solData = sol as typeof solData;
+          // Buscar guia_solicitacao_id do faturamento
+          const { data: fatForSol } = await supabase
+            .from("faturamentos")
+            .select("guia_solicitacao_id")
+            .eq("id", ensuredFaturamentoId)
+            .single();
+          const guiaSolId = (fatForSol as any)?.guia_solicitacao_id;
+          if (guiaSolId) {
+            const { data: sol } = await supabase
+              .from("guia_solicitacao")
+              .select("nome_beneficiario, numero_carteira, contratado_cnes")
+              .eq("id", guiaSolId)
+              .maybeSingle();
+            solData = sol as typeof solData;
+          }
         }
 
         if (fatData) {
@@ -1153,20 +1173,35 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           let solDataForAut: { nome_beneficiario?: string | null; hora_inicial?: string | null; profissional_nome?: string | null; profissional_numero_conselho?: string | null } | null = null;
           let solProcCodesForAut: string[] = [];
           if (solicitacaoEnviada) {
-            const { data: solRow } = await supabase
-              .from("guia_solicitacao")
-              .select("nome_beneficiario, hora_inicial, profissional_nome, profissional_numero_conselho")
-              .eq("faturamento_id" as never, ensuredFaturamentoId)
-              .maybeSingle();
-            if (solRow) {
-              solDataForAut = solRow as typeof solDataForAut;
-              const { data: solItens } = await supabase
-                .from("guia_solicitacao_itens")
-                .select("codigo_procedimento")
-                .eq("guia_id" as never, (solRow as any).id);
-              solProcCodesForAut = (solItens ?? [])
-                .map((it: any) => it.codigo_procedimento)
-                .filter(Boolean);
+            // Buscar guia_solicitacao_id do faturamento
+            const { data: fatForSol2 } = await supabase
+              .from("faturamentos")
+              .select("guia_solicitacao_id")
+              .eq("id", ensuredFaturamentoId)
+              .single();
+            const guiaSolId2 = (fatForSol2 as any)?.guia_solicitacao_id;
+            if (guiaSolId2) {
+              const { data: solRow } = await supabase
+                .from("guia_solicitacao")
+                .select("id, nome_beneficiario, profissional_nome, profissional_numero_conselho")
+                .eq("id", guiaSolId2)
+                .maybeSingle();
+              if (solRow) {
+                const { data: solItens3 } = await supabase
+                  .from("itens_guia_solicitacao")
+                  .select("codigo_procedimento, hora_inicial")
+                  .eq("guia_id", (solRow as any).id);
+                const horaInicial3 = (solItens3 ?? []).find((it: any) => it.hora_inicial)?.hora_inicial ?? null;
+                solDataForAut = {
+                  nome_beneficiario: (solRow as any).nome_beneficiario,
+                  hora_inicial: horaInicial3,
+                  profissional_nome: (solRow as any).profissional_nome,
+                  profissional_numero_conselho: (solRow as any).profissional_numero_conselho,
+                };
+                solProcCodesForAut = (solItens3 ?? [])
+                  .map((it: any) => it.codigo_procedimento)
+                  .filter(Boolean);
+              }
             }
           }
 
@@ -1380,20 +1415,35 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         let solDataForCheck: { nome_beneficiario?: string | null; hora_inicial?: string | null; profissional_nome?: string | null; profissional_numero_conselho?: string | null } | null = null;
         let solProcCodesForCheck: string[] = [];
         if (solicitacaoEnviada) {
-          const { data: sol } = await supabase
-            .from("guia_solicitacao")
-            .select("nome_beneficiario, hora_inicial, profissional_nome, profissional_numero_conselho")
-            .eq("faturamento_id" as never, faturamentoId)
-            .maybeSingle();
-          if (sol) {
-            solDataForCheck = sol as typeof solDataForCheck;
-            const { data: solItens } = await supabase
-              .from("guia_solicitacao_itens")
-              .select("codigo_procedimento")
-              .eq("guia_id" as never, (sol as any).id);
-            solProcCodesForCheck = (solItens ?? [])
-              .map((it: any) => it.codigo_procedimento)
-              .filter(Boolean);
+          // Buscar guia_solicitacao_id do faturamento
+          const { data: fatForSol4 } = await supabase
+            .from("faturamentos")
+            .select("guia_solicitacao_id")
+            .eq("id", faturamentoId)
+            .single();
+          const guiaSolId4 = (fatForSol4 as any)?.guia_solicitacao_id;
+          if (guiaSolId4) {
+            const { data: sol } = await supabase
+              .from("guia_solicitacao")
+              .select("id, nome_beneficiario, profissional_nome, profissional_numero_conselho")
+              .eq("id", guiaSolId4)
+              .maybeSingle();
+            if (sol) {
+              const { data: solItens4 } = await supabase
+                .from("itens_guia_solicitacao")
+                .select("codigo_procedimento, hora_inicial")
+                .eq("guia_id", (sol as any).id);
+              const horaInicial4 = (solItens4 ?? []).find((it: any) => it.hora_inicial)?.hora_inicial ?? null;
+              solDataForCheck = {
+                nome_beneficiario: (sol as any).nome_beneficiario,
+                hora_inicial: horaInicial4,
+                profissional_nome: (sol as any).profissional_nome,
+                profissional_numero_conselho: (sol as any).profissional_numero_conselho,
+              };
+              solProcCodesForCheck = (solItens4 ?? [])
+                .map((it: any) => it.codigo_procedimento)
+                .filter(Boolean);
+            }
           }
         }
 
@@ -3201,188 +3251,21 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <Button
                     type="button"
                     className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                    disabled={isUploading || filesGuia.length === 0}
-                    onClick={handleUploadGuiaAutorizacao}
+                    disabled={isUploading || filesDescricao.length === 0}
+                    onClick={handleUploadDescricaoCirurgica}
                   >
-                    {isUploading ? "Processando..." : "Continuar Envio"}
+                    {isUploading ? "Processando..." : "Processar Guia"}
                   </Button>
 
                   <Button
                     type="button"
                     variant="ghost"
                     className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => setView("pergunta_solicitacao")}
+                    onClick={() => setView("pergunta_guia_autorizacao")}
                     disabled={isUploading}
                   >
-                    Voltar para Novo Faturamento
+                    Voltar
                   </Button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* TELA 4 - UPLOAD DESCRIÇÃO CIRÚRGICA */}
-          {view === "upload_descricao" && (
-            <div className="mt-2 flex w-full max-w-md flex-col">
-
-              {/* Tabela de consistência — exibida após o processamento */}
-              {showConsistencyTable ? (
-                <ConsistencyResultsTable
-                  results={allConsistencyResults}
-                  onContinue={async () => {
-                    if (faturamentoId) {
-                      await markResultsAsIgnored(faturamentoId, "apos_descricao_cirurgica");
-                    }
-                    setShowConsistencyTable(false);
-                    pendingNavigation?.();
-                  }}
-                  onVoltar={() => {
-                    setShowConsistencyTable(false);
-                    setFilesDescricao([]);
-                  }}
-                />
-              ) : (
-                <>
-                  <Input
-                    id="files-upload-descricao"
-                    ref={fileInputRefDescricao}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    accept="image/*,application/pdf"
-                    onChange={handleFileChangeDescricao}
-                  />
-
-                  <div className="mb-6">
-                    <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                      {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                    </h1>
-                    <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                      {filesDescricao.length === 0 ? (
-                        <>
-                          <span>
-                            Faça upload das imagens da{" "}
-                            <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                              Descrição Cirúrgica
-                            </span>
-                            .
-                          </span>
-                          <br />
-                          <span className="text-[11px] text-[#6B7280] sm:text-xs">
-                            Obs: Tire várias imagens com os detalhes dos campos da mesma
-                            descrição para melhor análise da IA
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          Confira os arquivos antes de enviar a{" "}
-                          <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                            Descrição Cirúrgica
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-
-                  {filesDescricao.length === 0 ? (
-                    <>
-                      <label
-                        htmlFor="files-upload-descricao"
-                        className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
-                      >
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
-                            <Upload className="h-8 w-8 text-black" />
-                          </div>
-                          <p className="text-[#F5F5F5] font-medium">
-                            Adicionar Arquivos
-                          </p>
-                          <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
-                          <p className="text-[#6B7280] text-[11px]">
-                            Formatos aceitos: PNG, JPEG, GIF, WEBP e PDF.
-                          </p>
-                        </div>
-                      </label>
-
-                      <Button
-                        type="button"
-                        disabled
-                        className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
-                      >
-                        Selecione arquivos acima
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mb-3 flex items-center justify-between">
-                        <p className="text-xs font-semibold text-[#F5F5F5]">
-                          Seus Arquivos ({filesDescricao.length === 1 ? "1 arquivo" : `${filesDescricao.length} arquivos`})
-                        </p>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                          onClick={handleAdicionarMaisDescricao}
-                        >
-                          + Adicionar mais
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {filesDescricao.map((file, index) => (
-                          <div
-                            key={file.name + file.lastModified + index}
-                            className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
-                          >
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                                {isImage(file) ? (
-                                  <ImageIcon className="h-4 w-4" />
-                                ) : (
-                                  <FileText className="h-4 w-4" />
-                                )}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[11px] sm:text-xs">
-                                  {file.name}
-                                </p>
-                                <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoverArquivoDescricao(index)}
-                              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button
-                        type="button"
-                        className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                        disabled={isUploading || filesDescricao.length === 0}
-                        onClick={handleUploadDescricaoCirurgica}
-                      >
-                        {isUploading ? "Processando..." : "Continuar Envio"}
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                        onClick={() => setView("pergunta_guia_autorizacao")}
-                        disabled={isUploading}
-                      >
-                        Voltar
-                      </Button>
-                    </>
-                  )}
                 </>
               )}
             </div>
@@ -3614,6 +3497,26 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
               <p className="mt-2 text-xs text-[#6B7280]">{analyzingProgress}%</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tabela de consistência */}
+      {showConsistencyTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto">
+          <ConsistencyResultsTable
+            results={allConsistencyResults}
+            onContinue={() => {
+              setShowConsistencyTable(false);
+              if (pendingNavigation) {
+                pendingNavigation();
+                setPendingNavigation(null);
+              }
+            }}
+            onVoltar={() => {
+              setShowConsistencyTable(false);
+              setPendingNavigation(null);
+            }}
+          />
         </div>
       )}
 
