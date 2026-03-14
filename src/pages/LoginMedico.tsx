@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { showError, showSuccess } from "@/utils/toast";
 import {
   loginWithRole,
-  registerUser,
   sendPasswordReset,
 } from "@/services/auth-service";
 import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
@@ -54,30 +53,18 @@ type Mode = "login" | "register";
 
 const LoginMedico = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("login");
-
   const [subscriptionExpiredOpen, setSubscriptionExpiredOpen] = useState(false);
 
   // Login state
-  const [loginEmail, setLoginEmail] = useState("");
+  const [loginEmail, setLoginEmail] = useState(() => localStorage.getItem("medicoLoginEmail") || "");
   const [loginSenha, setLoginSenha] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(() => !!localStorage.getItem("medicoLoginEmail"));
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Register state
-  const [registerNome, setRegisterNome] = useState("");
-  const [registerCrmUf, setRegisterCrmUf] = useState("");
-  const [registerWhatsapp, setRegisterWhatsapp] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerSenha, setRegisterSenha] = useState("");
-  const [registerPasswordVisible, setRegisterPasswordVisible] = useState(false);
-  const [registerLoading, setRegisterLoading] = useState(false);
-
   // Video background
   const [youtubeSetting, setYoutubeSetting] = useState<string | null>(null);
-
-  const isLogin = mode === "login";
 
   useEffect(() => {
     let alive = true;
@@ -117,8 +104,14 @@ const LoginMedico = () => {
 
     setIsLoading(true);
     try {
+      if (rememberLogin) {
+        localStorage.setItem("medicoLoginEmail", loginEmail);
+      } else {
+        localStorage.removeItem("medicoLoginEmail");
+      }
+      
       await loginWithRole({
-        email: loginEmail.trim(),
+        email: loginEmail,
         password: loginSenha,
         allowedRole: "MEDICO",
       });
@@ -142,53 +135,6 @@ const LoginMedico = () => {
     }
   };
 
-  const handleRegisterSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    if (!registerNome.trim()) {
-      showError("Informe o nome completo.");
-      return;
-    }
-    if (!registerEmail.trim()) {
-      showError("Informe o e-mail.");
-      return;
-    }
-    if (registerSenha.length < 6) {
-      showError("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-
-    setRegisterLoading(true);
-    try {
-      await registerUser({
-        nome: registerNome.trim(),
-        email: registerEmail.trim(),
-        password: registerSenha,
-        role: "MEDICO",
-      });
-
-      void registerCrmUf;
-      void registerWhatsapp;
-
-      showSuccess(
-        "Usuário médico criado. Verifique seu e-mail e confirme o cadastro antes do primeiro acesso.",
-      );
-
-      setLoginEmail(registerEmail.trim());
-      setLoginSenha(registerSenha);
-      setMode("login");
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível criar o usuário. Verifique os dados.";
-      showError(message);
-    } finally {
-      setRegisterLoading(false);
-    }
-  };
 
   const handleForgotPassword = async () => {
     if (!loginEmail.trim()) {
@@ -313,256 +259,119 @@ const LoginMedico = () => {
           </div>
         </div>
 
-        {/* Card */}
-        <div className="w-full rounded-2xl bg-[#1a1a1a]/95 border border-[#D4A017]/20 shadow-[0_0_40px_rgba(212,160,23,0.15)] backdrop-blur-xl px-5 py-6 sm:px-6">
-          <div className="mb-6 space-y-1">
-            <h1 className="bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent text-3xl font-bold leading-tight">
+        {/* Form Container */}
+        <div className="relative z-10 mx-auto w-full max-w-sm rounded-2xl border border-[#D4A017]/30 bg-black/60 p-6 shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="mb-6 text-center">
+            <h1 className="bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#8B6508] bg-clip-text text-3xl font-black tracking-tight text-transparent drop-shadow-[0_2px_10px_rgba(212,160,23,0.3)]">
               Portal Médico
             </h1>
-            <p className="text-xs text-[#9CA3AF]">
+            <p className="mt-2 text-xs font-medium text-[#D1D5DB]">
               Acesse seus envios, descrições cirúrgicas e indicadores.
             </p>
           </div>
 
-          {/* Tabs */}
-          <div className="mb-6 flex rounded-2xl bg-black/40 p-1 text-xs font-semibold text-[#9CA3AF] ring-1 ring-[#D4A017]/15">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={`flex-1 rounded-xl px-3 py-2 transition-all duration-300 ${
-                isLogin
-                  ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)]"
-                  : "hover:text-[#F5F5F5]"
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className={`flex-1 rounded-xl px-3 py-2 transition-all duration-300 ${
-                !isLogin
-                  ? "bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black shadow-[0_0_20px_rgba(212,160,23,0.35)]"
-                  : "hover:text-[#F5F5F5]"
-              }`}
-            >
-              Criar conta
-            </button>
-          </div>
-
-          {isLogin && (
-            <form className="space-y-4" onSubmit={handleLoginSubmit}>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  E-mail
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <Mail className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type="email"
-                    placeholder="seuemail@exemplo.com"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
-                </div>
+          <form className="space-y-4" onSubmit={handleLoginSubmit}>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#F5F5F5]">
+                E-mail
+              </label>
+              <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
+                  <Mail className="h-4 w-4" />
+                </span>
+                <Input
+                  type="email"
+                  placeholder="seuemail@exemplo.com"
+                  className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  Senha
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <Lock className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type={loginPasswordVisible ? "text" : "password"}
-                    placeholder="Digite sua senha"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={loginSenha}
-                    onChange={(e) => setLoginSenha(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setLoginPasswordVisible((visible) => !visible)
-                    }
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-[#9CA3AF] hover:text-[#D4A017] hover:bg-[#D4A017]/10 transition-colors"
-                    aria-label={
-                      loginPasswordVisible ? "Ocultar senha" : "Mostrar senha"
-                    }
-                  >
-                    {loginPasswordVisible ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-1 text-[11px]">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#F5F5F5]">
+                Senha
+              </label>
+              <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
+                  <Lock className="h-4 w-4" />
+                </span>
+                <Input
+                  type={loginPasswordVisible ? "text" : "password"}
+                  placeholder="Digite sua senha"
+                  className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
+                  value={loginSenha}
+                  onChange={(e) => setLoginSenha(e.target.value)}
+                  required
+                />
                 <button
                   type="button"
-                  onClick={handleForgotPassword}
-                  disabled={resetLoading}
-                  className="font-semibold text-[#D4A017] underline-offset-2 hover:underline disabled:opacity-60"
+                  onClick={() =>
+                    setLoginPasswordVisible((visible) => !visible)
+                  }
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-[#9CA3AF] hover:text-[#D4A017] hover:bg-[#D4A017]/10 transition-colors"
+                  aria-label={
+                    loginPasswordVisible ? "Ocultar senha" : "Mostrar senha"
+                  }
                 >
-                  {resetLoading ? "Enviando..." : "Esqueci a senha"}
+                  {loginPasswordVisible ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
+            </div>
 
-              <div className="pt-1">
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  <ArrowRightCircle className="h-4 w-4" />
-                  <span>
-                    {isLoading ? "Entrando..." : "Entrar como Médico"}
-                  </span>
-                </Button>
-              </div>
-            </form>
-          )}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={(e) => setRememberLogin(e.target.checked)}
+                  className="rounded border-[#D4A017]/30 bg-black/40 text-[#D4A017] focus:ring-[#D4A017]"
+                />
+                <span className="text-[11px] font-medium text-[#D1D5DB]">
+                  Lembrar login
+                </span>
+              </label>
+              
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
+                className="text-[11px] font-semibold text-[#D4A017] underline-offset-2 hover:underline disabled:opacity-60"
+              >
+                {resetLoading ? "Enviando..." : "Esqueci a senha"}
+              </button>
+            </div>
 
-          {!isLogin && (
-            <form className="space-y-3.5" onSubmit={handleRegisterSubmit}>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  Nome Completo
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <span className="text-[11px] font-bold">Dr</span>
-                  </span>
-                  <Input
-                    type="text"
-                    placeholder="Ex: Dr. Adriano"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={registerNome}
-                    onChange={(e) => setRegisterNome(e.target.value)}
-                  />
-                </div>
-              </div>
+            <div className="pt-1">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <ArrowRightCircle className="h-4 w-4" />
+                <span>
+                  {isLoading ? "Entrando..." : "Entrar como Médico"}
+                </span>
+              </Button>
+            </div>
+          </form>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  CRM / UF
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <Hash className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type="text"
-                    placeholder="123456 / SP"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={registerCrmUf}
-                    onChange={(e) => setRegisterCrmUf(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  Telefone / WhatsApp
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <Phone className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type="tel"
-                    placeholder="(11) 99999-9999"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={registerWhatsapp}
-                    onChange={(e) => setRegisterWhatsapp(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  E-mail
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <Mail className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type="email"
-                    placeholder="seuemail@exemplo.com"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[#F5F5F5]">
-                  Senha
-                </label>
-                <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_18px_rgba(212,160,23,0.25)]">
-                    <Lock className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type={registerPasswordVisible ? "text" : "password"}
-                    placeholder="Crie uma senha segura"
-                    className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
-                    value={registerSenha}
-                    onChange={(e) => setRegisterSenha(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setRegisterPasswordVisible((visible) => !visible)
-                    }
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-[#9CA3AF] hover:text-[#D4A017] hover:bg-[#D4A017]/10 transition-colors"
-                    aria-label={
-                      registerPasswordVisible
-                        ? "Ocultar senha"
-                        : "Mostrar senha"
-                    }
-                  >
-                    {registerPasswordVisible ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-1">
-                <Button
-                  type="submit"
-                  disabled={registerLoading}
-                  className="flex h-11 w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {registerLoading ? "Criando conta..." : "Criar Conta"}
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-
-        <div className="mt-6 text-center text-[11px] text-white/80 drop-shadow-sm">
-          <button
-            type="button"
-            className="hover:text-[#D4A017] transition-colors"
-            onClick={() => navigate("/login")}
-          >
-            Acessar como administrador
-          </button>
+          {/* Footer Access Admin */}
+          <div className="mt-8 text-center">
+            <button
+              type="button"
+              className="hover:text-[#D4A017] transition-colors"
+              onClick={() => navigate("/login")}
+            >
+              Acessar como administrador
+            </button>
+          </div>
         </div>
       </div>
     </div>
