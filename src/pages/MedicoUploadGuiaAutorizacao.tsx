@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { Button } from "@/components/ui/button";
+import { compressFiles } from "@/utils/image-compression";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -98,7 +99,9 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
       return;
     }
 
-    setFiles((prev) => [...prev, ...allowedFiles]);
+    compressFiles(allowedFiles).then((compressedFiles) => {
+      setFiles((prev) => [...prev, ...compressedFiles]);
+    });
     event.target.value = "";
   };
 

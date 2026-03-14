@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
+import { compressFiles } from "@/utils/image-compression";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -540,7 +541,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    setFilesGuia((prev) => [...prev, ...allowedFiles]);
+    compressFiles(allowedFiles).then((compressedFiles) => {
+      setFilesGuia((prev) => [...prev, ...compressedFiles]);
+    });
     event.target.value = "";
   };
 
@@ -579,7 +582,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    setFilesDescricao((prev) => [...prev, ...allowedFiles]);
+    compressFiles(allowedFiles).then((compressedFiles) => {
+      setFilesDescricao((prev) => [...prev, ...compressedFiles]);
+    });
     event.target.value = "";
   };
 
@@ -618,7 +623,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    setFilesSolicitacao((prev) => [...prev, ...allowedFiles]);
+    compressFiles(allowedFiles).then((compressedFiles) => {
+      setFilesSolicitacao((prev) => [...prev, ...compressedFiles]);
+    });
     event.target.value = "";
   };
 

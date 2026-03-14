@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { showError, showSuccess } from "@/utils/toast";
+import { compressFiles } from "@/utils/image-compression";
 
 type ViewState = "upload" | "processing" | "success";
 
@@ -137,7 +138,9 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
       return;
     }
 
-    setFiles((prev) => [...prev, ...allowedFiles]);
+    compressFiles(allowedFiles).then((compressedFiles) => {
+      setFiles((prev) => [...prev, ...compressedFiles]);
+    });
     event.target.value = "";
   };
 
