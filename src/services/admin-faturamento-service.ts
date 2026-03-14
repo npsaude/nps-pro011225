@@ -234,8 +234,87 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
 }
 
 export async function deleteFaturamento(id: string): Promise<void> {
-  const { error } = await supabase.from("faturamentos").delete().eq("id", id);
-  if (error) {
-    throw error;
+  // 1. Buscar o faturamento para pegar os caminhos dos arquivos e IDs relacionados
+  const { data: faturamento, error: fetchError } = await supabase
+    .from("faturamentos")
+    .select(`
+      url_guia_autorizacao,
+      url_descricao_cirurgica,
+      url_guia_honorarios,
+      url_relatorio_analitico,
+      guia_solicitacao_id,
+      guia_honorarios_id
+    `)
+    .eq("id", id)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  let filePaths: string[] = [];
+
+  // Adicionar arquivos que estão salvos diretamente no faturamento
+  if (faturamento) {
+    if (faturamento.url_guia_autorizacao) filePaths.push(...faturamento.url_guia_autorizacao);
+    if (faturamento.url_descricao_cirurgica) filePaths.push(...faturamento.url_descricao_cirurgica);
+    if (faturamento.url_guia_honorarios) filePaths.push(...faturamento.url_guia_honorarios);
+    if (faturamento.url_relatorio_analitico) filePaths.push(...faturamento.url_relatorio_analitico);
+  }
+
+  // 2. Buscar arquivos da guia de solicitação
+  if (faturamento?.guia_solicitacao_id) {
+    const { data: guiaSol } = await supabase
+      .from("guia_solicitacao")
+      .select("url_documentos")
+      .eq("id", faturamento.guia_solicitacao_id)
+      .single();
+      
+    if (guiaSol?.url_documentos) {
+      filePaths.push(...guiaSol.url_documentos);
+    }
+  }
+
+  // 3. Buscar PDF da guia de honorários gerada
+  if (faturamento?.guia_honorarios_id) {
+    const { data: guiaHon } = await supabase
+      .from("guia_honorarios")
+      .select("pdf_guia_honorario")
+      .eq("id", faturamento.guia_honorarios_id)
+      .single();
+      
+    if (guiaHon?.pdf_guia_honorario) {
+      filePaths.push(guiaHon.pdf_guia_honorario);
+    }
+  }
+
+  // Filtrar valores nulos, vazios ou falsos
+  filePaths = filePaths.filter(path => Boolean(path));
+
+  // 4. Excluir os arquivos físicos do bucket NPS-pro
+  if (filePaths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from("NPS-pro")
+      .remove(filePaths);
+      
+    if (storageError) {
+      console.error("Erro ao excluir arquivos do storage:", storageError);
+    }
+  }
+
+  // 5. Excluir os registros dependentes do banco antes de deletar o faturamento principal
+  if (faturamento?.guia_solicitacao_id) {
+    await supabase.from("guia_solicitacao").delete().eq("id", faturamento.guia_solicitacao_id);
+  }
+  if (faturamento?.guia_honorarios_id) {
+    await supabase.from("guia_honorarios").delete().eq("id", faturamento.guia_honorarios_id);
+  }
+
+  // 6. Finalmente, excluir o registro principal de faturamento
+  const { error: deleteError } = await supabase
+    .from("faturamentos")
+    .delete()
+    .eq("id", id);
+    
+  if (deleteError) {
+    throw deleteError;
   }
 }
