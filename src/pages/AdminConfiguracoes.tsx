@@ -20,6 +20,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -732,12 +739,26 @@ const AdminConfiguracoes = () => {
                     <div className="flex flex-col gap-4">
                       <div>
                         <FieldLabel>Modelo</FieldLabel>
-                        <Input
+                        <Select
                           value={openaiModel}
-                          onChange={(e) => setOpenaiModel(e.target.value)}
+                          onValueChange={setOpenaiModel}
                           disabled={carregando}
-                          placeholder="gpt-4"
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um modelo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gpt-4.1">GPT-4.1 — Mais recente, alta precisão</SelectItem>
+                            <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini — Rápido e econômico</SelectItem>
+                            <SelectItem value="gpt-4.1-nano">GPT-4.1 Nano — Ultra rápido</SelectItem>
+                            <SelectItem value="gpt-4o">GPT-4o — Multimodal, visão avançada</SelectItem>
+                            <SelectItem value="gpt-4o-mini">GPT-4o Mini — Econômico com visão</SelectItem>
+                            <SelectItem value="gpt-4-turbo">GPT-4 Turbo — Alta capacidade</SelectItem>
+                            <SelectItem value="gpt-4">GPT-4 — Clássico, confiável</SelectItem>
+                            <SelectItem value="o3-mini">O3 Mini — Raciocínio avançado</SelectItem>
+                            <SelectItem value="o1-mini">O1 Mini — Raciocínio rápido</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button
                         type="button"
