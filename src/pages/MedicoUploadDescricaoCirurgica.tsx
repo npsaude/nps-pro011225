@@ -1000,6 +1000,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setAnalyzingStep("analyzing");
       setAnalyzingProgress(35);
 
+      // ── Snapshot ANTES de chamar a edge function (dados da autorização) ──
+      let autSnapshot: Record<string, any> | null = null;
+      let autProcCodes: string[] = [];
+
+      if (consistencyCheckEnabled && autorizacaoEnviada) {
+        const { data: snapRow } = await supabase
+          .from("faturamentos")
+          .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
+          .eq("id", faturamentoId)
+          .single();
+        if (snapRow) autSnapshot = snapRow;
+
+        const { data: snapItens } = await supabase
+          .from("itens_faturamento")
+          .select("codigo_procedimento")
+          .eq("faturamento_id", faturamentoId);
+        autProcCodes = (snapItens ?? [])
+          .map((it: any) => it.codigo_procedimento)
+          .filter(Boolean);
+      }
+
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-autorizacao";
 
@@ -1185,6 +1206,27 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setAnalyzingStep("analyzing");
       setAnalyzingProgress(35);
 
+      // ── Snapshot ANTES de chamar a edge function (dados da autorização) ──
+      let autSnapshot: Record<string, any> | null = null;
+      let autProcCodes: string[] = [];
+
+      if (consistencyCheckEnabled && autorizacaoEnviada) {
+        const { data: snapRow } = await supabase
+          .from("faturamentos")
+          .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
+          .eq("id", faturamentoId)
+          .single();
+        if (snapRow) autSnapshot = snapRow;
+
+        const { data: snapItens } = await supabase
+          .from("itens_faturamento")
+          .select("codigo_procedimento")
+          .eq("faturamento_id", faturamentoId);
+        autProcCodes = (snapItens ?? [])
+          .map((it: any) => it.codigo_procedimento)
+          .filter(Boolean);
+      }
+
       const functionUrl =
         "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
 
@@ -1243,43 +1285,24 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const temRevisao = responseJson?.tem_revisao_pendente === true;
 
       if (consistencyCheckEnabled) {
-        // Buscar descrição cirúrgica pelo faturamento_id
-        const { data: descData } = await supabase
-          .from("descricoes_cirurgicas")
-          .select("registro_civil, nome_social, cpf, data_inicio_procedimento, hora_inicio_procedimento, hora_fim_procedimento, cirurgiao_responsavel, cirurgiao_responsavel_crm, equipe, procedimentos")
-          .eq("faturamento_id" as never, faturamentoId)
-          .order("created_at" as never, { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // Ler faturamento ATUALIZADO (após edge function salvar dados da descrição)
+        const { data: descFatRow } = await supabase
+          .from("faturamentos")
+          .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
+          .eq("id", faturamentoId)
+          .single();
 
-        let autDataForCheck: Parameters<typeof checkAposDescricaoCirurgica>[1] | null = null;
-        if (autorizacaoEnviada) {
-          const { data: fatRow } = await supabase
-            .from("faturamentos")
-            .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
-            .eq("id", faturamentoId)
-            .single();
-          if (fatRow) {
-            // Buscar códigos CBHPM dos itens de faturamento
-            const { data: itens } = await supabase
-              .from("itens_faturamento")
-              .select("codigo_procedimento")
-              .eq("faturamento_id", faturamentoId);
-            const codes = (itens ?? []).map((it: any, idx: number) => ({ [`proc_cir_${idx + 1}_amb_cbhpm`]: it.codigo_procedimento }));
-            const procMap: Record<string, string | null> = {};
-            codes.slice(0, 5).forEach((obj: any) => Object.assign(procMap, obj));
-            autDataForCheck = {
-              ...(fatRow as any),
-              proc_cir_1_amb_cbhpm: procMap["proc_cir_1_amb_cbhpm"] ?? null,
-              proc_cir_2_amb_cbhpm: procMap["proc_cir_2_amb_cbhpm"] ?? null,
-              proc_cir_3_amb_cbhpm: procMap["proc_cir_3_amb_cbhpm"] ?? null,
-              proc_cir_4_amb_cbhpm: procMap["proc_cir_4_amb_cbhpm"] ?? null,
-              proc_cir_5_amb_cbhpm: procMap["proc_cir_5_amb_cbhpm"] ?? null,
-            };
-          }
-        }
+        // Ler itens de faturamento ATUALIZADOS (após edge function inserir/atualizar procedimentos)
+        const { data: descItens } = await supabase
+          .from("itens_faturamento")
+          .select("codigo_procedimento")
+          .eq("faturamento_id", faturamentoId);
+        const descProcCodes = (descItens ?? [])
+          .map((it: any) => it.codigo_procedimento)
+          .filter(Boolean);
 
-        let solDataForCheck: Parameters<typeof checkAposDescricaoCirurgica>[2] | null = null;
+        // Buscar dados da solicitação se enviada
+        let solDataForCheck: Parameters<typeof checkAposDescricaoCirurgica>[4] | null = null;
         if (solicitacaoEnviada) {
           const { data: sol } = await supabase
             .from("guia_solicitacao")
@@ -1290,8 +1313,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
 
         const descResults = checkAposDescricaoCirurgica(
-          (descData as any) ?? {},
-          autDataForCheck,
+          (descFatRow as any) ?? {},
+          autorizacaoEnviada ? autSnapshot : null,
+          autProcCodes,
+          descProcCodes,
           solDataForCheck
         );
         const allResults = [...allConsistencyResults, ...descResults];
@@ -3217,361 +3242,4 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                         {filesDescricao.map((file, index) => (
                           <div
                             key={file.name + file.lastModified + index}
-                            className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
-                          >
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                                {isImage(file) ? (
-                                  <ImageIcon className="h-4 w-4" />
-                                ) : (
-                                  <FileText className="h-4 w-4" />
-                                )}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[11px] sm:text-xs">
-                                  {file.name}
-                                </p>
-                                <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoverArquivoDescricao(index)}
-                              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-[#9CA3AF] border border-[#D4A017]/15 hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button
-                        type="button"
-                        className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:opacity-70"
-                        disabled={isUploading || filesDescricao.length === 0}
-                        onClick={handleUploadDescricaoCirurgica}
-                      >
-                        {isUploading ? "Processando..." : "Continuar Envio"}
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                        onClick={() => setView("upload_guia")}
-                        disabled={isUploading}
-                      >
-                        Voltar para Guia de Autorização
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* TELA 5 - PERGUNTA SOBRE GUIA DE HONORÁRIOS */}
-          {view === "pergunta_honorarios" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
-                  <FileCheck className="h-8 w-8" />
-                </div>
-
-                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
-                  Guia de Honorários
-                </h2>
-                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
-                  Deseja que o sistema preencha automaticamente a Guia de Faturamento de Honorários com os dados extraídos?
-                </p>
-
-                <div className="flex flex-col gap-3">
-                  <Button
-                    type="button"
-                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                    onClick={handleGerarGuiaHonorarios}
-                  >
-                    Sim, preencher guia
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={handlePularGuiaHonorarios}
-                  >
-                    Não, pular esta etapa
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TELA 6 - GERANDO GUIA DE HONORÁRIOS */}
-          {view === "gerando_honorarios" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-
-                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
-                  Gerando Guia de Honorários
-                </h2>
-                <p className="text-xs text-[#9CA3AF] sm:text-sm">
-                  Aguarde enquanto preenchemos a guia com os dados extraídos...
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* TELA 7 - SEM MODELO CADASTRADO */}
-          {view === "sem_modelo" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                  <AlertCircle className="h-8 w-8" />
-                </div>
-
-                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
-                  Modelo não encontrado
-                </h2>
-                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
-                  Não existe modelo de guia de faturamento cadastrado para a instituição selecionada ({selectedClinicaName}).
-                </p>
-
-                <div className="flex flex-col gap-3">
-                  <Button
-                    type="button"
-                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                    onClick={handlePularGuiaHonorarios}
-                  >
-                    Continuar sem guia
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => setView("pergunta_honorarios")}
-                  >
-                    Voltar
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TELA 8 - PREVIEW DA GUIA DE HONORÁRIOS */}
-          {view === "preview_honorarios" && (
-            <div className="mt-2 flex w-full max-w-5xl flex-col">
-              {/* Cabeçalho + controles de zoom */}
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                    Guia de Honorários Preenchida
-                  </h1>
-                  <p className="mt-0.5 text-xs text-[#9CA3AF]">
-                    Confira os dados preenchidos automaticamente na guia abaixo.
-                  </p>
-                </div>
-
-                {/* Controles de zoom */}
-                <div className="flex items-center gap-2 rounded-xl bg-black/60 border border-[#D4A017]/20 px-3 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setGuiaZoom((z) => Math.max(ZOOM_MIN, parseFloat((z - ZOOM_STEP).toFixed(2))))}
-                    disabled={guiaZoom <= ZOOM_MIN}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 hover:bg-[#D4A017]/25 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold leading-none transition-colors"
-                    title="Diminuir zoom"
-                  >
-                    −
-                  </button>
-                  <span className="min-w-[44px] text-center text-xs font-semibold text-[#F5F5F5]">
-                    {Math.round(guiaZoom * 100)}%
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setGuiaZoom((z) => Math.min(ZOOM_MAX, parseFloat((z + ZOOM_STEP).toFixed(2))))}
-                    disabled={guiaZoom >= ZOOM_MAX}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 hover:bg-[#D4A017]/25 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold leading-none transition-colors"
-                    title="Aumentar zoom"
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGuiaZoom(0.5)}
-                    className="ml-1 text-[10px] text-[#9CA3AF] hover:text-[#D4A017] transition-colors"
-                    title="Resetar zoom para 50%"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-
-              {/* Container do HTML da guia com zoom */}
-              <div className="w-full rounded-2xl bg-[#f0f0f0] shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 overflow-auto"
-                style={{ maxHeight: "70vh" }}
-              >
-                <div
-                  style={{
-                    transform: `scale(${guiaZoom})`,
-                    transformOrigin: "top left",
-                    width: `${(1 / guiaZoom) * 100}%`,
-                    minHeight: "400px",
-                    backgroundColor: "#ffffff",
-                    padding: "16px",
-                  }}
-                >
-                  <div
-                    ref={guiaPreviewRef}
-                    className="guia-preview"
-                    dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
-                  />
-                </div>
-              </div>
-
-              {/* Botões de ação */}
-              <div className="mt-4">
-                {isGeneratingPdf || (!pdfGerado && !pdfBlobUrl) ? (
-                  <div className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold flex items-center justify-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando PDF da guia...
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full rounded-lg border-[#D4A017]/40 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10 flex items-center justify-center"
-                      onClick={handleBaixarPdf}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Baixar PDF
-                    </Button>
-
-                    <Button
-                      type="button"
-                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300"
-                      onClick={() => {
-                        void handleAvancarAposPreview();
-                      }}
-                    >
-                      Avançar
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TELA 9 - SUCESSO */}
-          {view === "success" && (
-            <div className="mt-6 flex w-full max-w-md flex-col items-stretch">
-              <Card className="rounded-2xl border border-[#D4A017]/20 bg-black/70 backdrop-blur-xl text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-                <CardContent className="space-y-6 px-6 py-8">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
-                    <CheckCircle2 className="h-8 w-8" />
-                  </div>
-                  <div className="space-y-2">
-                    <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                      {medicoNome
-                        ? `Tudo certo, Dr. ${medicoNome}!`
-                        : "Tudo certo!"}
-                    </h2>
-                    <p className="text-xs text-[#9CA3AF] sm:text-sm">
-                      Os documentos foram enviados e processados com sucesso.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3 pt-2">
-                    <Button
-                      type="button"
-                      className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                      onClick={handleNovaDescricao}
-                    >
-                      Novo Faturamento
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                      onClick={() => navigate("/medico/dashboard")}
-                    >
-                      Ir para o Início
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Diálogo de Envio de Emails */}
-      {faturamentoId && (
-        <SendBillingEmailsDialog
-          open={showEmailDialog}
-          onOpenChange={setShowEmailDialog}
-          faturamentoId={faturamentoId}
-          userEmail={medicoEmail}
-          userName={medicoNome ? `Dr. ${medicoNome}` : "Médico"}
-          userCrm={medicoCrm || undefined}
-          instituicaoCirurgiaNome={selectedHospitalName}
-          instituicaoFaturamentoNome={selectedClinicaName}
-          instituicoesDiferentes={selectedHospitalId !== selectedClinicaId}
-          skipAtuacaoScreen={!!initialFaturamentoId}
-          onEmailsSent={handleEmailsSent}
-          onSkip={handleSkipEmails}
-        />
-      )}
-
-      {/* Diálogo de Revisão de Procedimentos */}
-      <ProcedureReviewDialog
-        open={showProcedureReview}
-        procedimentos={procedimentosRevisao}
-        faturamentoId={faturamentoId}
-        userId={currentUserId}
-        onConfirm={handleProcedureReviewConfirm}
-        onClose={handleProcedureReviewClose}
-        onProcedimentosUpdated={(novos) => setProcedimentosRevisao(novos)}
-      />
-
-      {/* Tela de Análise da IA */}
-      {showAnalyzingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
-          <div className="w-full max-w-sm rounded-2xl border border-[#D4A017]/20 bg-black/70 px-6 py-8 text-center shadow-[0_0_40px_rgba(212,160,23,0.12)]">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
-              {analyzingStep === "uploading" ? (
-                <Upload className="h-7 w-7" />
-              ) : analyzingStep === "analyzing" ? (
-                <Brain className="h-7 w-7" />
-              ) : (
-                <CheckCircle2 className="h-7 w-7" />
-              )}
-            </div>
-
-            <h2 className="text-base font-semibold text-[#F5F5F5]">
-              {analyzingStep === "uploading"
-                ? "Enviando..."
-                : analyzingStep === "analyzing"
-                  ? "Analisando..."
-                  : "Salvando..."}
-            </h2>
-
-            <p className="mt-2 text-xs text-[#9CA3AF]">{getAnalyzingStepDescription()}</p>
-
-            <div className="mt-6">
-              <Progress value={analyzingProgress} className="h-2.5 rounded-full" />
-              <p className="mt-2 text-[11px] text-[#6B7280]">{analyzingProgress}% concluído</p>
-            </div>
-
-            <p className="mt-4 text-[11px] text-[#D4A017]">{getAnalyzingDocTitle()}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default MedicoUploadDescricaoCirurgica;
+                            className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px

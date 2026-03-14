@@ -257,27 +257,17 @@ export function checkAposGuiaAutorizacao(
 
 // ─── Estágio 3: após descrição cirúrgica ─────────────────────────────────────
 
+/**
+ * Compara dados extraídos da descrição cirúrgica (salvos em `faturamentos`)
+ * com dados previamente extraídos da guia de autorização (também em `faturamentos`).
+ *
+ * `descFat` = faturamento APÓS processamento da descrição cirúrgica
+ * `autSnapshot` = snapshot dos campos da autorização ANTES da descrição (pode ser null se não enviada)
+ * `autProcCodes` = códigos de procedimentos da autorização (itens_faturamento antes da descrição)
+ * `descProcCodes` = códigos de procedimentos da descrição (itens_faturamento após a descrição)
+ */
 export function checkAposDescricaoCirurgica(
-  desc: {
-    registro_civil?: string | null;
-    nome_social?: string | null;
-    cpf?: string | null;
-    data_inicio_procedimento?: string | null;
-    hora_inicio_procedimento?: string | null;
-    hora_fim_procedimento?: string | null;
-    cirurgiao_responsavel?: string | null;
-    cirurgiao_responsavel_crm?: string | null;
-    equipe?: Array<{
-      nome?: string;
-      funcao?: string;
-      conselho_numero?: string;
-    }> | null;
-    procedimentos?: Array<{
-      codigo?: string;
-      descricao?: string;
-    }> | null;
-  },
-  aut?: {
+  descFat: {
     paciente_nome?: string | null;
     data_cirurgia?: string | null;
     hora_inicio?: string | null;
@@ -294,26 +284,46 @@ export function checkAposDescricaoCirurgica(
     anestesista_crm?: string | null;
     instrumentador_nome?: string | null;
     instrumentador_crm?: string | null;
-    proc_cir_1_amb_cbhpm?: string | null;
-    proc_cir_2_amb_cbhpm?: string | null;
-    proc_cir_3_amb_cbhpm?: string | null;
-    proc_cir_4_amb_cbhpm?: string | null;
-    proc_cir_5_amb_cbhpm?: string | null;
+  },
+  autSnapshot?: {
+    paciente_nome?: string | null;
+    data_cirurgia?: string | null;
+    hora_inicio?: string | null;
+    hora_fim?: string | null;
+    cirurgiao_principal_nome?: string | null;
+    cirurgiao_principal_crm?: string | null;
+    auxiliar1_nome?: string | null;
+    auxiliar1_crm?: string | null;
+    auxiliar2_nome?: string | null;
+    auxiliar2_crm?: string | null;
+    auxiliar3_nome?: string | null;
+    auxiliar3_crm?: string | null;
+    anestesista_nome?: string | null;
+    anestesista_crm?: string | null;
+    instrumentador_nome?: string | null;
+    instrumentador_crm?: string | null;
   } | null,
+  autProcCodes?: string[],
+  descProcCodes?: string[],
   sol?: {
     nome_beneficiario?: string | null;
   } | null
 ): CheckResult[] {
   const results: CheckResult[] = [];
 
-  const descNome = desc.registro_civil || desc.nome_social;
-  const refNome  = aut?.paciente_nome || sol?.nome_beneficiario;
+  const aut = autSnapshot ?? null;
 
   // C1 — Nome do paciente
+  const refNome = aut?.paciente_nome || sol?.nome_beneficiario;
+  const descNome = descFat.paciente_nome;
+
   if (!refNome) {
     results.push({
       id: "C1", label: "Nome do paciente", grupo: "cirurgia",
-      status: "skipped", detail: "Nenhum documento anterior enviado",
+      status: descNome ? "ok" : "warning",
+      detail: descNome ? undefined : "Nome não extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica",
+      valorB: descNome ?? undefined,
     });
   } else {
     const ok = firstToken(refNome) === firstToken(descNome);
@@ -332,16 +342,21 @@ export function checkAposDescricaoCirurgica(
   if (!aut) {
     results.push({
       id: "C2", label: "Data da cirurgia", grupo: "cirurgia",
-      status: "skipped", detail: "Guia de autorização não enviada",
+      status: descFat.data_cirurgia ? "ok" : "warning",
+      detail: descFat.data_cirurgia ? undefined : "Data não extraída da descrição cirúrgica",
+      documentoB: "descricao_cirurgica",
+      valorB: descFat.data_cirurgia ?? undefined,
     });
   } else {
-    const ok = normalize(aut.data_cirurgia) === normalize(desc.data_inicio_procedimento);
+    const autDate = aut.data_cirurgia;
+    const descDate = descFat.data_cirurgia;
+    const ok = normalize(autDate) === normalize(descDate);
     results.push({
       id: "C2", label: "Data da cirurgia", grupo: "cirurgia",
-      status: ok ? "ok" : "error",
-      detail: ok ? undefined : `"${aut.data_cirurgia}" ↔ "${desc.data_inicio_procedimento}"`,
-      documentoA: "guia_autorizacao", valorA: aut.data_cirurgia ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: desc.data_inicio_procedimento ?? undefined,
+      status: ok ? "ok" : (!autDate || !descDate) ? "warning" : "error",
+      detail: ok ? undefined : `"${autDate}" ↔ "${descDate}"`,
+      documentoA: "guia_autorizacao", valorA: autDate ?? undefined,
+      documentoB: "descricao_cirurgica", valorB: descDate ?? undefined,
     });
   }
 
@@ -349,16 +364,19 @@ export function checkAposDescricaoCirurgica(
   if (!aut) {
     results.push({
       id: "C3", label: "Hora de início", grupo: "cirurgia",
-      status: "skipped", detail: "Guia de autorização não enviada",
+      status: descFat.hora_inicio ? "ok" : "warning",
+      detail: descFat.hora_inicio ? undefined : "Hora não extraída da descrição cirúrgica",
+      documentoB: "descricao_cirurgica",
+      valorB: descFat.hora_inicio ?? undefined,
     });
   } else {
-    const diff = minuteDiff(aut.hora_inicio, desc.hora_inicio_procedimento);
+    const diff = minuteDiff(aut.hora_inicio, descFat.hora_inicio);
     results.push({
       id: "C3", label: "Hora de início", grupo: "cirurgia",
       status: diff <= 30 ? "ok" : "warning",
       detail: diff <= 30 ? undefined : `Diferença de ${diff} min (tolerância: 30 min)`,
       documentoA: "guia_autorizacao", valorA: aut.hora_inicio ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: desc.hora_inicio_procedimento ?? undefined,
+      documentoB: "descricao_cirurgica", valorB: descFat.hora_inicio ?? undefined,
     });
   }
 
@@ -366,16 +384,19 @@ export function checkAposDescricaoCirurgica(
   if (!aut) {
     results.push({
       id: "M1", label: "CRM do cirurgião", grupo: "medicos",
-      status: "skipped", detail: "Guia de autorização não enviada",
+      status: descFat.cirurgiao_principal_crm ? "ok" : "warning",
+      detail: descFat.cirurgiao_principal_crm ? undefined : "CRM não extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica",
+      valorB: descFat.cirurgiao_principal_crm ?? undefined,
     });
   } else {
-    const ok = normalize(aut.cirurgiao_principal_crm) === normalize(desc.cirurgiao_responsavel_crm);
+    const ok = normalize(aut.cirurgiao_principal_crm) === normalize(descFat.cirurgiao_principal_crm);
     results.push({
       id: "M1", label: "CRM do cirurgião", grupo: "medicos",
       status: ok ? "ok" : "error",
-      detail: ok ? undefined : `"${aut.cirurgiao_principal_crm}" ↔ "${desc.cirurgiao_responsavel_crm}"`,
+      detail: ok ? undefined : `"${aut.cirurgiao_principal_crm}" ↔ "${descFat.cirurgiao_principal_crm}"`,
       documentoA: "guia_autorizacao", valorA: aut.cirurgiao_principal_crm ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: desc.cirurgiao_responsavel_crm ?? undefined,
+      documentoB: "descricao_cirurgica", valorB: descFat.cirurgiao_principal_crm ?? undefined,
     });
   }
 
@@ -383,16 +404,19 @@ export function checkAposDescricaoCirurgica(
   if (!aut) {
     results.push({
       id: "M2", label: "Nome do cirurgião", grupo: "medicos",
-      status: "skipped", detail: "Guia de autorização não enviada",
+      status: descFat.cirurgiao_principal_nome ? "ok" : "warning",
+      detail: descFat.cirurgiao_principal_nome ? undefined : "Nome não extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica",
+      valorB: descFat.cirurgiao_principal_nome ?? undefined,
     });
   } else {
-    const ok = firstToken(aut.cirurgiao_principal_nome) === firstToken(desc.cirurgiao_responsavel);
+    const ok = firstToken(aut.cirurgiao_principal_nome) === firstToken(descFat.cirurgiao_principal_nome);
     results.push({
       id: "M2", label: "Nome do cirurgião", grupo: "medicos",
       status: ok ? "ok" : "warning",
-      detail: ok ? undefined : `"${aut.cirurgiao_principal_nome}" ↔ "${desc.cirurgiao_responsavel}"`,
+      detail: ok ? undefined : `"${aut.cirurgiao_principal_nome}" ↔ "${descFat.cirurgiao_principal_nome}"`,
       documentoA: "guia_autorizacao", valorA: aut.cirurgiao_principal_nome ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: desc.cirurgiao_responsavel ?? undefined,
+      documentoB: "descricao_cirurgica", valorB: descFat.cirurgiao_principal_nome ?? undefined,
     });
   }
 
@@ -403,20 +427,19 @@ export function checkAposDescricaoCirurgica(
       status: "skipped", detail: "Guia de autorização não enviada",
     });
   } else {
-    const descAux = desc.equipe?.find(e => normalize(e.funcao) === "auxiliar");
-    if (!aut.auxiliar1_crm && !descAux?.conselho_numero) {
+    if (!aut.auxiliar1_crm && !descFat.auxiliar1_crm) {
       results.push({
         id: "M3", label: "CRM do 1º auxiliar", grupo: "medicos",
         status: "skipped", detail: "Auxiliar não informado em nenhum documento",
       });
     } else {
-      const ok = normalize(aut.auxiliar1_crm) === normalize(descAux?.conselho_numero);
+      const ok = normalize(aut.auxiliar1_crm) === normalize(descFat.auxiliar1_crm);
       results.push({
         id: "M3", label: "CRM do 1º auxiliar", grupo: "medicos",
         status: ok ? "ok" : "error",
-        detail: ok ? undefined : `"${aut.auxiliar1_crm}" ↔ "${descAux?.conselho_numero}"`,
+        detail: ok ? undefined : `"${aut.auxiliar1_crm}" ↔ "${descFat.auxiliar1_crm}"`,
         documentoA: "guia_autorizacao", valorA: aut.auxiliar1_crm ?? undefined,
-        documentoB: "descricao_cirurgica", valorB: descAux?.conselho_numero ?? undefined,
+        documentoB: "descricao_cirurgica", valorB: descFat.auxiliar1_crm ?? undefined,
       });
     }
   }
@@ -428,53 +451,62 @@ export function checkAposDescricaoCirurgica(
       status: "skipped", detail: "Guia de autorização não enviada",
     });
   } else {
-    const descAux = desc.equipe?.find(e => normalize(e.funcao) === "auxiliar");
-    if (!aut.auxiliar1_nome && !descAux?.nome) {
+    if (!aut.auxiliar1_nome && !descFat.auxiliar1_nome) {
       results.push({
         id: "M4", label: "Nome do 1º auxiliar", grupo: "medicos",
         status: "skipped", detail: "Auxiliar não informado em nenhum documento",
       });
     } else {
-      const ok = firstToken(aut.auxiliar1_nome) === firstToken(descAux?.nome);
+      const ok = firstToken(aut.auxiliar1_nome) === firstToken(descFat.auxiliar1_nome);
       results.push({
         id: "M4", label: "Nome do 1º auxiliar", grupo: "medicos",
         status: ok ? "ok" : "warning",
-        detail: ok ? undefined : `"${aut.auxiliar1_nome}" ↔ "${descAux?.nome}"`,
+        detail: ok ? undefined : `"${aut.auxiliar1_nome}" ↔ "${descFat.auxiliar1_nome}"`,
         documentoA: "guia_autorizacao", valorA: aut.auxiliar1_nome ?? undefined,
-        documentoB: "descricao_cirurgica", valorB: descAux?.nome ?? undefined,
+        documentoB: "descricao_cirurgica", valorB: descFat.auxiliar1_nome ?? undefined,
       });
     }
   }
 
-  // M5 — Conflito de papéis
+  // M5 — Conflito de papéis na equipe
   if (!aut) {
     results.push({
       id: "M5", label: "Conflito de papéis na equipe", grupo: "medicos",
       status: "skipped", detail: "Guia de autorização não enviada",
     });
   } else {
-    const mapaAut: Record<string, string> = {};
-    const campos = [
+    // Comparar se CRMs trocaram de papel entre autorização e descrição
+    const autMembers = [
       { crm: aut.cirurgiao_principal_crm, papel: "cirurgiao" },
-      { crm: aut.auxiliar1_crm,           papel: "auxiliar1" },
-      { crm: aut.auxiliar2_crm,           papel: "auxiliar2" },
-      { crm: aut.auxiliar3_crm,           papel: "auxiliar3" },
-      { crm: aut.anestesista_crm,         papel: "anestesista" },
-      { crm: aut.instrumentador_crm,      papel: "instrumentador" },
+      { crm: aut.auxiliar1_crm, papel: "auxiliar1" },
+      { crm: aut.auxiliar2_crm, papel: "auxiliar2" },
+      { crm: aut.auxiliar3_crm, papel: "auxiliar3" },
+      { crm: aut.anestesista_crm, papel: "anestesista" },
+      { crm: aut.instrumentador_crm, papel: "instrumentador" },
     ];
-    campos.forEach(({ crm, papel }) => {
+    const descMembers = [
+      { crm: descFat.cirurgiao_principal_crm, papel: "cirurgiao" },
+      { crm: descFat.auxiliar1_crm, papel: "auxiliar1" },
+      { crm: descFat.auxiliar2_crm, papel: "auxiliar2" },
+      { crm: descFat.auxiliar3_crm, papel: "auxiliar3" },
+      { crm: descFat.anestesista_crm, papel: "anestesista" },
+      { crm: descFat.instrumentador_crm, papel: "instrumentador" },
+    ];
+
+    const mapaAut: Record<string, string> = {};
+    autMembers.forEach(({ crm, papel }) => {
       if (crm) mapaAut[normalize(crm)] = papel;
     });
 
     const conflitos: string[] = [];
-    desc.equipe?.forEach(membro => {
-      const crm = normalize(membro.conselho_numero);
-      if (!crm || !mapaAut[crm]) return;
-      const papelAut  = mapaAut[crm];
-      const papelDesc = normalize(membro.funcao);
+    descMembers.forEach(({ crm, papel }) => {
+      const crmNorm = normalize(crm);
+      if (!crmNorm || !mapaAut[crmNorm]) return;
+      const papelAut = mapaAut[crmNorm];
       const papelAutNorm = papelAut.startsWith("auxiliar") ? "auxiliar" : papelAut;
-      if (papelAutNorm !== papelDesc) {
-        conflitos.push(`CRM ${membro.conselho_numero}: "${papelAut}" (aut.) ↔ "${membro.funcao}" (desc.)`);
+      const papelDescNorm = papel.startsWith("auxiliar") ? "auxiliar" : papel;
+      if (papelAutNorm !== papelDescNorm) {
+        conflitos.push(`CRM ${crm}: "${papelAut}" (aut.) ↔ "${papel}" (desc.)`);
       }
     });
 
@@ -488,52 +520,41 @@ export function checkAposDescricaoCirurgica(
   }
 
   // P1 — Quantidade de procedimentos
-  if (!aut) {
+  const autCodes = (autProcCodes ?? []).filter(Boolean);
+  const descCodes = (descProcCodes ?? []).filter(Boolean);
+
+  if (!aut && autCodes.length === 0) {
     results.push({
       id: "P1", label: "Quantidade de procedimentos", grupo: "procedimentos",
-      status: "skipped", detail: "Guia de autorização não enviada",
+      status: descCodes.length > 0 ? "ok" : "warning",
+      detail: descCodes.length > 0 ? undefined : "Nenhum procedimento extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: String(descCodes.length),
     });
   } else {
-    const autProcs = [
-      aut.proc_cir_1_amb_cbhpm,
-      aut.proc_cir_2_amb_cbhpm,
-      aut.proc_cir_3_amb_cbhpm,
-      aut.proc_cir_4_amb_cbhpm,
-      aut.proc_cir_5_amb_cbhpm,
-    ].filter(Boolean);
-    const descQtd = desc.procedimentos?.length ?? 0;
-    const ok = autProcs.length === descQtd;
+    const ok = autCodes.length === descCodes.length;
     results.push({
       id: "P1", label: "Quantidade de procedimentos", grupo: "procedimentos",
       status: ok ? "ok" : "warning",
-      detail: ok ? undefined : `${autProcs.length} na autorização ↔ ${descQtd} na descrição`,
-      documentoA: "guia_autorizacao", valorA: String(autProcs.length),
-      documentoB: "descricao_cirurgica", valorB: String(descQtd),
+      detail: ok ? undefined : `${autCodes.length} na autorização ↔ ${descCodes.length} na descrição`,
+      documentoA: "guia_autorizacao", valorA: String(autCodes.length),
+      documentoB: "descricao_cirurgica", valorB: String(descCodes.length),
     });
   }
 
   // P2 — Códigos dos procedimentos
-  if (!aut) {
+  if (!aut && autCodes.length === 0) {
     results.push({
       id: "P2", label: "Códigos dos procedimentos", grupo: "procedimentos",
-      status: "skipped", detail: "Guia de autorização não enviada",
+      status: descCodes.length > 0 ? "ok" : "warning",
+      detail: descCodes.length > 0 ? undefined : "Nenhum código extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: descCodes.join(", "),
     });
   } else {
-    const autCodes = [
-      aut.proc_cir_1_amb_cbhpm,
-      aut.proc_cir_2_amb_cbhpm,
-      aut.proc_cir_3_amb_cbhpm,
-      aut.proc_cir_4_amb_cbhpm,
-      aut.proc_cir_5_amb_cbhpm,
-    ].filter((c): c is string => !!c);
-    const descCodes = (desc.procedimentos ?? [])
-      .map(p => p.codigo)
-      .filter((c): c is string => !!c);
     const { missingInDesc, missingInAut } = compareProcedureSets(autCodes, descCodes);
     const ok = missingInDesc.length === 0 && missingInAut.length === 0;
     const details: string[] = [];
     if (missingInDesc.length) details.push(`Ausentes na descrição: ${missingInDesc.join(", ")}`);
-    if (missingInAut.length)  details.push(`Ausentes na autorização: ${missingInAut.join(", ")}`);
+    if (missingInAut.length) details.push(`Ausentes na autorização: ${missingInAut.join(", ")}`);
     results.push({
       id: "P2", label: "Códigos dos procedimentos", grupo: "procedimentos",
       status: ok ? "ok" : "error",
