@@ -22,6 +22,8 @@ import {
   Download,
   Calendar,
   Zap,
+  TrendingUp,
+  Scissors,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,7 @@ import {
   markResultsAsIgnored,
   type CheckResult,
 } from "@/utils/consistencyCheck";
+import { useBillingQuota } from "@/hooks/use-billing-quota";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -181,6 +184,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     faturamentoId?: string;
     initialView?: ViewState | "email_faturamento";
   };
+
+  // Quota de faturamentos mensais
+  const billingQuota = useBillingQuota();
 
   // Arquivos da Guia de Autorização
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
@@ -2554,7 +2560,31 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   Vamos iniciar o processo de Acompanhamento de Faturamento
                 </p>
 
-                <div className="mt-6 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3 w-full max-w-sm">
+                {/* Contador de faturamentos do mês */}
+                {!billingQuota.loading && billingQuota.limit !== null && (
+                  <div className={`mt-5 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 w-full max-w-sm ${
+                    billingQuota.isOverLimit
+                      ? "border-rose-500/40 bg-rose-950/30"
+                      : billingQuota.isNearLimit
+                        ? "border-amber-500/40 bg-amber-950/20"
+                        : "border-[#D4A017]/20 bg-black/40"
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <Scissors className={`h-4 w-4 ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`} />
+                      <div>
+                        <p className="text-xs font-semibold text-[#F5F5F5]">Faturamentos do mês</p>
+                        <p className="text-[11px] text-[#9CA3AF]">
+                          {billingQuota.used} de {billingQuota.limit} do seu plano
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-sm font-bold ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`}>
+                      {billingQuota.used}/{billingQuota.limit}
+                    </span>
+                  </div>
+                )}
+
+                <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3 w-full max-w-sm">
                   <Checkbox
                     id="consistency-check"
                     checked={consistencyCheckEnabled}
@@ -2569,20 +2599,47 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   </label>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleIniciarFluxo}
-                  className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] text-center text-black shadow-[0_0_60px_rgba(212,160,23,0.35)] ring-8 ring-[#D4A017]/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_90px_rgba(212,160,23,0.45)] sm:h-56 sm:w-56"
-                >
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-black shadow-inner">
-                      <ShieldCheck className="h-5 w-5" />
+                {/* Limite excedido: bloquear e mostrar upgrade */}
+                {!billingQuota.loading && billingQuota.isOverLimit ? (
+                  <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-4">
+                    <div className="w-full rounded-2xl border border-rose-500/30 bg-rose-950/30 px-5 py-5 text-center">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 border border-rose-500/30">
+                        <AlertCircle className="h-6 w-6 text-rose-400" />
+                      </div>
+                      <p className="text-sm font-semibold text-rose-300">
+                        Limite de faturamentos atingido
+                      </p>
+                      <p className="mt-1 text-xs text-rose-400/80">
+                        Você utilizou {billingQuota.used} de {billingQuota.limit} faturamentos do seu plano neste mês.
+                      </p>
                     </div>
-                    <span className="text-[15px] font-semibold">
-                      Iniciar Agora
-                    </span>
+                    <a
+                      href="https://site.conmedic.com.br/planos"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-3 text-sm font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-all duration-300"
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      Fazer Upgrade do Plano
+                    </a>
                   </div>
-                </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleIniciarFluxo}
+                    disabled={billingQuota.loading}
+                    className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] text-center text-black shadow-[0_0_60px_rgba(212,160,23,0.35)] ring-8 ring-[#D4A017]/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_90px_rgba(212,160,23,0.45)] sm:h-56 sm:w-56 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-black shadow-inner">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <span className="text-[15px] font-semibold">
+                        Iniciar Agora
+                      </span>
+                    </div>
+                  </button>
+                )}
 
                 <p className="mt-8 text-[11px] text-[#6B7280]">
                   Seus dados são criptografados ponta a ponta.
