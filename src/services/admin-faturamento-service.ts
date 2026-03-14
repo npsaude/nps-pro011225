@@ -232,3 +232,10 @@ export async function listAdminFaturamentos(): Promise<AdminFaturamentoListItem[
     };
   });
 }
+
+export async function deleteFaturamento(id: string): Promise<void> {
+  const { error } = await supabase.from("faturamentos").delete().eq("id", id);
+  if (error) {
+    throw error;
+  }
+}

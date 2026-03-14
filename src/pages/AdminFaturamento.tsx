@@ -9,8 +9,9 @@ import { useEffect, useMemo, useState } from "react";
 import AdminBillingCard, {
   type AdminBillingCardRecord,
 } from "@/components/faturamento/AdminBillingCard";
-import { listAdminFaturamentos } from "@/services/admin-faturamento-service";
+import { deleteFaturamento, listAdminFaturamentos } from "@/services/admin-faturamento-service";
 import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
+import { showSuccess, showError } from "@/utils/toast";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -120,6 +121,17 @@ const AdminFaturamento = () => {
       return true;
     });
   }, [items, doctorQuery, patientQuery, dateQuery]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteFaturamento(id);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      showSuccess("Faturamento excluído com sucesso.");
+    } catch (error) {
+      console.error(error);
+      showError("Não foi possível excluir o faturamento.");
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
@@ -245,7 +257,11 @@ const AdminFaturamento = () => {
                   </Card>
                 ) : (
                   filteredItems.map((record) => (
-                    <AdminBillingCard key={record.id} record={record} />
+                    <AdminBillingCard
+                      key={record.id}
+                      record={record}
+                      onDelete={handleDelete}
+                    />
                   ))
                 )}
               </section>

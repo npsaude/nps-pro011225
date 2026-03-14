@@ -1,6 +1,18 @@
 import React from "react";
-import { CalendarDays, Clock3, Hospital, User2, Stethoscope, Users, FileText, FileCheck, DollarSign } from "lucide-react";
+import { CalendarDays, Clock3, Hospital, User2, Stethoscope, Users, FileText, FileCheck, DollarSign, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import BillingDocsProgress, { type BillingDocStep } from "./BillingDocsProgress";
 
 function getInitials(name: string): string {
@@ -46,7 +58,13 @@ function formatCurrency(value: number): string {
   });
 }
 
-export default function AdminBillingCard({ record }: { record: AdminBillingCardRecord }) {
+export default function AdminBillingCard({
+  record,
+  onDelete,
+}: {
+  record: AdminBillingCardRecord;
+  onDelete?: (id: string) => void;
+}) {
   const pacienteLabel = record.pacienteNome?.trim() || "Paciente não informado";
 
   const procedimentosText = record.procedimentos.length > 0
@@ -61,9 +79,43 @@ export default function AdminBillingCard({ record }: { record: AdminBillingCardR
   const temGuiaSolicitacao = record.qtdSolicitada > 0;
 
   return (
-    <Card className="overflow-hidden rounded-[22px] border-[#D5DFEF] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.1)]">
+    <Card className="overflow-hidden rounded-[22px] border-[#D5DFEF] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.1)] relative">
+      {onDelete && (
+        <div className="absolute right-4 top-4 z-10">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir faturamento?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir o faturamento de{" "}
+                  <strong>{pacienteLabel}</strong>? Esta ação não pode ser
+                  desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(record.id)}
+                  className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
       <CardContent className="p-0">
-        <div className="bg-[#EAF1FF] px-6 py-4">
+        <div className="bg-[#EAF1FF] px-6 py-4 pr-16">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Paciente */}
             <div className="flex items-center gap-3">
