@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Upload,
   Image as ImageIcon,
+  FileText,
   X,
   CheckCircle2,
   FileCheck,
@@ -78,21 +79,21 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
-    const allowedFiles = selectedFiles.filter((file) =>
-      file.type.startsWith("image/")
+    const allowedFiles = selectedFiles.filter(
+      (file) => file.type.startsWith("image/") || file.type === "application/pdf"
     );
     const ignoredCount = selectedFiles.length - allowedFiles.length;
 
     if (ignoredCount > 0) {
       showError(
-        "Alguns arquivos foram ignorados por não serem imagens. Envie apenas imagens (PNG, JPEG, GIF, WEBP)."
+        "Alguns arquivos foram ignorados. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs."
       );
     }
 
     if (allowedFiles.length === 0) {
       setFiles([]);
       showError(
-        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP)."
+        "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs."
       );
       return;
     }
@@ -469,7 +470,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
                 type="file"
                 multiple
                 className="hidden"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 onChange={handleFileChange}
               />
 
@@ -550,7 +551,11 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            <ImageIcon className="h-4 w-4" />
+                            {isImage(file) ? (
+                              <ImageIcon className="h-4 w-4" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[11px] sm:text-xs">
