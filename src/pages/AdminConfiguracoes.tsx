@@ -748,7 +748,8 @@ const AdminConfiguracoes = () => {
                             <SelectValue placeholder="Selecione um modelo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="gpt-4.1">GPT-4.1 — Mais recente, alta precisão</SelectItem>
+                            <SelectItem value="gpt-4.5-preview">GPT-4.5 Preview — Mais recente (fev/2025)</SelectItem>
+                            <SelectItem value="gpt-4.1">GPT-4.1 — Alta precisão</SelectItem>
                             <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini — Rápido e econômico</SelectItem>
                             <SelectItem value="gpt-4.1-nano">GPT-4.1 Nano — Ultra rápido</SelectItem>
                             <SelectItem value="gpt-4o">GPT-4o — Multimodal, visão avançada</SelectItem>
