@@ -810,16 +810,29 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (consistencyCheckEnabled) {
         const { data: solData } = await supabase
           .from("guia_solicitacao")
-          .select("nome_beneficiario, data_inicio_faturamento, profissional_numero_conselho")
+          .select("nome_beneficiario, hora_inicial, profissional_nome, profissional_numero_conselho")
           .eq("faturamento_id" as never, ensuredFaturamentoId)
           .maybeSingle();
 
         if (solData) {
-          const results = checkAposSolicitacao({
-            paciente_nome: (solData as any).nome_beneficiario,
-            data_inicio_faturamento: (solData as any).data_inicio_faturamento,
-            profissional_numero_conselho: (solData as any).profissional_numero_conselho,
-          });
+          // Buscar códigos de procedimentos da solicitação
+          const { data: solItens } = await supabase
+            .from("guia_solicitacao_itens")
+            .select("codigo_procedimento")
+            .eq("guia_id" as never, (solData as any).id);
+          const solProcCodes = (solItens ?? [])
+            .map((it: any) => it.codigo_procedimento)
+            .filter(Boolean);
+
+          const results = checkAposSolicitacao(
+            {
+              nome_beneficiario: (solData as any).nome_beneficiario,
+              hora_inicial: (solData as any).hora_inicial,
+              profissional_nome: (solData as any).profissional_nome,
+              profissional_numero_conselho: (solData as any).profissional_numero_conselho,
+            },
+            solProcCodes
+          );
           setAllConsistencyResults(prev => [...prev, ...results]);
           const uid = (await supabase.auth.getUser()).data.user?.id;
           if (uid) {
@@ -1127,15 +1140,45 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
 
         if (fatData) {
+          // Buscar códigos de procedimentos da autorização
+          const { data: autItens } = await supabase
+            .from("itens_faturamento")
+            .select("codigo_procedimento")
+            .eq("faturamento_id", ensuredFaturamentoId);
+          const autProcCodesCheck = (autItens ?? [])
+            .map((it: any) => it.codigo_procedimento)
+            .filter(Boolean);
+
+          // Buscar dados da solicitação para cruzamento
+          let solDataForAut: { nome_beneficiario?: string | null; hora_inicial?: string | null; profissional_nome?: string | null; profissional_numero_conselho?: string | null } | null = null;
+          let solProcCodesForAut: string[] = [];
+          if (solicitacaoEnviada) {
+            const { data: solRow } = await supabase
+              .from("guia_solicitacao")
+              .select("nome_beneficiario, hora_inicial, profissional_nome, profissional_numero_conselho")
+              .eq("faturamento_id" as never, ensuredFaturamentoId)
+              .maybeSingle();
+            if (solRow) {
+              solDataForAut = solRow as typeof solDataForAut;
+              const { data: solItens } = await supabase
+                .from("guia_solicitacao_itens")
+                .select("codigo_procedimento")
+                .eq("guia_id" as never, (solRow as any).id);
+              solProcCodesForAut = (solItens ?? [])
+                .map((it: any) => it.codigo_procedimento)
+                .filter(Boolean);
+            }
+          }
+
           const results = checkAposGuiaAutorizacao(
             {
               paciente_nome: (fatData as any).paciente_nome,
-              paciente_carteirinha: (fatData as any).paciente_carteirinha,
-              hospital_codigo_cnes: (fatData as any).hospital_codigo_cnes,
-              data_cirurgia: (fatData as any).data_cirurgia,
+              cirurgiao_nome: (fatData as any).cirurgiao_principal_nome,
               cirurgiao_principal_crm: (fatData as any).cirurgiao_principal_crm,
             },
-            solData
+            autProcCodesCheck,
+            solDataForAut,
+            solProcCodesForAut
           );
           setAllConsistencyResults(prev => [...prev, ...results]);
           const uid = (await supabase.auth.getUser()).data.user?.id;
@@ -1320,7 +1363,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         // Ler faturamento ATUALIZADO (após edge function salvar dados da descrição)
         const { data: descFatRow } = await supabase
           .from("faturamentos")
-          .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
+          .select("paciente_nome, hora_inicio, cirurgiao_principal_nome, cirurgiao_principal_crm")
           .eq("id", faturamentoId)
           .single();
 
@@ -1334,22 +1377,38 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           .filter(Boolean);
 
         // Buscar dados da solicitação se enviada
-        let solDataForCheck: Parameters<typeof checkAposDescricaoCirurgica>[4] | null = null;
+        let solDataForCheck: { nome_beneficiario?: string | null; hora_inicial?: string | null; profissional_nome?: string | null; profissional_numero_conselho?: string | null } | null = null;
+        let solProcCodesForCheck: string[] = [];
         if (solicitacaoEnviada) {
           const { data: sol } = await supabase
             .from("guia_solicitacao")
-            .select("nome_beneficiario")
+            .select("nome_beneficiario, hora_inicial, profissional_nome, profissional_numero_conselho")
             .eq("faturamento_id" as never, faturamentoId)
             .maybeSingle();
-          solDataForCheck = sol as typeof solDataForCheck;
+          if (sol) {
+            solDataForCheck = sol as typeof solDataForCheck;
+            const { data: solItens } = await supabase
+              .from("guia_solicitacao_itens")
+              .select("codigo_procedimento")
+              .eq("guia_id" as never, (sol as any).id);
+            solProcCodesForCheck = (solItens ?? [])
+              .map((it: any) => it.codigo_procedimento)
+              .filter(Boolean);
+          }
         }
 
         const descResults = checkAposDescricaoCirurgica(
-          (descFatRow as any) ?? {},
-          autorizacaoEnviada ? autSnapshot : null,
-          autProcCodes,
+          {
+            paciente_nome: (descFatRow as any)?.paciente_nome,
+            hora_inicio: (descFatRow as any)?.hora_inicio,
+            cirurgiao_principal_nome: (descFatRow as any)?.cirurgiao_principal_nome,
+            cirurgiao_principal_crm: (descFatRow as any)?.cirurgiao_principal_crm,
+          },
           descProcCodes,
-          solDataForCheck
+          autorizacaoEnviada ? (autSnapshot as any) : null,
+          autProcCodes,
+          solDataForCheck,
+          solProcCodesForCheck
         );
         const allResults = [...allConsistencyResults, ...descResults];
         setAllConsistencyResults(allResults);
@@ -3363,7 +3422,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {/* TELA 5.1 - GERANDO HONORÁRIOS (loading) */}
+          {/* TELA 5.1 - GERANDO HONORÁRIOS */}
           {view === "gerando_honorarios" && (
             <div className="mt-2 flex w-full max-w-md flex-col items-center text-center">
               <div className="mb-6">

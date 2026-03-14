@@ -6,19 +6,19 @@ export type ConsistencyStage =
   | "apos_descricao_cirurgica";
 
 export type CheckResult = {
-  id: string;                          // "C1", "M1", "P2" etc.
-  label: string;                       // descrição legível
+  id: string;
+  label: string;
   grupo: "cirurgia" | "medicos" | "procedimentos";
   status: "ok" | "warning" | "error" | "skipped";
   detail?: string;
-  documentoA?: string;                 // ex: "guia_autorizacao"
-  valorA?: string;                     // valor extraído do doc A
-  documentoB?: string;                 // ex: "descricao_cirurgica"
-  valorB?: string;                     // valor extraído do doc B
-  confiancaIa?: number;               // 0.000 a 1.000
+  documentoA?: string;
+  valorA?: string;
+  documentoB?: string;
+  valorB?: string;
+  confiancaIa?: number;
 };
 
-// ─── Funções auxiliares ──────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function normalize(s?: string | null): string {
   if (!s) return "";
@@ -26,6 +26,7 @@ function normalize(s?: string | null): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -35,21 +36,27 @@ function firstToken(s?: string | null): string {
 }
 
 function minuteDiff(a?: string | null, b?: string | null): number {
-  if (!a || !b) return 0;
+  if (!a || !b) return Infinity;
   const [ah, am] = a.split(":").map(Number);
   const [bh, bm] = b.split(":").map(Number);
   return Math.abs((ah * 60 + am) - (bh * 60 + bm));
 }
 
+/** Normaliza CRM: mantém só dígitos para comparação */
+function normalizeCrm(s?: string | null): string {
+  if (!s) return "";
+  return s.replace(/\D/g, "");
+}
+
 function compareProcedureSets(
-  autCodes: string[],
-  descCodes: string[]
-): { missingInDesc: string[]; missingInAut: string[] } {
-  const setAut  = new Set(autCodes.map(normalize).filter(Boolean));
-  const setDesc = new Set(descCodes.map(normalize).filter(Boolean));
+  aCodes: string[],
+  bCodes: string[]
+): { missingInB: string[]; missingInA: string[] } {
+  const setA = new Set(aCodes.map(normalize).filter(Boolean));
+  const setB = new Set(bCodes.map(normalize).filter(Boolean));
   return {
-    missingInDesc: [...setAut].filter(c => !setDesc.has(c)),
-    missingInAut:  [...setDesc].filter(c => !setAut.has(c)),
+    missingInB: [...setA].filter(c => !setB.has(c)),
+    missingInA: [...setB].filter(c => !setA.has(c)),
   };
 }
 
@@ -59,10 +66,10 @@ function resolveDbStatus(
   if (status === "skipped") return null;
   if (status === "ok")      return "correto";
   if (status === "error")   return "inconsistente";
-  return "suspeita"; // warning → suspeita
+  return "suspeita";
 }
 
-// ─── Persistência ────────────────────────────────────────────────────────────
+// ─── Persistência ─────────────────────────────────────────────────────────────
 
 export async function saveConsistencyResults(
   faturamentoId: string,
@@ -115,140 +122,228 @@ export async function markResultsAsIgnored(
   if (error) console.error("[consistencyCheck] Erro ao marcar ignorado:", error);
 }
 
-// ─── Estágio 1: após guia de solicitação ─────────────────────────────────────
+// ─── Tipos de dados por documento ────────────────────────────────────────────
 
-export function checkAposSolicitacao(sol: {
-  paciente_nome?: string | null;
-  data_inicio_faturamento?: string | null;
-  profissional_numero_conselho?: string | null;
-}): CheckResult[] {
+export type DadosSolicitacao = {
+  nome_beneficiario?: string | null;          // Nome do paciente
+  hora_inicial?: string | null;               // Hora de início (por item)
+  profissional_nome?: string | null;          // Cirurgião nome
+  profissional_numero_conselho?: string | null; // Cirurgião CRM
+  // procedimentos vêm separados como array de strings
+};
+
+export type DadosAutorizacao = {
+  paciente_nome?: string | null;              // Nome do paciente
+  // hora_inicio: NÃO extraído pela autorização
+  cirurgiao_nome?: string | null;             // Cirurgião nome
+  cirurgiao_principal_crm?: string | null;    // Cirurgião CRM
+  // procedimentos vêm separados como array de strings
+};
+
+export type DadosDescricao = {
+  paciente_nome?: string | null;              // Nome do paciente
+  hora_inicio?: string | null;               // Hora de início
+  cirurgiao_principal_nome?: string | null;  // Cirurgião nome
+  cirurgiao_principal_crm?: string | null;   // Cirurgião CRM
+  // procedimentos vêm separados como array de strings
+};
+
+// ─── Estágio 1: após guia de solicitação ─────────────────────────────────────
+// Apenas valida que os campos foram extraídos (sem cruzamento ainda)
+
+export function checkAposSolicitacao(
+  sol: DadosSolicitacao,
+  solProcCodes: string[]
+): CheckResult[] {
   const results: CheckResult[] = [];
 
+  // C — Nome do paciente
   results.push({
-    id: "S1",
-    label: "Nome do paciente extraído",
-    grupo: "cirurgia",
-    status: sol.paciente_nome ? "ok" : "warning",
-    detail: sol.paciente_nome ? undefined : "Campo não extraído da guia de solicitação",
+    id: "S1", label: "Nome do paciente extraído", grupo: "cirurgia",
+    status: sol.nome_beneficiario ? "ok" : "warning",
+    detail: sol.nome_beneficiario ? undefined : "Campo não extraído da guia de solicitação",
     documentoA: "guia_solicitacao",
-    valorA: sol.paciente_nome ?? undefined,
+    valorA: sol.nome_beneficiario ?? undefined,
   });
 
+  // C — Hora de início
   results.push({
-    id: "S2",
-    label: "Data de faturamento extraída",
-    grupo: "cirurgia",
-    status: sol.data_inicio_faturamento ? "ok" : "warning",
-    detail: sol.data_inicio_faturamento ? undefined : "Campo não extraído da guia de solicitação",
+    id: "S2", label: "Hora de início extraída", grupo: "cirurgia",
+    status: sol.hora_inicial ? "ok" : "warning",
+    detail: sol.hora_inicial ? undefined : "Campo não extraído da guia de solicitação",
     documentoA: "guia_solicitacao",
-    valorA: sol.data_inicio_faturamento ?? undefined,
+    valorA: sol.hora_inicial ?? undefined,
   });
 
+  // M — Cirurgião nome
   results.push({
-    id: "S3",
-    label: "CRM do solicitante extraído",
-    grupo: "medicos",
+    id: "S3", label: "Cirurgião nome extraído", grupo: "medicos",
+    status: sol.profissional_nome ? "ok" : "warning",
+    detail: sol.profissional_nome ? undefined : "Campo não extraído da guia de solicitação",
+    documentoA: "guia_solicitacao",
+    valorA: sol.profissional_nome ?? undefined,
+  });
+
+  // M — Cirurgião CRM
+  results.push({
+    id: "S4", label: "Cirurgião CRM extraído", grupo: "medicos",
     status: sol.profissional_numero_conselho ? "ok" : "warning",
     detail: sol.profissional_numero_conselho ? undefined : "Campo não extraído da guia de solicitação",
     documentoA: "guia_solicitacao",
     valorA: sol.profissional_numero_conselho ?? undefined,
   });
 
+  // P — Código dos procedimentos
+  results.push({
+    id: "S5", label: "Código dos procedimentos extraído", grupo: "procedimentos",
+    status: solProcCodes.length > 0 ? "ok" : "warning",
+    detail: solProcCodes.length > 0 ? undefined : "Nenhum código extraído da guia de solicitação",
+    documentoA: "guia_solicitacao",
+    valorA: solProcCodes.join(", ") || undefined,
+  });
+
+  // P — Quantidade de procedimentos
+  results.push({
+    id: "S6", label: "Quantidade de procedimentos", grupo: "procedimentos",
+    status: solProcCodes.length > 0 ? "ok" : "warning",
+    detail: solProcCodes.length > 0 ? undefined : "Nenhum procedimento extraído da guia de solicitação",
+    documentoA: "guia_solicitacao",
+    valorA: String(solProcCodes.length),
+  });
+
   return results;
 }
 
 // ─── Estágio 2: após guia de autorização ─────────────────────────────────────
+// Cruza com solicitação (se enviada) nos campos em comum.
+// Hora de início: a autorização NÃO extrai — skipped nesse cruzamento.
 
 export function checkAposGuiaAutorizacao(
-  aut: {
-    paciente_nome?: string | null;
-    paciente_carteirinha?: string | null;
-    hospital_codigo_cnes?: string | null;
-    data_cirurgia?: string | null;
-    cirurgiao_principal_crm?: string | null;
-  },
-  sol?: {
-    nome_beneficiario?: string | null;
-    numero_carteira?: string | null;
-    contratado_cnes?: string | null;
-  } | null
+  aut: DadosAutorizacao,
+  autProcCodes: string[],
+  sol?: DadosSolicitacao | null,
+  solProcCodes?: string[]
 ): CheckResult[] {
   const results: CheckResult[] = [];
+  const solCodes = solProcCodes ?? [];
 
   if (sol) {
-    // Cruzar com solicitação
-    const nomeOk = firstToken(aut.paciente_nome) === firstToken(sol.nome_beneficiario);
+    // ── Cruzamento Solicitação ↔ Autorização ──
+
+    // Nome do paciente
+    const nomeOk = firstToken(sol.nome_beneficiario) === firstToken(aut.paciente_nome);
     results.push({
-      id: "A1",
-      label: "Nome do paciente — solicitação ↔ autorização",
-      grupo: "cirurgia",
-      status: nomeOk ? "ok" : "error",
+      id: "A1", label: "Nome do paciente", grupo: "cirurgia",
+      status: (!sol.nome_beneficiario || !aut.paciente_nome) ? "warning" : nomeOk ? "ok" : "error",
       detail: nomeOk ? undefined : `"${sol.nome_beneficiario}" ↔ "${aut.paciente_nome}"`,
-      documentoA: "guia_solicitacao",
-      valorA: sol.nome_beneficiario ?? undefined,
-      documentoB: "guia_autorizacao",
-      valorB: aut.paciente_nome ?? undefined,
+      documentoA: "guia_solicitacao", valorA: sol.nome_beneficiario ?? undefined,
+      documentoB: "guia_autorizacao", valorB: aut.paciente_nome ?? undefined,
     });
 
-    const cartOk = normalize(aut.paciente_carteirinha) === normalize(sol.numero_carteira);
+    // Hora de início — autorização não extrai
     results.push({
-      id: "A2",
-      label: "Carteirinha — solicitação ↔ autorização",
-      grupo: "cirurgia",
-      status: (!aut.paciente_carteirinha || !sol.numero_carteira)
-        ? "warning"
-        : cartOk ? "ok" : "error",
-      detail: cartOk ? undefined : `"${sol.numero_carteira}" ↔ "${aut.paciente_carteirinha}"`,
-      documentoA: "guia_solicitacao",
-      valorA: sol.numero_carteira ?? undefined,
-      documentoB: "guia_autorizacao",
-      valorB: aut.paciente_carteirinha ?? undefined,
+      id: "A2", label: "Hora de início", grupo: "cirurgia",
+      status: "skipped",
+      detail: "Guia de autorização não contém hora de início",
+      documentoA: "guia_solicitacao", valorA: sol.hora_inicial ?? undefined,
     });
 
-    const cnesOk = normalize(aut.hospital_codigo_cnes) === normalize(sol.contratado_cnes);
+    // Cirurgião nome
+    const cirNomeOk = firstToken(sol.profissional_nome) === firstToken(aut.cirurgiao_nome);
     results.push({
-      id: "A3",
-      label: "CNES do hospital — solicitação ↔ autorização",
-      grupo: "cirurgia",
-      status: (!aut.hospital_codigo_cnes || !sol.contratado_cnes)
-        ? "warning"
-        : cnesOk ? "ok" : "error",
-      detail: cnesOk ? undefined : `"${sol.contratado_cnes}" ↔ "${aut.hospital_codigo_cnes}"`,
-      documentoA: "guia_solicitacao",
-      valorA: sol.contratado_cnes ?? undefined,
-      documentoB: "guia_autorizacao",
-      valorB: aut.hospital_codigo_cnes ?? undefined,
+      id: "A3", label: "Cirurgião nome", grupo: "medicos",
+      status: (!sol.profissional_nome || !aut.cirurgiao_nome) ? "warning" : cirNomeOk ? "ok" : "warning",
+      detail: cirNomeOk ? undefined : `"${sol.profissional_nome}" ↔ "${aut.cirurgiao_nome}"`,
+      documentoA: "guia_solicitacao", valorA: sol.profissional_nome ?? undefined,
+      documentoB: "guia_autorizacao", valorB: aut.cirurgiao_nome ?? undefined,
     });
+
+    // Cirurgião CRM
+    const cirCrmOk = normalizeCrm(sol.profissional_numero_conselho) === normalizeCrm(aut.cirurgiao_principal_crm);
+    results.push({
+      id: "A4", label: "Cirurgião CRM", grupo: "medicos",
+      status: (!sol.profissional_numero_conselho || !aut.cirurgiao_principal_crm) ? "warning" : cirCrmOk ? "ok" : "error",
+      detail: cirCrmOk ? undefined : `"${sol.profissional_numero_conselho}" ↔ "${aut.cirurgiao_principal_crm}"`,
+      documentoA: "guia_solicitacao", valorA: sol.profissional_numero_conselho ?? undefined,
+      documentoB: "guia_autorizacao", valorB: aut.cirurgiao_principal_crm ?? undefined,
+    });
+
+    // Código dos procedimentos
+    if (solCodes.length > 0 && autProcCodes.length > 0) {
+      const { missingInB, missingInA } = compareProcedureSets(solCodes, autProcCodes);
+      const ok = missingInB.length === 0 && missingInA.length === 0;
+      const details: string[] = [];
+      if (missingInB.length) details.push(`Ausentes na autorização: ${missingInB.join(", ")}`);
+      if (missingInA.length) details.push(`Ausentes na solicitação: ${missingInA.join(", ")}`);
+      results.push({
+        id: "A5", label: "Código dos procedimentos", grupo: "procedimentos",
+        status: ok ? "ok" : "error",
+        detail: ok ? undefined : details.join(" | "),
+        documentoA: "guia_solicitacao", valorA: solCodes.join(", "),
+        documentoB: "guia_autorizacao", valorB: autProcCodes.join(", "),
+      });
+    } else {
+      results.push({
+        id: "A5", label: "Código dos procedimentos", grupo: "procedimentos",
+        status: autProcCodes.length > 0 ? "ok" : "warning",
+        detail: autProcCodes.length > 0 ? undefined : "Nenhum código extraído da guia de autorização",
+        documentoA: "guia_solicitacao", valorA: solCodes.join(", ") || undefined,
+        documentoB: "guia_autorizacao", valorB: autProcCodes.join(", ") || undefined,
+      });
+    }
+
+    // Quantidade de procedimentos
+    const qtdOk = solCodes.length === autProcCodes.length;
+    results.push({
+      id: "A6", label: "Quantidade de procedimentos", grupo: "procedimentos",
+      status: (solCodes.length === 0 || autProcCodes.length === 0) ? "warning" : qtdOk ? "ok" : "warning",
+      detail: qtdOk ? undefined : `${solCodes.length} na solicitação ↔ ${autProcCodes.length} na autorização`,
+      documentoA: "guia_solicitacao", valorA: String(solCodes.length),
+      documentoB: "guia_autorizacao", valorB: String(autProcCodes.length),
+    });
+
   } else {
-    // Sem solicitação — validar campos essenciais da autorização
+    // ── Sem solicitação: apenas valida extração da autorização ──
+
     results.push({
-      id: "A1",
-      label: "Nome do paciente extraído",
-      grupo: "cirurgia",
+      id: "A1", label: "Nome do paciente extraído", grupo: "cirurgia",
       status: aut.paciente_nome ? "ok" : "warning",
       detail: aut.paciente_nome ? undefined : "Campo não extraído da guia de autorização",
-      documentoA: "guia_autorizacao",
-      valorA: aut.paciente_nome ?? undefined,
+      documentoA: "guia_autorizacao", valorA: aut.paciente_nome ?? undefined,
     });
 
     results.push({
-      id: "A2",
-      label: "Data da cirurgia extraída",
-      grupo: "cirurgia",
-      status: aut.data_cirurgia ? "ok" : "warning",
-      detail: aut.data_cirurgia ? undefined : "Campo não extraído da guia de autorização",
-      documentoA: "guia_autorizacao",
-      valorA: aut.data_cirurgia ?? undefined,
+      id: "A2", label: "Hora de início", grupo: "cirurgia",
+      status: "skipped",
+      detail: "Guia de autorização não contém hora de início",
     });
 
     results.push({
-      id: "A3",
-      label: "CRM do cirurgião extraído",
-      grupo: "medicos",
+      id: "A3", label: "Cirurgião nome extraído", grupo: "medicos",
+      status: aut.cirurgiao_nome ? "ok" : "warning",
+      detail: aut.cirurgiao_nome ? undefined : "Campo não extraído da guia de autorização",
+      documentoA: "guia_autorizacao", valorA: aut.cirurgiao_nome ?? undefined,
+    });
+
+    results.push({
+      id: "A4", label: "Cirurgião CRM extraído", grupo: "medicos",
       status: aut.cirurgiao_principal_crm ? "ok" : "warning",
       detail: aut.cirurgiao_principal_crm ? undefined : "Campo não extraído da guia de autorização",
-      documentoA: "guia_autorizacao",
-      valorA: aut.cirurgiao_principal_crm ?? undefined,
+      documentoA: "guia_autorizacao", valorA: aut.cirurgiao_principal_crm ?? undefined,
+    });
+
+    results.push({
+      id: "A5", label: "Código dos procedimentos extraído", grupo: "procedimentos",
+      status: autProcCodes.length > 0 ? "ok" : "warning",
+      detail: autProcCodes.length > 0 ? undefined : "Nenhum código extraído da guia de autorização",
+      documentoA: "guia_autorizacao", valorA: autProcCodes.join(", ") || undefined,
+    });
+
+    results.push({
+      id: "A6", label: "Quantidade de procedimentos", grupo: "procedimentos",
+      status: autProcCodes.length > 0 ? "ok" : "warning",
+      detail: autProcCodes.length > 0 ? undefined : "Nenhum procedimento extraído da guia de autorização",
+      documentoA: "guia_autorizacao", valorA: String(autProcCodes.length),
     });
   }
 
@@ -256,311 +351,158 @@ export function checkAposGuiaAutorizacao(
 }
 
 // ─── Estágio 3: após descrição cirúrgica ─────────────────────────────────────
+// Cruza com o melhor documento anterior disponível.
+// Referência de nome/CRM/nome cirurgião: autorização > solicitação
+// Referência de hora: solicitação (autorização não extrai)
+// Referência de procedimentos: autorização > solicitação
 
-/**
- * Compara dados extraídos da descrição cirúrgica (salvos em `faturamentos`)
- * com dados previamente extraídos da guia de autorização (também em `faturamentos`).
- *
- * `descFat` = faturamento APÓS processamento da descrição cirúrgica
- * `autSnapshot` = snapshot dos campos da autorização ANTES da descrição (pode ser null se não enviada)
- * `autProcCodes` = códigos de procedimentos da autorização (itens_faturamento antes da descrição)
- * `descProcCodes` = códigos de procedimentos da descrição (itens_faturamento após a descrição)
- */
 export function checkAposDescricaoCirurgica(
-  descFat: {
-    paciente_nome?: string | null;
-    data_cirurgia?: string | null;
-    hora_inicio?: string | null;
-    hora_fim?: string | null;
-    cirurgiao_principal_nome?: string | null;
-    cirurgiao_principal_crm?: string | null;
-    auxiliar1_nome?: string | null;
-    auxiliar1_crm?: string | null;
-    auxiliar2_nome?: string | null;
-    auxiliar2_crm?: string | null;
-    auxiliar3_nome?: string | null;
-    auxiliar3_crm?: string | null;
-    anestesista_nome?: string | null;
-    anestesista_crm?: string | null;
-    instrumentador_nome?: string | null;
-    instrumentador_crm?: string | null;
-  },
-  autSnapshot?: {
-    paciente_nome?: string | null;
-    data_cirurgia?: string | null;
-    hora_inicio?: string | null;
-    hora_fim?: string | null;
-    cirurgiao_principal_nome?: string | null;
-    cirurgiao_principal_crm?: string | null;
-    auxiliar1_nome?: string | null;
-    auxiliar1_crm?: string | null;
-    auxiliar2_nome?: string | null;
-    auxiliar2_crm?: string | null;
-    auxiliar3_nome?: string | null;
-    auxiliar3_crm?: string | null;
-    anestesista_nome?: string | null;
-    anestesista_crm?: string | null;
-    instrumentador_nome?: string | null;
-    instrumentador_crm?: string | null;
-  } | null,
+  desc: DadosDescricao,
+  descProcCodes: string[],
+  autSnapshot?: DadosAutorizacao | null,
   autProcCodes?: string[],
-  descProcCodes?: string[],
-  sol?: {
-    nome_beneficiario?: string | null;
-  } | null
+  sol?: DadosSolicitacao | null,
+  solProcCodes?: string[]
 ): CheckResult[] {
   const results: CheckResult[] = [];
 
-  const aut = autSnapshot ?? null;
+  const autCodes = autProcCodes ?? [];
+  const solCodes = solProcCodes ?? [];
 
-  // C1 — Nome do paciente
-  const refNome = aut?.paciente_nome || sol?.nome_beneficiario;
-  const descNome = descFat.paciente_nome;
+  // Melhor referência para cada campo
+  const refNome = autSnapshot?.paciente_nome || sol?.nome_beneficiario || null;
+  const refNomeDoc = autSnapshot?.paciente_nome ? "guia_autorizacao" : "guia_solicitacao";
 
+  const refHora = sol?.hora_inicial || null; // só solicitação tem hora
+  const refHoraDoc = "guia_solicitacao";
+
+  const refCirNome = autSnapshot?.cirurgiao_nome || sol?.profissional_nome || null;
+  const refCirNomeDoc = autSnapshot?.cirurgiao_nome ? "guia_autorizacao" : "guia_solicitacao";
+
+  const refCirCrm = autSnapshot?.cirurgiao_principal_crm || sol?.profissional_numero_conselho || null;
+  const refCirCrmDoc = autSnapshot?.cirurgiao_principal_crm ? "guia_autorizacao" : "guia_solicitacao";
+
+  const refProcCodes = autCodes.length > 0 ? autCodes : solCodes;
+  const refProcDoc = autCodes.length > 0 ? "guia_autorizacao" : "guia_solicitacao";
+
+  // ── C1 — Nome do paciente ──
   if (!refNome) {
     results.push({
       id: "C1", label: "Nome do paciente", grupo: "cirurgia",
-      status: descNome ? "ok" : "warning",
-      detail: descNome ? undefined : "Nome não extraído da descrição cirúrgica",
-      documentoB: "descricao_cirurgica",
-      valorB: descNome ?? undefined,
+      status: desc.paciente_nome ? "ok" : "warning",
+      detail: desc.paciente_nome ? undefined : "Nome não extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: desc.paciente_nome ?? undefined,
     });
   } else {
-    const ok = firstToken(refNome) === firstToken(descNome);
+    const ok = firstToken(refNome) === firstToken(desc.paciente_nome);
     results.push({
       id: "C1", label: "Nome do paciente", grupo: "cirurgia",
-      status: ok ? "ok" : "error",
-      detail: ok ? undefined : `"${refNome}" ↔ "${descNome}"`,
-      documentoA: aut ? "guia_autorizacao" : "guia_solicitacao",
-      valorA: refNome,
-      documentoB: "descricao_cirurgica",
-      valorB: descNome ?? undefined,
+      status: !desc.paciente_nome ? "warning" : ok ? "ok" : "error",
+      detail: ok ? undefined : `"${refNome}" ↔ "${desc.paciente_nome}"`,
+      documentoA: refNomeDoc, valorA: refNome,
+      documentoB: "descricao_cirurgica", valorB: desc.paciente_nome ?? undefined,
     });
   }
 
-  // C2 — Data da cirurgia
-  if (!aut) {
+  // ── C2 — Hora de início ──
+  if (!refHora) {
     results.push({
-      id: "C2", label: "Data da cirurgia", grupo: "cirurgia",
-      status: descFat.data_cirurgia ? "ok" : "warning",
-      detail: descFat.data_cirurgia ? undefined : "Data não extraída da descrição cirúrgica",
-      documentoB: "descricao_cirurgica",
-      valorB: descFat.data_cirurgia ?? undefined,
+      id: "C2", label: "Hora de início", grupo: "cirurgia",
+      status: desc.hora_inicio ? "ok" : "warning",
+      detail: desc.hora_inicio ? undefined : "Hora não extraída da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: desc.hora_inicio ?? undefined,
     });
   } else {
-    const autDate = aut.data_cirurgia;
-    const descDate = descFat.data_cirurgia;
-    const ok = normalize(autDate) === normalize(descDate);
+    const diff = minuteDiff(refHora, desc.hora_inicio);
+    const ok = diff <= 30;
     results.push({
-      id: "C2", label: "Data da cirurgia", grupo: "cirurgia",
-      status: ok ? "ok" : (!autDate || !descDate) ? "warning" : "error",
-      detail: ok ? undefined : `"${autDate}" ↔ "${descDate}"`,
-      documentoA: "guia_autorizacao", valorA: autDate ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: descDate ?? undefined,
+      id: "C2", label: "Hora de início", grupo: "cirurgia",
+      status: !desc.hora_inicio ? "warning" : ok ? "ok" : "warning",
+      detail: !desc.hora_inicio
+        ? "Hora não extraída da descrição cirúrgica"
+        : ok ? undefined : `Diferença de ${diff} min (tolerância: 30 min)`,
+      documentoA: refHoraDoc, valorA: refHora,
+      documentoB: "descricao_cirurgica", valorB: desc.hora_inicio ?? undefined,
     });
   }
 
-  // C3 — Hora de início
-  if (!aut) {
+  // ── M1 — Cirurgião nome ──
+  if (!refCirNome) {
     results.push({
-      id: "C3", label: "Hora de início", grupo: "cirurgia",
-      status: descFat.hora_inicio ? "ok" : "warning",
-      detail: descFat.hora_inicio ? undefined : "Hora não extraída da descrição cirúrgica",
-      documentoB: "descricao_cirurgica",
-      valorB: descFat.hora_inicio ?? undefined,
+      id: "M1", label: "Cirurgião nome", grupo: "medicos",
+      status: desc.cirurgiao_principal_nome ? "ok" : "warning",
+      detail: desc.cirurgiao_principal_nome ? undefined : "Nome do cirurgião não extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: desc.cirurgiao_principal_nome ?? undefined,
     });
   } else {
-    const diff = minuteDiff(aut.hora_inicio, descFat.hora_inicio);
+    const ok = firstToken(refCirNome) === firstToken(desc.cirurgiao_principal_nome);
     results.push({
-      id: "C3", label: "Hora de início", grupo: "cirurgia",
-      status: diff <= 30 ? "ok" : "warning",
-      detail: diff <= 30 ? undefined : `Diferença de ${diff} min (tolerância: 30 min)`,
-      documentoA: "guia_autorizacao", valorA: aut.hora_inicio ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: descFat.hora_inicio ?? undefined,
+      id: "M1", label: "Cirurgião nome", grupo: "medicos",
+      status: !desc.cirurgiao_principal_nome ? "warning" : ok ? "ok" : "warning",
+      detail: ok ? undefined : `"${refCirNome}" ↔ "${desc.cirurgiao_principal_nome}"`,
+      documentoA: refCirNomeDoc, valorA: refCirNome,
+      documentoB: "descricao_cirurgica", valorB: desc.cirurgiao_principal_nome ?? undefined,
     });
   }
 
-  // M1 — CRM do cirurgião
-  if (!aut) {
+  // ── M2 — Cirurgião CRM ──
+  if (!refCirCrm) {
     results.push({
-      id: "M1", label: "CRM do cirurgião", grupo: "medicos",
-      status: descFat.cirurgiao_principal_crm ? "ok" : "warning",
-      detail: descFat.cirurgiao_principal_crm ? undefined : "CRM não extraído da descrição cirúrgica",
-      documentoB: "descricao_cirurgica",
-      valorB: descFat.cirurgiao_principal_crm ?? undefined,
+      id: "M2", label: "Cirurgião CRM", grupo: "medicos",
+      status: desc.cirurgiao_principal_crm ? "ok" : "warning",
+      detail: desc.cirurgiao_principal_crm ? undefined : "CRM do cirurgião não extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: desc.cirurgiao_principal_crm ?? undefined,
     });
   } else {
-    const ok = normalize(aut.cirurgiao_principal_crm) === normalize(descFat.cirurgiao_principal_crm);
+    const ok = normalizeCrm(refCirCrm) === normalizeCrm(desc.cirurgiao_principal_crm);
     results.push({
-      id: "M1", label: "CRM do cirurgião", grupo: "medicos",
-      status: ok ? "ok" : "error",
-      detail: ok ? undefined : `"${aut.cirurgiao_principal_crm}" ↔ "${descFat.cirurgiao_principal_crm}"`,
-      documentoA: "guia_autorizacao", valorA: aut.cirurgiao_principal_crm ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: descFat.cirurgiao_principal_crm ?? undefined,
+      id: "M2", label: "Cirurgião CRM", grupo: "medicos",
+      status: !desc.cirurgiao_principal_crm ? "warning" : ok ? "ok" : "error",
+      detail: ok ? undefined : `"${refCirCrm}" ↔ "${desc.cirurgiao_principal_crm}"`,
+      documentoA: refCirCrmDoc, valorA: refCirCrm,
+      documentoB: "descricao_cirurgica", valorB: desc.cirurgiao_principal_crm ?? undefined,
     });
   }
 
-  // M2 — Primeiro nome do cirurgião
-  if (!aut) {
+  // ── P1 — Código dos procedimentos ──
+  if (refProcCodes.length === 0) {
     results.push({
-      id: "M2", label: "Nome do cirurgião", grupo: "medicos",
-      status: descFat.cirurgiao_principal_nome ? "ok" : "warning",
-      detail: descFat.cirurgiao_principal_nome ? undefined : "Nome não extraído da descrição cirúrgica",
-      documentoB: "descricao_cirurgica",
-      valorB: descFat.cirurgiao_principal_nome ?? undefined,
+      id: "P1", label: "Código dos procedimentos", grupo: "procedimentos",
+      status: descProcCodes.length > 0 ? "ok" : "warning",
+      detail: descProcCodes.length > 0 ? undefined : "Nenhum código extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: descProcCodes.join(", ") || undefined,
     });
   } else {
-    const ok = firstToken(aut.cirurgiao_principal_nome) === firstToken(descFat.cirurgiao_principal_nome);
-    results.push({
-      id: "M2", label: "Nome do cirurgião", grupo: "medicos",
-      status: ok ? "ok" : "warning",
-      detail: ok ? undefined : `"${aut.cirurgiao_principal_nome}" ↔ "${descFat.cirurgiao_principal_nome}"`,
-      documentoA: "guia_autorizacao", valorA: aut.cirurgiao_principal_nome ?? undefined,
-      documentoB: "descricao_cirurgica", valorB: descFat.cirurgiao_principal_nome ?? undefined,
-    });
-  }
-
-  // M3 — CRM do 1º auxiliar
-  if (!aut) {
-    results.push({
-      id: "M3", label: "CRM do 1º auxiliar", grupo: "medicos",
-      status: "skipped", detail: "Guia de autorização não enviada",
-    });
-  } else {
-    if (!aut.auxiliar1_crm && !descFat.auxiliar1_crm) {
-      results.push({
-        id: "M3", label: "CRM do 1º auxiliar", grupo: "medicos",
-        status: "skipped", detail: "Auxiliar não informado em nenhum documento",
-      });
-    } else {
-      const ok = normalize(aut.auxiliar1_crm) === normalize(descFat.auxiliar1_crm);
-      results.push({
-        id: "M3", label: "CRM do 1º auxiliar", grupo: "medicos",
-        status: ok ? "ok" : "error",
-        detail: ok ? undefined : `"${aut.auxiliar1_crm}" ↔ "${descFat.auxiliar1_crm}"`,
-        documentoA: "guia_autorizacao", valorA: aut.auxiliar1_crm ?? undefined,
-        documentoB: "descricao_cirurgica", valorB: descFat.auxiliar1_crm ?? undefined,
-      });
-    }
-  }
-
-  // M4 — Primeiro nome do 1º auxiliar
-  if (!aut) {
-    results.push({
-      id: "M4", label: "Nome do 1º auxiliar", grupo: "medicos",
-      status: "skipped", detail: "Guia de autorização não enviada",
-    });
-  } else {
-    if (!aut.auxiliar1_nome && !descFat.auxiliar1_nome) {
-      results.push({
-        id: "M4", label: "Nome do 1º auxiliar", grupo: "medicos",
-        status: "skipped", detail: "Auxiliar não informado em nenhum documento",
-      });
-    } else {
-      const ok = firstToken(aut.auxiliar1_nome) === firstToken(descFat.auxiliar1_nome);
-      results.push({
-        id: "M4", label: "Nome do 1º auxiliar", grupo: "medicos",
-        status: ok ? "ok" : "warning",
-        detail: ok ? undefined : `"${aut.auxiliar1_nome}" ↔ "${descFat.auxiliar1_nome}"`,
-        documentoA: "guia_autorizacao", valorA: aut.auxiliar1_nome ?? undefined,
-        documentoB: "descricao_cirurgica", valorB: descFat.auxiliar1_nome ?? undefined,
-      });
-    }
-  }
-
-  // M5 — Conflito de papéis na equipe
-  if (!aut) {
-    results.push({
-      id: "M5", label: "Conflito de papéis na equipe", grupo: "medicos",
-      status: "skipped", detail: "Guia de autorização não enviada",
-    });
-  } else {
-    // Comparar se CRMs trocaram de papel entre autorização e descrição
-    const autMembers = [
-      { crm: aut.cirurgiao_principal_crm, papel: "cirurgiao" },
-      { crm: aut.auxiliar1_crm, papel: "auxiliar1" },
-      { crm: aut.auxiliar2_crm, papel: "auxiliar2" },
-      { crm: aut.auxiliar3_crm, papel: "auxiliar3" },
-      { crm: aut.anestesista_crm, papel: "anestesista" },
-      { crm: aut.instrumentador_crm, papel: "instrumentador" },
-    ];
-    const descMembers = [
-      { crm: descFat.cirurgiao_principal_crm, papel: "cirurgiao" },
-      { crm: descFat.auxiliar1_crm, papel: "auxiliar1" },
-      { crm: descFat.auxiliar2_crm, papel: "auxiliar2" },
-      { crm: descFat.auxiliar3_crm, papel: "auxiliar3" },
-      { crm: descFat.anestesista_crm, papel: "anestesista" },
-      { crm: descFat.instrumentador_crm, papel: "instrumentador" },
-    ];
-
-    const mapaAut: Record<string, string> = {};
-    autMembers.forEach(({ crm, papel }) => {
-      if (crm) mapaAut[normalize(crm)] = papel;
-    });
-
-    const conflitos: string[] = [];
-    descMembers.forEach(({ crm, papel }) => {
-      const crmNorm = normalize(crm);
-      if (!crmNorm || !mapaAut[crmNorm]) return;
-      const papelAut = mapaAut[crmNorm];
-      const papelAutNorm = papelAut.startsWith("auxiliar") ? "auxiliar" : papelAut;
-      const papelDescNorm = papel.startsWith("auxiliar") ? "auxiliar" : papel;
-      if (papelAutNorm !== papelDescNorm) {
-        conflitos.push(`CRM ${crm}: "${papelAut}" (aut.) ↔ "${papel}" (desc.)`);
-      }
-    });
-
-    results.push({
-      id: "M5", label: "Conflito de papéis na equipe", grupo: "medicos",
-      status: conflitos.length === 0 ? "ok" : "error",
-      detail: conflitos.length === 0 ? undefined : conflitos.join("; "),
-      documentoA: "guia_autorizacao",
-      documentoB: "descricao_cirurgica",
-    });
-  }
-
-  // P1 — Quantidade de procedimentos
-  const autCodes = (autProcCodes ?? []).filter(Boolean);
-  const descCodes = (descProcCodes ?? []).filter(Boolean);
-
-  if (!aut && autCodes.length === 0) {
-    results.push({
-      id: "P1", label: "Quantidade de procedimentos", grupo: "procedimentos",
-      status: descCodes.length > 0 ? "ok" : "warning",
-      detail: descCodes.length > 0 ? undefined : "Nenhum procedimento extraído da descrição cirúrgica",
-      documentoB: "descricao_cirurgica", valorB: String(descCodes.length),
-    });
-  } else {
-    const ok = autCodes.length === descCodes.length;
-    results.push({
-      id: "P1", label: "Quantidade de procedimentos", grupo: "procedimentos",
-      status: ok ? "ok" : "warning",
-      detail: ok ? undefined : `${autCodes.length} na autorização ↔ ${descCodes.length} na descrição`,
-      documentoA: "guia_autorizacao", valorA: String(autCodes.length),
-      documentoB: "descricao_cirurgica", valorB: String(descCodes.length),
-    });
-  }
-
-  // P2 — Códigos dos procedimentos
-  if (!aut && autCodes.length === 0) {
-    results.push({
-      id: "P2", label: "Códigos dos procedimentos", grupo: "procedimentos",
-      status: descCodes.length > 0 ? "ok" : "warning",
-      detail: descCodes.length > 0 ? undefined : "Nenhum código extraído da descrição cirúrgica",
-      documentoB: "descricao_cirurgica", valorB: descCodes.join(", "),
-    });
-  } else {
-    const { missingInDesc, missingInAut } = compareProcedureSets(autCodes, descCodes);
-    const ok = missingInDesc.length === 0 && missingInAut.length === 0;
+    const { missingInB, missingInA } = compareProcedureSets(refProcCodes, descProcCodes);
+    const ok = missingInB.length === 0 && missingInA.length === 0;
     const details: string[] = [];
-    if (missingInDesc.length) details.push(`Ausentes na descrição: ${missingInDesc.join(", ")}`);
-    if (missingInAut.length) details.push(`Ausentes na autorização: ${missingInAut.join(", ")}`);
+    if (missingInB.length) details.push(`Ausentes na descrição: ${missingInB.join(", ")}`);
+    if (missingInA.length) details.push(`Ausentes na autorização/solicitação: ${missingInA.join(", ")}`);
     results.push({
-      id: "P2", label: "Códigos dos procedimentos", grupo: "procedimentos",
+      id: "P1", label: "Código dos procedimentos", grupo: "procedimentos",
       status: ok ? "ok" : "error",
       detail: ok ? undefined : details.join(" | "),
-      documentoA: "guia_autorizacao", valorA: autCodes.join(", "),
-      documentoB: "descricao_cirurgica", valorB: descCodes.join(", "),
+      documentoA: refProcDoc, valorA: refProcCodes.join(", "),
+      documentoB: "descricao_cirurgica", valorB: descProcCodes.join(", "),
+    });
+  }
+
+  // ── P2 — Quantidade de procedimentos ──
+  if (refProcCodes.length === 0) {
+    results.push({
+      id: "P2", label: "Quantidade de procedimentos", grupo: "procedimentos",
+      status: descProcCodes.length > 0 ? "ok" : "warning",
+      detail: descProcCodes.length > 0 ? undefined : "Nenhum procedimento extraído da descrição cirúrgica",
+      documentoB: "descricao_cirurgica", valorB: String(descProcCodes.length),
+    });
+  } else {
+    const ok = refProcCodes.length === descProcCodes.length;
+    results.push({
+      id: "P2", label: "Quantidade de procedimentos", grupo: "procedimentos",
+      status: ok ? "ok" : "warning",
+      detail: ok ? undefined : `${refProcCodes.length} na ${refProcDoc === "guia_autorizacao" ? "autorização" : "solicitação"} ↔ ${descProcCodes.length} na descrição`,
+      documentoA: refProcDoc, valorA: String(refProcCodes.length),
+      documentoB: "descricao_cirurgica", valorB: String(descProcCodes.length),
     });
   }
 
