@@ -245,13 +245,18 @@ A partir das IMAGENS anexadas (fotos de guias de autorização de cirurgia),
 extraia todos os dados relevantes para preencher os campos de faturamento.
 
 REGRAS CRÍTICAS PARA EXTRAÇÃO DE PROCEDIMENTOS:
-1. Extraia APENAS os procedimentos que estão EXPLICITAMENTE listados na seção "Procedimentos" ou "Procedimentos Solicitados/Autorizados" da guia.
+1. Extraia TODOS os procedimentos listados na seção "Procedimentos", "Procedimentos Solicitados", "Procedimentos Autorizados" ou qualquer tabela de procedimentos da guia.
 2. NÃO duplique procedimentos - cada procedimento deve aparecer APENAS UMA VEZ no array.
 3. Se o mesmo procedimento aparecer em múltiplas imagens, inclua-o apenas UMA vez.
 4. NÃO invente ou infira procedimentos que não estejam claramente escritos na guia.
 5. Verifique se cada código de procedimento é ÚNICO no array antes de incluí-lo.
 6. Se houver dúvida se um item é um procedimento ou não, NÃO inclua.
-7. Preste atenção ao número de linhas na tabela de procedimentos - extraia EXATAMENTE esse número.
+7. Preste atenção ao número de linhas na tabela de procedimentos - extraia EXATAMENTE esse número de procedimentos, sem pular nenhuma linha.
+8. Mesmo que a tabela tenha linhas em branco ou separadores, conte apenas as linhas com código preenchido.
+
+REGRAS CRÍTICAS PARA EXTRAÇÃO DO CIRURGIÃO:
+- O nome do cirurgião pode aparecer em campos com diferentes rótulos: "Cirurgião", "Médico Solicitante", "Profissional Solicitante", "Nome do Profissional", "Médico Executante", "Profissional Executante", "Médico Responsável" ou similares. Extraia o nome desse campo.
+- O CRM do cirurgião deve conter APENAS OS DÍGITOS NUMÉRICOS. Remova qualquer prefixo ("CRM", "CRM/PE", "CRM-PE", etc.), barra, hífen, estado (UF) ou espaços. Exemplo: "CRM/PE 15126" → "15126", "015126 - PE" → "15126" (sem zeros à esquerda desnecessários), "CRM 12345-SP" → "12345".
 
 IMPORTANTE:
 - As imagens podem ser de DIFERENTES PARTES da mesma guia de autorização.
@@ -270,13 +275,13 @@ FATURAMENTO (tabela faturamentos):
 - nome_paciente: Nome completo do paciente
 - numero_carteira: Número da carteira/carteirinha do paciente
 - hospital_solicitado: Nome do hospital onde será realizado o procedimento
-- cirurgiao_nome: Nome completo do médico cirurgião solicitante/executante
-- cirurgiao_crm: CRM do médico cirurgião (apenas o número)
+- cirurgiao_nome: Nome completo do médico cirurgião/profissional solicitante/executante (veja regras acima)
+- cirurgiao_crm: CRM do médico cirurgião — retorne SOMENTE OS DÍGITOS NUMÉRICOS, sem letras, UF, barras ou hífens (veja regras acima)
 - status_autorizacao: Status da autorização (ex: "AUTORIZADO", "PENDENTE", "NEGADO")
 - carater_cirurgia: Caráter/tipo da cirurgia. Procure por campos como "Caráter da Internação", "Tipo de Atendimento", "Caráter do Atendimento" ou similares. Retorne EXATAMENTE "ELETIVA" se for eletiva/agendada/programada, ou "EMERGENCIAL" se for emergencial/urgência/urgente. Se não encontrar, retorne null.
 
 ITENS/PROCEDIMENTOS (tabela itens_faturamento):
-- procedimentos: Array de procedimentos autorizados. ATENÇÃO: Cada procedimento deve ser ÚNICO (sem duplicatas).
+- procedimentos: Array com TODOS os procedimentos autorizados encontrados na guia. ATENÇÃO: Cada procedimento deve ser ÚNICO (sem duplicatas). Não pule nenhum procedimento listado.
   - codigo_procedimento: Código TUSS ou código do procedimento (DEVE SER ÚNICO no array)
   - descricao_procedimento: Descrição do procedimento
   - quantidade_autorizada: Quantidade autorizada (geralmente 1)
@@ -388,6 +393,11 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
   // 5) Atualizar o faturamento existente com os dados extraídos
   const filePaths = files.map((f) => f.path);
 
+  // Sanitiza CRM: mantém apenas dígitos numéricos
+  const rawCrm: string | null = faturamentoData.cirurgiao_crm ?? null;
+  const sanitizedCrm = rawCrm ? rawCrm.replace(/\D/g, "") || null : null;
+  console.log("[process-guia-autorizacao] CRM bruto:", rawCrm, "→ sanitizado:", sanitizedCrm);
+
   const updateData: Record<string, unknown> = {
     numero_autorizacao: faturamentoData.numero_guia_operadora ?? null,
     paciente_convenio: faturamentoData.operadora_nome ?? null,
@@ -395,7 +405,7 @@ Responda APENAS com um JSON válido, sem comentários ou explicações extras, n
     paciente_carteirinha: faturamentoData.numero_carteira ?? null,
     hospital_nome: faturamentoData.hospital_solicitado ?? null,
     cirurgiao_principal_nome: faturamentoData.cirurgiao_nome ?? null,
-    cirurgiao_principal_crm: faturamentoData.cirurgiao_crm ?? null,
+    cirurgiao_principal_crm: sanitizedCrm,
     url_guia_autorizacao: filePaths,
     updated_at: new Date().toISOString(),
   };
