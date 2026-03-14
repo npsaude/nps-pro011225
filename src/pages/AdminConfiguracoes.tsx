@@ -748,8 +748,9 @@ const AdminConfiguracoes = () => {
                             <SelectValue placeholder="Selecione um modelo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="gpt-5.4">GPT-5.4 Thinking — Raciocínio mais capaz</SelectItem>
-                            <SelectItem value="gpt-5.3">GPT-5.3 Instant — Rápido e poderoso</SelectItem>
+                            <SelectItem value="gpt-5.4">GPT-5.4 — Flagship, raciocínio avançado</SelectItem>
+                            <SelectItem value="gpt-5.4-pro">GPT-5.4 Pro — Máxima capacidade</SelectItem>
+                            <SelectItem value="gpt-5.3-chat-latest">GPT-5.3 — Rápido e poderoso</SelectItem>
                             <SelectItem value="gpt-4.1">GPT-4.1 — Alta precisão</SelectItem>
                             <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini — Rápido e econômico</SelectItem>
                             <SelectItem value="gpt-4.1-nano">GPT-4.1 Nano — Ultra rápido</SelectItem>
