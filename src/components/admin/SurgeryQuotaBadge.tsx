@@ -6,16 +6,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { subscribeQuotaChanged } from "@/utils/quota-events";
 
 type QuotaData = {
   used: number;
-  limit: number | null; // null = não conseguiu extrair
+  limit: number | null;
   loading: boolean;
 };
 
 function extractLimit(description: string | null): number | null {
   if (!description) return null;
-  // "Até 10 cirurgias" → 10
   const match = description.match(/(\d+)\s*cirurgia/i);
   return match ? parseInt(match[1], 10) : null;
 }
@@ -26,6 +26,11 @@ export default function SurgeryQuotaBadge() {
     limit: null,
     loading: true,
   });
+  const [reloadTick, setReloadTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeQuotaChanged(() => setReloadTick((t) => t + 1));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +43,6 @@ export default function SurgeryQuotaBadge() {
         return;
       }
 
-      // 1) Contar faturamentos do mês corrente
       const now = new Date();
       const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
       const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -54,7 +58,6 @@ export default function SurgeryQuotaBadge() {
 
       const used = countError ? 0 : (count ?? 0);
 
-      // 2) Buscar o plano do médico via enrollment → plan description
       const email = user.email?.toLowerCase().trim() ?? "";
       const { data: enrollment } = await supabase
         .from("subscription_enrollments")
@@ -76,7 +79,7 @@ export default function SurgeryQuotaBadge() {
 
     void load();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadTick]);
 
   if (quota.loading) return null;
   if (quota.limit === null) return null;

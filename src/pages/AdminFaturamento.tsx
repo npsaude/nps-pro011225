@@ -12,6 +12,7 @@ import AdminBillingCard, {
 import { deleteFaturamento, listAdminFaturamentos } from "@/services/admin-faturamento-service";
 import type { BillingDocStep } from "@/components/faturamento/BillingDocsProgress";
 import { showSuccess, showError } from "@/utils/toast";
+import { emitQuotaChanged } from "@/utils/quota-events";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -127,6 +128,7 @@ const AdminFaturamento = () => {
       await deleteFaturamento(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
       showSuccess("Faturamento excluído com sucesso.");
+      emitQuotaChanged();
     } catch (error) {
       console.error(error);
       showError("Não foi possível excluir o faturamento.");
