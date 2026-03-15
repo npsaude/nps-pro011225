@@ -63,11 +63,11 @@ export default function MedicoHeader({
           ) : null}
 
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.4)]">
+            <div className="h-10 w-10 rounded-xl bg-sidebar-accent flex items-center justify-center">
               <img
                 src={MEDICO_LOGO_URL}
                 alt="Logo Conmedic"
-                className="h-6 w-6 object-contain"
+                className="h-8 w-8 rounded-xl object-contain"
                 loading="eager"
               />
             </div>
