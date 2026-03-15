@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, Activity, User2 } from "lucide-react";
+import { Upload, Activity, User2, Scissors, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import MedicoHeader from "@/components/medico/MedicoHeader";
+import { useBillingQuota } from "@/hooks/use-billing-quota";
 
 const MedicoInicio: React.FC = () => {
   const navigate = useNavigate();
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const billingQuota = useBillingQuota();
 
   useEffect(() => {
     const carregarDadosMedico = async () => {
@@ -79,26 +81,84 @@ const MedicoInicio: React.FC = () => {
             </div>
           </section>
 
-          {/* CTA - Novo faturamento */}
-          <button
-            type="button"
-            onClick={() => navigate("/medico/faturamentos/enviar")}
-            className="mb-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-4 text-left text-black shadow-[0_0_30px_rgba(212,160,23,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(212,160,23,0.2)]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black/25 text-black shadow-inner">
-                <Upload className="h-5 w-5" />
+          {/* Quota de faturamentos do mês */}
+          {!billingQuota.loading && billingQuota.limit !== null && (
+            <div className={`mb-4 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
+              billingQuota.isOverLimit
+                ? "border-rose-500/40 bg-[#2a0a0a]"
+                : billingQuota.isNearLimit
+                  ? "border-amber-500/40 bg-amber-950/20"
+                  : "border-[#D4A017]/20 bg-black/50"
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border ${
+                  billingQuota.isOverLimit
+                    ? "border-rose-500/30 bg-rose-500/15 text-rose-400"
+                    : billingQuota.isNearLimit
+                      ? "border-amber-500/30 bg-amber-500/15 text-amber-400"
+                      : "border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]"
+                }`}>
+                  <Scissors className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[#F5F5F5]">Faturamentos do mês</p>
+                  <p className="text-[11px] text-[#9CA3AF]">
+                    {billingQuota.used} de {billingQuota.limit} do seu plano
+                  </p>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold sm:text-base">
-                  Novo Faturamento
-                </span>
-                <span className="text-[11px] text-black/80">
-                  Faça o upload dos documentos.
-                </span>
-              </div>
+              <span className={`text-sm font-bold flex-shrink-0 ${
+                billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"
+              }`}>
+                {billingQuota.used}/{billingQuota.limit}
+              </span>
             </div>
-          </button>
+          )}
+
+          {/* CTA - Novo faturamento (bloqueado se limite excedido) */}
+          {!billingQuota.loading && billingQuota.isOverLimit ? (
+            <a
+              href="https://site.conmedic.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-4 text-left text-black shadow-[0_0_30px_rgba(212,160,23,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(212,160,23,0.2)]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black/25 text-black shadow-inner">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold sm:text-base">
+                    Fazer Upgrade do Plano
+                  </span>
+                  <span className="text-[11px] text-black/80">
+                    Limite mensal atingido.
+                  </span>
+                </div>
+              </div>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate("/medico/faturamentos/enviar")}
+              disabled={billingQuota.loading}
+              className="mb-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-4 text-left text-black shadow-[0_0_30px_rgba(212,160,23,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(212,160,23,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black/25 text-black shadow-inner">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold sm:text-base">
+                    Novo Faturamento
+                  </span>
+                  <span className="text-[11px] text-black/80">
+                    Faça o upload dos documentos.
+                  </span>
+                </div>
+              </div>
+            </button>
+          )}
 
           {/* Secundário - Informações */}
           <button
