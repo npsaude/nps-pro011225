@@ -122,6 +122,7 @@ serve(async (req) => {
   console.log("[check-subscription] Loaded enrollments for user", {
     authEmail,
     count: mine.length,
+    enrollments: mine.map((r) => ({ id: r.id, status: r.status, cancelado: r.cancelado, current_period_end: r.current_period_end })),
   });
 
   if (!mine.length) {
@@ -135,6 +136,34 @@ serve(async (req) => {
   }
 
   const nowMs = Date.now();
+
+  // Se houver algum enrollment ativo/trial/pending não cancelado sem data de validade,
+  // considera válido (cliente recém-criado pelo admin ainda sem data configurada).
+  const pendingActive = mine.find(
+    (r) =>
+      !r.cancelado &&
+      !r.current_period_end &&
+      ["ACTIVE", "TRIAL", "PENDING"].includes(String(r.status ?? "").toUpperCase()),
+  );
+
+  if (pendingActive) {
+    console.log("[check-subscription] Found active enrollment without period end (new client)", {
+      authEmail,
+      enrollmentId: pendingActive.id,
+      status: pendingActive.status,
+    });
+    return new Response(
+      JSON.stringify({
+        valid: true,
+        enrollment_id: pendingActive.id,
+        current_period_end: null,
+        status: pendingActive.status,
+        cancelado: pendingActive.cancelado,
+        reason: "PENDING_NO_END_DATE",
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   // Find the enrollment with the furthest current_period_end that is still valid
   let best: EnrollmentRow | null = null;
