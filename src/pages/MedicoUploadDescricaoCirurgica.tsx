@@ -889,6 +889,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
 
     setView("upload_guia");
+    setTimeout(() => fileInputRefGuia.current?.click(), 100);
   };
 
   const handlePularGuiaAutorizacao = async () => {
@@ -2924,7 +2925,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   <Button
                     type="button"
                     className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                    onClick={() => setView("upload_solicitacao")}
+                    onClick={() => {
+                      setView("upload_solicitacao");
+                      setTimeout(() => fileInputRefSolicitacao.current?.click(), 100);
+                    }}
                   >
                     Sim, enviar guia
                   </Button>
