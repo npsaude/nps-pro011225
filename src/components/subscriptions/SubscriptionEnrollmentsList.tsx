@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, Pencil, Plus, Search, Users } from "lucide-react";
+import { Mail, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -30,6 +41,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import {
   atualizarSubscriptionEnrollment,
   criarSubscriptionEnrollment,
+  excluirSubscriptionEnrollment,
   listarSubscriptionEnrollments,
   type SubscriptionEnrollment,
   type SubscriptionEnrollmentInput,
@@ -97,6 +109,7 @@ export default function SubscriptionEnrollmentsList() {
   const [editing, setEditing] = useState<SubscriptionEnrollment | null>(null);
   const [saving, setSaving] = useState(false);
   const [sendingAccessId, setSendingAccessId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -179,6 +192,20 @@ export default function SubscriptionEnrollmentsList() {
       );
     } finally {
       setSendingAccessId(null);
+    }
+  };
+
+  const handleDelete = async (enrollment: SubscriptionEnrollment) => {
+    setDeletingId(enrollment.id);
+
+    try {
+      await excluirSubscriptionEnrollment(enrollment.id);
+      setRows((prev) => prev.filter((r) => r.id !== enrollment.id));
+      showSuccess(`Assinante ${enrollment.user_name} excluído com sucesso.`);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : "Não foi possível excluir o assinante.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -272,7 +299,6 @@ export default function SubscriptionEnrollmentsList() {
                         key={r.id}
                         className="border-b border-slate-50 text-xs hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/60"
                       >
-
                         <TableCell className="px-4 py-3">
                           <div className="flex flex-col">
                             <span className="font-medium text-slate-900 dark:text-slate-50">
@@ -314,7 +340,7 @@ export default function SubscriptionEnrollmentsList() {
                               className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
                               onClick={() => void handleSendAccess(r)}
                               title="Reenviar acesso"
-                              disabled={sendingAccessId === r.id}
+                              disabled={sendingAccessId === r.id || deletingId === r.id}
                             >
                               <Mail className="h-3.5 w-3.5" />
                             </Button>
@@ -325,9 +351,41 @@ export default function SubscriptionEnrollmentsList() {
                               className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
                               onClick={() => openEdit(r)}
                               title="Editar"
+                              disabled={deletingId === r.id}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-full text-slate-500 hover:bg-rose-50 hover:text-rose-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-rose-300"
+                                  title="Excluir"
+                                  disabled={deletingId === r.id}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir assinante?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir o assinante <strong>{r.user_name}</strong>? Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => void handleDelete(r)}
+                                    className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
+                                  >
+                                    {deletingId === r.id ? "Excluindo..." : "Excluir"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>

@@ -76,3 +76,12 @@ export async function atualizarSubscriptionEnrollment(
 
   return data as SubscriptionEnrollment;
 }
+
+export async function excluirSubscriptionEnrollment(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("subscription_enrollments")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message || "Falha ao excluir assinante.");
+}
