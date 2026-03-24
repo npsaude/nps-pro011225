@@ -370,31 +370,36 @@ EXEMPLO de tabela com 5 procedimentos → array deve ter 5 objetos:
 TIPO 2 — BOLETIM OPERATÓRIO / DESCRIÇÃO CIRÚRGICA NARRATIVA (sem tabela de códigos)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Quando NÃO houver tabela com códigos numéricos, os procedimentos estão descritos
-de forma narrativa. Procure nos seguintes campos, NESTA ORDEM DE PRIORIDADE:
+de forma narrativa.
 
-  1. "Descrição detalhada da intervenção" (Técnica operatória, incisão, achados, órgãos
-     examinados, órgãos extirpados, ligadura, suturas, drenos, etc.)
-  2. "Intervenção feita" / "Intervenção indicada"
-  3. "Diagnóstico pré-operatório" / "Diagnóstico pós-operatório"
+FONTE PRIMÁRIA (use APENAS esta para extrair procedimentos):
+  → "Descrição detalhada da intervenção" (Técnica operatória, incisão, achados, etc.)
+
+FONTES SECUNDÁRIAS (use SOMENTE se a Descrição detalhada estiver vazia ou ilegível):
+  → "Intervenção feita" / "Intervenção indicada"
+
+⚠️ REGRA ANTI-DUPLICAÇÃO: NÃO extraia procedimentos do campo "Intervenção indicada"
+se já extraiu da "Descrição detalhada da intervenção". A "Intervenção indicada" é
+apenas um resumo — os procedimentos reais estão na descrição detalhada.
 
 PASSO A PASSO OBRIGATÓRIO:
-1. Leia COMPLETAMENTE o campo "Descrição detalhada da intervenção" (ou equivalente)
-2. Identifique CADA procedimento cirúrgico distinto realizado
+1. Leia COMPLETAMENTE o campo "Descrição detalhada da intervenção"
+2. Identifique CADA procedimento cirúrgico DISTINTO realizado
 3. Para CADA procedimento, crie um objeto com:
    - codigo_procedimento: null (não há código no documento)
    - descricao_procedimento: nome técnico do procedimento em linguagem médica clara e concisa
    - quantidade_executada: 1 (ou quantidade mencionada no texto)
 
 PROCEDIMENTOS QUE DEVEM SER INCLUÍDOS (atos cirúrgicos faturáveis):
+  ✅ Tratamento cirúrgico de fratura (ex: "TRATAMENTO CIRÚRGICO DE FRATURA DE ANEL PÉLVICO")
   ✅ Osteotomias (ex: "OSTEOTOMIA DE SÍNFISE PÚBICA")
   ✅ Tenoplastias / tenorrafias (ex: "TENOPLASTIA DE RETO FEMORAL")
-  ✅ Fixações internas com placa e parafusos (ex: "FIXAÇÃO INTERNA DE FRATURA COM PLACA BLOQUEADA")
-  ✅ Reduções de fratura (ex: "REDUÇÃO DE FRATURA DE SÍNFISE PÚBICA")
   ✅ Osteossínteses
+  ✅ Reduções de fratura
   ✅ Controle radioscópico intraoperatório (ex: "CONTROLE RADIOSCÓPICO INTRAOPERATÓRIO")
   ✅ Qualquer procedimento cirúrgico com nome técnico específico
 
-PROCEDIMENTOS QUE NÃO DEVEM SER INCLUÍDOS (passos técnicos, não faturáveis):
+PROCEDIMENTOS QUE NÃO DEVEM SER INCLUÍDOS:
   ❌ Antissepsia / assepsia / antissepsia com clorexidina
   ❌ Posicionamento do paciente (ex: "paciente em DDH sob anestesia")
   ❌ Incisão de acesso (ex: "incisão tipo Phannestiel", "divulsão por planos")
@@ -402,26 +407,42 @@ PROCEDIMENTOS QUE NÃO DEVEM SER INCLUÍDOS (passos técnicos, não faturáveis)
   ❌ Sutura por planos / sutura de pele
   ❌ Curativo
   ❌ Aposição de campos estéreis
+  ❌ Fixação com placa e parafusos quando é PARTE de um tratamento cirúrgico de fratura
+     (a fixação é o MÉTODO do tratamento, não um procedimento separado)
+  ❌ Exposição de foco de fratura (é etapa do tratamento cirúrgico, não procedimento separado)
+  ❌ Redução de fratura quando já existe "tratamento cirúrgico de fratura" do mesmo osso
+     (o tratamento cirúrgico JÁ INCLUI a redução e fixação)
 
-EXEMPLOS DE EXTRAÇÃO DO TEXTO NARRATIVO:
-  Texto: "TENOPALSTIA DE RETO FEMORAL + EXPOSIÇÃO DE FOCO DE FRATURA COM OSTEOTOMIA DE SÍNFISE
-          PARA REDUÇÃO E FIXAÇÃO DE FOCO DE FRATURA DE SÍNFISE PÚBICA COM 01 PLACA BLOQUEADA
-          DE RECONSTRUÇÃO + 03 PARAFUSOS CORTICAIS + 06 PARAFUSOS BLOQUEADOS"
-  → Extrair 3 procedimentos:
+⚠️ REGRA CRÍTICA DE NÃO-FRAGMENTAÇÃO:
+Quando o texto descreve um ÚNICO ato cirúrgico complexo com múltiplas etapas
+(ex: "tenoplastia + exposição de foco de fratura + osteotomia para redução e fixação
+com placa bloqueada"), NÃO fragmente em procedimentos separados para cada etapa.
+Extraia apenas os procedimentos cirúrgicos DISTINTOS e INDEPENDENTES:
+  - "TENOPLASTIA DE RETO FEMORAL" = procedimento independente ✅
+  - "OSTEOTOMIA DE SÍNFISE PÚBICA" = procedimento independente ✅
+  - "FIXAÇÃO COM PLACA BLOQUEADA" = método de fixação do tratamento de fratura ❌ (não separar)
+  - "EXPOSIÇÃO DE FOCO DE FRATURA" = etapa do tratamento ❌ (não separar)
+  - "REDUÇÃO DE FRATURA" = etapa do tratamento ❌ (não separar)
+
+EXEMPLOS DE EXTRAÇÃO CORRETA DO TEXTO NARRATIVO:
+
+  Texto da Descrição Detalhada:
+    "3.2 – REALIZADO TENOPLASTIA DE RETO FEMORAL + EXPOSIÇÃO DE FOCO DE FRATURA
+     COM OSTEOTOMIA DE SÍNFISE PARA REDUÇÃO E FIXAÇÃO DE FOCO DE FRATURA DE
+     SÍNFISE PÚBICA COM 01 PLACA BLOQUEADA DE RECONSTRUÇÃO + 03 PARAFUSOS
+     CORTICAIS + 06 PARAFUSOS BLOQUEADOS
+     3.3 – CONTROLE RADIOSCÓPICO VISUALIZANDO BOA REDUÇÃO E FIXAÇÃO"
+  → Extrair 3 procedimentos (NÃO 5):
     1. codigo: null, descricao: "TENOPLASTIA DE RETO FEMORAL"
     2. codigo: null, descricao: "OSTEOTOMIA DE SÍNFISE PÚBICA"
-    3. codigo: null, descricao: "FIXAÇÃO INTERNA DE FRATURA DE SÍNFISE PÚBICA COM PLACA BLOQUEADA E PARAFUSOS"
+    3. codigo: null, descricao: "CONTROLE RADIOSCÓPICO INTRAOPERATÓRIO"
+  → NÃO extrair: "FIXAÇÃO INTERNA COM PLACA BLOQUEADA" (é método do tratamento)
+  → NÃO extrair: "EXPOSIÇÃO DE FOCO DE FRATURA" (é etapa do tratamento)
+  → NÃO extrair: "TRATAMENTO CIRÚRGICO DE FRATURA DE ANEL PÉLVICO" (já coberto pela osteotomia + fixação)
 
   Texto: "CONTROLE RADIOSCOPICO VISUALIZANDO BOA REDUÇÃO E FIXAÇÃO"
   → Extrair 1 procedimento:
     1. codigo: null, descricao: "CONTROLE RADIOSCÓPICO INTRAOPERATÓRIO"
-
-  Texto: "TRATAMENTO CIRURGICO DE FRATURA ANEL PELVICO + OSTEOTOMIA + TENOPLASTIA"
-  (campo "Intervenção indicada")
-  → Extrair 3 procedimentos:
-    1. codigo: null, descricao: "TRATAMENTO CIRÚRGICO DE FRATURA DE ANEL PÉLVICO"
-    2. codigo: null, descricao: "OSTEOTOMIA"
-    3. codigo: null, descricao: "TENOPLASTIA"
 
 ═══════════════════════════════════════════════════════
 FORMATO DE RESPOSTA — JSON VÁLIDO E COMPLETO
@@ -949,8 +970,9 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       // Quando não há código (boletim operatório narrativo), usar limiar menor
       // para permitir match por similaridade de nome na CBHPM.
       // Com código: 70% (reduz falsos positivos)
-      // Sem código: 45% (necessário para nomes técnicos extraídos de texto narrativo)
-      const limiarSimilaridade = codigoOriginal ? 0.7 : 0.45;
+      // Sem código: 55% (equilibra entre encontrar matches e evitar falsos positivos
+      //   como "fratura de anel pélvico" → "fratura do crânio")
+      const limiarSimilaridade = codigoOriginal ? 0.7 : 0.55;
 
       // Validar contra CBHPM para obter código/descrição corretos
       const validacao = await validarProcedimentoCbhpm(
