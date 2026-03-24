@@ -7,9 +7,19 @@
 const PRECOS_POR_1K_TOKENS: Record<string, { input: number; output: number }> = {
   "gpt-4.1": { input: 0.002, output: 0.008 },
   "gpt-4.1-mini": { input: 0.0004, output: 0.0016 },
+  "gpt-4.1-nano": { input: 0.0001, output: 0.0004 },
+  "gpt-4.5": { input: 0.075, output: 0.15 },
   "gpt-4o": { input: 0.0025, output: 0.01 },
   "gpt-4o-mini": { input: 0.00015, output: 0.0006 },
+  "gpt-4-turbo": { input: 0.01, output: 0.03 },
+  "o3-mini": { input: 0.0011, output: 0.0044 },
+  "gpt-5": { input: 0.00125, output: 0.01 },
+  "gpt-5.1": { input: 0.00125, output: 0.01 },
+  "gpt-5.2": { input: 0.00175, output: 0.014 },
+  "gpt-5.3": { input: 0.00175, output: 0.014 },
   "gpt-5.3-chat-latest": { input: 0.00175, output: 0.014 },
+  "gpt-5.4": { input: 0.0025, output: 0.015 },
+  "gpt-5.4-pro": { input: 0.03, output: 0.18 },
 };
 
 function getPrecoPorModelo(model: string): { input: number; output: number } | null {
