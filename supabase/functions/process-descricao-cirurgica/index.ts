@@ -987,14 +987,16 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
           `[process-descricao-cirurgica] ❌ Procedimento rejeitado (não encontrado na CBHPM): codigo="${codigoOriginal}", descricao="${descricaoOriginal?.slice(0, 50)}..."`
         );
         // Add rejected procedure to review list so doctor can provide correct code
+        // Include best suggestion if available (below threshold but still useful for UI)
+        const sugestao = validacao.melhor_sugestao;
         procedimentosRevisao.push({
           item_faturamento_id: null,
           codigo_original: codigoOriginal,
           descricao_original: descricaoOriginal,
-          codigo_validado: null,
-          descricao_validada: null,
-          metodo_validacao: "nao_encontrado",
-          similaridade: null,
+          codigo_validado: sugestao?.codigo ?? null,
+          descricao_validada: sugestao?.descricao ?? null,
+          metodo_validacao: sugestao ? "sugestao_baixa_similaridade" : "nao_encontrado",
+          similaridade: sugestao?.similaridade ?? null,
           necessita_revisao: true,
         });
         continue;

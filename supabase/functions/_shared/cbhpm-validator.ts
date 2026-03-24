@@ -17,6 +17,12 @@ interface ValidacaoResult {
   cbhpm_match: CbhpmProcedimento | null;
   metodo_validacao: "codigo_exato" | "descricao_similar" | "nao_encontrado";
   similaridade?: number;
+  /** Best match found even if below threshold (for suggestion purposes) */
+  melhor_sugestao?: {
+    codigo: string;
+    descricao: string;
+    similaridade: number;
+  } | null;
 }
 
 /**
@@ -213,6 +219,9 @@ export async function validarProcedimentoCbhpm(
   }
 
   // 2. Se não encontrou por código, tentar por similaridade de descrição
+  let melhorMatchGlobal: CbhpmProcedimento | null = null;
+  let melhorSimilaridadeGlobal = 0;
+
   if (descricaoLimpa) {
     // Buscar todos os procedimentos CBHPM para comparação
     const { data: todosProcedimentos, error } = await supabase
@@ -230,9 +239,6 @@ export async function validarProcedimentoCbhpm(
       };
     }
 
-    let melhorMatch: CbhpmProcedimento | null = null;
-    let melhorSimilaridade = 0;
-
     for (const proc of todosProcedimentos) {
       // Calcular similaridade combinada (Levenshtein + palavras-chave)
       const simLevenshtein = calcularSimilaridade(descricaoLimpa, proc.descricao);
@@ -241,41 +247,60 @@ export async function validarProcedimentoCbhpm(
       // Média ponderada: 40% Levenshtein, 60% palavras-chave
       const similaridadeCombinada = simLevenshtein * 0.4 + simPalavras * 0.6;
 
-      if (similaridadeCombinada > melhorSimilaridade) {
-        melhorSimilaridade = similaridadeCombinada;
-        melhorMatch = proc;
+      if (similaridadeCombinada > melhorSimilaridadeGlobal) {
+        melhorSimilaridadeGlobal = similaridadeCombinada;
+        melhorMatchGlobal = proc;
       }
     }
 
-    if (melhorMatch && melhorSimilaridade >= limiarSimilaridade) {
+    if (melhorMatchGlobal && melhorSimilaridadeGlobal >= limiarSimilaridade) {
       console.log(
-        `[cbhpm-validator] ✅ Match por descrição similar (${(melhorSimilaridade * 100).toFixed(1)}%): "${melhorMatch.codigo}" - "${melhorMatch.descricao.slice(0, 50)}..."`
+        `[cbhpm-validator] ✅ Match por descrição similar (${(melhorSimilaridadeGlobal * 100).toFixed(1)}%): "${melhorMatchGlobal.codigo}" - "${melhorMatchGlobal.descricao.slice(0, 50)}..."`
       );
       return {
         valido: true,
-        codigo_validado: melhorMatch.codigo,
-        descricao_validada: melhorMatch.descricao,
-        cbhpm_match: melhorMatch,
+        codigo_validado: melhorMatchGlobal.codigo,
+        descricao_validada: melhorMatchGlobal.descricao,
+        cbhpm_match: melhorMatchGlobal,
         metodo_validacao: "descricao_similar",
-        similaridade: melhorSimilaridade,
+        similaridade: melhorSimilaridadeGlobal,
       };
     }
 
-    if (melhorMatch) {
+    if (melhorMatchGlobal) {
       console.log(
-        `[cbhpm-validator] ❌ Melhor match encontrado mas similaridade insuficiente (${(melhorSimilaridade * 100).toFixed(1)}% < ${limiarSimilaridade * 100}%): "${melhorMatch.descricao.slice(0, 50)}..."`
+        `[cbhpm-validator] ❌ Melhor match encontrado mas similaridade insuficiente (${(melhorSimilaridadeGlobal * 100).toFixed(1)}% < ${limiarSimilaridade * 100}%): "${melhorMatchGlobal.codigo}" - "${melhorMatchGlobal.descricao.slice(0, 50)}..."`
       );
     }
   }
 
   // 3. Não encontrou match válido
   console.log(`[cbhpm-validator] ❌ Procedimento não validado: codigo="${codigoLimpo}", descricao="${descricaoLimpa?.slice(0, 50)}..."`);
+
+  // Return best match as suggestion even if below threshold (for UI suggestion purposes)
+  // Only suggest if similarity is at least 30%
+  const melhorSugestao: ValidacaoResult["melhor_sugestao"] =
+    melhorMatchGlobal && melhorSimilaridadeGlobal >= 0.3
+      ? {
+          codigo: melhorMatchGlobal.codigo,
+          descricao: melhorMatchGlobal.descricao,
+          similaridade: melhorSimilaridadeGlobal,
+        }
+      : null;
+
+  if (melhorSugestao) {
+    console.log(
+      `[cbhpm-validator] 💡 Sugestão (abaixo do limiar): "${melhorSugestao.codigo}" - "${melhorSugestao.descricao.slice(0, 50)}..." (${(melhorSugestao.similaridade * 100).toFixed(1)}%)`
+    );
+  }
+
   return {
     valido: false,
     codigo_validado: null,
     descricao_validada: null,
     cbhpm_match: null,
     metodo_validacao: "nao_encontrado",
+    melhor_sugestao: melhorSugestao,
   };
 }
 

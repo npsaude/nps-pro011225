@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -80,6 +80,23 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     unresolved: number[];
     message?: string;
   } | null>(null);
+
+  // Pre-populate corrections from validated codes when procedimentos change
+  useEffect(() => {
+    const initial: Record<number, Correction> = {};
+    procedimentos.forEach((proc, index) => {
+      if (proc.necessita_revisao && proc.codigo_validado) {
+        initial[index] = {
+          codigo: proc.codigo_validado,
+          descricao: proc.descricao_validada || proc.descricao_original || "",
+          quantidade: 1,
+        };
+      }
+    });
+    if (Object.keys(initial).length > 0) {
+      setCorrections(initial);
+    }
+  }, [procedimentos]);
 
   if (!open) return null;
 
@@ -260,6 +277,34 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
   const handleConfirm = async () => {
     setSaving(true);
     try {
+      // Get faturamento_id and medico_id for inserting new items
+      let fatId = faturamentoId;
+      let medicoId: string | null = null;
+
+      // Try to get medico_id from an existing item or from the faturamento
+      const existingItem = procedimentos.find((p) => p.item_faturamento_id);
+      if (existingItem?.item_faturamento_id) {
+        const { data: itemData } = await supabase
+          .from("itens_faturamento")
+          .select("faturamento_id, medico_id")
+          .eq("id", existingItem.item_faturamento_id)
+          .single();
+        if (itemData) {
+          fatId = fatId || itemData.faturamento_id;
+          medicoId = itemData.medico_id;
+        }
+      }
+
+      // Fallback: get medico_id from faturamento
+      if (!medicoId && fatId) {
+        const { data: fatData } = await supabase
+          .from("faturamentos")
+          .select("medico_id")
+          .eq("id", fatId)
+          .single();
+        if (fatData) medicoId = fatData.medico_id;
+      }
+
       for (let i = 0; i < procedimentos.length; i++) {
         const proc = procedimentos[i];
         const correction = corrections[i];
@@ -279,25 +324,17 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
             })
             .eq("id", proc.item_faturamento_id);
           if (error) showError(`Erro ao atualizar ${correction.codigo}: ${error.message}`);
-        } else if (correction.codigo) {
-          const faturamentoItem = procedimentos.find((p) => p.item_faturamento_id);
-          if (faturamentoItem?.item_faturamento_id) {
-            const { data: itemData } = await supabase
-              .from("itens_faturamento").select("faturamento_id, medico_id")
-              .eq("id", faturamentoItem.item_faturamento_id).single();
-            if (itemData) {
-              await supabase.from("itens_faturamento").insert({
-                faturamento_id: itemData.faturamento_id,
-                medico_id: itemData.medico_id,
-                codigo_procedimento: correction.codigo,
-                descricao_procedimento: correction.descricao,
-                quantidade_autorizada: qty,
-                quantidade_executada: qty,
-                quantidade: qty,
-                status_item: "pendente",
-              });
-            }
-          }
+        } else if (correction.codigo && fatId) {
+          await supabase.from("itens_faturamento").insert({
+            faturamento_id: fatId,
+            medico_id: medicoId,
+            codigo_procedimento: correction.codigo,
+            descricao_procedimento: correction.descricao,
+            quantidade_autorizada: qty,
+            quantidade_executada: qty,
+            quantidade: qty,
+            status_item: "pendente",
+          });
         }
       }
       showSuccess("Procedimentos revisados com sucesso!");
@@ -460,14 +497,14 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
                       ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                       : <AlertTriangle className="h-3 w-3 text-amber-400" />}
                     <span className={`text-[9px] font-semibold uppercase tracking-wider ${isResolved ? "text-emerald-400" : "text-amber-400"}`}>
-                      {isResolved ? "Corrigido" : "Verificar código"}
+                      {isResolved ? "Sugestão CBHPM" : "Verificar código"}
                     </span>
                   </div>
 
                   {/* Original data */}
                   <div className="flex items-start gap-1.5 mb-2">
                     <span className="inline-block rounded bg-[#D4A017]/15 px-1.5 py-0.5 text-[10px] font-mono text-[#D4A017] border border-[#D4A017]/25 flex-shrink-0">
-                      {proc.codigo_original || "???"}
+                      {proc.codigo_validado || proc.codigo_original || "???"}
                     </span>
                     <p className="text-[10px] text-[#F5F5F5] leading-snug uppercase">
                       {proc.descricao_original || "Sem descrição"}
