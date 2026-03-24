@@ -234,7 +234,10 @@ export default function SubscriptionEnrollmentsList() {
                   filtered.map((r) => {
                     const plan = planById.get(r.plan_id);
                     const createdAt = r.created_at
-                      ? new Date(r.created_at).toLocaleDateString("pt-BR")
+                      ? new Date(r.created_at).toLocaleString("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
                       : "-";
 
                     return (
@@ -242,6 +245,7 @@ export default function SubscriptionEnrollmentsList() {
                         key={r.id}
                         className="border-b border-slate-50 text-xs hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/60"
                       >
+
                         <TableCell className="px-4 py-3">
                           <div className="flex flex-col">
                             <span className="font-medium text-slate-900 dark:text-slate-50">
