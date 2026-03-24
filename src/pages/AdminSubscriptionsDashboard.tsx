@@ -268,12 +268,8 @@ export default function AdminSubscriptionsDashboard() {
               </Card>
             ) : (
               <>
-                <section>
-                  <SubscriptionServicesStatusCard />
-                </section>
-
                 {/* Métricas */}
-                <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
                     <CardHeader className="pb-2">
                       <CardTitle className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
@@ -330,6 +326,8 @@ export default function AdminSubscriptionsDashboard() {
                       </p>
                     </CardContent>
                   </Card>
+
+                  <SubscriptionServicesStatusCard />
                 </section>
 
                 {/* Gráficos */}
