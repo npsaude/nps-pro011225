@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Brain, Circle, Database, RefreshCw, Webhook } from "lucide-react";
+import { Brain, Database, RefreshCw, Webhook } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,24 +19,24 @@ type ItemProps = {
 function colorByStatus(status: ServiceIndicator["status"]) {
   if (status === "ok") {
     return {
-      dot: "text-emerald-500",
       chip: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900",
       label: "OK",
+      activeLight: "bg-emerald-500 shadow-[0_0_18px_rgba(16,185,129,0.45)]",
     };
   }
 
   if (status === "error") {
     return {
-      dot: "text-rose-500",
       chip: "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900",
       label: "Não funcionando",
+      activeLight: "bg-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.45)]",
     };
   }
 
   return {
-    dot: "text-amber-500",
     chip: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900",
     label: "Verificando",
+    activeLight: "bg-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.45)]",
   };
 }
 
@@ -45,30 +45,60 @@ function formatCheckedAt(value: string | null) {
   return new Date(value).toLocaleString("pt-BR");
 }
 
+function TrafficLight({ status }: { status: ServiceIndicator["status"] }) {
+  const isGreen = status === "ok";
+  const isRed = status === "error";
+  const isYellow = status === "checking";
+
+  return (
+    <div className="flex h-16 w-10 flex-col items-center justify-center gap-1.5 rounded-full bg-slate-800 p-2 shadow-inner dark:bg-slate-950">
+      <span
+        className={`h-3.5 w-3.5 rounded-full ${
+          isRed ? "bg-rose-500 shadow-[0_0_16px_rgba(244,63,94,0.5)]" : "bg-slate-600"
+        }`}
+      />
+      <span
+        className={`h-3.5 w-3.5 rounded-full ${
+          isYellow ? "bg-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.5)]" : "bg-slate-600"
+        }`}
+      />
+      <span
+        className={`h-3.5 w-3.5 rounded-full ${
+          isGreen ? "bg-emerald-500 shadow-[0_0_16px_rgba(16,185,129,0.5)]" : "bg-slate-600"
+        }`}
+      />
+    </div>
+  );
+}
+
 function StatusItem({ icon, label, indicator }: ItemProps) {
   const ui = colorByStatus(indicator.status);
 
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-      <div className="flex gap-3">
-        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-          {icon}
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-              {label}
-            </span>
-            <Circle className={`h-3.5 w-3.5 fill-current ${ui.dot}`} />
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-slate-50/80 p-4 dark:border-slate-800 dark:from-slate-950/60 dark:to-slate-900/40">
+      <div className="flex items-center gap-4">
+        <TrafficLight status={indicator.status} />
+
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+            {icon}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {indicator.message}
-          </p>
-          {indicator.checkedAt ? (
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              Última checagem: {formatCheckedAt(indicator.checkedAt)}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                {label}
+              </span>
+              <span className={`h-2.5 w-2.5 rounded-full ${ui.activeLight}`} />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {indicator.message}
             </p>
-          ) : null}
+            {indicator.checkedAt ? (
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                Última checagem: {formatCheckedAt(indicator.checkedAt)}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
 
