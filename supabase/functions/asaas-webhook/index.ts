@@ -59,6 +59,7 @@ type EnrollmentRow = {
   ended_at: string | null;
   last_payment_at: string | null;
   metadata: unknown | null;
+  asaas_subscription_id: string | null;
 };
 
 type AppSettingsRow = {
@@ -301,13 +302,14 @@ async function findEnrollment(params: {
 }) {
   const { adminClient, subscriptionId, customerId, externalReference } = params;
 
+  const selectCols =
+    "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata,asaas_subscription_id";
+
   // 1) Try by subscription ID (exact match)
   if (subscriptionId) {
     const { data, error } = await adminClient
       .from("subscription_enrollments")
-      .select(
-        "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata",
-      )
+      .select(selectCols)
       .eq("asaas_subscription_id", subscriptionId)
       .maybeSingle();
 
@@ -317,17 +319,13 @@ async function findEnrollment(params: {
 
   // 2) Try by external reference (enrollment ID or lead ID stored in metadata)
   if (externalReference) {
-    // externalReference may be the enrollment UUID itself
     const { data, error } = await adminClient
       .from("subscription_enrollments")
-      .select(
-        "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata",
-      )
+      .select(selectCols)
       .eq("id", externalReference)
       .maybeSingle();
 
     if (error) {
-      // May fail if externalReference is not a valid UUID — that's fine
       console.log("[asaas-webhook] externalReference lookup by id failed (may not be UUID)", { externalReference });
     } else if (data) {
       return data as EnrollmentRow;
@@ -338,9 +336,7 @@ async function findEnrollment(params: {
   if (customerId) {
     const { data, error } = await adminClient
       .from("subscription_enrollments")
-      .select(
-        "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata,created_at",
-      )
+      .select(selectCols + ",created_at")
       .eq("asaas_customer_id", customerId)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -887,30 +883,39 @@ serve(async (req) => {
       return jsonResponse({ error: processError }, 404);
     }
 
-    // If the enrollment was found by customer/externalReference but has a
-    // different (or missing) asaas_subscription_id, update it so future
-    // webhooks can match by subscription_id directly.
-    if (subscriptionId) {
-      const { data: enrollmentFull } = await adminClient
+    // If the enrollment already has a different asaas_subscription_id and the
+    // webhook comes from a different subscription, this is an orphan/old
+    // subscription event — ignore it to avoid activating the enrollment with
+    // data from the wrong subscription.
+    const enrollmentSubId = normalizeString(enrollment.asaas_subscription_id);
+
+    if (subscriptionId && enrollmentSubId && enrollmentSubId !== subscriptionId) {
+      console.log("[asaas-webhook] Ignoring event from mismatched subscription", {
+        enrollmentId: enrollment.id,
+        enrollmentSubId,
+        webhookSubId: subscriptionId,
+        eventName,
+      });
+      await markEvent({
+        processed: true,
+        processError: `Ignorado: subscription do webhook (${subscriptionId}) difere da do enrollment (${enrollmentSubId}).`,
+        enrollmentId: enrollment.id,
+      });
+      return jsonResponse({ ok: true, ignored: true, reason: "subscription_mismatch" }, 200);
+    }
+
+    // If the enrollment has no asaas_subscription_id yet (just created),
+    // update it so future webhooks can match by subscription_id directly.
+    if (subscriptionId && !enrollmentSubId) {
+      console.log("[asaas-webhook] Setting enrollment asaas_subscription_id", {
+        enrollmentId: enrollment.id,
+        subscriptionId,
+      });
+
+      await adminClient
         .from("subscription_enrollments")
-        .select("asaas_subscription_id")
-        .eq("id", enrollment.id)
-        .single();
-
-      const currentSubId = normalizeString((enrollmentFull as any)?.asaas_subscription_id);
-
-      if (currentSubId !== subscriptionId) {
-        console.log("[asaas-webhook] Updating enrollment asaas_subscription_id", {
-          enrollmentId: enrollment.id,
-          oldSubscriptionId: currentSubId,
-          newSubscriptionId: subscriptionId,
-        });
-
-        await adminClient
-          .from("subscription_enrollments")
-          .update({ asaas_subscription_id: subscriptionId })
-          .eq("id", enrollment.id);
-      }
+        .update({ asaas_subscription_id: subscriptionId })
+        .eq("id", enrollment.id);
     }
 
     const subscriptionDetails = subscriptionId && asaasToken
@@ -923,7 +928,15 @@ serve(async (req) => {
     const nowIso = new Date().toISOString();
     const paymentSignal = mapPaymentSignalToLocal(eventName, payment?.status ?? null);
     const subscriptionSignal = mapSubscriptionStatusToLocal(subscriptionDetails?.status ?? subscription?.status ?? null);
-    const effectiveSignal = subscriptionSignal ?? paymentSignal;
+
+    // For PAYMENT events, the payment signal takes priority over the
+    // subscription status. A subscription can be "ACTIVE" in Asaas simply
+    // because it was created — that does NOT mean the payment was confirmed.
+    // We must only activate the enrollment when the payment itself is
+    // CONFIRMED/RECEIVED, not when PAYMENT_CREATED arrives.
+    const effectiveSignal = isPaymentEvent
+      ? (paymentSignal ?? subscriptionSignal)
+      : (subscriptionSignal ?? paymentSignal);
 
     const currentMetadata = asObject(enrollment.metadata);
     const currentAsaasMetadata = asObject(currentMetadata.asaas);
