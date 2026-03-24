@@ -1004,6 +1004,35 @@ serve(async (req) => {
       metadata: nextMetadata,
     };
 
+    // If we are about to set this enrollment to ACTIVE, deactivate any other
+    // ACTIVE enrollments for the same email first (unique constraint:
+    // subscription_enrollments_one_active_per_email_uidx).
+    if (localStatus === "ACTIVE") {
+      const userEmail = normalizeEmail(enrollment.user_email);
+      if (userEmail) {
+        const { data: otherActive, error: otherActiveError } = await adminClient
+          .from("subscription_enrollments")
+          .select("id")
+          .ilike("user_email", userEmail)
+          .eq("status", "ACTIVE")
+          .neq("id", enrollment.id);
+
+        if (!otherActiveError && otherActive && otherActive.length > 0) {
+          const otherIds = otherActive.map((r: { id: string }) => r.id);
+          console.log("[asaas-webhook] Deactivating previous ACTIVE enrollments for same email", {
+            userEmail,
+            currentEnrollmentId: enrollment.id,
+            deactivatingIds: otherIds,
+          });
+
+          await adminClient
+            .from("subscription_enrollments")
+            .update({ status: "CANCELED", cancelado: true, ended_at: nowIso, updated_at: nowIso })
+            .in("id", otherIds);
+        }
+      }
+    }
+
     const { error: updateError } = await adminClient
       .from("subscription_enrollments")
       .update(updatePayload)
