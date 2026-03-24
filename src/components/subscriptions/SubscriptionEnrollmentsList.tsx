@@ -41,6 +41,33 @@ import {
 } from "@/services/subscription-plans-service";
 import SubscriptionEnrollmentForm from "@/components/subscriptions/SubscriptionEnrollmentForm";
 
+function getStatusLabel(status: string | null) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+
+  if (normalized === "active") return "Ativo";
+  if (normalized === "canceled") return "Cancelado";
+  if (normalized === "pending") return "Pendente";
+  if (normalized === "trial") return "Período de teste";
+  if (normalized === "paused") return "Pausado";
+  if (normalized === "failed") return "Falhou";
+
+  return String(status ?? "—");
+}
+
+function getStatusBadgeClassName(status: string | null) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+
+  if (normalized === "active") {
+    return "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900";
+  }
+
+  if (normalized === "canceled") {
+    return "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900";
+  }
+
+  return "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700";
+}
+
 export default function SubscriptionEnrollmentsList() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [rows, setRows] = useState<SubscriptionEnrollment[]>([]);
@@ -268,8 +295,10 @@ export default function SubscriptionEnrollmentsList() {
                         </TableCell>
 
                         <TableCell className="px-4 py-3">
-                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                            {String(r.status ?? "")}
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${getStatusBadgeClassName(r.status)}`}
+                          >
+                            {getStatusLabel(r.status)}
                           </span>
                         </TableCell>
 
