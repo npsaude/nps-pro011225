@@ -25,6 +25,52 @@ interface ValidacaoResult {
   } | null;
 }
 
+// ── Medical synonym groups ──────────────────────────────────────────────────
+// Words in the same group are considered equivalent for matching purposes.
+// This helps match "sínfise púbica" → "pelve", "reto femoral" → "fêmur", etc.
+const SYNONYM_GROUPS: string[][] = [
+  // Pelve / púbis / sínfise
+  ["pelve", "pelvico", "pelvica", "pubica", "pubico", "pubis", "pubiana", "pubiano", "sinfise", "iliac", "iliaco", "iliaca", "isquio", "sacroiliaca", "sacroiliaco"],
+  // Fêmur / femoral
+  ["femur", "femoral", "femorais"],
+  // Tíbia / tibial
+  ["tibia", "tibial", "tibiais"],
+  // Joelho / patelar
+  ["joelho", "patelar", "patela"],
+  // Ombro / escapular / umeral
+  ["ombro", "escapular", "escapula", "umeral", "umero"],
+  // Mão / carpal / metacarpal
+  ["mao", "carpal", "metacarpal", "metacarpiano", "carpiano"],
+  // Pé / tarsal / metatarsal
+  ["pe", "tarsal", "metatarsal", "metatarsiano", "tarsiano"],
+  // Coluna / vertebral / espinhal
+  ["coluna", "vertebral", "vertebra", "espinhal", "raqui"],
+  // Tendão / tenoplastia / tenorrafia
+  ["tendao", "tenoplastia", "tenorrafia", "tenotomia"],
+  // Fratura / redução
+  ["fratura", "fraturas"],
+  // Osteotomia / osteoplastia
+  ["osteotomia", "osteoplastia"],
+  // Cirúrgico / cirurgia
+  ["cirurgico", "cirurgica", "cirurgia"],
+  // Tratamento
+  ["tratamento", "trat"],
+  // Radioscopia / fluoroscopia / intensificador de imagem
+  ["radioscopico", "radioscopica", "radioscopia", "fluoroscopia", "fluoroscopico", "fluoroscopica", "intensificador"],
+  // Controle / monitorização
+  ["controle", "monitorizacao", "acompanhamento"],
+  // Intraoperatório
+  ["intraoperatorio", "intraoperatoria", "peroperatorio", "peroperatoria", "transoperatorio", "transoperatoria"],
+];
+
+// Build a lookup map: word → group index
+const synonymMap = new Map<string, number>();
+SYNONYM_GROUPS.forEach((group, idx) => {
+  for (const word of group) {
+    synonymMap.set(word, idx);
+  }
+});
+
 /**
  * Normaliza texto para comparação (remove acentos, lowercase, trim, espaços extras)
  */
@@ -38,6 +84,35 @@ export function normalizeText(text: string | null | undefined): string {
     .replace(/[^a-z0-9\s]/g, " ") // Remove caracteres especiais
     .replace(/\s+/g, " ") // Normaliza espaços
     .trim();
+}
+
+/**
+ * Extrai palavras significativas (>= 3 chars, excluindo stopwords)
+ */
+const STOPWORDS = new Set(["de", "do", "da", "dos", "das", "com", "sem", "por", "para", "ou", "e/ou", "cada", "uma", "mais", "nao", "que", "nos", "nas", "num", "tipo", "nivel"]);
+
+function extractSignificantWords(text: string): string[] {
+  return normalizeText(text)
+    .split(" ")
+    .filter(w => w.length >= 3 && !STOPWORDS.has(w));
+}
+
+/**
+ * Checks if two words are synonyms (belong to the same synonym group)
+ */
+function areSynonyms(word1: string, word2: string): boolean {
+  if (word1 === word2) return true;
+  const group1 = synonymMap.get(word1);
+  const group2 = synonymMap.get(word2);
+  if (group1 !== undefined && group2 !== undefined && group1 === group2) return true;
+  // Also check if one word starts with the other (stem matching)
+  // e.g., "osteotomia" matches "osteotomias", "pelvic" matches "pelvico"
+  if (word1.length >= 4 && word2.length >= 4) {
+    const minLen = Math.min(word1.length, word2.length);
+    const stemLen = Math.max(4, Math.floor(minLen * 0.75));
+    if (word1.slice(0, stemLen) === word2.slice(0, stemLen)) return true;
+  }
+  return false;
 }
 
 /**
@@ -80,25 +155,101 @@ export function calcularSimilaridade(str1: string, str2: string): number {
 }
 
 /**
- * Verifica se a descrição contém as palavras-chave principais da descrição CBHPM
+ * Bidirectional word matching with synonym support.
+ * Returns a score 0-1 based on how many significant words match between the two descriptions.
+ * Checks both directions and returns the best combined score.
  */
+export function calcularSimilaridadePalavras(
+  descricaoExtraida: string,
+  descricaoCbhpm: string
+): number {
+  const wordsExtraida = extractSignificantWords(descricaoExtraida);
+  const wordsCbhpm = extractSignificantWords(descricaoCbhpm);
+
+  if (wordsExtraida.length === 0 || wordsCbhpm.length === 0) return 0;
+
+  // Direction 1: How many CBHPM words are found in the extracted description?
+  let matchesCbhpmInExtraida = 0;
+  for (const wCbhpm of wordsCbhpm) {
+    if (wordsExtraida.some(wExt => areSynonyms(wExt, wCbhpm))) {
+      matchesCbhpmInExtraida++;
+    }
+  }
+  const scoreCbhpmInExtraida = wordsCbhpm.length > 0 ? matchesCbhpmInExtraida / wordsCbhpm.length : 0;
+
+  // Direction 2: How many extracted words are found in the CBHPM description?
+  let matchesExtraidaInCbhpm = 0;
+  for (const wExt of wordsExtraida) {
+    if (wordsCbhpm.some(wCbhpm => areSynonyms(wExt, wCbhpm))) {
+      matchesExtraidaInCbhpm++;
+    }
+  }
+  const scoreExtraidaInCbhpm = wordsExtraida.length > 0 ? matchesExtraidaInCbhpm / wordsExtraida.length : 0;
+
+  // F1-like score: harmonic mean of both directions
+  if (scoreCbhpmInExtraida + scoreExtraidaInCbhpm === 0) return 0;
+  const f1 = (2 * scoreCbhpmInExtraida * scoreExtraidaInCbhpm) / (scoreCbhpmInExtraida + scoreExtraidaInCbhpm);
+
+  return f1;
+}
+
+/**
+ * Generates character bigrams from a string for fuzzy matching
+ */
+function getBigrams(text: string): Set<string> {
+  const normalized = normalizeText(text);
+  const bigrams = new Set<string>();
+  for (let i = 0; i < normalized.length - 1; i++) {
+    if (normalized[i] !== " " && normalized[i + 1] !== " ") {
+      bigrams.add(normalized.slice(i, i + 2));
+    }
+  }
+  return bigrams;
+}
+
+/**
+ * Dice coefficient using bigrams - good for fuzzy string matching
+ */
+export function calcularSimilaridadeBigram(str1: string, str2: string): number {
+  const bigrams1 = getBigrams(str1);
+  const bigrams2 = getBigrams(str2);
+  if (bigrams1.size === 0 || bigrams2.size === 0) return 0;
+
+  let intersection = 0;
+  for (const bg of bigrams1) {
+    if (bigrams2.has(bg)) intersection++;
+  }
+
+  return (2 * intersection) / (bigrams1.size + bigrams2.size);
+}
+
+/**
+ * Combined similarity score using multiple methods.
+ * This is the main scoring function for description matching.
+ */
+export function calcularScoreCombinado(
+  descricaoExtraida: string,
+  descricaoCbhpm: string
+): { score: number; detalhes: { palavras: number; bigram: number; levenshtein: number } } {
+  const palavras = calcularSimilaridadePalavras(descricaoExtraida, descricaoCbhpm);
+  const bigram = calcularSimilaridadeBigram(descricaoExtraida, descricaoCbhpm);
+  const levenshtein = calcularSimilaridade(descricaoExtraida, descricaoCbhpm);
+
+  // Weighted combination:
+  // - 50% word matching with synonyms (most important for medical terms)
+  // - 30% bigram similarity (good for partial matches)
+  // - 20% Levenshtein (overall string similarity)
+  const score = palavras * 0.50 + bigram * 0.30 + levenshtein * 0.20;
+
+  return { score, detalhes: { palavras, bigram, levenshtein } };
+}
+
+// Keep old function for backward compatibility with code-based matching
 export function verificarPalavrasChave(
   descricaoExtraida: string,
   descricaoCbhpm: string
 ): number {
-  const palavrasExtraida = new Set(normalizeText(descricaoExtraida).split(" ").filter(p => p.length > 2));
-  const palavrasCbhpm = normalizeText(descricaoCbhpm).split(" ").filter(p => p.length > 2);
-
-  if (palavrasCbhpm.length === 0) return 0;
-
-  let matches = 0;
-  for (const palavra of palavrasCbhpm) {
-    if (palavrasExtraida.has(palavra)) {
-      matches++;
-    }
-  }
-
-  return matches / palavrasCbhpm.length;
+  return calcularSimilaridadePalavras(descricaoExtraida, descricaoCbhpm);
 }
 
 /**
@@ -117,7 +268,7 @@ export async function validarProcedimentoCbhpm(
   const codigoLimpo = codigo?.toString().trim() || null;
   const descricaoLimpa = descricao?.toString().trim() || null;
 
-  console.log(`[cbhpm-validator] Validando: codigo="${codigoLimpo}", descricao="${descricaoLimpa?.slice(0, 50)}..."`);
+  console.log(`[cbhpm-validator] Validando: codigo="${codigoLimpo}", descricao="${descricaoLimpa?.slice(0, 60)}..."`);
 
   // 1. Primeiro, tentar validação por código exato
   if (codigoLimpo) {
@@ -141,23 +292,18 @@ export async function validarProcedimentoCbhpm(
     console.log(`[cbhpm-validator] ❌ Código "${codigoLimpo}" não encontrado na CBHPM`);
 
     // 1.5. Tentar busca por código aproximado
-    // A IA pode ter errado 1-2 dígitos (dígito extra, faltando, ou trocado).
-    // Estratégia: gerar variantes do código e testar cada uma.
     const variantesCodigo: string[] = [];
 
-    // Variante: remover cada dígito (código com 1 dígito a menos)
     for (let i = 0; i < codigoLimpo.length; i++) {
       variantesCodigo.push(codigoLimpo.slice(0, i) + codigoLimpo.slice(i + 1));
     }
 
-    // Variante: prefixos de 5, 6, 7 dígitos para busca por LIKE
     const prefixos = [
       codigoLimpo.slice(0, 5),
       codigoLimpo.slice(0, 6),
       codigoLimpo.slice(0, 7),
     ].filter((p, idx, arr) => p.length >= 5 && arr.indexOf(p) === idx);
 
-    // Buscar candidatos por prefixo
     const candidatosSet = new Map<string, CbhpmProcedimento>();
 
     for (const prefixo of prefixos) {
@@ -173,7 +319,6 @@ export async function validarProcedimentoCbhpm(
       }
     }
 
-    // Também testar variantes exatas (código com dígito removido)
     for (const variante of variantesCodigo) {
       if (variante.length >= 7) {
         const { data: matchVariante } = await supabase
@@ -192,10 +337,7 @@ export async function validarProcedimentoCbhpm(
       let melhorScore = 0;
 
       for (const cand of candidatosSet.values()) {
-        const simDesc = verificarPalavrasChave(descricaoLimpa, cand.descricao);
-        const simLev = calcularSimilaridade(descricaoLimpa, cand.descricao);
-        const score = simLev * 0.4 + simDesc * 0.6;
-
+        const { score } = calcularScoreCombinado(descricaoLimpa, cand.descricao);
         if (score > melhorScore) {
           melhorScore = score;
           melhorCandidato = cand;
@@ -221,9 +363,9 @@ export async function validarProcedimentoCbhpm(
   // 2. Se não encontrou por código, tentar por similaridade de descrição
   let melhorMatchGlobal: CbhpmProcedimento | null = null;
   let melhorSimilaridadeGlobal = 0;
+  let melhorDetalhes: { palavras: number; bigram: number; levenshtein: number } | null = null;
 
   if (descricaoLimpa) {
-    // Buscar todos os procedimentos CBHPM para comparação
     const { data: todosProcedimentos, error } = await supabase
       .from("cbhpm_cirurgias")
       .select("codigo, descricao, porte, valor_porte");
@@ -239,23 +381,35 @@ export async function validarProcedimentoCbhpm(
       };
     }
 
+    // Log top 3 candidates for debugging
+    const candidates: Array<{ proc: CbhpmProcedimento; score: number; detalhes: any }> = [];
+
     for (const proc of todosProcedimentos) {
-      // Calcular similaridade combinada (Levenshtein + palavras-chave)
-      const simLevenshtein = calcularSimilaridade(descricaoLimpa, proc.descricao);
-      const simPalavras = verificarPalavrasChave(descricaoLimpa, proc.descricao);
+      const { score, detalhes } = calcularScoreCombinado(descricaoLimpa, proc.descricao);
 
-      // Média ponderada: 40% Levenshtein, 60% palavras-chave
-      const similaridadeCombinada = simLevenshtein * 0.4 + simPalavras * 0.6;
-
-      if (similaridadeCombinada > melhorSimilaridadeGlobal) {
-        melhorSimilaridadeGlobal = similaridadeCombinada;
+      if (score > melhorSimilaridadeGlobal) {
+        melhorSimilaridadeGlobal = score;
         melhorMatchGlobal = proc;
+        melhorDetalhes = detalhes;
+      }
+
+      // Track top candidates for logging
+      if (candidates.length < 3 || score > candidates[candidates.length - 1].score) {
+        candidates.push({ proc, score, detalhes });
+        candidates.sort((a, b) => b.score - a.score);
+        if (candidates.length > 3) candidates.pop();
       }
     }
 
+    // Log top 3 candidates for debugging
+    console.log(
+      `[cbhpm-validator] Top 3 candidatos para "${descricaoLimpa?.slice(0, 50)}...":`,
+      candidates.map(c => `${c.proc.codigo} "${c.proc.descricao.slice(0, 40)}..." (score=${(c.score * 100).toFixed(1)}% pal=${(c.detalhes.palavras * 100).toFixed(0)}% bi=${(c.detalhes.bigram * 100).toFixed(0)}% lev=${(c.detalhes.levenshtein * 100).toFixed(0)}%)`).join(" | ")
+    );
+
     if (melhorMatchGlobal && melhorSimilaridadeGlobal >= limiarSimilaridade) {
       console.log(
-        `[cbhpm-validator] ✅ Match por descrição similar (${(melhorSimilaridadeGlobal * 100).toFixed(1)}%): "${melhorMatchGlobal.codigo}" - "${melhorMatchGlobal.descricao.slice(0, 50)}..."`
+        `[cbhpm-validator] ✅ Match por descrição similar (${(melhorSimilaridadeGlobal * 100).toFixed(1)}%): "${melhorMatchGlobal.codigo}" - "${melhorMatchGlobal.descricao.slice(0, 60)}..." [pal=${(melhorDetalhes!.palavras * 100).toFixed(0)}% bi=${(melhorDetalhes!.bigram * 100).toFixed(0)}% lev=${(melhorDetalhes!.levenshtein * 100).toFixed(0)}%]`
       );
       return {
         valido: true,
@@ -269,18 +423,17 @@ export async function validarProcedimentoCbhpm(
 
     if (melhorMatchGlobal) {
       console.log(
-        `[cbhpm-validator] ❌ Melhor match encontrado mas similaridade insuficiente (${(melhorSimilaridadeGlobal * 100).toFixed(1)}% < ${limiarSimilaridade * 100}%): "${melhorMatchGlobal.codigo}" - "${melhorMatchGlobal.descricao.slice(0, 50)}..."`
+        `[cbhpm-validator] ❌ Melhor match encontrado mas similaridade insuficiente (${(melhorSimilaridadeGlobal * 100).toFixed(1)}% < ${limiarSimilaridade * 100}%): "${melhorMatchGlobal.codigo}" - "${melhorMatchGlobal.descricao.slice(0, 60)}..."`
       );
     }
   }
 
   // 3. Não encontrou match válido
-  console.log(`[cbhpm-validator] ❌ Procedimento não validado: codigo="${codigoLimpo}", descricao="${descricaoLimpa?.slice(0, 50)}..."`);
+  console.log(`[cbhpm-validator] ❌ Procedimento não validado: codigo="${codigoLimpo}", descricao="${descricaoLimpa?.slice(0, 60)}..."`);
 
-  // Return best match as suggestion even if below threshold (for UI suggestion purposes)
-  // Only suggest if similarity is at least 30%
+  // Return best match as suggestion even if below threshold
   const melhorSugestao: ValidacaoResult["melhor_sugestao"] =
-    melhorMatchGlobal && melhorSimilaridadeGlobal >= 0.3
+    melhorMatchGlobal && melhorSimilaridadeGlobal >= 0.2
       ? {
           codigo: melhorMatchGlobal.codigo,
           descricao: melhorMatchGlobal.descricao,
@@ -290,7 +443,7 @@ export async function validarProcedimentoCbhpm(
 
   if (melhorSugestao) {
     console.log(
-      `[cbhpm-validator] 💡 Sugestão (abaixo do limiar): "${melhorSugestao.codigo}" - "${melhorSugestao.descricao.slice(0, 50)}..." (${(melhorSugestao.similaridade * 100).toFixed(1)}%)`
+      `[cbhpm-validator] 💡 Sugestão (abaixo do limiar): "${melhorSugestao.codigo}" - "${melhorSugestao.descricao.slice(0, 60)}..." (${(melhorSugestao.similaridade * 100).toFixed(1)}%)`
     );
   }
 
@@ -345,7 +498,6 @@ export async function validarListaProcedimentos(
     );
 
     if (validacao.valido && validacao.codigo_validado) {
-      // Evitar duplicatas
       if (codigosJaAdicionados.has(validacao.codigo_validado)) {
         console.log(`[cbhpm-validator] Procedimento duplicado ignorado: ${validacao.codigo_validado}`);
         continue;

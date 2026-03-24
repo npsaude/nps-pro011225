@@ -967,12 +967,12 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
       const quantidadeExecutada = proc.quantidade_executada ?? 1;
 
-      // Quando não há código (boletim operatório narrativo), usar limiar menor
-      // para permitir match por similaridade de nome na CBHPM.
-      // Com código: 70% (reduz falsos positivos)
-      // Sem código: 55% (equilibra entre encontrar matches e evitar falsos positivos
-      //   como "fratura de anel pélvico" → "fratura do crânio")
-      const limiarSimilaridade = codigoOriginal ? 0.7 : 0.55;
+      // Limiar de similaridade para aceitar match CBHPM.
+      // O algoritmo usa matching bidirecional de palavras com sinônimos médicos,
+      // bigrams e Levenshtein combinados, então os limiares podem ser mais baixos.
+      // Com código: 0.55 (já tem código, descrição é confirmação)
+      // Sem código: 0.40 (precisa encontrar match apenas por nome)
+      const limiarSimilaridade = codigoOriginal ? 0.55 : 0.40;
 
       // Validar contra CBHPM para obter código/descrição corretos
       const validacao = await validarProcedimentoCbhpm(
