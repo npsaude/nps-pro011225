@@ -268,9 +268,11 @@ async function findEnrollment(params: {
   adminClient: ReturnType<typeof createClient>;
   subscriptionId: string | null;
   customerId: string | null;
+  externalReference: string | null;
 }) {
-  const { adminClient, subscriptionId, customerId } = params;
+  const { adminClient, subscriptionId, customerId, externalReference } = params;
 
+  // 1) Try by subscription ID (exact match)
   if (subscriptionId) {
     const { data, error } = await adminClient
       .from("subscription_enrollments")
@@ -284,6 +286,26 @@ async function findEnrollment(params: {
     if (data) return data as EnrollmentRow;
   }
 
+  // 2) Try by external reference (enrollment ID or lead ID stored in metadata)
+  if (externalReference) {
+    // externalReference may be the enrollment UUID itself
+    const { data, error } = await adminClient
+      .from("subscription_enrollments")
+      .select(
+        "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata",
+      )
+      .eq("id", externalReference)
+      .maybeSingle();
+
+    if (error) {
+      // May fail if externalReference is not a valid UUID — that's fine
+      console.log("[asaas-webhook] externalReference lookup by id failed (may not be UUID)", { externalReference });
+    } else if (data) {
+      return data as EnrollmentRow;
+    }
+  }
+
+  // 3) Fallback: by customer ID (most recent enrollment for this customer)
   if (customerId) {
     const { data, error } = await adminClient
       .from("subscription_enrollments")
@@ -802,16 +824,64 @@ serve(async (req) => {
       return jsonResponse({ ok: true, ignored: true }, 200);
     }
 
-    const enrollment = await findEnrollment({
-      adminClient,
-      subscriptionId,
-      customerId,
-    });
+    // Retry logic: the Asaas webhook may arrive before create-subscription
+    // finishes inserting the enrollment row. We retry up to 3 times with delays.
+    let enrollment: EnrollmentRow | null = null;
+    const maxRetries = 3;
+    const retryDelayMs = 3000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      enrollment = await findEnrollment({
+        adminClient,
+        subscriptionId,
+        customerId,
+        externalReference,
+      });
+
+      if (enrollment) break;
+
+      if (attempt < maxRetries) {
+        console.log("[asaas-webhook] Enrollment not found, retrying...", {
+          attempt,
+          maxRetries,
+          subscriptionId,
+          customerId,
+          externalReference,
+        });
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+    }
 
     if (!enrollment) {
-      const processError = `Enrollment não encontrado para subscription_id=${subscriptionId ?? "null"} customer_id=${customerId ?? "null"}.`;
+      const processError = `Enrollment não encontrado para subscription_id=${subscriptionId ?? "null"} customer_id=${customerId ?? "null"} externalReference=${externalReference ?? "null"} após ${maxRetries} tentativas.`;
       await markEvent({ processed: false, processError });
       return jsonResponse({ error: processError }, 404);
+    }
+
+    // If the enrollment was found by customer/externalReference but has a
+    // different (or missing) asaas_subscription_id, update it so future
+    // webhooks can match by subscription_id directly.
+    if (subscriptionId) {
+      const { data: enrollmentFull } = await adminClient
+        .from("subscription_enrollments")
+        .select("asaas_subscription_id")
+        .eq("id", enrollment.id)
+        .single();
+
+      const currentSubId = normalizeString((enrollmentFull as any)?.asaas_subscription_id);
+
+      if (currentSubId !== subscriptionId) {
+        console.log("[asaas-webhook] Updating enrollment asaas_subscription_id", {
+          enrollmentId: enrollment.id,
+          oldSubscriptionId: currentSubId,
+          newSubscriptionId: subscriptionId,
+        });
+
+        await adminClient
+          .from("subscription_enrollments")
+          .update({ asaas_subscription_id: subscriptionId })
+          .eq("id", enrollment.id);
+      }
     }
 
     const subscriptionDetails = subscriptionId && asaasToken

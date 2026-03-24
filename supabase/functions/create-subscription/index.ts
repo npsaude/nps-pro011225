@@ -194,43 +194,14 @@ serve(async (req) => {
     user_email,
   });
 
-  const customer = await asaasPost<{ id: string }>({
-    url: "https://sandbox.asaas.com/api/v3/customers",
-    token: asaasToken,
-    body: {
-      name: user_name,
-      email: user_email,
-      phone: user_phone,
-      mobilePhone: user_phone,
-    },
-  });
-
-  console.log("[create-subscription] Creating Asaas subscription", {
-    customer_id: customer.id,
-    cycle,
-    value,
-    payment_method,
-  });
-
-  const subscription = await asaasPost<{ id: string }>({
-    url: "https://sandbox.asaas.com/api/v3/subscriptions",
-    token: asaasToken,
-    body: {
-      customer: customer.id,
-      billingType: payment_method,
-      value,
-      nextDueDate: toDateYYYYMMDD(tomorrow),
-      cycle,
-      description: (plan as any).name ?? "Assinatura",
-    },
-  });
-
+  // 1) Insert enrollment FIRST (before Asaas) so the webhook can find it
+  //    even if Asaas fires the webhook before we finish.
   const { data: enrollment, error: enrollmentError } = await adminClient
     .from("subscription_enrollments")
     .insert({
       plan_id,
-      asaas_subscription_id: subscription.id,
-      asaas_customer_id: customer.id,
+      asaas_subscription_id: null, // will be updated after Asaas call
+      asaas_customer_id: null,     // will be updated after Asaas call
       user_name,
       user_email,
       user_phone,
@@ -238,9 +209,10 @@ serve(async (req) => {
       payment_method,
       created_by: authUser.id,
       metadata: {
-        asaas: {
-          subscription_id: subscription.id,
-          customer_id: customer.id,
+        plan_snapshot: {
+          id: plan_id,
+          name: (plan as any).name,
+          price_cents: (plan as any).price_cents,
         },
       },
     })
@@ -257,7 +229,78 @@ serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify(enrollment), {
+  const enrollmentId = (enrollment as any).id as string;
+
+  // 2) Create Asaas customer
+  const customer = await asaasPost<{ id: string }>({
+    url: "https://sandbox.asaas.com/api/v3/customers",
+    token: asaasToken,
+    body: {
+      name: user_name,
+      email: user_email,
+      phone: user_phone,
+      mobilePhone: user_phone,
+    },
+  });
+
+  console.log("[create-subscription] Creating Asaas subscription", {
+    customer_id: customer.id,
+    cycle,
+    value,
+    payment_method,
+    enrollmentId,
+  });
+
+  // 3) Create Asaas subscription with enrollment ID as externalReference
+  //    so the webhook can find the enrollment even if subscription IDs differ.
+  const subscription = await asaasPost<{ id: string }>({
+    url: "https://sandbox.asaas.com/api/v3/subscriptions",
+    token: asaasToken,
+    body: {
+      customer: customer.id,
+      billingType: payment_method,
+      value,
+      nextDueDate: toDateYYYYMMDD(tomorrow),
+      cycle,
+      description: (plan as any).name ?? "Assinatura",
+      externalReference: enrollmentId,
+    },
+  });
+
+  // 4) Update enrollment with Asaas IDs
+  const { error: updateError } = await adminClient
+    .from("subscription_enrollments")
+    .update({
+      asaas_subscription_id: subscription.id,
+      asaas_customer_id: customer.id,
+      metadata: {
+        ...(typeof (enrollment as any).metadata === "object" && (enrollment as any).metadata
+          ? (enrollment as any).metadata
+          : {}),
+        asaas: {
+          subscription_id: subscription.id,
+          customer_id: customer.id,
+        },
+      },
+    })
+    .eq("id", enrollmentId);
+
+  if (updateError) {
+    console.error("[create-subscription] Failed to update enrollment with Asaas IDs", {
+      updateError,
+      enrollmentId,
+    });
+    // Don't fail — the enrollment exists and the webhook can still find it
+  }
+
+  // Re-fetch the updated enrollment to return complete data
+  const { data: updatedEnrollment } = await adminClient
+    .from("subscription_enrollments")
+    .select("*")
+    .eq("id", enrollmentId)
+    .single();
+
+  return new Response(JSON.stringify(updatedEnrollment ?? enrollment), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
