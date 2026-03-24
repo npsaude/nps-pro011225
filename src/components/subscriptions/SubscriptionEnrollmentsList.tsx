@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search, Users } from "lucide-react";
+import { Mail, Pencil, Plus, Search, Users } from "lucide-react";
 
 import {
   Card,
@@ -34,6 +34,7 @@ import {
   type SubscriptionEnrollment,
   type SubscriptionEnrollmentInput,
 } from "@/services/subscription-enrollments-service";
+import { reenviarAcessoAssinante } from "@/services/subscription-access-email-service";
 import {
   listarSubscriptionPlans,
   type SubscriptionPlan,
@@ -68,6 +69,7 @@ export default function SubscriptionEnrollmentsList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SubscriptionEnrollment | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sendingAccessId, setSendingAccessId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -134,6 +136,22 @@ export default function SubscriptionEnrollmentsList() {
       showError(e instanceof Error ? e.message : "Não foi possível salvar.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSendAccess = async (enrollment: SubscriptionEnrollment) => {
+    setSendingAccessId(enrollment.id);
+
+    try {
+      const updated = await reenviarAcessoAssinante(enrollment.id);
+      setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      showSuccess(`E-mail de acesso reenviado para ${enrollment.user_email}.`);
+    } catch (e) {
+      showError(
+        e instanceof Error ? e.message : "Não foi possível reenviar o acesso.",
+      );
+    } finally {
+      setSendingAccessId(null);
     }
   };
 
@@ -256,15 +274,28 @@ export default function SubscriptionEnrollmentsList() {
                         </TableCell>
 
                         <TableCell className="px-4 py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
-                            onClick={() => openEdit(r)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+                              onClick={() => void handleSendAccess(r)}
+                              title="Reenviar acesso"
+                              disabled={sendingAccessId === r.id}
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-full text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+                              onClick={() => openEdit(r)}
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
