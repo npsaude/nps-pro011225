@@ -16,7 +16,7 @@ import {
   type ServicesHealth,
 } from "@/services/service-health-service";
 
-type ServiceRowProps = {
+type ServiceCardProps = {
   icon: ReactNode;
   label: string;
   indicator: ServiceIndicator;
@@ -27,7 +27,7 @@ function getStatusMeta(status: ServiceIndicator["status"]) {
     return {
       label: "OK",
       badge: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900",
-      light: "bg-emerald-500 shadow-[0_0_16px_rgba(16,185,129,0.5)]",
+      dot: "bg-emerald-500 shadow-[0_0_14px_rgba(16,185,129,0.45)]",
     };
   }
 
@@ -35,14 +35,14 @@ function getStatusMeta(status: ServiceIndicator["status"]) {
     return {
       label: "Não funcionando",
       badge: "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900",
-      light: "bg-rose-500 shadow-[0_0_16px_rgba(244,63,94,0.5)]",
+      dot: "bg-rose-500 shadow-[0_0_14px_rgba(244,63,94,0.45)]",
     };
   }
 
   return {
     label: "Verificando",
     badge: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900",
-    light: "bg-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.5)]",
+    dot: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.45)]",
   };
 }
 
@@ -57,15 +57,15 @@ function MiniTrafficLight({ status }: { status: ServiceIndicator["status"] }) {
   const isYellow = status === "checking";
 
   return (
-    <div className="flex h-11 w-7 flex-col items-center justify-center gap-1 rounded-full bg-slate-900 px-1.5 py-1 shadow-inner dark:bg-slate-950">
-      <span className={`h-1.5 w-1.5 rounded-full ${isRed ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.55)]" : "bg-slate-600"}`} />
-      <span className={`h-1.5 w-1.5 rounded-full ${isYellow ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.55)]" : "bg-slate-600"}`} />
-      <span className={`h-1.5 w-1.5 rounded-full ${isGreen ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.55)]" : "bg-slate-600"}`} />
+    <div className="flex h-10 w-6 flex-col items-center justify-center gap-1 rounded-full bg-slate-900 px-1 py-1 shadow-inner dark:bg-slate-950">
+      <span className={`h-1.5 w-1.5 rounded-full ${isRed ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]" : "bg-slate-600"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${isYellow ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)]" : "bg-slate-600"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${isGreen ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]" : "bg-slate-600"}`} />
     </div>
   );
 }
 
-function ServiceRow({ icon, label, indicator }: ServiceRowProps) {
+function ServiceCard({ icon, label, indicator }: ServiceCardProps) {
   const status = getStatusMeta(indicator.status);
 
   return (
@@ -73,22 +73,27 @@ function ServiceRow({ icon, label, indicator }: ServiceRowProps) {
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:bg-slate-900 dark:focus:ring-slate-700"
+          className="flex h-14 w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700 dark:focus:ring-slate-700"
         >
-          <div className="flex min-w-0 items-center gap-3">
-            <MiniTrafficLight status={indicator.status} />
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">
-              {icon}
-            </div>
-            <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
-              {label}
-            </span>
+          <MiniTrafficLight status={indicator.status} />
+
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            {icon}
           </div>
 
-          <span className={`ml-3 h-2.5 w-2.5 shrink-0 rounded-full ${status.light}`} />
+          <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-slate-700 dark:text-slate-100">
+            {label}
+          </span>
+
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${status.dot}`} />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" align="start" className="max-w-xs rounded-2xl border-slate-200 bg-white p-3 text-slate-700 shadow-xl dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+
+      <TooltipContent
+        side="top"
+        align="start"
+        className="max-w-xs rounded-2xl border-slate-200 bg-white p-3 text-slate-700 shadow-xl dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+      >
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold">{label}</span>
@@ -156,48 +161,53 @@ export default function SubscriptionServicesStatusCard() {
 
   return (
     <TooltipProvider delayDuration={120}>
-      <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            <span>Serviços</span>
+      <Card className="rounded-[28px] border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                Serviços
+              </CardTitle>
+            </div>
+
             <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EEF0FF] text-[#6B6EEA] dark:bg-indigo-950/60 dark:text-indigo-300">
                 <Activity className="h-4 w-4" />
               </span>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-2xl"
+                className="h-9 w-9 rounded-full bg-slate-950 text-white hover:bg-slate-800 hover:text-white dark:bg-slate-900 dark:hover:bg-slate-800"
                 onClick={() => void load()}
                 disabled={refreshing}
               >
                 <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               </Button>
             </div>
-          </CardTitle>
+          </div>
+
+          <div className="h-px w-full bg-gradient-to-r from-slate-200 via-slate-100 to-transparent dark:from-slate-800 dark:via-slate-800/60 dark:to-transparent" />
         </CardHeader>
 
-        <CardContent className="space-y-2 pb-5">
-          <ServiceRow
-            icon={<Webhook className="h-4 w-4" />}
-            label="Webhook Asaas"
-            indicator={health.webhookAsaas}
-          />
-          <ServiceRow
-            icon={<Brain className="h-4 w-4" />}
-            label="IA"
-            indicator={health.ia}
-          />
-          <ServiceRow
-            icon={<Database className="h-4 w-4" />}
-            label="Supabase"
-            indicator={health.supabase}
-          />
-
-          <p className="pt-1 text-[11px] text-slate-400 dark:text-slate-500">
-            Passe o mouse sobre um serviço para ver os detalhes.
-          </p>
+        <CardContent className="space-y-3 pt-0">
+          <div className="grid gap-3 md:grid-cols-3">
+            <ServiceCard
+              icon={<Webhook className="h-4 w-4" />}
+              label="Webhook Asaas"
+              indicator={health.webhookAsaas}
+            />
+            <ServiceCard
+              icon={<Brain className="h-4 w-4" />}
+              label="IA"
+              indicator={health.ia}
+            />
+            <ServiceCard
+              icon={<Database className="h-4 w-4" />}
+              label="Supabase"
+              indicator={health.supabase}
+            />
+          </div>
 
           {loadError ? (
             <p className="text-xs text-rose-600 dark:text-rose-400">{loadError}</p>
