@@ -5,18 +5,31 @@
  */
 
 const PRECOS_POR_1K_TOKENS: Record<string, { input: number; output: number }> = {
-  "gpt-4.1":      { input: 0.002,   output: 0.008 },
-  "gpt-4.1-mini": { input: 0.0004,  output: 0.0016 },
-  "gpt-4o":       { input: 0.0025,  output: 0.01 },
-  "gpt-4o-mini":  { input: 0.00015, output: 0.0006 },
+  "gpt-4.1": { input: 0.002, output: 0.008 },
+  "gpt-4.1-mini": { input: 0.0004, output: 0.0016 },
+  "gpt-4o": { input: 0.0025, output: 0.01 },
+  "gpt-4o-mini": { input: 0.00015, output: 0.0006 },
+  "gpt-5.3-chat-latest": { input: 0.00175, output: 0.014 },
 };
+
+function getPrecoPorModelo(model: string): { input: number; output: number } | null {
+  const normalizedModel = model.toLowerCase();
+  const exactMatch = PRECOS_POR_1K_TOKENS[normalizedModel];
+  if (exactMatch) return exactMatch;
+
+  const prefixMatch = Object.entries(PRECOS_POR_1K_TOKENS)
+    .sort(([a], [b]) => b.length - a.length)
+    .find(([supportedModel]) => normalizedModel.startsWith(supportedModel));
+
+  return prefixMatch?.[1] ?? null;
+}
 
 function estimarCusto(
   promptTokens: number,
   completionTokens: number,
   model: string,
 ): number {
-  const preco = PRECOS_POR_1K_TOKENS[model];
+  const preco = getPrecoPorModelo(model);
   if (!preco) return 0;
   return (promptTokens / 1000) * preco.input + (completionTokens / 1000) * preco.output;
 }
