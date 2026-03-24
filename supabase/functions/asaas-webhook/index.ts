@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, asaas-access-token",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, asaas-access-token",
 };
 
 const ASAAS_BASE_URL = "https://api-sandbox.asaas.com/v3";
+const RESET_PASSWORD_URL = "https://conmedic.com.br/reset-password";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -18,10 +19,12 @@ type AsaasPayment = {
   status?: string;
   billingType?: string;
   dueDate?: string;
-  paymentDate?: string;
-  clientPaymentDate?: string;
+  paymentDate?: string | null;
+  clientPaymentDate?: string | null;
+  confirmedDate?: string | null;
   dateCreated?: string;
   value?: number;
+  description?: string;
   externalReference?: string;
 };
 
@@ -45,6 +48,8 @@ type AsaasWebhookPayload = {
 
 type EnrollmentRow = {
   id: string;
+  user_name: string;
+  user_email: string;
   status: string | null;
   cancelado: boolean;
   payment_method: string | null;
@@ -54,6 +59,10 @@ type EnrollmentRow = {
   ended_at: string | null;
   last_payment_at: string | null;
   metadata: unknown | null;
+};
+
+type AppSettingsRow = {
+  asaas_token?: string | null;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -72,6 +81,11 @@ function asObject(value: unknown): JsonRecord {
 function normalizeString(value: unknown) {
   const text = String(value ?? "").trim();
   return text || null;
+}
+
+function normalizeEmail(value: unknown) {
+  const text = normalizeString(value);
+  return text ? text.toLowerCase() : null;
 }
 
 function normalizeUpper(value: unknown) {
@@ -93,6 +107,7 @@ function pickPaymentTimestamp(payment: AsaasPayment | undefined, fallbackIso: st
   const candidates = [
     payment?.clientPaymentDate,
     payment?.paymentDate,
+    payment?.confirmedDate,
     payment?.dateCreated,
   ];
 
@@ -100,10 +115,8 @@ function pickPaymentTimestamp(payment: AsaasPayment | undefined, fallbackIso: st
     const text = normalizeString(candidate);
     if (!text) continue;
 
-    const parsed = new Date(text);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
-    }
+    const parsed = text.includes("T") ? new Date(text) : new Date(`${text}T12:00:00.000Z`);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
   }
 
   return fallbackIso;
@@ -158,40 +171,97 @@ function mapPaymentSignalToLocal(event: string | null, paymentStatus: string | n
   return null;
 }
 
-async function asaasGetSubscription(params: {
-  token: string;
-  subscriptionId: string;
-}) {
-  const response = await fetch(
-    `${ASAAS_BASE_URL}/subscriptions/${encodeURIComponent(params.subscriptionId)}`,
-    {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        access_token: params.token,
-      },
+async function asaasGet<T>(params: { token: string; path: string }) {
+  const response = await fetch(`${ASAAS_BASE_URL}${params.path}`, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      access_token: params.token,
     },
-  );
-
-  if (response.status === 404) {
-    console.warn("[asaas-webhook] Subscription not found in Asaas", {
-      subscriptionId: params.subscriptionId,
-    });
-    return null;
-  }
+  });
 
   const json = await response.json().catch(() => null);
 
+  if (response.status === 404) return null;
+
   if (!response.ok) {
-    console.error("[asaas-webhook] Failed to fetch Asaas subscription", {
+    console.error("[asaas-webhook] Failed to fetch Asaas resource", {
+      path: params.path,
       status: response.status,
-      subscriptionId: params.subscriptionId,
       response: json,
     });
-    throw new Error(`Erro Asaas (${response.status}) ao consultar assinatura.`);
+    throw new Error(`Erro Asaas (${response.status}) ao consultar recurso.`);
   }
 
-  return (json ?? null) as AsaasSubscription | null;
+  return json as T;
+}
+
+async function loadAppSettings(adminClient: ReturnType<typeof createClient>) {
+  const { data, error } = await adminClient
+    .from("app_settings")
+    .select("asaas_token")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as AppSettingsRow | null;
+}
+
+async function validateWebhookOrigin(params: {
+  webhookToken: string | null;
+  headerToken: string | null;
+  asaasToken: string | null;
+  payment: AsaasPayment | undefined;
+  subscription: AsaasSubscription | undefined;
+}) {
+  const { webhookToken, headerToken, asaasToken, payment, subscription } = params;
+
+  if (webhookToken && headerToken === webhookToken) {
+    return true;
+  }
+
+  if (!asaasToken) {
+    console.warn("[asaas-webhook] Cannot validate webhook: Asaas token missing");
+    return false;
+  }
+
+  const paymentId = normalizeString(payment?.id);
+  if (paymentId) {
+    const remotePayment = await asaasGet<AsaasPayment>({
+      token: asaasToken,
+      path: `/payments/${encodeURIComponent(paymentId)}`,
+    });
+
+    if (!remotePayment) return false;
+
+    const remoteStatus = normalizeUpper(remotePayment.status);
+    const remoteCustomer = normalizeString(remotePayment.customer);
+    const remoteSubscription = normalizeString(remotePayment.subscription);
+
+    const samePayment = normalizeString(remotePayment.id) === paymentId;
+    const sameStatus = remoteStatus === normalizeUpper(payment?.status);
+    const sameCustomer = remoteCustomer === normalizeString(payment?.customer);
+    const sameSubscription = remoteSubscription === normalizeString(payment?.subscription);
+
+    return Boolean(samePayment && sameStatus && sameCustomer && sameSubscription);
+  }
+
+  const subscriptionId = normalizeString(subscription?.id);
+  if (subscriptionId) {
+    const remoteSubscription = await asaasGet<AsaasSubscription>({
+      token: asaasToken,
+      path: `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    });
+
+    if (!remoteSubscription) return false;
+
+    return (
+      normalizeString(remoteSubscription.id) === subscriptionId &&
+      normalizeString(remoteSubscription.customer) === normalizeString(subscription?.customer)
+    );
+  }
+
+  return false;
 }
 
 async function findEnrollment(params: {
@@ -205,7 +275,7 @@ async function findEnrollment(params: {
     const { data, error } = await adminClient
       .from("subscription_enrollments")
       .select(
-        "id,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata",
+        "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata",
       )
       .eq("asaas_subscription_id", subscriptionId)
       .maybeSingle();
@@ -218,7 +288,7 @@ async function findEnrollment(params: {
     const { data, error } = await adminClient
       .from("subscription_enrollments")
       .select(
-        "id,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata,created_at",
+        "id,user_name,user_email,status,cancelado,payment_method,current_period_start,current_period_end,started_at,ended_at,last_payment_at,metadata,created_at",
       )
       .eq("asaas_customer_id", customerId)
       .order("created_at", { ascending: false })
@@ -231,6 +301,314 @@ async function findEnrollment(params: {
   return null;
 }
 
+function uint8ArrayToBase64WithLineBreaks(uint8Array: Uint8Array): string {
+  const base64 = base64Encode(uint8Array);
+  const lines: string[] = [];
+  for (let index = 0; index < base64.length; index += 76) {
+    lines.push(base64.substring(index, index + 76));
+  }
+  return lines.join("\r\n");
+}
+
+function buildMimeEmail(params: {
+  from: string;
+  fromName: string;
+  to: string;
+  subject: string;
+  htmlBody: string;
+}) {
+  const boundary = `----=_Part_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+  const encoder = new TextEncoder();
+  const subjectBase64 = base64Encode(encoder.encode(params.subject));
+
+  let email = "";
+  email += `From: ${params.fromName} <${params.from}>\r\n`;
+  email += `To: ${params.to}\r\n`;
+  email += `Subject: =?UTF-8?B?${subjectBase64}?=\r\n`;
+  email += `MIME-Version: 1.0\r\n`;
+  email += `Content-Type: multipart/alternative; boundary="${boundary}"\r\n`;
+  email += `\r\n`;
+  email += `--${boundary}\r\n`;
+  email += `Content-Type: text/html; charset=UTF-8\r\n`;
+  email += `Content-Transfer-Encoding: base64\r\n`;
+  email += `\r\n`;
+  email += uint8ArrayToBase64WithLineBreaks(encoder.encode(params.htmlBody)) + `\r\n`;
+  email += `--${boundary}--\r\n`;
+
+  return email;
+}
+
+async function sendEmailViaSMTP(params: {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  from: string;
+  fromName: string;
+  to: string;
+  subject: string;
+  htmlBody: string;
+}) {
+  const conn = await Deno.connectTls({ hostname: params.host, port: params.port });
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  async function readResponse() {
+    const buffer = new Uint8Array(4096);
+    const read = await conn.read(buffer);
+    if (read === null) return "";
+    return decoder.decode(buffer.subarray(0, read));
+  }
+
+  async function sendCommand(command: string) {
+    console.log("[asaas-webhook] SMTP >", command.replace(/\r\n/g, " ").slice(0, 80));
+    await conn.write(encoder.encode(command + "\r\n"));
+    const response = await readResponse();
+    console.log("[asaas-webhook] SMTP <", response.replace(/\r\n/g, " ").slice(0, 140));
+    return response;
+  }
+
+  try {
+    let response = await readResponse();
+    if (!response.startsWith("220")) {
+      throw new Error("Servidor SMTP não respondeu corretamente.");
+    }
+
+    response = await sendCommand("EHLO localhost");
+    if (!response.startsWith("250")) throw new Error("EHLO falhou.");
+
+    response = await sendCommand("AUTH LOGIN");
+    if (!response.startsWith("334")) throw new Error("AUTH LOGIN não suportado.");
+
+    response = await sendCommand(base64Encode(encoder.encode(params.username)));
+    if (!response.startsWith("334")) throw new Error("Usuário SMTP rejeitado.");
+
+    response = await sendCommand(base64Encode(encoder.encode(params.password)));
+    if (!response.startsWith("235")) throw new Error("Autenticação SMTP falhou.");
+
+    response = await sendCommand(`MAIL FROM:<${params.from}>`);
+    if (!response.startsWith("250")) throw new Error("MAIL FROM rejeitado.");
+
+    response = await sendCommand(`RCPT TO:<${params.to}>`);
+    if (!response.startsWith("250")) throw new Error(`Destinatário ${params.to} rejeitado.`);
+
+    response = await sendCommand("DATA");
+    if (!response.startsWith("354")) throw new Error("DATA rejeitado.");
+
+    const mimeEmail = buildMimeEmail(params);
+    await conn.write(encoder.encode(mimeEmail));
+    await conn.write(encoder.encode("\r\n.\r\n"));
+
+    response = await readResponse();
+    if (!response.startsWith("250")) throw new Error("Envio SMTP não confirmado.");
+
+    await sendCommand("QUIT");
+  } finally {
+    conn.close();
+  }
+}
+
+function buildRecoveryEmailHtml(params: { userName: string; recoveryUrl: string }) {
+  const firstName = normalizeString(params.userName)?.split(" ")[0] ?? "cliente";
+  return `
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#f7f8fc;padding:32px;color:#0f172a;">
+      <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:18px;padding:32px;border:1px solid #e2e8f0;">
+        <p style="margin:0 0 12px;font-size:16px;">Olá, ${firstName}.</p>
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+          Seu pagamento foi confirmado e seu acesso à Conmedic já está liberado.
+        </p>
+        <p style="margin:0 0 24px;font-size:15px;line-height:1.6;">
+          Para definir sua senha de acesso, clique no botão abaixo:
+        </p>
+        <p style="margin:0 0 24px;">
+          <a href="${params.recoveryUrl}" style="display:inline-block;background:#112a66;color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:12px;font-weight:700;">
+            Criar / redefinir minha senha
+          </a>
+        </p>
+        <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#475569;">
+          Se o botão não funcionar, copie e cole este link no navegador:
+        </p>
+        <p style="margin:0;font-size:13px;line-height:1.6;word-break:break-all;color:#334155;">
+          ${params.recoveryUrl}
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function extractRecoveryLink(data: unknown) {
+  const obj = asObject(data);
+  const properties = asObject(obj.properties);
+
+  return (
+    normalizeString(properties.action_link) ??
+    normalizeString(obj.action_link) ??
+    normalizeString(obj.actionLink) ??
+    normalizeString(obj.url)
+  );
+}
+
+async function findAuthUserByEmail(adminClient: ReturnType<typeof createClient>, email: string) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  for (let page = 1; page <= 5; page += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+
+    if (error) throw error;
+
+    const user = (data.users ?? []).find(
+      (item) => normalizeEmail(item.email) === normalizedEmail,
+    );
+
+    if (user) return user;
+    if ((data.users ?? []).length < 200) break;
+  }
+
+  return null;
+}
+
+async function ensureAuthUserAndRecoveryEmail(params: {
+  adminClient: ReturnType<typeof createClient>;
+  enrollment: EnrollmentRow;
+  metadata: JsonRecord;
+}) {
+  const { adminClient, enrollment, metadata } = params;
+
+  const normalizedEmail = normalizeEmail(enrollment.user_email);
+  if (!normalizedEmail) {
+    return { sent: false, metadataPatch: null };
+  }
+
+  const accessEmailMetadata = asObject(metadata.access_email);
+  if (normalizeString(accessEmailMetadata.sent_at)) {
+    return { sent: false, metadataPatch: accessEmailMetadata };
+  }
+
+  const smtpHost = Deno.env.get("SMTP_HOST") ?? "smtp.hostinger.com";
+  const smtpPort = parseInt(Deno.env.get("SMTP_PORT") ?? "465");
+  const smtpUser = Deno.env.get("SMTP_USER") ?? "";
+  const smtpPass = Deno.env.get("SMTP_PASS") ?? "";
+  const smtpFrom = Deno.env.get("SMTP_FROM") ?? smtpUser;
+  const smtpFromName = Deno.env.get("SMTP_FROM_NAME") ?? "Conmedic";
+
+  if (!smtpUser || !smtpPass) {
+    throw new Error("Configurações SMTP não encontradas para envio do e-mail de acesso.");
+  }
+
+  let authUser = await findAuthUserByEmail(adminClient, normalizedEmail);
+
+  if (!authUser) {
+    const temporaryPassword = `${crypto.randomUUID()}A!9`;
+    const { data, error } = await adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: {
+        role: "MEDICO",
+        nome: enrollment.user_name,
+      },
+    });
+
+    if (error) {
+      const message = error.message.toLowerCase();
+      if (!message.includes("already") && !message.includes("registered")) {
+        throw error;
+      }
+    } else {
+      authUser = data.user;
+    }
+
+    if (!authUser) {
+      authUser = await findAuthUserByEmail(adminClient, normalizedEmail);
+    }
+  }
+
+  if (!authUser?.id) {
+    throw new Error("Não foi possível localizar/criar o usuário no Auth após o pagamento confirmado.");
+  }
+
+  const { error: usuariosSistemaError } = await adminClient
+    .from("usuarios_sistema")
+    .upsert(
+      {
+        id_user: authUser.id,
+        nome: enrollment.user_name,
+        email: normalizedEmail,
+        celular: null,
+        regra: "MEDICO",
+        ativo: true,
+      },
+      { onConflict: "id_user" },
+    );
+
+  if (usuariosSistemaError) {
+    throw usuariosSistemaError;
+  }
+
+  const { error: medicoError } = await adminClient
+    .from("medicos")
+    .upsert(
+      {
+        id: authUser.id,
+        nome: enrollment.user_name,
+        email: normalizedEmail,
+        telefone_whatsapp: null,
+        crm: null,
+        clinicas_ids: [],
+        hospitais_ids: [],
+      },
+      { onConflict: "id" },
+    );
+
+  if (medicoError) {
+    throw medicoError;
+  }
+
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "recovery",
+    email: normalizedEmail,
+    options: {
+      redirectTo: RESET_PASSWORD_URL,
+    },
+  });
+
+  if (linkError) throw linkError;
+
+  const recoveryUrl = extractRecoveryLink(linkData);
+  if (!recoveryUrl) {
+    throw new Error("Não foi possível gerar o link de recuperação de senha.");
+  }
+
+  await sendEmailViaSMTP({
+    host: smtpHost,
+    port: smtpPort,
+    username: smtpUser,
+    password: smtpPass,
+    from: smtpFrom,
+    fromName: smtpFromName,
+    to: normalizedEmail,
+    subject: "Seu acesso à Conmedic foi liberado",
+    htmlBody: buildRecoveryEmailHtml({
+      userName: enrollment.user_name,
+      recoveryUrl,
+    }),
+  });
+
+  return {
+    sent: true,
+    metadataPatch: {
+      sent_at: new Date().toISOString(),
+      type: "RECOVERY",
+      email: normalizedEmail,
+      auth_user_id: authUser.id,
+    },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -238,21 +616,6 @@ serve(async (req) => {
 
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method Not Allowed" }, 405);
-  }
-
-  const webhookToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
-  const headerToken = req.headers.get("asaas-access-token");
-
-  if (!webhookToken) {
-    console.error("[asaas-webhook] Missing ASAAS_WEBHOOK_TOKEN secret");
-    return jsonResponse({ error: "Webhook secret not configured" }, 500);
-  }
-
-  if (!headerToken || headerToken !== webhookToken) {
-    console.warn("[asaas-webhook] Invalid webhook token", {
-      hasHeaderToken: Boolean(headerToken),
-    });
-    return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -280,14 +643,10 @@ serve(async (req) => {
   const providerEventId = normalizeString(payload.id);
   const payment = payload.payment;
   const subscription = payload.subscription;
-  const subscriptionId =
-    normalizeString(payment?.subscription) ?? normalizeString(subscription?.id);
-  const customerId =
-    normalizeString(payment?.customer) ?? normalizeString(subscription?.customer);
+  const subscriptionId = normalizeString(payment?.subscription) ?? normalizeString(subscription?.id);
+  const customerId = normalizeString(payment?.customer) ?? normalizeString(subscription?.customer);
   const paymentId = normalizeString(payment?.id);
-  const externalReference =
-    normalizeString(payment?.externalReference) ??
-    normalizeString(subscription?.externalReference);
+  const externalReference = normalizeString(payment?.externalReference) ?? normalizeString(subscription?.externalReference);
 
   console.log("[asaas-webhook] Received event", {
     eventName,
@@ -300,84 +659,6 @@ serve(async (req) => {
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   let eventRowId: string | null = null;
-
-  if (providerEventId) {
-    const { data: existingEvent, error: existingEventError } = await adminClient
-      .from("asaas_webhook_events")
-      .select("id, processed")
-      .eq("provider_event_id", providerEventId)
-      .maybeSingle();
-
-    if (existingEventError) {
-      console.error("[asaas-webhook] Failed to check existing event", {
-        existingEventError,
-        providerEventId,
-      });
-      return jsonResponse({ error: "Failed to check event" }, 500);
-    }
-
-    if (existingEvent?.processed) {
-      console.log("[asaas-webhook] Duplicate processed event ignored", {
-        providerEventId,
-        eventRowId: existingEvent.id,
-      });
-      return jsonResponse({ ok: true, duplicate: true }, 200);
-    }
-  }
-
-  const { data: insertedEvent, error: insertEventError } = await adminClient
-    .from("asaas_webhook_events")
-    .insert({
-      provider_event_id: providerEventId,
-      event: eventName,
-      subscription_id: subscriptionId,
-      customer_id: customerId,
-      external_reference: externalReference,
-      payment_id: paymentId,
-      payload,
-      processed: false,
-      process_error: null,
-    })
-    .select("id")
-    .single();
-
-  if (insertEventError) {
-    const code = String((insertEventError as { code?: string }).code ?? "");
-
-    if (code === "23505" && providerEventId) {
-      const { data: duplicateEvent, error: duplicateEventError } = await adminClient
-        .from("asaas_webhook_events")
-        .select("id, processed")
-        .eq("provider_event_id", providerEventId)
-        .maybeSingle();
-
-      if (duplicateEventError) {
-        console.error("[asaas-webhook] Failed to load duplicate event", {
-          duplicateEventError,
-          providerEventId,
-        });
-        return jsonResponse({ error: "Failed to load duplicate event" }, 500);
-      }
-
-      if (duplicateEvent?.processed) {
-        console.log("[asaas-webhook] Duplicate event already processed", {
-          providerEventId,
-          eventRowId: duplicateEvent.id,
-        });
-        return jsonResponse({ ok: true, duplicate: true }, 200);
-      }
-
-      eventRowId = duplicateEvent?.id ?? null;
-    } else {
-      console.error("[asaas-webhook] Failed to store incoming event", {
-        insertEventError,
-        providerEventId,
-      });
-      return jsonResponse({ error: "Failed to store event" }, 500);
-    }
-  } else {
-    eventRowId = insertedEvent.id;
-  }
 
   const markEvent = async (params: {
     processed: boolean;
@@ -406,24 +687,114 @@ serve(async (req) => {
 
   try {
     if (!eventName) {
-      await markEvent({ processed: true, processError: "Evento não informado." });
-      return jsonResponse({ ok: true, ignored: true }, 200);
+      return jsonResponse({ error: "Evento não informado." }, 400);
     }
 
     const isSubscriptionEvent = eventName.startsWith("SUBSCRIPTION_");
     const isPaymentEvent = eventName.startsWith("PAYMENT_");
 
     if (!isSubscriptionEvent && !isPaymentEvent) {
-      console.log("[asaas-webhook] Unsupported event ignored", { eventName });
-      await markEvent({ processed: true, processError: null });
       return jsonResponse({ ok: true, ignored: true }, 200);
     }
 
-    if (!subscriptionId && !customerId) {
-      console.warn("[asaas-webhook] Event without subscription/customer reference", {
+    const settings = await loadAppSettings(adminClient);
+    const asaasToken = normalizeString(settings?.asaas_token);
+    const webhookToken = normalizeString(Deno.env.get("ASAAS_WEBHOOK_TOKEN"));
+    const headerToken = normalizeString(req.headers.get("asaas-access-token"));
+
+    const validated = await validateWebhookOrigin({
+      webhookToken,
+      headerToken,
+      asaasToken,
+      payment,
+      subscription,
+    });
+
+    if (!validated) {
+      console.warn("[asaas-webhook] Unauthorized webhook", {
         eventName,
         providerEventId,
+        hasHeaderToken: Boolean(headerToken),
+        hasWebhookToken: Boolean(webhookToken),
       });
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    if (providerEventId) {
+      const { data: existingEvent, error: existingEventError } = await adminClient
+        .from("asaas_webhook_events")
+        .select("id, processed")
+        .eq("provider_event_id", providerEventId)
+        .maybeSingle();
+
+      if (existingEventError) {
+        console.error("[asaas-webhook] Failed to check existing event", {
+          existingEventError,
+          providerEventId,
+        });
+        return jsonResponse({ error: "Failed to check event" }, 500);
+      }
+
+      if (existingEvent?.processed) {
+        console.log("[asaas-webhook] Duplicate processed event ignored", {
+          providerEventId,
+          eventRowId: existingEvent.id,
+        });
+        return jsonResponse({ ok: true, duplicate: true }, 200);
+      }
+    }
+
+    const { data: insertedEvent, error: insertEventError } = await adminClient
+      .from("asaas_webhook_events")
+      .insert({
+        provider_event_id: providerEventId,
+        event: eventName,
+        subscription_id: subscriptionId,
+        customer_id: customerId,
+        external_reference: externalReference,
+        payment_id: paymentId,
+        payload,
+        processed: false,
+        process_error: null,
+      })
+      .select("id")
+      .single();
+
+    if (insertEventError) {
+      const code = String((insertEventError as { code?: string }).code ?? "");
+
+      if (code === "23505" && providerEventId) {
+        const { data: duplicateEvent, error: duplicateEventError } = await adminClient
+          .from("asaas_webhook_events")
+          .select("id, processed")
+          .eq("provider_event_id", providerEventId)
+          .maybeSingle();
+
+        if (duplicateEventError) {
+          console.error("[asaas-webhook] Failed to load duplicate event", {
+            duplicateEventError,
+            providerEventId,
+          });
+          return jsonResponse({ error: "Failed to load duplicate event" }, 500);
+        }
+
+        if (duplicateEvent?.processed) {
+          return jsonResponse({ ok: true, duplicate: true }, 200);
+        }
+
+        eventRowId = duplicateEvent?.id ?? null;
+      } else {
+        console.error("[asaas-webhook] Failed to store incoming event", {
+          insertEventError,
+          providerEventId,
+        });
+        return jsonResponse({ error: "Failed to store event" }, 500);
+      }
+    } else {
+      eventRowId = insertedEvent.id;
+    }
+
+    if (!subscriptionId && !customerId) {
       await markEvent({
         processed: true,
         processError: "Evento sem subscription/customer para vinculação.",
@@ -439,47 +810,24 @@ serve(async (req) => {
 
     if (!enrollment) {
       const processError = `Enrollment não encontrado para subscription_id=${subscriptionId ?? "null"} customer_id=${customerId ?? "null"}.`;
-      console.warn("[asaas-webhook] Enrollment not found", {
-        eventName,
-        providerEventId,
-        subscriptionId,
-        customerId,
-      });
       await markEvent({ processed: false, processError });
       return jsonResponse({ error: processError }, 404);
     }
 
-    let asaasToken: string | null = null;
-    if (subscriptionId) {
-      const { data: settings, error: settingsError } = await adminClient
-        .from("app_settings")
-        .select("asaas_token")
-        .limit(1)
-        .maybeSingle();
-
-      if (settingsError) {
-        console.error("[asaas-webhook] Failed to load app settings", {
-          settingsError,
-        });
-        await markEvent({
-          processed: false,
-          processError: "Falha ao carregar token Asaas do app_settings.",
-          enrollmentId: enrollment.id,
-        });
-        return jsonResponse({ error: "Failed to load settings" }, 500);
-      }
-
-      asaasToken = normalizeString((settings as { asaas_token?: string } | null)?.asaas_token);
-    }
-
     const subscriptionDetails = subscriptionId && asaasToken
-      ? await asaasGetSubscription({ token: asaasToken, subscriptionId })
+      ? await asaasGet<AsaasSubscription>({
+          token: asaasToken,
+          path: `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+        })
       : subscription ?? null;
 
     const nowIso = new Date().toISOString();
     const paymentSignal = mapPaymentSignalToLocal(eventName, payment?.status ?? null);
     const subscriptionSignal = mapSubscriptionStatusToLocal(subscriptionDetails?.status ?? subscription?.status ?? null);
     const effectiveSignal = subscriptionSignal ?? paymentSignal;
+
+    const currentMetadata = asObject(enrollment.metadata);
+    const currentAsaasMetadata = asObject(currentMetadata.asaas);
 
     const nextPeriodEnd =
       endOfDayIso(subscriptionDetails?.nextDueDate) ??
@@ -498,8 +846,16 @@ serve(async (req) => {
     const isCanceled = cancelado || localStatus === "CANCELED";
     const isPaused = localStatus === "PAUSED";
 
-    const currentMetadata = asObject(enrollment.metadata);
-    const currentAsaasMetadata = asObject(currentMetadata.asaas);
+    let accessEmailPatch: JsonRecord | null = asObject(currentMetadata.access_email);
+
+    if (isPaymentSuccess) {
+      const accessEmailResult = await ensureAuthUserAndRecoveryEmail({
+        adminClient,
+        enrollment,
+        metadata: currentMetadata,
+      });
+      accessEmailPatch = accessEmailResult.metadataPatch;
+    }
 
     const nextMetadata = {
       ...currentMetadata,
@@ -525,6 +881,7 @@ serve(async (req) => {
           next_due_date: normalizeString(subscriptionDetails?.nextDueDate),
         },
       },
+      access_email: accessEmailPatch,
     };
 
     const updatePayload = {
@@ -576,6 +933,7 @@ serve(async (req) => {
       cancelado: isCanceled,
       current_period_end: updatePayload.current_period_end,
       last_payment_at: updatePayload.last_payment_at,
+      accessEmailSent: Boolean(normalizeString(asObject(nextMetadata.access_email).sent_at)),
     });
 
     return jsonResponse({ ok: true, enrollment_id: enrollment.id, status: localStatus }, 200);
