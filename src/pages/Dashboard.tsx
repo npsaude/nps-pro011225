@@ -51,6 +51,7 @@ import {
 import GlosaGauge from "@/components/dashboard/GlosaGauge";
 import RegionBubbleMap from "@/components/dashboard/RegionBubbleMap";
 import DashboardMedicoAdmin from "@/components/dashboard/DashboardMedicoAdmin";
+import SubscriptionServicesStatusCard from "@/components/subscriptions/SubscriptionServicesStatusCard";
 import { useSystemUser } from "@/hooks/use-system-user";
 import { useSuperAdminMetrics } from "@/hooks/use-superadmin-metrics";
 import { useSuperAdminChartData } from "@/hooks/use-superadmin-chart-data";
@@ -321,6 +322,12 @@ const Dashboard = () => {
 
             {!systemUserLoading && !isMedico && (
               <>
+                {isSuperAdmin ? (
+                  <section>
+                    <SubscriptionServicesStatusCard />
+                  </section>
+                ) : null}
+
                 {/* Filtros principais */}
                 <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-2">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">

@@ -16,7 +16,6 @@ import {
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
-import SubscriptionServicesStatusCard from "@/components/subscriptions/SubscriptionServicesStatusCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
@@ -268,10 +267,6 @@ export default function AdminSubscriptionsDashboard() {
               </Card>
             ) : (
               <>
-                <section>
-                  <SubscriptionServicesStatusCard />
-                </section>
-
                 {/* Métricas */}
                 <section className="grid gap-4 lg:grid-cols-3">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
