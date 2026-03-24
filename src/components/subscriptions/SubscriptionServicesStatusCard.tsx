@@ -11,15 +11,23 @@ import {
 } from "@/components/ui/tooltip";
 import {
   carregarSaudeDosServicos,
+  carregarUsoIA,
   createCheckingHealth,
+  type IAUsageMetrics,
   type ServiceIndicator,
   type ServicesHealth,
 } from "@/services/service-health-service";
+
+type ServiceMetric = {
+  label: string;
+  value: string;
+};
 
 type ServiceCardProps = {
   icon: ReactNode;
   label: string;
   indicator: ServiceIndicator;
+  metrics?: ServiceMetric[];
 };
 
 function getStatusMeta(status: ServiceIndicator["status"]) {
@@ -51,6 +59,22 @@ function formatCheckedAt(value: string | null) {
   return new Date(value).toLocaleString("pt-BR");
 }
 
+function formatUsd(value: number) {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
+}
+
+function createCheckingUsage(): IAUsageMetrics {
+  return {
+    totalUsd: 0,
+    currentMonthUsd: 0,
+  };
+}
+
 function MiniTrafficLight({ status }: { status: ServiceIndicator["status"] }) {
   const isGreen = status === "ok";
   const isRed = status === "error";
@@ -65,15 +89,16 @@ function MiniTrafficLight({ status }: { status: ServiceIndicator["status"] }) {
   );
 }
 
-function ServiceCard({ icon, label, indicator }: ServiceCardProps) {
+function ServiceCard({ icon, label, indicator, metrics }: ServiceCardProps) {
   const status = getStatusMeta(indicator.status);
+  const hasMetrics = (metrics?.length ?? 0) > 0;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="flex h-14 w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700 dark:focus:ring-slate-700"
+          className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700 dark:focus:ring-slate-700"
         >
           <MiniTrafficLight status={indicator.status} />
 
@@ -81,9 +106,27 @@ function ServiceCard({ icon, label, indicator }: ServiceCardProps) {
             {icon}
           </div>
 
-          <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-slate-700 dark:text-slate-100">
-            {label}
-          </span>
+          <div className="min-w-0 flex-1 text-left">
+            <span className="block truncate text-sm font-medium text-slate-700 dark:text-slate-100">
+              {label}
+            </span>
+
+            {hasMetrics ? (
+              <div className="mt-1 space-y-0.5">
+                {metrics?.map((metric) => (
+                  <div
+                    key={metric.label}
+                    className="flex items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400"
+                  >
+                    <span>{metric.label}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {metric.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
           <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${status.dot}`} />
         </button>
@@ -115,6 +158,7 @@ function ServiceCard({ icon, label, indicator }: ServiceCardProps) {
 
 export default function SubscriptionServicesStatusCard() {
   const [health, setHealth] = useState<ServicesHealth>(createCheckingHealth());
+  const [iaUsage, setIaUsage] = useState<IAUsageMetrics>(createCheckingUsage());
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -122,10 +166,16 @@ export default function SubscriptionServicesStatusCard() {
     setRefreshing(true);
     setLoadError(null);
     setHealth(createCheckingHealth());
+    setIaUsage(createCheckingUsage());
 
     try {
-      const data = await carregarSaudeDosServicos();
-      setHealth(data);
+      const [healthData, iaUsageData] = await Promise.all([
+        carregarSaudeDosServicos(),
+        carregarUsoIA(),
+      ]);
+
+      setHealth(healthData);
+      setIaUsage(iaUsageData);
     } catch (error) {
       const message =
         error instanceof Error
@@ -201,6 +251,10 @@ export default function SubscriptionServicesStatusCard() {
               icon={<Brain className="h-4 w-4" />}
               label="IA"
               indicator={health.ia}
+              metrics={[
+                { label: "Uso total", value: formatUsd(iaUsage.totalUsd) },
+                { label: "Mês atual", value: formatUsd(iaUsage.currentMonthUsd) },
+              ]}
             />
             <ServiceCard
               icon={<Database className="h-4 w-4" />}
