@@ -46,21 +46,40 @@ export async function ensureCurrentUserSubscriptionValid(): Promise<void> {
     return;
   }
 
-  // A edge function respondeu com sucesso — verificar o campo valid
-  const valid = Boolean((data as any)?.valid);
+  // Se data veio como string (edge function retornou texto em vez de JSON parsed),
+  // tenta parsear manualmente antes de avaliar.
+  let parsed: Record<string, unknown> | null = null;
+
+  if (typeof data === "string") {
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      // Não é JSON válido → fail-open
+      console.warn("[subscription-validity] data is non-JSON string, skipping check:", data);
+      return;
+    }
+  } else if (data && typeof data === "object") {
+    parsed = data as Record<string, unknown>;
+  }
+
+  // Se não conseguiu obter um objeto válido → fail-open
+  if (!parsed) {
+    console.warn("[subscription-validity] no parseable data, skipping check:", data);
+    return;
+  }
+
+  const valid = Boolean(parsed.valid);
 
   if (valid) return;
 
   // Só bloqueia se a resposta for explicitamente valid: false
-  const reason = (data as any)?.reason as string | undefined;
-  const currentPeriodEnd = ((data as any)?.current_period_end ?? null) as
-    | string
-    | null;
+  const reason = parsed.reason as string | undefined;
+  const currentPeriodEnd = (parsed.current_period_end ?? null) as string | null;
 
   console.warn("[subscription-validity] subscription invalid:", {
     reason,
     currentPeriodEnd,
-    data,
+    data: parsed,
   });
 
   await supabase.auth.signOut();
