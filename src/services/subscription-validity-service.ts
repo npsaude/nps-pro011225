@@ -68,11 +68,12 @@ export async function ensureCurrentUserSubscriptionValid(): Promise<void> {
     return;
   }
 
-  const valid = Boolean(parsed.valid);
+  // A edge function pode retornar "valid" ou "active" dependendo da versão deployada
+  const valid = Boolean(parsed.valid ?? parsed.active);
 
   if (valid) return;
 
-  // Só bloqueia se a resposta for explicitamente valid: false
+  // Só bloqueia se a resposta for explicitamente valid/active: false
   const reason = parsed.reason as string | undefined;
   const currentPeriodEnd = (parsed.current_period_end ?? null) as string | null;
 
