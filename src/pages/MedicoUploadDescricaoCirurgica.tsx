@@ -814,10 +814,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setAnalyzingProgress(100);
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      showSuccess("Guia de solicitação processada com sucesso!");
-      setFilesSolicitacao([]);
+      // Fechar overlay primeiro para evitar erro removeChild no DOM
       setShowAnalyzingScreen(false);
-
       setSolicitacaoEnviada(true);
 
       if (consistencyCheckEnabled) {
@@ -865,11 +863,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
       }
 
+      // Mudar view primeiro (desmonta a lista de arquivos), depois limpar array, toast por último
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
         setView("pergunta_guia_autorizacao");
       }
+      setFilesSolicitacao([]);
+      showSuccess("Guia de solicitação processada com sucesso!");
     } catch (err) {
       const message =
         err instanceof Error
@@ -1128,10 +1129,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      showSuccess("Guia de autorização processada com sucesso!");
-      setFilesGuia([]);
+      // Fechar overlay primeiro para evitar erro removeChild no DOM
       setShowAnalyzingScreen(false);
-
       setAutorizacaoEnviada(true);
 
       // Sincronizar carater_cirurgia extraído pela IA com o estado local
@@ -1237,11 +1236,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         }
       }
 
+      // Mudar view primeiro (desmonta a lista de arquivos), depois limpar array, toast por último
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
         setView("upload_descricao");
       }
+      setFilesGuia([]);
+      showSuccess("Guia de autorização processada com sucesso!");
     } catch (err) {
       const message =
         err instanceof Error
@@ -1400,8 +1402,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      showSuccess("Descrição cirúrgica processada com sucesso!");
-      setFilesDescricao([]);
+      // Fechar overlay primeiro para evitar erro removeChild no DOM
       setShowAnalyzingScreen(false);
 
       // Check if any procedures need review
@@ -1499,9 +1500,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           setPendingNavigation(() => () => setView("pergunta_honorarios"));
         }
         setShowConsistencyTable(true);
+        setFilesDescricao([]);
+        showSuccess("Descrição cirúrgica processada com sucesso!");
         return;
       }
 
+      // Mudar view/navegar primeiro (desmonta a lista de arquivos), depois limpar array, toast por último
       if (temRevisao && revisaoData && revisaoData.length > 0) {
         // Show procedure review dialog before proceeding
         setProcedimentosRevisao(revisaoData);
@@ -1512,6 +1516,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       } else {
         setView("pergunta_honorarios");
       }
+      setFilesDescricao([]);
+      showSuccess("Descrição cirúrgica processada com sucesso!");
     } catch (err) {
       const message =
         err instanceof Error
