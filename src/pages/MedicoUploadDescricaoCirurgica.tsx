@@ -3077,7 +3077,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 type="file"
                 multiple
                 className="hidden"
-                accept="image/*,.heic,.heif,application/pdf"
+                accept="image/*,image/heic,image/heif,.heic,.heif,application/pdf"
                 onChange={handleFileChangeSolicitacao}
               />
 
@@ -3223,7 +3223,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 type="file"
                 multiple
                 className="hidden"
-                accept="image/*,.heic,.heif,application/pdf"
+                accept="image/*,image/heic,image/heif,.heic,.heif,application/pdf"
                 onChange={handleFileChangeGuia}
               />
 
@@ -3296,7 +3296,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
           {view === "upload_descricao" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
-              <Input id="files-upload-descricao" ref={fileInputRefDescricao} type="file" multiple className="hidden" accept="image/*,.heic,.heif,application/pdf" onChange={handleFileChangeDescricao} />
+              <Input id="files-upload-descricao" ref={fileInputRefDescricao} type="file" multiple className="hidden" accept="image/*,image/heic,image/heif,.heic,.heif,application/pdf" onChange={handleFileChangeDescricao} />
               <div className="mb-6">
                 <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">{medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}</h1>
                 <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
