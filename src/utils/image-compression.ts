@@ -1,4 +1,47 @@
 import imageCompression from 'browser-image-compression';
+import heic2any from 'heic2any';
+
+/**
+ * Detect if a file is HEIC/HEIF format (by extension or MIME type).
+ * iOS sometimes reports HEIC files as "image/heic", "image/heif", or even empty type.
+ */
+export function isHeicFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.heic') || name.endsWith('.heif')) return true;
+  if (file.type === 'image/heic' || file.type === 'image/heif') return true;
+  return false;
+}
+
+/**
+ * Convert a HEIC/HEIF file to JPEG. Returns the original file if not HEIC.
+ */
+export async function convertHeicToJpeg(file: File): Promise<File> {
+  if (!isHeicFile(file)) return file;
+
+  try {
+    console.log(`[HEIC] Converting ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) to JPEG...`);
+    const result = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.85,
+    });
+
+    // heic2any can return a single Blob or an array of Blobs (for multi-image HEIC)
+    const jpegBlob = Array.isArray(result) ? result[0] : result;
+
+    const newName = file.name.replace(/\.(heic|heif)$/i, '') + '.jpg';
+    const jpegFile = new File([jpegBlob], newName, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
+
+    console.log(`[HEIC] Converted ${file.name} -> ${newName} (${(jpegFile.size / 1024 / 1024).toFixed(2)} MB)`);
+    return jpegFile;
+  } catch (error) {
+    console.error('[HEIC] Conversion failed:', error);
+    throw new Error(`Não foi possível converter o arquivo HEIC "${file.name}". Tente exportar como JPEG antes de enviar.`);
+  }
+}
 
 /**
  * Intelligent image compression utility.
@@ -7,8 +50,14 @@ import imageCompression from 'browser-image-compression';
  */
 export async function compressImageIfNeeded(file: File): Promise<File> {
   // If not an image (e.g. PDF), return as is.
-  if (!file.type.startsWith('image/')) {
+  if (!file.type.startsWith('image/') && !isHeicFile(file)) {
     return file;
+  }
+
+  // Convert HEIC to JPEG first
+  let processedFile = file;
+  if (isHeicFile(file)) {
+    processedFile = await convertHeicToJpeg(file);
   }
 
   // Options specifically tuned for OCR / reading text from documents
@@ -21,7 +70,7 @@ export async function compressImageIfNeeded(file: File): Promise<File> {
 
   try {
     // browser-image-compression returns a Blob, so we recreate the File to keep name/type
-    const compressedBlob = await imageCompression(file, options);
+    const compressedBlob = await imageCompression(processedFile, options);
     
     // Create new file with original name (but change extension to .jpg if it was another format and got converted)
     const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
