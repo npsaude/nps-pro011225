@@ -209,9 +209,9 @@ function SuperAdminMenu({
             className={currentCadastroSub === "modelos-descricao" ? blockItemActive : blockItemInactive}
             onClick={() => navigate("/admin/modelos-descricao-cirurgica")}
           >
-            <span className="ml-7 flex items-center gap-1.5">
-              <Scissors className="h-3.5 w-3.5 opacity-70" />
-              Modelos Desc. Cirúrgica
+            <span className="ml-7 flex items-center gap-1.5 whitespace-nowrap">
+              <Scissors className="h-3.5 w-3.5 opacity-70 flex-shrink-0" />
+              <span className="truncate">Modelos Descrição</span>
             </span>
           </button>
         </div>
