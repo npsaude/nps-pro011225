@@ -18,6 +18,7 @@ import {
   Building2,
   UserRound,
   Upload,
+  Scissors,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -37,7 +38,7 @@ interface AdminSidebarProps {
     | "cadastro"
     | "config"
     | "assinaturas";
-  cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft";
+  cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft" | "modelos-descricao";
   documentosSubsection?:
     | "guia-solicitacao"
     | "guia-autorizacao"
@@ -202,6 +203,15 @@ function SuperAdminMenu({
             <span className="ml-7 flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 opacity-70" />
               Modelos GFT
+            </span>
+          </button>
+          <button
+            className={currentCadastroSub === "modelos-descricao" ? blockItemActive : blockItemInactive}
+            onClick={() => navigate("/admin/modelos-descricao-cirurgica")}
+          >
+            <span className="ml-7 flex items-center gap-1.5">
+              <Scissors className="h-3.5 w-3.5 opacity-70" />
+              Modelos Desc. Cirúrgica
             </span>
           </button>
         </div>
@@ -618,6 +628,7 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/hospitais")) return "hospitais";
     if (path.startsWith("/cadastro/medicos")) return "medicos";
     if (path.startsWith("/cadastro/gft")) return "gft";
+    if (path.startsWith("/admin/modelos-descricao-cirurgica")) return "modelos-descricao";
     return undefined;
   }, [location.pathname, cadastroSubsection]);
 

@@ -51,6 +51,8 @@ import DescricaoCirurgicaAdminPage from "./pages/DescricaoCirurgicaAdmin";
 import DescricaoCirurgicaAdminFormPage from "./pages/DescricaoCirurgicaAdminForm";
 import GftCadastro from "./pages/GftCadastro";
 import AdminOrSuperAdminGuard from "@/components/auth/AdminOrSuperAdminGuard";
+import AdminModelosDescricaoCirurgica from "./pages/AdminModelosDescricaoCirurgica";
+import AdminModelosDescricaoCirurgicaForm from "./pages/AdminModelosDescricaoCirurgicaForm";
 
 const queryClient = new QueryClient();
 
@@ -124,6 +126,32 @@ const App = () => (
               <AdminOrSuperAdminGuard>
                 <GftCadastro />
               </AdminOrSuperAdminGuard>
+            }
+          />
+
+          {/* Modelos de Descrição Cirúrgica (super_admin) */}
+          <Route
+            path="/admin/modelos-descricao-cirurgica"
+            element={
+              <SuperAdminGuard>
+                <AdminModelosDescricaoCirurgica />
+              </SuperAdminGuard>
+            }
+          />
+          <Route
+            path="/admin/modelos-descricao-cirurgica/novo"
+            element={
+              <SuperAdminGuard>
+                <AdminModelosDescricaoCirurgicaForm />
+              </SuperAdminGuard>
+            }
+          />
+          <Route
+            path="/admin/modelos-descricao-cirurgica/editar/:id"
+            element={
+              <SuperAdminGuard>
+                <AdminModelosDescricaoCirurgicaForm />
+              </SuperAdminGuard>
             }
           />
 

@@ -261,6 +261,88 @@ serve(async (req) => {
     );
   }
 
+  // ── 1.6) Buscar modelos de descrição cirúrgica ativos (contexto global para a IA) ──
+  // Esses modelos são cadastrados pelo super-admin e ajudam a IA a reconhecer
+  // diferentes formatos de documentos e localizar os campos de procedimentos.
+  let modelosContexto: Array<{ nome: string; instrucao_ia: string | null }> = [];
+  let modeloImageBase64List: Array<{ base64: string; mimeType: string }> = [];
+
+  try {
+    const { data: modelosData, error: modelosError } = await supabase
+      .from("modelos_descricao_cirurgica")
+      .select("id, nome, instrucao_ia, imagem_descricao_path, imagem_destaque_path")
+      .eq("ativo", true)
+      .order("created_at", { ascending: true });
+
+    if (modelosError) {
+      console.error("[process-descricao-cirurgica] Erro ao buscar modelos de descrição:", modelosError);
+    } else if (modelosData && modelosData.length > 0) {
+      console.log("[process-descricao-cirurgica] Modelos de descrição ativos encontrados:", modelosData.length);
+
+      // Coletar todos os paths de imagens dos modelos
+      const modeloImagePaths: string[] = [];
+      for (const modelo of modelosData) {
+        if ((modelo as any).imagem_descricao_path) {
+          modeloImagePaths.push((modelo as any).imagem_descricao_path);
+        }
+        if ((modelo as any).imagem_destaque_path) {
+          modeloImagePaths.push((modelo as any).imagem_destaque_path);
+        }
+        modelosContexto.push({
+          nome: (modelo as any).nome,
+          instrucao_ia: (modelo as any).instrucao_ia ?? null,
+        });
+      }
+
+      // Criar URLs assinadas para as imagens dos modelos
+      const modeloSignedUrls: string[] = [];
+      for (const path of modeloImagePaths) {
+        const { data: signedData } = await supabase.storage
+          .from("NPS-pro")
+          .createSignedUrl(path, 3600);
+        if (signedData?.signedUrl) {
+          modeloSignedUrls.push(signedData.signedUrl);
+        }
+      }
+
+      // Filtrar apenas imagens e converter para base64
+      const modeloImageUrls = modeloSignedUrls.filter((url) =>
+        /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
+      );
+
+      if (modeloImageUrls.length > 0) {
+        console.log("[process-descricao-cirurgica] Convertendo", modeloImageUrls.length, "imagens de modelos para base64...");
+        modeloImageBase64List = await imageUrlsToBase64(modeloImageUrls);
+        console.log("[process-descricao-cirurgica] Imagens de modelos convertidas:", modeloImageBase64List.length);
+      }
+    } else {
+      console.log("[process-descricao-cirurgica] Nenhum modelo de descrição ativo encontrado.");
+    }
+  } catch (modelosErr) {
+    console.error("[process-descricao-cirurgica] Erro ao processar modelos de descrição:", modelosErr);
+  }
+
+  // ── Bloco de contexto dos modelos de descrição para o prompt da IA ──
+  const blocoContextoModelos = modelosContexto.length > 0
+    ? `
+═══════════════════════════════════════════════════════
+📋 MODELOS DE REFERÊNCIA — FORMATOS CONHECIDOS DE DESCRIÇÃO CIRÚRGICA
+═══════════════════════════════════════════════════════
+As imagens a seguir (ANTES das imagens do documento real) são EXEMPLOS de modelos
+de descrição cirúrgica cadastrados pelo administrador. Use-os para:
+1. Reconhecer o formato/layout do documento enviado
+2. Localizar corretamente os campos de procedimentos
+3. Entender onde ficam os dados de equipe cirúrgica
+
+Modelos disponíveis:
+${modelosContexto.map((m, i) => `  ${i + 1}. "${m.nome}"${m.instrucao_ia ? `\n     Instrução: ${m.instrucao_ia}` : ""}`).join("\n")}
+
+⚠️ IMPORTANTE: As primeiras ${modeloImageBase64List.length} imagem(ns) são MODELOS DE REFERÊNCIA.
+As imagens SEGUINTES são o DOCUMENTO REAL que você deve analisar e extrair os dados.
+NÃO extraia dados dos modelos de referência — eles são apenas para orientação visual.
+`
+    : "";
+
   // 2) Criar URLs assinadas para os arquivos no bucket NPS-pro
   const bucketName = "NPS-pro";
   const signedUrls: string[] = [];
@@ -341,6 +423,7 @@ serve(async (req) => {
   console.log("[process-descricao-cirurgica] Imagens convertidas:", imageBase64List.length);
 
   // ── Bloco de contexto de procedimentos autorizados para o prompt da IA ──
+  // (blocoContextoModelos já foi definido acima)
   const blocoContextoAutorizados = temItensPreExistentes && procedimentosAutorizadosParaIA.length > 0
     ? `
 ═══════════════════════════════════════════════════════
@@ -374,6 +457,7 @@ EXEMPLO CORRETO para este caso:
   // 3) Instruções de extração para Descrição Cirúrgica
   const jsonFormatInstructions = `
 Você é um especialista em faturamento médico hospitalar brasileiro. Analise TODAS as imagens fornecidas e extraia os dados com MÁXIMA PRECISÃO.
+${blocoContextoModelos}
 ${blocoContextoAutorizados}
 ═══════════════════════════════════════════════════════
 REGRAS ABSOLUTAS — VIOLAÇÃO DESTAS REGRAS É INACEITÁVEL
@@ -576,7 +660,13 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
 `;
 
   // 4) Chamar OpenAI para analisar as imagens
+  // Combinar imagens dos modelos (referência) + imagens do documento real
+  // Os modelos vêm PRIMEIRO para que a IA os use como contexto visual
+  const allImageBase64List = [...modeloImageBase64List, ...imageBase64List];
+
   console.log("[process-descricao-cirurgica] Chamando OpenAI modelo:", openaiModel);
+  console.log("[process-descricao-cirurgica] Total de imagens para a IA:", allImageBase64List.length,
+    `(${modeloImageBase64List.length} modelos + ${imageBase64List.length} documento)`);
 
   let messageContent: string;
   let openaiUsage: any;
@@ -591,7 +681,7 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         "NUNCA invente códigos CBHPM — se o documento não tiver código, use null. " +
         "Sempre responda com JSON válido e completo.",
       userText: jsonFormatInstructions,
-      imageBase64List,
+      imageBase64List: allImageBase64List,
       maxTokens: 4096,
     });
     messageContent = result.content;
