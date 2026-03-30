@@ -271,6 +271,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Estado para o diálogo de revisão de procedimentos
   const [showProcedureReview, setShowProcedureReview] = useState(false);
   const [procedimentosRevisao, setProcedimentosRevisao] = useState<ProcedimentoRevisao[]>([]);
+  const [procedureReviewEditMode, setProcedureReviewEditMode] = useState(false);
 
   // Zoom do preview da guia de honorários (inicia em 50%)
   const [guiaZoom, setGuiaZoom] = useState(0.5);
@@ -1534,7 +1535,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleProcedureReviewConfirm = () => {
     setShowProcedureReview(false);
     setProcedimentosRevisao([]);
-    if (initialFaturamentoId) {
+    setProcedureReviewEditMode(false);
+    if (procedureReviewEditMode) {
+      // Veio do botão "Editar procedimentos" na tela de consistência — continua o fluxo normal
+      setShowConsistencyTable(false);
+      const nextAction = pendingNavigation;
+      setPendingNavigation(null);
+      nextAction?.();
+    } else if (initialFaturamentoId) {
       navigate("/medico/faturamentos");
     } else {
       setView("pergunta_honorarios");
@@ -1545,10 +1553,41 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleProcedureReviewClose = () => {
     setShowProcedureReview(false);
     setProcedimentosRevisao([]);
+    setProcedureReviewEditMode(false);
     if (initialFaturamentoId) {
       navigate("/medico/faturamentos");
     } else {
       setView("pergunta_honorarios");
+    }
+  };
+
+  // Abre o diálogo de edição de procedimentos a partir da tela de consistência
+  const handleEditProcedimentos = async () => {
+    if (!faturamentoId) return;
+
+    try {
+      const { data: itens } = await supabase
+        .from("itens_faturamento")
+        .select("id, codigo_procedimento, descricao_procedimento")
+        .eq("faturamento_id", faturamentoId)
+        .order("created_at", { ascending: true });
+
+      const procs: ProcedimentoRevisao[] = (itens ?? []).map((item: any) => ({
+        item_faturamento_id: item.id,
+        codigo_original: item.codigo_procedimento ?? null,
+        descricao_original: item.descricao_procedimento ?? null,
+        codigo_validado: item.codigo_procedimento ?? null,
+        descricao_validada: item.descricao_procedimento ?? null,
+        metodo_validacao: "manual",
+        similaridade: null,
+        necessita_revisao: false,
+      }));
+
+      setProcedimentosRevisao(procs);
+      setProcedureReviewEditMode(true);
+      setShowProcedureReview(true);
+    } catch {
+      // ignore
     }
   };
 
@@ -3353,9 +3392,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       {showAnalyzingScreen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"><Card className="w-full max-w-md rounded-3xl border border-[#D4A017]/20 bg-[#111111] text-[#F5F5F5] shadow-2xl"><CardContent className="p-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#D4A017]/15 text-[#FFD700]"><Brain className="h-7 w-7" /></div><h3 className="mt-4 text-lg font-semibold">{getAnalyzingDocTitle()}</h3><p className="mt-2 text-sm text-[#9CA3AF]">{getAnalyzingStepDescription()}</p><Progress value={analyzingProgress} className="mt-5 h-2 bg-white/10" /><p className="mt-3 text-xs text-[#D4A017]">{analyzingProgress}% concluído</p></CardContent></Card></div>)}
 
-      {showConsistencyTable && (<div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"><ConsistencyResultsTable results={allConsistencyResults} onVoltar={() => { setShowConsistencyTable(false); setPendingNavigation(null); setView("upload_descricao"); }} onContinue={() => { void (async () => { if (faturamentoId) { await markResultsAsIgnored(faturamentoId, "apos_descricao_cirurgica"); } setShowConsistencyTable(false); const nextAction = pendingNavigation; setPendingNavigation(null); nextAction?.(); })(); }} /></div>)}
+      {showConsistencyTable && (<div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"><ConsistencyResultsTable results={allConsistencyResults} onVoltar={() => { setShowConsistencyTable(false); setPendingNavigation(null); setView("upload_descricao"); }} onContinue={() => { void (async () => { if (faturamentoId) { await markResultsAsIgnored(faturamentoId, "apos_descricao_cirurgica"); } setShowConsistencyTable(false); const nextAction = pendingNavigation; setPendingNavigation(null); nextAction?.(); })(); }} onEditProcedimentos={() => void handleEditProcedimentos()} /></div>)}
 
-      <ProcedureReviewDialog open={showProcedureReview} procedimentos={procedimentosRevisao} faturamentoId={faturamentoId} userId={currentUserId} onConfirm={handleProcedureReviewConfirm} onClose={handleProcedureReviewClose} onProcedimentosUpdated={setProcedimentosRevisao} />
+      <ProcedureReviewDialog open={showProcedureReview} procedimentos={procedimentosRevisao} faturamentoId={faturamentoId} userId={currentUserId} onConfirm={handleProcedureReviewConfirm} onClose={handleProcedureReviewClose} onProcedimentosUpdated={setProcedimentosRevisao} editMode={procedureReviewEditMode} />
 
       {showEmailDialog && faturamentoId ? (<SendBillingEmailsDialog open={showEmailDialog} onOpenChange={setShowEmailDialog} faturamentoId={faturamentoId} userEmail={medicoEmail} userName={medicoNome} userCrm={medicoCrm} instituicaoCirurgiaNome={selectedHospitalName} instituicaoFaturamentoNome={selectedClinicaName} instituicoesDiferentes={selectedHospitalId !== selectedClinicaId} onEmailsSent={handleEmailsSent} onSkip={handleSkipEmails} />) : null}
     </div>

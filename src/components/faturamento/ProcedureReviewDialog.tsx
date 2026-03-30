@@ -33,6 +33,8 @@ interface ProcedureReviewDialogProps {
   onConfirm: () => void;
   onClose: () => void;
   onProcedimentosUpdated?: (novos: ProcedimentoRevisao[]) => void;
+  /** Quando true, todos os procedimentos ficam editáveis (não só os inconsistentes) */
+  editMode?: boolean;
 }
 
 interface CbhpmSearchResult {
@@ -60,6 +62,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
   onConfirm,
   onClose,
   onProcedimentosUpdated,
+  editMode = false,
 }) => {
   const [globalMode, setGlobalMode] = useState<GlobalMode>(null);
   const [corrections, setCorrections] = useState<Record<number, Correction>>({});
@@ -85,9 +88,11 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
   useEffect(() => {
     const initial: Record<number, Correction> = {};
     procedimentos.forEach((proc, index) => {
-      if (proc.necessita_revisao && proc.codigo_validado) {
+      const shouldPrepopulate = editMode || proc.necessita_revisao;
+      const codigo = proc.codigo_validado || proc.codigo_original;
+      if (shouldPrepopulate && codigo) {
         initial[index] = {
-          codigo: proc.codigo_validado,
+          codigo,
           descricao: proc.descricao_validada || proc.descricao_original || "",
           quantidade: 1,
         };
@@ -96,25 +101,32 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     if (Object.keys(initial).length > 0) {
       setCorrections(initial);
     }
-  }, [procedimentos]);
+    // In editMode, start directly in manual mode
+    if (editMode) {
+      setGlobalMode("manual");
+    }
+  }, [procedimentos, editMode]);
 
   if (!open) return null;
 
   const totalProcedimentos = procedimentos.length;
-  const qtdInconsistentes = procedimentos.filter((p) => p.necessita_revisao).length;
+  const qtdInconsistentes = editMode
+    ? totalProcedimentos
+    : procedimentos.filter((p) => p.necessita_revisao).length;
 
   if (totalProcedimentos === 0) {
     onConfirm();
     return null;
   }
 
-  const consistentes = procedimentos
-    .map((p, i) => ({ proc: p, index: i }))
-    .filter(({ proc }) => !proc.necessita_revisao);
+  // Em editMode, todos são tratados como "inconsistentes" (editáveis)
+  const consistentes = editMode
+    ? []
+    : procedimentos.map((p, i) => ({ proc: p, index: i })).filter(({ proc }) => !proc.necessita_revisao);
 
-  const inconsistentes = procedimentos
-    .map((p, i) => ({ proc: p, index: i }))
-    .filter(({ proc }) => proc.necessita_revisao);
+  const inconsistentes = editMode
+    ? procedimentos.map((p, i) => ({ proc: p, index: i }))
+    : procedimentos.map((p, i) => ({ proc: p, index: i })).filter(({ proc }) => proc.necessita_revisao);
 
   // ── Camera ──────────────────────────────────────────────────────────────────
 
@@ -358,15 +370,17 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
         <div className="flex-shrink-0 border-b border-[#D4A017]/15 px-4 py-3.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/20">
-                <AlertTriangle className="h-4 w-4" />
+              <div className={`flex h-8 w-8 items-center justify-center rounded-lg border ${editMode ? "bg-[#D4A017]/15 text-[#D4A017] border-[#D4A017]/20" : "bg-amber-500/15 text-amber-400 border-amber-500/20"}`}>
+                {editMode ? <Keyboard className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-[#F5F5F5] leading-tight">
-                  Revisão de Procedimentos
+                  {editMode ? "Editar Procedimentos" : "Revisão de Procedimentos"}
                 </h2>
                 <p className="text-[10px] text-[#9CA3AF] mt-0.5">
-                  {qtdInconsistentes} de {totalProcedimentos} procedimento(s) precisam de confirmação
+                  {editMode
+                    ? `${totalProcedimentos} procedimento(s) — edite os códigos conforme necessário`
+                    : `${qtdInconsistentes} de ${totalProcedimentos} procedimento(s) precisam de confirmação`}
                 </p>
               </div>
             </div>

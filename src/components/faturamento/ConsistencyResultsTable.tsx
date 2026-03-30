@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, AlertCircle, XCircle, Minus } from "lucide-react";
+import { CheckCircle2, AlertCircle, XCircle, Minus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { CheckResult } from "@/utils/consistencyCheck";
@@ -8,6 +8,7 @@ interface Props {
   results: CheckResult[];
   onContinue: () => void;
   onVoltar: () => void;
+  onEditProcedimentos?: () => void;
 }
 
 // Campos fixos na ordem da tabela
@@ -173,6 +174,7 @@ export default function ConsistencyResultsTable({
   results,
   onContinue,
   onVoltar,
+  onEditProcedimentos,
 }: Props) {
   const [procedureNamesByCode, setProcedureNamesByCode] = useState<ProcedureNamesByCode>({});
 
@@ -388,6 +390,18 @@ export default function ConsistencyResultsTable({
           {hasError ? "Continuar mesmo assim" : "Continuar"}
         </Button>
       </div>
+
+      {onEditProcedimentos && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-10 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#D4A017] hover:bg-[#D4A017]/10 flex items-center justify-center gap-2 text-sm"
+          onClick={onEditProcedimentos}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Editar / corrigir códigos dos procedimentos
+        </Button>
+      )}
     </div>
   );
 }
