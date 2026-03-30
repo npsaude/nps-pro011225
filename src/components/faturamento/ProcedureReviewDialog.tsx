@@ -84,8 +84,21 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     message?: string;
   } | null>(null);
 
-  // Pre-populate corrections from validated codes when procedimentos change
+  // Pre-populate corrections only when the dialog opens (open changes to true)
+  // Using a ref to track if we've already initialized for the current open session
+  const initializedRef = React.useRef(false);
+
   useEffect(() => {
+    if (!open) {
+      // Reset when dialog closes so next open re-initializes
+      initializedRef.current = false;
+      setCorrections({});
+      setGlobalMode(null);
+      return;
+    }
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const initial: Record<number, Correction> = {};
     procedimentos.forEach((proc, index) => {
       const shouldPrepopulate = editMode || proc.necessita_revisao;
@@ -105,7 +118,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
     if (editMode) {
       setGlobalMode("manual");
     }
-  }, [procedimentos, editMode]);
+  }, [open, procedimentos, editMode]);
 
   if (!open) return null;
 
