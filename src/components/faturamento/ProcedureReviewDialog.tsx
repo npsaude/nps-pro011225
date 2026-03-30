@@ -320,7 +320,9 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
       for (let i = 0; i < procedimentos.length; i++) {
         const proc = procedimentos[i];
         const correction = corrections[i];
-        if (!proc.necessita_revisao || !correction) continue;
+        // Em editMode, salvar todos que têm correção; caso contrário, só os que necessitam revisão
+        if (!correction) continue;
+        if (!editMode && !proc.necessita_revisao) continue;
         const qty = correction.quantidade ?? 1;
 
         if (proc.item_faturamento_id) {
@@ -511,7 +513,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
                       ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                       : <AlertTriangle className="h-3 w-3 text-amber-400" />}
                     <span className={`text-[9px] font-semibold uppercase tracking-wider ${isResolved ? "text-emerald-400" : "text-amber-400"}`}>
-                      {isResolved ? "Sugestão CBHPM" : "Verificar código"}
+                      {isResolved ? (editMode ? "Código selecionado" : "Sugestão CBHPM") : "Verificar código"}
                     </span>
                   </div>
 
