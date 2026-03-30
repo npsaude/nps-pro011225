@@ -317,16 +317,33 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
         if (fatData) medicoId = fatData.medico_id;
       }
 
+      console.log("[ProcedureReview] handleConfirm — editMode:", editMode);
+      console.log("[ProcedureReview] procedimentos:", procedimentos.map((p, i) => ({
+        i,
+        item_id: p.item_faturamento_id,
+        codigo_original: p.codigo_original,
+        necessita_revisao: p.necessita_revisao,
+        correction: corrections[i],
+      })));
+
       for (let i = 0; i < procedimentos.length; i++) {
         const proc = procedimentos[i];
         const correction = corrections[i];
         // Em editMode, salvar todos que têm correção; caso contrário, só os que necessitam revisão
-        if (!correction) continue;
-        if (!editMode && !proc.necessita_revisao) continue;
+        if (!correction) {
+          console.log(`[ProcedureReview] item ${i} — sem correction, pulando`);
+          continue;
+        }
+        if (!editMode && !proc.necessita_revisao) {
+          console.log(`[ProcedureReview] item ${i} — não necessita revisão e não é editMode, pulando`);
+          continue;
+        }
+
         const qty = correction.quantidade ?? 1;
+        console.log(`[ProcedureReview] item ${i} — salvando: item_id=${proc.item_faturamento_id} codigo=${correction.codigo} descricao=${correction.descricao}`);
 
         if (proc.item_faturamento_id) {
-          const { error } = await supabase
+          const { error, data } = await supabase
             .from("itens_faturamento")
             .update({
               codigo_procedimento: correction.codigo,
@@ -336,10 +353,16 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
               quantidade_executada: qty,
               updated_at: new Date().toISOString(),
             })
-            .eq("id", proc.item_faturamento_id);
-          if (error) showError(`Erro ao atualizar ${correction.codigo}: ${error.message}`);
+            .eq("id", proc.item_faturamento_id)
+            .select();
+          if (error) {
+            console.error(`[ProcedureReview] ERRO ao atualizar item ${i}:`, error);
+            showError(`Erro ao atualizar ${correction.codigo}: ${error.message}`);
+          } else {
+            console.log(`[ProcedureReview] item ${i} atualizado com sucesso:`, data);
+          }
         } else if (correction.codigo && fatId) {
-          await supabase.from("itens_faturamento").insert({
+          const { error, data } = await supabase.from("itens_faturamento").insert({
             faturamento_id: fatId,
             medico_id: medicoId,
             codigo_procedimento: correction.codigo,
@@ -348,12 +371,18 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
             quantidade_executada: qty,
             quantidade: qty,
             status_item: "pendente",
-          });
+          }).select();
+          if (error) {
+            console.error(`[ProcedureReview] ERRO ao inserir item ${i}:`, error);
+          } else {
+            console.log(`[ProcedureReview] item ${i} inserido com sucesso:`, data);
+          }
         }
       }
       showSuccess("Procedimentos revisados com sucesso!");
       onConfirm();
-    } catch {
+    } catch (err) {
+      console.error("[ProcedureReview] ERRO geral:", err);
       showError("Erro ao salvar as correções dos procedimentos.");
     } finally {
       setSaving(false);
