@@ -218,6 +218,8 @@ serve(async (req) => {
     nome: string;
     instrucao_ia: string | null;
     imagem_destaque_path: string | null;
+    campo_procedimentos: string | null;
+    tipo_documento: string | null;
   } | null = null;
 
   let destaqueBase64List: Array<{ base64: string; mimeType: string }> = [];
@@ -226,7 +228,7 @@ serve(async (req) => {
     // Verificar se há algum modelo ativo antes de fazer qualquer chamada à IA
     const { data: modelosAtivos, error: modelosError } = await supabase
       .from("modelos_descricao_cirurgica")
-      .select("id, nome, instrucao_ia, imagem_destaque_path")
+      .select("id, nome, instrucao_ia, imagem_destaque_path, campo_procedimentos, tipo_documento")
       .eq("ativo", true);
 
     if (modelosError) {
@@ -316,6 +318,8 @@ Se não encontrar nenhum nome de hospital/clínica, use null.`;
             nome: modeloEncontrado.nome,
             instrucao_ia: modeloEncontrado.instrucao_ia ?? null,
             imagem_destaque_path: modeloEncontrado.imagem_destaque_path ?? null,
+            campo_procedimentos: modeloEncontrado.campo_procedimentos ?? null,
+            tipo_documento: modeloEncontrado.tipo_documento ?? null,
           };
         } else {
           console.log(`[process-descricao-cirurgica] ⚠️ Nenhum modelo encontrado para o hospital "${nomeHospitalLido}". Prosseguindo sem modelo.`);
@@ -346,17 +350,72 @@ Se não encontrar nenhum nome de hospital/clínica, use null.`;
 
   // ── 5) Montar contexto do modelo identificado para o prompt principal ─────────
   const blocoContextoModelo = modeloIdentificado
-    ? `
-═══════════════════════════════════════════════════════
-📋 MODELO DE DOCUMENTO IDENTIFICADO: "${modeloIdentificado.nome}"
-═══════════════════════════════════════════════════════
-${modeloIdentificado.instrucao_ia
-  ? `INSTRUÇÃO ESPECÍFICA PARA ESTE MODELO:\n${modeloIdentificado.instrucao_ia}\n`
-  : "Nenhuma instrução específica cadastrada para este modelo."}
-${destaqueBase64List.length > 0
-  ? `\nA ÚLTIMA IMAGEM enviada nesta mensagem é o DESTAQUE DO CAMPO DE PROCEDIMENTOS\ndeste modelo — ela mostra exatamente onde ficam os procedimentos no documento.\nUse-a como referência visual para localizar o campo correto no documento real.`
-  : ""}
+    ? (() => {
+        const tipoDoc = modeloIdentificado.tipo_documento ?? "narrativo";
+        const campoProc = modeloIdentificado.campo_procedimentos;
+        const instrucao = modeloIdentificado.instrucao_ia;
+        const temDestaque = destaqueBase64List.length > 0;
+
+        // Bloco do campo âncora — a parte mais crítica
+        const blocoAncora = campoProc
+          ? `
+🎯 CAMPO ÂNCORA — ONDE FICAM OS PROCEDIMENTOS NESTE DOCUMENTO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Procure EXATAMENTE pelo rótulo: "${campoProc}"
+
+REGRA OBRIGATÓRIA:
+→ Leia APENAS o conteúdo do campo "${campoProc}"
+→ NÃO leia a lista numerada de passos cirúrgicos (ex: "1. PCTE EM DDH...", "2. ANTISSEPSIA...")
+   Essa lista descreve o passo-a-passo operatório, NÃO os procedimentos faturáveis.
+→ O campo "${campoProc}" já contém os procedimentos resumidos e prontos para faturamento.
+→ Separe múltiplos procedimentos pelo símbolo "+" ou "," quando houver mais de um.
+
+EXEMPLO CORRETO para este modelo:
+  Se o campo mostrar: "${campoProc}: MICRONEUROLISES NERVOS DIGITAIS + TENOLISE FLEXORES"
+  → Extrair 2 procedimentos:
+    1. descricao: "MICRONEUROLISES NERVOS DIGITAIS"
+    2. descricao: "TENOLISE FLEXORES DO DEDO"
+  → NÃO extrair: passos como "Incisão em V", "Divulsão do TCSC", "Hemostasia", etc.
 `
+          : "";
+
+        // Bloco do tipo de documento
+        const blocoTipo = tipoDoc === "tabela"
+          ? `
+📊 TIPO DE DOCUMENTO: GUIA COM TABELA DE CÓDIGOS
+→ Os procedimentos estão em uma tabela com colunas de código numérico.
+→ Extraia o código numérico de cada linha da tabela.
+`
+          : `
+📝 TIPO DE DOCUMENTO: BOLETIM OPERATÓRIO / DESCRIÇÃO NARRATIVA
+→ Os procedimentos NÃO têm código numérico no documento.
+→ Use null em codigo_procedimento para todos os procedimentos.
+→ Extraia apenas os nomes técnicos dos procedimentos faturáveis.
+`;
+
+        // Bloco da instrução personalizada
+        const blocoInstrucao = instrucao
+          ? `
+📌 INSTRUÇÃO ESPECÍFICA DO ADMINISTRADOR PARA ESTE MODELO:
+${instrucao}
+`
+          : "";
+
+        // Bloco da imagem de destaque
+        const blocoDestaque = temDestaque
+          ? `
+🖼️ IMAGEM DE REFERÊNCIA:
+A ÚLTIMA IMAGEM desta mensagem é um ZOOM do campo de procedimentos deste modelo.
+Use-a para localizar visualmente o campo correto no documento real.
+`
+          : "";
+
+        return `
+═══════════════════════════════════════════════════════
+📋 MODELO IDENTIFICADO: "${modeloIdentificado.nome}"
+═══════════════════════════════════════════════════════
+${blocoAncora}${blocoTipo}${blocoInstrucao}${blocoDestaque}`;
+      })()
     : "";
 
   // ── 6) Montar contexto de procedimentos autorizados ──────────────────────────
