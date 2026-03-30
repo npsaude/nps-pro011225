@@ -280,15 +280,18 @@ export default function AdminModelosDescricaoCirurgicaForm() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="nome">
-                    Nome do modelo <span className="text-destructive">*</span>
+                    Nome do hospital / clínica <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="nome"
-                    placeholder="Ex: Boletim Operatório - Hospital São Lucas"
+                    placeholder="Ex: Hospital São Lucas, Clínica Ortopédica Santa Maria..."
                     value={form.nome}
                     onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
                     className="mt-1.5"
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Use o nome exato como aparece no cabeçalho do documento. A IA vai ler o hospital do documento e comparar com este nome para aplicar as instruções corretas.
+                  </p>
                 </div>
 
                 <div>

@@ -4,7 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   validarProcedimentoCbhpm,
   calcularScoreCombinado,
-  normalizeText as normalizeTextCbhpm,
 } from "../_shared/cbhpm-validator.ts";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
@@ -18,91 +17,62 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-// Helpers para normalizar datas vindas da OpenAI (formato brasileiro -> ISO/Postgres)
 function normalizeDate(value: unknown): string | null {
   if (!value) return null;
   const s = String(value).trim();
   if (!s) return null;
-
-  // Já está em formato ISO (YYYY-MM-DD...)
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    return s.slice(0, 10);
-  }
-
-  // Formato brasileiro: DD/MM/YYYY ou DD/MM/YYYY HH:MM[:SS]
-  const match = s.match(
-    /^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
-  );
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const match = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
   if (match) {
     const [, dd, mm, yyyy] = match;
-    return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
+    return `${yyyy}-${mm}-${dd}`;
   }
-
-  console.warn("[process-descricao-cirurgica] normalizeDate: formato de data desconhecido, descartando:", s);
+  console.warn("[process-descricao-cirurgica] normalizeDate: formato desconhecido:", s);
   return null;
 }
 
-// Normaliza hora para formato HH:MM:SS
 function normalizeTime(value: unknown): string | null {
   if (!value) return null;
   const s = String(value).trim();
   if (!s) return null;
-
-  // Formato HH:MM ou HH:MM:SS
   const match = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (match) {
     const [, hh, mm, ss] = match;
-    const hours = hh.padStart(2, "0");
-    const minutes = mm.padStart(2, "0");
-    const seconds = ss ? ss.padStart(2, "0") : "00";
-    return `${hours}:${minutes}:${seconds}`;
+    return `${hh.padStart(2, "0")}:${mm.padStart(2, "0")}:${(ss ?? "00").padStart(2, "0")}`;
   }
-
-  console.warn("[process-descricao-cirurgica] normalizeTime: formato de hora desconhecido, descartando:", s);
+  console.warn("[process-descricao-cirurgica] normalizeTime: formato desconhecido:", s);
   return null;
 }
 
-// Normaliza CPF para apenas dígitos (idealmente 11). Retorna null se vazio.
 function normalizeCpf(value: unknown): string | null {
   if (value == null) return null;
   const digits = String(value).replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length === 11) return digits;
-  return null;
+  return digits.length === 11 ? digits : null;
 }
 
 function normalizeGuideNumber(value: unknown): string | null {
   if (value == null) return null;
   const s = String(value).trim();
-  if (!s) return null;
-  return s.replace(/\s+/g, "");
+  return s ? s.replace(/\s+/g, "") : null;
 }
 
-interface UploadedFile {
-  path: string;
-}
-
-interface RequestBody {
-  userId: string;
-  faturamentoId: string;
-  files: UploadedFile[];
-}
-
+interface UploadedFile { path: string; }
+interface RequestBody { userId: string; faturamentoId: string; files: UploadedFile[]; }
 interface ProcedimentoPreExistente {
   id: string;
   codigo_procedimento: string | null;
   descricao_procedimento: string | null;
 }
 
-serve(async (req) => {
-  const method = req.method.toUpperCase();
+// ─── Cria URL assinada e retorna null em caso de erro ────────────────────────
+async function signedUrl(supabase: any, path: string): Promise<string | null> {
+  const { data } = await supabase.storage.from("NPS-pro").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
 
-  // Preflight CORS
-  if (method === "OPTIONS") {
-    return new Response("ok", {
-      status: 200,
-      headers: corsHeaders,
-    });
+serve(async (req) => {
+  if (req.method.toUpperCase() === "OPTIONS") {
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   console.log("[process-descricao-cirurgica] Iniciando processamento...");
@@ -111,33 +81,20 @@ serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!supabaseUrl || !serviceKey) {
-    console.error("[process-descricao-cirurgica] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.");
-    return new Response(
-      JSON.stringify({
-        error: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
 
   let body: RequestBody;
   try {
-    const raw = await req.text();
-    body = JSON.parse(raw) as RequestBody;
+    body = JSON.parse(await req.text()) as RequestBody;
   } catch {
-    console.error("[process-descricao-cirurgica] Body JSON inválido.");
-    return new Response(
-      JSON.stringify({ error: "Body JSON inválido." }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Body JSON inválido." }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const { userId, faturamentoId, files } = body;
@@ -146,95 +103,79 @@ serve(async (req) => {
   console.log("[process-descricao-cirurgica] faturamentoId:", faturamentoId);
   console.log("[process-descricao-cirurgica] files:", files?.length);
 
-  if (!userId || !faturamentoId || !files || !Array.isArray(files) || files.length === 0) {
-    console.error("[process-descricao-cirurgica] Parâmetros obrigatórios faltando.");
-    return new Response(
-      JSON.stringify({
-        error: "Parâmetros obrigatórios: userId, faturamentoId e files (com ao menos 1 item).",
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+  if (!userId || !faturamentoId || !files?.length) {
+    return new Response(JSON.stringify({ error: "Parâmetros obrigatórios: userId, faturamentoId e files." }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  // 1) Buscar token da OpenAI em app_settings
+  // ── 1) Configurações OpenAI ──────────────────────────────────────────────────
   const { data: settings, error: settingsError } = await supabase
-    .from("app_settings")
-    .select("openai_api_token, openai_model")
-    .limit(1)
-    .maybeSingle();
+    .from("app_settings").select("openai_api_token, openai_model").limit(1).maybeSingle();
 
   if (settingsError) {
-    console.error("[process-descricao-cirurgica] Erro ao carregar app_settings:", settingsError);
-    return new Response(
-      JSON.stringify({
-        error: "Erro ao carregar configurações da aplicação.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Erro ao carregar configurações da aplicação." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  const openaiToken =
-    (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
-  const openaiModel =
-    (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
+  const openaiToken = (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
+  const openaiModel = (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
 
   if (!openaiToken) {
-    console.error("[process-descricao-cirurgica] Token da OpenAI não configurado.");
-    return new Response(
-      JSON.stringify({
-        error:
-          "Token da OpenAI não configurado em app_settings (campo openai_api_token).",
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Token da OpenAI não configurado em app_settings." }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  // ── 1.5) Buscar procedimentos pré-existentes da guia de autorização/solicitação ──
-  // Isso é feito ANTES de chamar a IA para que possamos:
-  // a) Informar a IA sobre os procedimentos já autorizados (para ela confirmar, não inventar)
-  // b) Usar esses códigos como âncora na validação CBHPM
-  const { data: existingItemsRaw, error: existingItemsError } = await supabase
+  // ── 2) Converter imagens do documento para base64 ────────────────────────────
+  const docSignedUrls: string[] = [];
+  for (const file of files) {
+    if (!file.path) continue;
+    const { data, error } = await supabase.storage.from("NPS-pro").createSignedUrl(file.path, 3600);
+    if (!error && data?.signedUrl) docSignedUrls.push(data.signedUrl);
+    else console.error("[process-descricao-cirurgica] Erro ao assinar URL:", file.path, error);
+  }
+
+  if (!docSignedUrls.length) {
+    return new Response(JSON.stringify({ error: "Não foi possível criar URLs assinadas para os arquivos." }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const docImageUrls = docSignedUrls.filter(u => /\.(png|jpe?g|gif|webp)(\?|$)/i.test(u));
+  if (!docImageUrls.length) {
+    return new Response(JSON.stringify({ error: "Nenhuma imagem válida encontrada. Envie PNG, JPEG, GIF ou WEBP." }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  console.log("[process-descricao-cirurgica] Convertendo", docImageUrls.length, "imagens do documento...");
+  const docBase64List = await imageUrlsToBase64(docImageUrls);
+
+  if (!docBase64List.length) {
+    return new Response(JSON.stringify({ error: "Não foi possível processar as imagens enviadas." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  console.log("[process-descricao-cirurgica] Imagens do documento convertidas:", docBase64List.length);
+
+  // ── 3) Buscar procedimentos pré-existentes (guia de autorização/solicitação) ──
+  const { data: existingItemsRaw } = await supabase
     .from("itens_faturamento")
     .select("id, codigo_procedimento, descricao_procedimento")
     .eq("faturamento_id", faturamentoId);
 
-  if (existingItemsError) {
-    console.error("[process-descricao-cirurgica] Erro ao buscar itens pré-existentes:", existingItemsError);
-  }
-
   const existingItemsList: ProcedimentoPreExistente[] = (existingItemsRaw || []) as ProcedimentoPreExistente[];
   const temItensPreExistentes = existingItemsList.length > 0;
 
-  console.log(
-    "[process-descricao-cirurgica] Itens pré-existentes (guia autorização/solicitação):",
-    existingItemsList.length,
-    "| Lista:",
-    JSON.stringify(existingItemsList.map(i => ({ cod: i.codigo_procedimento, desc: i.descricao_procedimento?.slice(0, 40) })))
-  );
+  console.log("[process-descricao-cirurgica] Itens pré-existentes:", existingItemsList.length);
 
-  // Buscar descrições CBHPM dos procedimentos pré-existentes para enriquecer o contexto da IA
   let procedimentosAutorizadosParaIA: Array<{ codigo: string; descricao: string }> = [];
   if (temItensPreExistentes) {
-    const codigosPreExistentes = existingItemsList
-      .map(i => i.codigo_procedimento)
-      .filter(Boolean) as string[];
-
+    const codigosPreExistentes = existingItemsList.map(i => i.codigo_procedimento).filter(Boolean) as string[];
     if (codigosPreExistentes.length > 0) {
-      const { data: cbhpmData } = await supabase
-        .from("cbhpm_cirurgias")
-        .select("codigo, descricao")
-        .in("codigo", codigosPreExistentes);
-
-      // Montar lista com código + descrição CBHPM oficial
+      const { data: cbhpmData } = await supabase.from("cbhpm_cirurgias").select("codigo, descricao").in("codigo", codigosPreExistentes);
       for (const item of existingItemsList) {
         if (!item.codigo_procedimento) continue;
         const cbhpmMatch = (cbhpmData || []).find((c: any) => c.codigo === item.codigo_procedimento);
@@ -244,379 +185,289 @@ serve(async (req) => {
         });
       }
     } else {
-      // Itens sem código (só descrição)
       for (const item of existingItemsList) {
         if (item.descricao_procedimento) {
-          procedimentosAutorizadosParaIA.push({
-            codigo: "",
-            descricao: item.descricao_procedimento,
-          });
+          procedimentosAutorizadosParaIA.push({ codigo: "", descricao: item.descricao_procedimento });
         }
       }
     }
-
-    console.log(
-      "[process-descricao-cirurgica] Procedimentos autorizados para contexto da IA:",
-      JSON.stringify(procedimentosAutorizadosParaIA)
-    );
+    console.log("[process-descricao-cirurgica] Procedimentos autorizados para contexto:", JSON.stringify(procedimentosAutorizadosParaIA));
   }
 
-  // ── 1.6) Buscar modelos de descrição cirúrgica ativos (contexto global para a IA) ──
-  // Esses modelos são cadastrados pelo super-admin e ajudam a IA a reconhecer
-  // diferentes formatos de documentos e localizar os campos de procedimentos.
-  let modelosContexto: Array<{ nome: string; instrucao_ia: string | null }> = [];
-  let modeloImageBase64List: Array<{ base64: string; mimeType: string }> = [];
+  // ── 4) Identificar modelo de descrição cirúrgica pelo nome do hospital/clínica ──
+  //
+  // ESTRATÉGIA (sem chamada visual extra cara):
+  //
+  //   PASSO 1 — Leitura rápida do hospital:
+  //     Envia apenas as imagens do documento para a IA com um prompt mínimo,
+  //     pedindo somente o nome do hospital/clínica. Custo: ~100 tokens de saída.
+  //
+  //   PASSO 2 — Busca no banco por nome:
+  //     Compara o nome lido com os campos `nome` de modelos_descricao_cirurgica
+  //     usando ILIKE (busca parcial, case-insensitive). Sem custo de IA.
+  //
+  //   PASSO 3 — Uso do modelo encontrado:
+  //     Se encontrou modelo → injeta instrucao_ia no prompt principal e carrega
+  //     imagem_destaque_path como referência visual de onde ficam os procedimentos.
+  //
+  //   Se não houver modelos cadastrados ou o hospital não bater com nenhum nome,
+  //   o processamento continua normalmente sem contexto de modelo.
+
+  let modeloIdentificado: {
+    id: string;
+    nome: string;
+    instrucao_ia: string | null;
+    imagem_destaque_path: string | null;
+  } | null = null;
+
+  let destaqueBase64List: Array<{ base64: string; mimeType: string }> = [];
 
   try {
-    const { data: modelosData, error: modelosError } = await supabase
+    // Verificar se há algum modelo ativo antes de fazer qualquer chamada à IA
+    const { data: modelosAtivos, error: modelosError } = await supabase
       .from("modelos_descricao_cirurgica")
-      .select("id, nome, instrucao_ia, imagem_descricao_path, imagem_destaque_path")
-      .eq("ativo", true)
-      .order("created_at", { ascending: true });
+      .select("id, nome, instrucao_ia, imagem_destaque_path")
+      .eq("ativo", true);
 
     if (modelosError) {
-      console.error("[process-descricao-cirurgica] Erro ao buscar modelos de descrição:", modelosError);
-    } else if (modelosData && modelosData.length > 0) {
-      console.log("[process-descricao-cirurgica] Modelos de descrição ativos encontrados:", modelosData.length);
+      console.error("[process-descricao-cirurgica] Erro ao buscar modelos:", modelosError);
+    } else if (modelosAtivos && modelosAtivos.length > 0) {
+      console.log("[process-descricao-cirurgica] Modelos ativos no banco:", modelosAtivos.length,
+        "| Nomes:", (modelosAtivos as any[]).map(m => m.nome).join(", "));
 
-      // Coletar todos os paths de imagens dos modelos
-      const modeloImagePaths: string[] = [];
-      for (const modelo of modelosData) {
-        if ((modelo as any).imagem_descricao_path) {
-          modeloImagePaths.push((modelo as any).imagem_descricao_path);
-        }
-        if ((modelo as any).imagem_destaque_path) {
-          modeloImagePaths.push((modelo as any).imagem_destaque_path);
-        }
-        modelosContexto.push({
-          nome: (modelo as any).nome,
-          instrucao_ia: (modelo as any).instrucao_ia ?? null,
+      // ── PASSO 1: Leitura rápida do hospital/clínica ──────────────────────────
+      // Prompt mínimo — só queremos o nome do hospital, nada mais.
+      const promptHospital = `Leia a imagem e extraia APENAS o nome do hospital ou clínica onde a cirurgia foi realizada.
+
+Procure por: cabeçalho do documento, logotipo, campo "Hospital", "Clínica", "Estabelecimento" ou similar.
+
+Responda SOMENTE com JSON válido:
+{
+  "hospital": "<nome do hospital ou clínica>" | null
+}
+
+Se não encontrar nenhum nome de hospital/clínica, use null.`;
+
+      console.log("[process-descricao-cirurgica] PASSO 1 — Lendo nome do hospital...");
+
+      let nomeHospitalLido: string | null = null;
+
+      try {
+        const resultHospital = await openaiChatWithImages({
+          apiKey: openaiToken,
+          model: openaiModel,
+          systemPrompt: "Você é um leitor de documentos médicos. Responda sempre com JSON válido.",
+          userText: promptHospital,
+          imageBase64List: docBase64List,
+          maxTokens: 80,
         });
+
+        const hospitalJson = extractJson(resultHospital.content);
+        nomeHospitalLido = hospitalJson?.hospital ?? null;
+        console.log("[process-descricao-cirurgica] Hospital lido pela IA:", nomeHospitalLido);
+      } catch (hospErr) {
+        console.error("[process-descricao-cirurgica] Erro ao ler hospital:", hospErr);
       }
 
-      // Criar URLs assinadas para as imagens dos modelos
-      const modeloSignedUrls: string[] = [];
-      for (const path of modeloImagePaths) {
-        const { data: signedData } = await supabase.storage
-          .from("NPS-pro")
-          .createSignedUrl(path, 3600);
-        if (signedData?.signedUrl) {
-          modeloSignedUrls.push(signedData.signedUrl);
+      // ── PASSO 2: Busca no banco por nome (ILIKE parcial) ─────────────────────
+      if (nomeHospitalLido) {
+        // Extrair palavras significativas do nome lido (≥4 letras) para busca parcial
+        const palavrasChave = nomeHospitalLido
+          .split(/\s+/)
+          .map(p => p.replace(/[^a-zA-ZÀ-ÿ0-9]/g, ""))
+          .filter(p => p.length >= 4);
+
+        console.log("[process-descricao-cirurgica] PASSO 2 — Buscando modelo por palavras-chave:", palavrasChave);
+
+        // Tentar match direto primeiro (nome do modelo contém o hospital lido)
+        let modeloEncontrado: any = null;
+
+        for (const modelo of modelosAtivos as any[]) {
+          const nomeModeloNorm = modelo.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const nomeHospitalNorm = nomeHospitalLido.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+          // Verificar se o nome do modelo contém o hospital ou vice-versa
+          if (
+            nomeModeloNorm.includes(nomeHospitalNorm) ||
+            nomeHospitalNorm.includes(nomeModeloNorm)
+          ) {
+            modeloEncontrado = modelo;
+            console.log(`[process-descricao-cirurgica] ✅ Match direto: modelo "${modelo.nome}" ↔ hospital "${nomeHospitalLido}"`);
+            break;
+          }
+
+          // Verificar por palavras-chave: se ≥50% das palavras batem
+          if (palavrasChave.length > 0) {
+            const palavrasBatendo = palavrasChave.filter(p =>
+              nomeModeloNorm.includes(p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+            );
+            const taxaMatch = palavrasBatendo.length / palavrasChave.length;
+            if (taxaMatch >= 0.5) {
+              modeloEncontrado = modelo;
+              console.log(`[process-descricao-cirurgica] ✅ Match por palavras-chave (${(taxaMatch * 100).toFixed(0)}%): modelo "${modelo.nome}" ↔ hospital "${nomeHospitalLido}"`);
+              break;
+            }
+          }
+        }
+
+        if (modeloEncontrado) {
+          modeloIdentificado = {
+            id: modeloEncontrado.id,
+            nome: modeloEncontrado.nome,
+            instrucao_ia: modeloEncontrado.instrucao_ia ?? null,
+            imagem_destaque_path: modeloEncontrado.imagem_destaque_path ?? null,
+          };
+        } else {
+          console.log(`[process-descricao-cirurgica] ⚠️ Nenhum modelo encontrado para o hospital "${nomeHospitalLido}". Prosseguindo sem modelo.`);
+        }
+      } else {
+        console.log("[process-descricao-cirurgica] ⚠️ Hospital não identificado. Prosseguindo sem modelo.");
+      }
+
+      // ── PASSO 3: Carregar imagem de destaque do modelo identificado ──────────
+      // A imagem_destaque_path é um zoom/recorte do campo de procedimentos.
+      // Ela será enviada APÓS as imagens do documento real para que a IA saiba
+      // exatamente onde procurar os procedimentos no documento.
+      if (modeloIdentificado?.imagem_destaque_path) {
+        const urlDestaque = await signedUrl(supabase, modeloIdentificado.imagem_destaque_path);
+        if (urlDestaque && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(urlDestaque)) {
+          console.log("[process-descricao-cirurgica] PASSO 3 — Carregando destaque do modelo:", modeloIdentificado.nome);
+          destaqueBase64List = await imageUrlsToBase64([urlDestaque]);
+          console.log("[process-descricao-cirurgica] Imagem de destaque:", destaqueBase64List.length > 0 ? "OK" : "FALHOU");
         }
       }
 
-      // Filtrar apenas imagens e converter para base64
-      const modeloImageUrls = modeloSignedUrls.filter((url) =>
-        /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
-      );
-
-      if (modeloImageUrls.length > 0) {
-        console.log("[process-descricao-cirurgica] Convertendo", modeloImageUrls.length, "imagens de modelos para base64...");
-        modeloImageBase64List = await imageUrlsToBase64(modeloImageUrls);
-        console.log("[process-descricao-cirurgica] Imagens de modelos convertidas:", modeloImageBase64List.length);
-      }
     } else {
-      console.log("[process-descricao-cirurgica] Nenhum modelo de descrição ativo encontrado.");
+      console.log("[process-descricao-cirurgica] Nenhum modelo de descrição ativo. Prosseguindo sem contexto de modelo.");
     }
   } catch (modelosErr) {
-    console.error("[process-descricao-cirurgica] Erro ao processar modelos de descrição:", modelosErr);
+    console.error("[process-descricao-cirurgica] Erro ao processar modelos:", modelosErr);
   }
 
-  // ── Bloco de contexto dos modelos de descrição para o prompt da IA ──
-  const blocoContextoModelos = modelosContexto.length > 0
+  // ── 5) Montar contexto do modelo identificado para o prompt principal ─────────
+  const blocoContextoModelo = modeloIdentificado
     ? `
 ═══════════════════════════════════════════════════════
-📋 MODELOS DE REFERÊNCIA — FORMATOS CONHECIDOS DE DESCRIÇÃO CIRÚRGICA
+📋 MODELO DE DOCUMENTO IDENTIFICADO: "${modeloIdentificado.nome}"
 ═══════════════════════════════════════════════════════
-As imagens a seguir (ANTES das imagens do documento real) são EXEMPLOS de modelos
-de descrição cirúrgica cadastrados pelo administrador. Use-os para:
-1. Reconhecer o formato/layout do documento enviado
-2. Localizar corretamente os campos de procedimentos
-3. Entender onde ficam os dados de equipe cirúrgica
-
-Modelos disponíveis:
-${modelosContexto.map((m, i) => `  ${i + 1}. "${m.nome}"${m.instrucao_ia ? `\n     Instrução: ${m.instrucao_ia}` : ""}`).join("\n")}
-
-⚠️ IMPORTANTE: As primeiras ${modeloImageBase64List.length} imagem(ns) são MODELOS DE REFERÊNCIA.
-As imagens SEGUINTES são o DOCUMENTO REAL que você deve analisar e extrair os dados.
-NÃO extraia dados dos modelos de referência — eles são apenas para orientação visual.
+${modeloIdentificado.instrucao_ia
+  ? `INSTRUÇÃO ESPECÍFICA PARA ESTE MODELO:\n${modeloIdentificado.instrucao_ia}\n`
+  : "Nenhuma instrução específica cadastrada para este modelo."}
+${destaqueBase64List.length > 0
+  ? `\nA ÚLTIMA IMAGEM enviada nesta mensagem é o DESTAQUE DO CAMPO DE PROCEDIMENTOS\ndeste modelo — ela mostra exatamente onde ficam os procedimentos no documento.\nUse-a como referência visual para localizar o campo correto no documento real.`
+  : ""}
 `
     : "";
 
-  // 2) Criar URLs assinadas para os arquivos no bucket NPS-pro
-  const bucketName = "NPS-pro";
-  const signedUrls: string[] = [];
-
-  for (const file of files) {
-    const path = file.path;
-    if (!path) continue;
-
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .createSignedUrl(path, 60 * 60); // 1 hora
-
-    if (error || !data?.signedUrl) {
-      console.error(
-        "[process-descricao-cirurgica] Erro ao criar URL assinada para arquivo:",
-        path,
-        error,
-      );
-      continue;
-    }
-
-    signedUrls.push(data.signedUrl);
-  }
-
-  if (signedUrls.length === 0) {
-    console.error("[process-descricao-cirurgica] Não foi possível criar URLs assinadas.");
-    return new Response(
-      JSON.stringify({
-        error:
-          "Não foi possível criar URLs assinadas para os arquivos enviados.",
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  console.log("[process-descricao-cirurgica] URLs assinadas criadas:", signedUrls.length);
-
-  // Filtrar apenas imagens
-  const imageUrls = signedUrls.filter((url) =>
-    /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
-  );
-
-  console.log("[process-descricao-cirurgica] URLs de imagens:", imageUrls.length);
-
-  if (imageUrls.length === 0) {
-    console.error("[process-descricao-cirurgica] Nenhuma imagem válida encontrada.");
-    return new Response(
-      JSON.stringify({
-        error: "Nenhuma imagem válida encontrada. Envie imagens (PNG, JPEG, GIF, WEBP).",
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  // Converter imagens para base64 (compatível com todos os modelos OpenAI)
-  console.log("[process-descricao-cirurgica] Convertendo imagens para base64...");
-  const imageBase64List = await imageUrlsToBase64(imageUrls);
-
-  if (imageBase64List.length === 0) {
-    console.error("[process-descricao-cirurgica] Falha ao converter imagens para base64.");
-    return new Response(
-      JSON.stringify({
-        error: "Não foi possível processar as imagens enviadas.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  console.log("[process-descricao-cirurgica] Imagens convertidas:", imageBase64List.length);
-
-  // ── Bloco de contexto de procedimentos autorizados para o prompt da IA ──
-  // (blocoContextoModelos já foi definido acima)
+  // ── 6) Montar contexto de procedimentos autorizados ──────────────────────────
   const blocoContextoAutorizados = temItensPreExistentes && procedimentosAutorizadosParaIA.length > 0
     ? `
 ═══════════════════════════════════════════════════════
-⚠️ ATENÇÃO — PROCEDIMENTOS JÁ AUTORIZADOS (GUIA DE AUTORIZAÇÃO/SOLICITAÇÃO)
+⚠️ PROCEDIMENTOS JÁ AUTORIZADOS (GUIA DE AUTORIZAÇÃO/SOLICITAÇÃO)
 ═══════════════════════════════════════════════════════
-Este faturamento já possui uma guia de autorização/solicitação com os seguintes
-procedimentos autorizados:
+Este faturamento já possui os seguintes procedimentos autorizados:
 
 ${procedimentosAutorizadosParaIA.map((p, i) => `  ${i + 1}. Código: ${p.codigo || "N/A"} | Descrição: ${p.descricao}`).join("\n")}
 
-REGRAS OBRIGATÓRIAS QUANDO HÁ PROCEDIMENTOS AUTORIZADOS:
-1. Para documentos NARRATIVOS (Tipo 2 — sem tabela de códigos):
-   - Identifique quais procedimentos da descrição cirúrgica CORRESPONDEM aos autorizados acima
-   - Use o MESMO código e descrição dos procedimentos autorizados quando houver correspondência
-   - NÃO invente novos códigos que não estejam na lista acima
-   - NÃO adicione procedimentos que não estejam na lista autorizada, a menos que sejam
-     claramente procedimentos ADICIONAIS distintos realizados e não previstos na autorização
-   - Se a descrição narrativa menciona "${procedimentosAutorizadosParaIA.map(p => p.descricao).join('" ou "')}", 
-     use os códigos correspondentes da lista acima
+REGRAS OBRIGATÓRIAS:
+1. Para documentos NARRATIVOS (sem tabela de códigos):
+   - Identifique quais procedimentos da descrição CORRESPONDEM aos autorizados acima
+   - Use o MESMO código dos procedimentos autorizados quando houver correspondência
+   - NÃO invente novos códigos fora da lista acima
+   - Só adicione procedimentos extras se forem claramente distintos e não previstos na autorização
 
-2. Para documentos com TABELA DE CÓDIGOS (Tipo 1):
+2. Para documentos com TABELA DE CÓDIGOS:
    - Extraia os códigos exatamente como aparecem na tabela
-   - Compare com os autorizados e sinalize discrepâncias no campo descricao_procedimento
-
-EXEMPLO CORRETO para este caso:
-  Se a descrição narrativa menciona "tenólise" ou "microneurólise", use os códigos
-  já autorizados correspondentes a esses procedimentos.
 `
     : "";
 
-  // 3) Instruções de extração para Descrição Cirúrgica
+  // ── 7) Prompt principal de extração ──────────────────────────────────────────
   const jsonFormatInstructions = `
 Você é um especialista em faturamento médico hospitalar brasileiro. Analise TODAS as imagens fornecidas e extraia os dados com MÁXIMA PRECISÃO.
-${blocoContextoModelos}
+${blocoContextoModelo}
 ${blocoContextoAutorizados}
 ═══════════════════════════════════════════════════════
-REGRAS ABSOLUTAS — VIOLAÇÃO DESTAS REGRAS É INACEITÁVEL
+REGRAS ABSOLUTAS
 ═══════════════════════════════════════════════════════
-1. Leia TODAS as imagens completamente, de cima para baixo, antes de responder.
-2. PROCEDIMENTOS: Extraia TODOS os procedimentos cirúrgicos realizados, independente do formato do documento.
+1. Leia TODAS as imagens completamente antes de responder.
+2. Extraia TODOS os procedimentos cirúrgicos realizados, sem omitir nenhum.
 3. NUNCA truncar ou resumir o array de procedimentos. Retorne TODOS.
 4. Use APENAS dados visíveis. Não invente. Se não encontrar, use null.
-5. Se um dado aparecer em múltiplas imagens, use o valor mais completo.
-6. NUNCA invente códigos CBHPM. Se o documento não tiver código, use null no campo codigo_procedimento.
+5. NUNCA invente códigos CBHPM. Se o documento não tiver código, use null.
 
 ═══════════════════════════════════════════════════════
 DADOS DA EXECUÇÃO (campo "faturamento")
 ═══════════════════════════════════════════════════════
-- paciente_nome: Nome completo do paciente (campo "Registro Civil", "Paciente" ou "Nome")
-- data_cirurgia: Data inicial do procedimento (formato DD/MM/YYYY)
-- hora_inicio: Hora de início do procedimento (formato HH:MM)
-- hora_fim: Hora de término do procedimento (formato HH:MM)
-- paciente_cpf: CPF do paciente (apenas 11 dígitos numéricos, sem pontos ou traços)
-- numero_guia_honorarios: Número da guia de honorários (se houver)
-- numero_guia_internacao: Número da guia de internação / registro (se houver)
+- paciente_nome: Nome completo do paciente
+- data_cirurgia: Data do procedimento (DD/MM/YYYY)
+- hora_inicio: Hora de início (HH:MM)
+- hora_fim: Hora de término (HH:MM)
+- paciente_cpf: CPF do paciente (apenas 11 dígitos numéricos)
+- numero_guia_honorarios: Número da guia de honorários
+- numero_guia_internacao: Número da guia de internação / registro
 
 DIAGNÓSTICO:
 - cid_codigo: Código CID (ex: "M75.1")
 - diagnostico_descricao: Diagnóstico pós-operatório ou pré-operatório
 
 ═══════════════════════════════════════════════════════
-EQUIPE CIRÚRGICA — ATENÇÃO ESPECIAL AOS CAMPOS ABAIXO
+EQUIPE CIRÚRGICA
 ═══════════════════════════════════════════════════════
 Procure a seção "EQUIPE PRESENTE NO ATO OPERATÓRIO" ou "EQUIPE CIRÚRGICA".
 
-CIRURGIÃO:
-- cirurgiao_nome: Nome do CIRURGIÃO (linha com rótulo "CIRURGIÃO" ou "CIRURGIAO")
-- cirurgiao_crm: CRM do cirurgião (número após "CRM" na linha do cirurgião)
-
-1º AUXILIAR:
-- auxiliar1_nome: Nome do 1º AUXILIAR (linha com rótulo "1º AUXILIAR" ou "1 AUXILIAR")
-- auxiliar1_crm: CRM do 1º auxiliar
-
-2º AUXILIAR:
-- auxiliar2_nome: Nome do 2º AUXILIAR
-- auxiliar2_crm: CRM do 2º auxiliar
-
-3º AUXILIAR:
-- auxiliar3_nome: Nome do 3º AUXILIAR
-- auxiliar3_crm: CRM do 3º auxiliar
-
-INSTRUMENTADOR — ATENÇÃO: Este campo usa COREN, não CRM:
-- instrumentador_nome: Nome do INSTRUMENTADOR (linha com rótulo "INSTRUMENTADOR" ou "INSTRUMENTADOR COREN")
-  EXEMPLO: Se a linha mostrar "INSTRUMENTADOR | LIDIANE ROCHA", extraia "LIDIANE ROCHA"
-- instrumentador_crm: Número do COREN do instrumentador (número após "COREN" ou "CONS. REG. ENFERMAGEM")
-  EXEMPLO: Se mostrar "COREN - CONS. REG. ENFERMAGEM | 25444", extraia "25444"
-
-ANESTESISTA — ATENÇÃO: Este campo pode usar CRM ou número de conselho diferente:
-- anestesista_nome: Nome do ANESTESISTA (linha com rótulo "ANESTESISTA" ou "ANESTESISTA CRM")
-  EXEMPLO: Se a linha mostrar "ANESTESISTA | MIRELLA TAVARES", extraia "MIRELLA TAVARES"
-- anestesista_crm: Número do CRM ou conselho do anestesista
-  EXEMPLO: Se mostrar "CRM - CONS. REG. MEDICINA | 18007", extraia "18007"
-
-VALIDAÇÃO:
-- assinatura_medica: true se há assinatura do médico visível, false caso contrário
+- cirurgiao_nome / cirurgiao_crm: linha com rótulo "CIRURGIÃO"
+- auxiliar1_nome / auxiliar1_crm: linha com rótulo "1º AUXILIAR"
+- auxiliar2_nome / auxiliar2_crm: linha com rótulo "2º AUXILIAR"
+- auxiliar3_nome / auxiliar3_crm: linha com rótulo "3º AUXILIAR"
+- instrumentador_nome / instrumentador_crm: linha com rótulo "INSTRUMENTADOR" (usa COREN, não CRM)
+- anestesista_nome / anestesista_crm: linha com rótulo "ANESTESISTA"
+- assinatura_medica: true se há assinatura do médico visível
 - data_assinatura: Data da assinatura (DD/MM/YYYY)
 
 ═══════════════════════════════════════════════════════
 PROCEDIMENTOS CIRÚRGICOS — REGRA CRÍTICA
 ═══════════════════════════════════════════════════════
-Existem DOIS tipos de documento. Identifique qual é e siga a estratégia correta:
+Existem DOIS tipos de documento:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TIPO 1 — GUIA COM TABELA DE PROCEDIMENTOS (tem códigos numéricos)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Localize a tabela "PROCEDIMENTOS REALIZADOS" ou "PROCEDIMENTOS CIRÚRGICOS".
-
-PASSO A PASSO OBRIGATÓRIO:
-1. Identifique o cabeçalho da tabela (ex: "Tipo | Código | Procedimento | Quantidade")
-2. Leia CADA LINHA de dados abaixo do cabeçalho
-3. Para CADA linha com código numérico ou nome de procedimento, crie um objeto no array
-4. Continue até a ÚLTIMA linha da tabela — não pare antes
-
-Para cada procedimento extraia:
-- codigo_procedimento: código numérico exatamente como aparece (ex: "30718058", "30731127")
+Para cada linha da tabela extraia:
+- codigo_procedimento: código numérico exatamente como aparece (ex: "30718058")
 - descricao_procedimento: descrição completa do procedimento
 - quantidade_executada: número da coluna "Quantidade" (use 1 se não informado)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TIPO 2 — BOLETIM OPERATÓRIO / DESCRIÇÃO CIRÚRGICA NARRATIVA (sem tabela de códigos)
+TIPO 2 — BOLETIM OPERATÓRIO / DESCRIÇÃO NARRATIVA (sem tabela de códigos)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Quando NÃO houver tabela com códigos numéricos, os procedimentos estão descritos
-de forma narrativa.
+FONTE PRIMÁRIA: campo "Descrição detalhada da intervenção" (técnica operatória)
+FONTES SECUNDÁRIAS (só se a primária estiver vazia): "Intervenção feita" / "Intervenção indicada"
 
-FONTE PRIMÁRIA (use APENAS esta para extrair procedimentos):
-  → "Descrição detalhada da intervenção" (Técnica operatória, incisão, achados, etc.)
+⚠️ NÃO extraia procedimentos de "Intervenção indicada" se já extraiu da "Descrição detalhada".
 
-FONTES SECUNDÁRIAS (use SOMENTE se a Descrição detalhada estiver vazia ou ilegível):
-  → "Intervenção feita" / "Intervenção indicada"
+Para cada procedimento distinto:
+- codigo_procedimento: null (NUNCA invente um código)
+- descricao_procedimento: nome técnico em linguagem médica clara e concisa
+- quantidade_executada: 1 (ou quantidade mencionada)
 
-⚠️ REGRA ANTI-DUPLICAÇÃO: NÃO extraia procedimentos do campo "Intervenção indicada"
-se já extraiu da "Descrição detalhada da intervenção". A "Intervenção indicada" é
-apenas um resumo — os procedimentos reais estão na descrição detalhada.
-
-PASSO A PASSO OBRIGATÓRIO:
-1. Leia COMPLETAMENTE o campo "Descrição detalhada da intervenção"
-2. Identifique CADA procedimento cirúrgico DISTINTO realizado
-3. Para CADA procedimento, crie um objeto com:
-   - codigo_procedimento: null (não há código no documento — NUNCA invente um código)
-   - descricao_procedimento: nome técnico do procedimento em linguagem médica clara e concisa
-   - quantidade_executada: 1 (ou quantidade mencionada no texto)
-
-PROCEDIMENTOS QUE DEVEM SER INCLUÍDOS (atos cirúrgicos faturáveis):
-  ✅ Tratamento cirúrgico de fratura (ex: "TRATAMENTO CIRÚRGICO DE FRATURA DE ANEL PÉLVICO")
-  ✅ Osteotomias (ex: "OSTEOTOMIA DE SÍNFISE PÚBICA")
-  ✅ Tenoplastias / tenorrafias (ex: "TENOPLASTIA DE RETO FEMORAL")
-  ✅ Tenólise / neurólise / microneurólise (ex: "TENÓLISE NO TÚNEL OSTEOFIBROSO", "MICRONEURÓLISE MÚLTIPLAS")
-  ✅ Osteossínteses
-  ✅ Reduções de fratura
-  ✅ Controle radioscópico intraoperatório (ex: "CONTROLE RADIOSCÓPICO INTRAOPERATÓRIO")
+INCLUIR (atos cirúrgicos faturáveis):
+  ✅ Tratamento cirúrgico de fratura
+  ✅ Osteotomias, osteossínteses
+  ✅ Tenoplastias, tenorrafias, tenólise
+  ✅ Neurólise, microneurólise
+  ✅ Controle radioscópico intraoperatório
   ✅ Qualquer procedimento cirúrgico com nome técnico específico
 
-PROCEDIMENTOS QUE NÃO DEVEM SER INCLUÍDOS:
-  ❌ Antissepsia / assepsia / antissepsia com clorexidina
-  ❌ Posicionamento do paciente (ex: "paciente em DDH sob anestesia")
-  ❌ Incisão de acesso (ex: "incisão tipo Phannestiel", "divulsão por planos")
-  ❌ Revisão de hemostasia / hemostasia
-  ❌ Sutura por planos / sutura de pele
-  ❌ Curativo
-  ❌ Aposição de campos estéreis
-  ❌ Fixação com placa e parafusos quando é PARTE de um tratamento cirúrgico de fratura
-     (a fixação é o MÉTODO do tratamento, não um procedimento separado)
-  ❌ Exposição de foco de fratura (é etapa do tratamento cirúrgico, não procedimento separado)
+NÃO INCLUIR:
+  ❌ Antissepsia / assepsia / posicionamento do paciente
+  ❌ Incisão de acesso / divulsão por planos
+  ❌ Hemostasia / sutura por planos / curativo
+  ❌ Fixação com placa/parafusos quando é PARTE de um tratamento cirúrgico de fratura
+  ❌ Exposição de foco de fratura (é etapa do tratamento, não procedimento separado)
   ❌ Redução de fratura quando já existe "tratamento cirúrgico de fratura" do mesmo osso
-     (o tratamento cirúrgico JÁ INCLUI a redução e fixação)
 
-⚠️ REGRA CRÍTICA DE NÃO-FRAGMENTAÇÃO:
-Quando o texto descreve um ÚNICO ato cirúrgico complexo com múltiplas etapas,
-NÃO fragmente em procedimentos separados para cada etapa.
-Extraia apenas os procedimentos cirúrgicos DISTINTOS e INDEPENDENTES.
-
-EXEMPLOS DE EXTRAÇÃO CORRETA DO TEXTO NARRATIVO:
-
-  Texto: "TENÓLISE NO TÚNEL OSTEOFIBROSO + MICRONEURÓLISE MÚLTIPLAS"
-  → Extrair 2 procedimentos:
-    1. codigo: null, descricao: "TENÓLISE NO TÚNEL OSTEOFIBROSO"
-    2. codigo: null, descricao: "MICRONEURÓLISE MÚLTIPLAS"
-  → NÃO extrair: "NEURÓLISE DE NERVO PERIFÉRICO" (não mencionado)
-  → NÃO extrair: "TENÓLISE DE MÃO" (não mencionado)
-  → NÃO extrair: "TUMOR DE PARTES MOLES - RESSECÇÃO" (não mencionado)
-
-  Texto da Descrição Detalhada:
-    "3.2 – REALIZADO TENOPLASTIA DE RETO FEMORAL + EXPOSIÇÃO DE FOCO DE FRATURA
-     COM OSTEOTOMIA DE SÍNFISE PARA REDUÇÃO E FIXAÇÃO DE FOCO DE FRATURA DE
-     SÍNFISE PÚBICA COM 01 PLACA BLOQUEADA DE RECONSTRUÇÃO + 03 PARAFUSOS
-     CORTICAIS + 06 PARAFUSOS BLOQUEADOS
-     3.3 – CONTROLE RADIOSCÓPICO VISUALIZANDO BOA REDUÇÃO E FIXAÇÃO"
-  → Extrair 3 procedimentos (NÃO 5):
-    1. codigo: null, descricao: "TENOPLASTIA DE RETO FEMORAL"
-    2. codigo: null, descricao: "OSTEOTOMIA DE SÍNFISE PÚBICA"
-    3. codigo: null, descricao: "CONTROLE RADIOSCÓPICO INTRAOPERATÓRIO"
-  → NÃO extrair: "FIXAÇÃO INTERNA COM PLACA BLOQUEADA" (é método do tratamento)
-  → NÃO extrair: "EXPOSIÇÃO DE FOCO DE FRATURA" (é etapa do tratamento)
+⚠️ REGRA DE NÃO-FRAGMENTAÇÃO: Não fragmente um único ato cirúrgico complexo em múltiplos procedimentos separados para cada etapa. Extraia apenas procedimentos DISTINTOS e INDEPENDENTES.
 
 ═══════════════════════════════════════════════════════
 FORMATO DE RESPOSTA — JSON VÁLIDO E COMPLETO
@@ -659,14 +510,20 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
 }
 `;
 
-  // 4) Chamar OpenAI para analisar as imagens
-  // Combinar imagens dos modelos (referência) + imagens do documento real
-  // Os modelos vêm PRIMEIRO para que a IA os use como contexto visual
-  const allImageBase64List = [...modeloImageBase64List, ...imageBase64List];
+  // ── 8) Chamar OpenAI para extração principal ──────────────────────────────────
+  // Ordem das imagens: [doc_real_1, doc_real_2, ..., destaque_modelo (se houver)]
+  // A imagem de destaque vem por ÚLTIMO para que a IA a use como referência visual
+  // de "onde procurar" no documento real.
+  const allImagesForExtraction = [...docBase64List, ...destaqueBase64List];
 
   console.log("[process-descricao-cirurgica] Chamando OpenAI modelo:", openaiModel);
-  console.log("[process-descricao-cirurgica] Total de imagens para a IA:", allImageBase64List.length,
-    `(${modeloImageBase64List.length} modelos + ${imageBase64List.length} documento)`);
+  console.log("[process-descricao-cirurgica] Total de imagens para extração:", allImagesForExtraction.length,
+    `(${docBase64List.length} doc + ${destaqueBase64List.length} destaque)`);
+  if (modeloIdentificado) {
+    console.log("[process-descricao-cirurgica] Modelo em uso:", modeloIdentificado.nome,
+      "| instrucao_ia:", modeloIdentificado.instrucao_ia ? "SIM" : "NÃO",
+      "| destaque:", destaqueBase64List.length > 0 ? "SIM" : "NÃO");
+  }
 
   let messageContent: string;
   let openaiUsage: any;
@@ -676,282 +533,133 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       apiKey: openaiToken,
       model: openaiModel,
       systemPrompt:
-        "Você é um assistente de IA especializado em leitura de descrições cirúrgicas (imagens) e faturamento médico hospitalar brasileiro. " +
+        "Você é um assistente de IA especializado em leitura de descrições cirúrgicas e faturamento médico hospitalar brasileiro. " +
         "Sua principal responsabilidade é extrair TODOS os procedimentos cirúrgicos listados no documento, sem omitir nenhum. " +
         "NUNCA invente códigos CBHPM — se o documento não tiver código, use null. " +
         "Sempre responda com JSON válido e completo.",
       userText: jsonFormatInstructions,
-      imageBase64List: allImageBase64List,
+      imageBase64List: allImagesForExtraction,
       maxTokens: 4096,
     });
     messageContent = result.content;
     openaiUsage = result.usage;
   } catch (openaiErr) {
     console.error("[process-descricao-cirurgica] Erro da OpenAI:", openaiErr);
-    return new Response(
-      JSON.stringify({
-        error: "Erro ao chamar a API da OpenAI.",
-        details: String(openaiErr),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Erro ao chamar a API da OpenAI.", details: String(openaiErr) }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  // Registrar uso de tokens da OpenAI
   await logOpenAIUsage({
-    supabase,
-    userId,
-    faturamentoId,
+    supabase, userId, faturamentoId,
     edgeFunction: "process-descricao-cirurgica",
-    model: openaiModel,
-    usage: openaiUsage,
+    model: openaiModel, usage: openaiUsage,
   });
 
   if (!messageContent) {
-    console.error("[process-descricao-cirurgica] Resposta da OpenAI sem conteúdo.");
-    return new Response(
-      JSON.stringify({
-        error: "Resposta da OpenAI sem conteúdo utilizável.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Resposta da OpenAI sem conteúdo utilizável." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   let parsed: any;
   try {
     parsed = extractJson(messageContent);
   } catch (e) {
-    console.error(
-      "[process-descricao-cirurgica] Falha ao fazer parse do JSON da OpenAI:",
-      e,
-      messageContent,
-    );
-    return new Response(
-      JSON.stringify({
-        error: "Falha ao interpretar a resposta da OpenAI como JSON.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    console.error("[process-descricao-cirurgica] Falha ao parsear JSON da OpenAI:", e, messageContent);
+    return new Response(JSON.stringify({ error: "Falha ao interpretar a resposta da OpenAI como JSON." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  console.log(
-    "[process-descricao-cirurgica] Resposta da OpenAI parseada:",
-    JSON.stringify(parsed).slice(0, 2000),
-  );
+  console.log("[process-descricao-cirurgica] Resposta parseada:", JSON.stringify(parsed).slice(0, 2000));
 
   const faturamentoData = parsed?.faturamento ?? {};
   const procedimentosData = Array.isArray(parsed?.procedimentos) ? parsed.procedimentos : [];
 
-  // Quantidade total de procedimentos extraídos da descrição cirúrgica
-  const quantidadeProcedimentosRealizados = procedimentosData.length;
+  console.log("[process-descricao-cirurgica] Procedimentos extraídos:", procedimentosData.length,
+    "| Lista:", JSON.stringify(procedimentosData.map((p: any) => ({ cod: p.codigo_procedimento, desc: p.descricao_procedimento?.slice(0, 40) }))));
 
-  console.log(
-    "[process-descricao-cirurgica] Procedimentos extraídos pela IA:",
-    procedimentosData.length,
-    "| Lista:",
-    JSON.stringify(procedimentosData.map((p: any) => ({ cod: p.codigo_procedimento, desc: p.descricao_procedimento?.slice(0, 40) })))
-  );
-
-  // 5) Atualizar o faturamento existente com os dados extraídos
-  const filePaths = files.map((f) => f.path);
-
+  // ── 9) Atualizar faturamento com dados extraídos ──────────────────────────────
+  const filePaths = files.map(f => f.path);
   const updateData: Record<string, unknown> = {
     url_descricao_cirurgica: filePaths,
-    quantidade_procedimentos_realizados: quantidadeProcedimentosRealizados,
+    quantidade_procedimentos_realizados: procedimentosData.length,
     updated_at: new Date().toISOString(),
   };
 
-  // Dados da execução
-  if (faturamentoData.paciente_nome) {
-    updateData.paciente_nome = faturamentoData.paciente_nome;
-  }
-
+  if (faturamentoData.paciente_nome) updateData.paciente_nome = faturamentoData.paciente_nome;
   const dataCirurgia = normalizeDate(faturamentoData.data_cirurgia);
-  if (dataCirurgia) {
-    updateData.data_cirurgia = dataCirurgia;
-  }
-
+  if (dataCirurgia) updateData.data_cirurgia = dataCirurgia;
   const horaInicio = normalizeTime(faturamentoData.hora_inicio);
-  if (horaInicio) {
-    updateData.hora_inicio = horaInicio;
-  }
-
+  if (horaInicio) updateData.hora_inicio = horaInicio;
   const horaFim = normalizeTime(faturamentoData.hora_fim);
-  if (horaFim) {
-    updateData.hora_fim = horaFim;
-  }
-
+  if (horaFim) updateData.hora_fim = horaFim;
   const pacienteCpf = normalizeCpf(faturamentoData.paciente_cpf);
-  if (pacienteCpf) {
-    updateData.paciente_cpf = pacienteCpf;
-  }
-
-  const numeroGuiaHonorarios = normalizeGuideNumber(
-    faturamentoData.numero_guia_honorarios,
-  );
-  if (numeroGuiaHonorarios) {
-    updateData.numero_guia_honorarios = numeroGuiaHonorarios;
-  }
-
-  const numeroGuiaInternacao = normalizeGuideNumber(
-    faturamentoData.numero_guia_internacao,
-  );
-  if (numeroGuiaInternacao) {
-    updateData.numero_guia_internacao = numeroGuiaInternacao;
-  }
-
-  // Diagnóstico
-  if (faturamentoData.cid_codigo) {
-    updateData.diagnostico_cid = faturamentoData.cid_codigo;
-  }
-
-  if (faturamentoData.diagnostico_descricao) {
-    updateData.diagnostico_descricao = faturamentoData.diagnostico_descricao;
-  }
-
-  // Equipe Cirúrgica - Cirurgião Principal
-  if (faturamentoData.cirurgiao_nome) {
-    updateData.cirurgiao_principal_nome = faturamentoData.cirurgiao_nome;
-  }
-  if (faturamentoData.cirurgiao_crm) {
-    updateData.cirurgiao_principal_crm = faturamentoData.cirurgiao_crm;
-  }
-
-  // Equipe Cirúrgica - 1º Auxiliar
-  if (faturamentoData.auxiliar1_nome) {
-    updateData.auxiliar1_nome = faturamentoData.auxiliar1_nome;
-  }
-  if (faturamentoData.auxiliar1_crm) {
-    updateData.auxiliar1_crm = faturamentoData.auxiliar1_crm;
-  }
-
-  // Equipe Cirúrgica - 2º Auxiliar
-  if (faturamentoData.auxiliar2_nome) {
-    updateData.auxiliar2_nome = faturamentoData.auxiliar2_nome;
-  }
-  if (faturamentoData.auxiliar2_crm) {
-    updateData.auxiliar2_crm = faturamentoData.auxiliar2_crm;
-  }
-
-  // Equipe Cirúrgica - 3º Auxiliar
-  if (faturamentoData.auxiliar3_nome) {
-    updateData.auxiliar3_nome = faturamentoData.auxiliar3_nome;
-  }
-  if (faturamentoData.auxiliar3_crm) {
-    updateData.auxiliar3_crm = faturamentoData.auxiliar3_crm;
-  }
-
-  // Equipe Cirúrgica - Anestesista
-  if (faturamentoData.anestesista_nome) {
-    updateData.anestesista_nome = faturamentoData.anestesista_nome;
-  }
-  if (faturamentoData.anestesista_crm) {
-    updateData.anestesista_crm = faturamentoData.anestesista_crm;
-  }
-
-  // Instrumentador
-  if (faturamentoData.instrumentador_nome) {
-    updateData.instrumentador_nome = faturamentoData.instrumentador_nome;
-  }
-  if (faturamentoData.instrumentador_crm) {
-    updateData.instrumentador_crm = faturamentoData.instrumentador_crm;
-  }
-
-  // Validação/Assinatura
-  if (faturamentoData.assinatura_medica !== null && faturamentoData.assinatura_medica !== undefined) {
-    updateData.assinatura_medica = Boolean(faturamentoData.assinatura_medica);
-  }
-
+  if (pacienteCpf) updateData.paciente_cpf = pacienteCpf;
+  const numeroGuiaHonorarios = normalizeGuideNumber(faturamentoData.numero_guia_honorarios);
+  if (numeroGuiaHonorarios) updateData.numero_guia_honorarios = numeroGuiaHonorarios;
+  const numeroGuiaInternacao = normalizeGuideNumber(faturamentoData.numero_guia_internacao);
+  if (numeroGuiaInternacao) updateData.numero_guia_internacao = numeroGuiaInternacao;
+  if (faturamentoData.cid_codigo) updateData.diagnostico_cid = faturamentoData.cid_codigo;
+  if (faturamentoData.diagnostico_descricao) updateData.diagnostico_descricao = faturamentoData.diagnostico_descricao;
+  if (faturamentoData.cirurgiao_nome) updateData.cirurgiao_principal_nome = faturamentoData.cirurgiao_nome;
+  if (faturamentoData.cirurgiao_crm) updateData.cirurgiao_principal_crm = faturamentoData.cirurgiao_crm;
+  if (faturamentoData.auxiliar1_nome) updateData.auxiliar1_nome = faturamentoData.auxiliar1_nome;
+  if (faturamentoData.auxiliar1_crm) updateData.auxiliar1_crm = faturamentoData.auxiliar1_crm;
+  if (faturamentoData.auxiliar2_nome) updateData.auxiliar2_nome = faturamentoData.auxiliar2_nome;
+  if (faturamentoData.auxiliar2_crm) updateData.auxiliar2_crm = faturamentoData.auxiliar2_crm;
+  if (faturamentoData.auxiliar3_nome) updateData.auxiliar3_nome = faturamentoData.auxiliar3_nome;
+  if (faturamentoData.auxiliar3_crm) updateData.auxiliar3_crm = faturamentoData.auxiliar3_crm;
+  if (faturamentoData.anestesista_nome) updateData.anestesista_nome = faturamentoData.anestesista_nome;
+  if (faturamentoData.anestesista_crm) updateData.anestesista_crm = faturamentoData.anestesista_crm;
+  if (faturamentoData.instrumentador_nome) updateData.instrumentador_nome = faturamentoData.instrumentador_nome;
+  if (faturamentoData.instrumentador_crm) updateData.instrumentador_crm = faturamentoData.instrumentador_crm;
+  if (faturamentoData.assinatura_medica != null) updateData.assinatura_medica = Boolean(faturamentoData.assinatura_medica);
   const dataAssinatura = normalizeDate(faturamentoData.data_assinatura);
-  if (dataAssinatura) {
-    updateData.data_assinatura = dataAssinatura;
-  }
+  if (dataAssinatura) updateData.data_assinatura = dataAssinatura;
 
   console.log("[process-descricao-cirurgica] Atualizando faturamento:", faturamentoId);
-  console.log("[process-descricao-cirurgica] Dados de atualização:", JSON.stringify(updateData));
 
-  const { error: updateError } = await supabase
-    .from("faturamentos")
-    .update(updateData)
-    .eq("id", faturamentoId);
-
+  const { error: updateError } = await supabase.from("faturamentos").update(updateData).eq("id", faturamentoId);
   if (updateError) {
     console.error("[process-descricao-cirurgica] Erro ao atualizar faturamento:", updateError);
-    return new Response(
-      JSON.stringify({
-        error: "Erro ao atualizar o faturamento no banco.",
-        details: updateError.message,
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Erro ao atualizar o faturamento no banco.", details: updateError.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  // 5.1) Reconhecer atuação do médico logado e salvar em atuou_como
+  // ── 9.1) Reconhecer atuação do médico logado ──────────────────────────────────
   try {
-    const { data: usuarioData, error: usuarioError } = await supabase
-      .from("usuarios_sistema")
-      .select("nome, crm")
-      .eq("id_user", userId)
-      .maybeSingle();
-
-    if (usuarioError) {
-      console.error("[process-descricao-cirurgica] Erro ao buscar usuario_sistema:", usuarioError);
-    }
+    const { data: usuarioData } = await supabase
+      .from("usuarios_sistema").select("nome, crm").eq("id_user", userId).maybeSingle();
 
     const userNome = usuarioData?.nome ?? "";
     const userCrm = usuarioData?.crm ? String(usuarioData.crm) : "";
 
-    console.log("[process-descricao-cirurgica] Dados do médico logado - nome:", userNome, "crm:", userCrm, "userId:", userId);
-
     if (userNome || userCrm) {
-      const cirurgiaoNome = faturamentoData.cirurgiao_nome ?? null;
-      const cirurgiaoCrm = faturamentoData.cirurgiao_crm ?? null;
-      const auxiliar1Nome = faturamentoData.auxiliar1_nome ?? null;
-      const auxiliar1Crm = faturamentoData.auxiliar1_crm ?? null;
-      const auxiliar2Nome = faturamentoData.auxiliar2_nome ?? null;
-      const auxiliar2Crm = faturamentoData.auxiliar2_crm ?? null;
-      const auxiliar3Nome = faturamentoData.auxiliar3_nome ?? null;
-      const auxiliar3Crm = faturamentoData.auxiliar3_crm ?? null;
-      const anestesistaNome = faturamentoData.anestesista_nome ?? null;
-      const anestesistaCrm = faturamentoData.anestesista_crm ?? null;
-
       const normalizeDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
       const normalizeTextLocal = (s: string) =>
         String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
       const cleanToken = (s: string) => normalizeTextLocal(s).replace(/[^a-z0-9]/g, "");
       const firstNameFn = (input: string): string => {
         const parts = normalizeTextLocal(input).split(" ").filter(Boolean);
-        if (parts.length === 0) return "";
+        if (!parts.length) return "";
         const first = cleanToken(parts[0]);
-        if (["dr", "dra", "doutor", "doutora"].includes(first)) return cleanToken(parts[1] ?? "");
-        return first;
+        return ["dr", "dra", "doutor", "doutora"].includes(first) ? cleanToken(parts[1] ?? "") : first;
       };
       const lastNameFn = (input: string): string => {
         const parts = normalizeTextLocal(input).split(" ").filter(Boolean);
-        if (parts.length <= 1) return "";
-        return cleanToken(parts[parts.length - 1]);
+        return parts.length <= 1 ? "" : cleanToken(parts[parts.length - 1]);
       };
 
       type Atuacao = "CIRURGIAO" | "PRIMEIRO_AUXILIAR" | "SEGUNDO_AUXILIAR" | "TERCEIRO_AUXILIAR" | "ANESTESISTA";
-
       const candidates: Array<{ atuacao: Atuacao; nome: string | null; crm: string | null }> = [
-        { atuacao: "CIRURGIAO", nome: cirurgiaoNome, crm: cirurgiaoCrm },
-        { atuacao: "PRIMEIRO_AUXILIAR", nome: auxiliar1Nome, crm: auxiliar1Crm },
-        { atuacao: "SEGUNDO_AUXILIAR", nome: auxiliar2Nome, crm: auxiliar2Crm },
-        { atuacao: "TERCEIRO_AUXILIAR", nome: auxiliar3Nome, crm: auxiliar3Crm },
-        { atuacao: "ANESTESISTA", nome: anestesistaNome, crm: anestesistaCrm },
+        { atuacao: "CIRURGIAO", nome: faturamentoData.cirurgiao_nome ?? null, crm: faturamentoData.cirurgiao_crm ?? null },
+        { atuacao: "PRIMEIRO_AUXILIAR", nome: faturamentoData.auxiliar1_nome ?? null, crm: faturamentoData.auxiliar1_crm ?? null },
+        { atuacao: "SEGUNDO_AUXILIAR", nome: faturamentoData.auxiliar2_nome ?? null, crm: faturamentoData.auxiliar2_crm ?? null },
+        { atuacao: "TERCEIRO_AUXILIAR", nome: faturamentoData.auxiliar3_nome ?? null, crm: faturamentoData.auxiliar3_crm ?? null },
+        { atuacao: "ANESTESISTA", nome: faturamentoData.anestesista_nome ?? null, crm: faturamentoData.anestesista_crm ?? null },
       ];
 
       const crmUser = normalizeDigits(userCrm);
@@ -959,8 +667,8 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
 
       if (crmUser) {
         for (const c of candidates) {
-          const crmCandidate = normalizeDigits(c.crm ?? "");
-          if (crmCandidate && (crmCandidate === crmUser || crmCandidate.includes(crmUser) || crmUser.includes(crmCandidate))) {
+          const crmC = normalizeDigits(c.crm ?? "");
+          if (crmC && (crmC === crmUser || crmC.includes(crmUser) || crmUser.includes(crmC))) {
             atuacaoReconhecida = c.atuacao;
             console.log(`[process-descricao-cirurgica] ✅ Match por CRM! ${c.atuacao}`);
             break;
@@ -971,21 +679,17 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       if (!atuacaoReconhecida && userNome) {
         const userFirst = firstNameFn(userNome);
         const userLast = lastNameFn(userNome);
-        if (userFirst) {
-          for (const c of candidates) {
-            if (!c.nome) continue;
-            const nomeFirst = firstNameFn(c.nome);
-            const nomeLast = lastNameFn(c.nome);
-            if (nomeFirst && nomeFirst === userFirst) {
-              atuacaoReconhecida = c.atuacao;
-              console.log(`[process-descricao-cirurgica] ✅ Match por primeiro nome! ${c.atuacao}`);
-              break;
-            }
-            if (userLast && nomeLast && nomeLast === userLast) {
-              atuacaoReconhecida = c.atuacao;
-              console.log(`[process-descricao-cirurgica] ✅ Match por último nome! ${c.atuacao}`);
-              break;
-            }
+        for (const c of candidates) {
+          if (!c.nome) continue;
+          if (userFirst && firstNameFn(c.nome) === userFirst) {
+            atuacaoReconhecida = c.atuacao;
+            console.log(`[process-descricao-cirurgica] ✅ Match por primeiro nome! ${c.atuacao}`);
+            break;
+          }
+          if (userLast && lastNameFn(c.nome) === userLast) {
+            atuacaoReconhecida = c.atuacao;
+            console.log(`[process-descricao-cirurgica] ✅ Match por último nome! ${c.atuacao}`);
+            break;
           }
         }
       }
@@ -994,15 +698,14 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
         const userNomeNorm = normalizeTextLocal(userNome);
         for (const c of candidates) {
           if (!c.nome) continue;
-          const candidateNomeNorm = normalizeTextLocal(c.nome);
-          if (candidateNomeNorm && (candidateNomeNorm.includes(userNomeNorm) || userNomeNorm.includes(candidateNomeNorm))) {
+          const cNorm = normalizeTextLocal(c.nome);
+          if (cNorm && (cNorm.includes(userNomeNorm) || userNomeNorm.includes(cNorm))) {
             atuacaoReconhecida = c.atuacao;
             console.log(`[process-descricao-cirurgica] ✅ Match por substring! ${c.atuacao}`);
             break;
           }
-          const userWords = userNomeNorm.split(" ").filter(w => w.length >= 4);
-          for (const word of userWords) {
-            if (candidateNomeNorm.includes(word)) {
+          for (const word of userNomeNorm.split(" ").filter(w => w.length >= 4)) {
+            if (cNorm.includes(word)) {
               atuacaoReconhecida = c.atuacao;
               console.log(`[process-descricao-cirurgica] ✅ Match por palavra "${word}"! ${c.atuacao}`);
               break;
@@ -1013,448 +716,259 @@ Responda SOMENTE com JSON válido, sem texto adicional, sem markdown:
       }
 
       if (atuacaoReconhecida) {
-        const { error: atuacaoError } = await supabase
-          .from("faturamentos")
-          .update({
-            atuou_como: atuacaoReconhecida,
-            updated_at: new Date().toISOString(),
-          })
+        const { error: atuacaoError } = await supabase.from("faturamentos")
+          .update({ atuou_como: atuacaoReconhecida, updated_at: new Date().toISOString() })
           .eq("id", faturamentoId);
-
-        if (atuacaoError) {
-          console.error("[process-descricao-cirurgica] Erro ao salvar atuou_como:", atuacaoError);
-        } else {
-          console.log("[process-descricao-cirurgica] atuou_como salvo com sucesso:", atuacaoReconhecida);
-        }
+        if (atuacaoError) console.error("[process-descricao-cirurgica] Erro ao salvar atuou_como:", atuacaoError);
+        else console.log("[process-descricao-cirurgica] atuou_como salvo:", atuacaoReconhecida);
       }
     }
   } catch (atuacaoErr) {
     console.error("[process-descricao-cirurgica] Erro ao reconhecer atuação:", atuacaoErr);
   }
 
-  // 6) Processar procedimentos extraídos pela IA com validação CBHPM inteligente
-  if (Array.isArray(procedimentosData) && procedimentosData.length > 0) {
-    console.log("[process-descricao-cirurgica] Processando", procedimentosData.length, "procedimentos...");
+  // ── 10) Processar procedimentos com validação CBHPM ───────────────────────────
+  if (!procedimentosData.length) {
+    console.log("[process-descricao-cirurgica] Concluído sem procedimentos.");
+    return new Response(JSON.stringify({
+      success: true, faturamento_id: faturamentoId,
+      dados_extraidos: { faturamento: faturamentoData, procedimentos: [] },
+      revisao_procedimentos: [], tem_revisao_pendente: false,
+      modelo_utilizado: modeloIdentificado?.nome ?? null,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
-    // Buscar o medico_id do faturamento
-    const { data: faturamentoInfo } = await supabase
-      .from("faturamentos")
-      .select("medico_id")
-      .eq("id", faturamentoId)
-      .single();
+  console.log("[process-descricao-cirurgica] Processando", procedimentosData.length, "procedimentos...");
 
-    const medicoId = faturamentoInfo?.medico_id ?? userId;
+  const { data: faturamentoInfo } = await supabase.from("faturamentos").select("medico_id").eq("id", faturamentoId).single();
+  const medicoId = faturamentoInfo?.medico_id ?? userId;
 
-    // Recarregar itens existentes (pode ter mudado desde o início)
-    const { data: currentItems } = await supabase
-      .from("itens_faturamento")
-      .select("id, codigo_procedimento, descricao_procedimento")
-      .eq("faturamento_id", faturamentoId);
+  const { data: currentItems } = await supabase.from("itens_faturamento")
+    .select("id, codigo_procedimento, descricao_procedimento").eq("faturamento_id", faturamentoId);
 
-    const currentItemsList: ProcedimentoPreExistente[] = (currentItems || []) as ProcedimentoPreExistente[];
-    const semItensPreExistentes = currentItemsList.length === 0;
+  const currentItemsList: ProcedimentoPreExistente[] = (currentItems || []) as ProcedimentoPreExistente[];
+  const semItensPreExistentes = currentItemsList.length === 0;
 
-    console.log(
-      "[process-descricao-cirurgica] Itens pré-existentes (recarregados):",
-      currentItemsList.length,
-      "| Modo inserção direta:",
-      semItensPreExistentes
-    );
+  console.log("[process-descricao-cirurgica] Itens pré-existentes (recarregados):", currentItemsList.length, "| Modo direto:", semItensPreExistentes);
 
-    // Função para normalizar texto para comparação
-    const normalizeText = (text: string | null | undefined): string => {
-      if (!text) return "";
-      return text
-        .toLowerCase()
-        .trim()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, " ");
-    };
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return "";
+    return text.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+  };
 
-    // Função para verificar se um procedimento já existe nos itens pré-existentes
-    const findExistingItem = (codigo: string | null, descricao: string | null) => {
-      if (codigo) {
-        const byCode = currentItemsList.find(
-          (item) => item.codigo_procedimento === codigo
-        );
-        if (byCode) return byCode;
+  const findExistingItem = (codigo: string | null, descricao: string | null) => {
+    if (codigo) {
+      const byCode = currentItemsList.find(item => item.codigo_procedimento === codigo);
+      if (byCode) return byCode;
+    }
+    if (descricao) {
+      const nd = normalizeText(descricao);
+      const byDesc = currentItemsList.find(item => normalizeText(item.descricao_procedimento) === nd);
+      if (byDesc) return byDesc;
+    }
+    return null;
+  };
+
+  const matchContraItensPreExistentes = async (
+    descricaoExtraida: string
+  ): Promise<{ codigo: string; descricao: string; similaridade: number } | null> => {
+    if (!currentItemsList.length) return null;
+    let melhorMatch: { codigo: string; descricao: string; similaridade: number } | null = null;
+    let melhorScore = 0;
+
+    for (const item of currentItemsList) {
+      if (!item.codigo_procedimento && !item.descricao_procedimento) continue;
+      const descricaoRef = procedimentosAutorizadosParaIA.find(p => p.codigo === item.codigo_procedimento)?.descricao
+        || item.descricao_procedimento || "";
+      if (!descricaoRef) continue;
+      const { score } = calcularScoreCombinado(descricaoExtraida, descricaoRef);
+      console.log(`[process-descricao-cirurgica] Match pré-existente: "${descricaoExtraida.slice(0, 40)}" vs "${descricaoRef.slice(0, 40)}" = ${(score * 100).toFixed(1)}%`);
+      if (score > melhorScore) {
+        melhorScore = score;
+        melhorMatch = { codigo: item.codigo_procedimento || "", descricao: descricaoRef, similaridade: score };
       }
-      if (descricao) {
-        const normalizedDescricao = normalizeText(descricao);
-        const byDescription = currentItemsList.find(
-          (item) => normalizeText(item.descricao_procedimento) === normalizedDescricao
-        );
-        if (byDescription) return byDescription;
-      }
-      return null;
-    };
+    }
 
-    // ── Estratégia de validação CBHPM para descrições narrativas com itens pré-existentes ──
-    // Quando há itens pré-existentes (guia de autorização/solicitação) E o procedimento
-    // extraído NÃO tem código (descrição narrativa), tentamos primeiro fazer match
-    // contra os itens pré-existentes por similaridade de descrição.
-    // Isso evita que o validador CBHPM geral encontre códigos errados.
-    const matchContraItensPreExistentes = async (
-      descricaoExtraida: string
-    ): Promise<{ codigo: string; descricao: string; similaridade: number } | null> => {
-      if (currentItemsList.length === 0) return null;
+    if (melhorMatch && melhorScore >= 0.35) {
+      console.log(`[process-descricao-cirurgica] ✅ Match pré-existente (${(melhorScore * 100).toFixed(1)}%): "${melhorMatch.codigo}" - "${melhorMatch.descricao.slice(0, 50)}"`);
+      return melhorMatch;
+    }
+    return null;
+  };
 
-      let melhorMatch: { codigo: string; descricao: string; similaridade: number } | null = null;
-      let melhorScore = 0;
+  const procedimentosRevisao: Array<{
+    item_faturamento_id: string | null;
+    codigo_original: string | null;
+    descricao_original: string | null;
+    codigo_validado: string | null;
+    descricao_validada: string | null;
+    metodo_validacao: string;
+    similaridade: number | null;
+    necessita_revisao: boolean;
+  }> = [];
 
-      for (const item of currentItemsList) {
-        if (!item.codigo_procedimento && !item.descricao_procedimento) continue;
+  for (const proc of procedimentosData) {
+    const codigoOriginal = proc.codigo_procedimento?.toString().trim() || null;
+    const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
+    const quantidadeExecutada = proc.quantidade_executada ?? 1;
 
-        // Usar a descrição CBHPM oficial se disponível (já buscamos antes)
-        const descricaoRef = procedimentosAutorizadosParaIA.find(
-          p => p.codigo === item.codigo_procedimento
-        )?.descricao || item.descricao_procedimento || "";
+    let codigoProcedimento: string | null = null;
+    let descricaoProcedimento: string | null = null;
+    let metodoValidacao = "nao_encontrado";
+    let similaridade: number | null = null;
+    let validado = false;
 
-        if (!descricaoRef) continue;
-
-        const { score } = calcularScoreCombinado(descricaoExtraida, descricaoRef);
-
-        console.log(
-          `[process-descricao-cirurgica] Match contra pré-existente: "${descricaoExtraida.slice(0, 40)}" vs "${descricaoRef.slice(0, 40)}" = ${(score * 100).toFixed(1)}%`
-        );
-
-        if (score > melhorScore) {
-          melhorScore = score;
-          melhorMatch = {
-            codigo: item.codigo_procedimento || "",
-            descricao: descricaoRef,
-            similaridade: score,
-          };
+    if (codigoOriginal) {
+      // Documento com tabela → validar por código
+      const validacao = await validarProcedimentoCbhpm(supabase, codigoOriginal, descricaoOriginal, 0.55);
+      if (validacao.valido && validacao.codigo_validado) {
+        codigoProcedimento = validacao.codigo_validado;
+        descricaoProcedimento = validacao.descricao_validada;
+        metodoValidacao = validacao.metodo_validacao;
+        similaridade = validacao.similaridade ?? null;
+        validado = true;
+        if (codigoOriginal !== codigoProcedimento) {
+          console.log(`[process-descricao-cirurgica] ⚠️ Código CORRIGIDO: "${codigoOriginal}" → "${codigoProcedimento}"`);
         }
+      } else {
+        const sugestao = validacao.melhor_sugestao;
+        procedimentosRevisao.push({
+          item_faturamento_id: null, codigo_original: codigoOriginal, descricao_original: descricaoOriginal,
+          codigo_validado: sugestao?.codigo ?? null, descricao_validada: sugestao?.descricao ?? null,
+          metodo_validacao: sugestao ? "sugestao_baixa_similaridade" : "nao_encontrado",
+          similaridade: sugestao?.similaridade ?? null, necessita_revisao: true,
+        });
+        console.log(`[process-descricao-cirurgica] ❌ Código "${codigoOriginal}" não encontrado na CBHPM`);
+        continue;
       }
-
-      // Limiar mais alto para match contra pré-existentes (0.35 é suficiente para nomes médicos similares)
-      if (melhorMatch && melhorScore >= 0.35) {
-        console.log(
-          `[process-descricao-cirurgica] ✅ Match contra pré-existente encontrado (${(melhorScore * 100).toFixed(1)}%): "${melhorMatch.codigo}" - "${melhorMatch.descricao.slice(0, 50)}"`
-        );
-        return melhorMatch;
-      }
-
-      return null;
-    };
-
-    // Track procedures that need review
-    const procedimentosRevisao: Array<{
-      item_faturamento_id: string | null;
-      codigo_original: string | null;
-      descricao_original: string | null;
-      codigo_validado: string | null;
-      descricao_validada: string | null;
-      metodo_validacao: string;
-      similaridade: number | null;
-      necessita_revisao: boolean;
-    }> = [];
-
-    for (const proc of procedimentosData) {
-      const codigoOriginal = proc.codigo_procedimento?.toString().trim() || null;
-      const descricaoOriginal = proc.descricao_procedimento?.toString().trim() || null;
-      const quantidadeExecutada = proc.quantidade_executada ?? 1;
-
-      let codigoProcedimento: string | null = null;
-      let descricaoProcedimento: string | null = null;
-      let metodoValidacao = "nao_encontrado";
-      let similaridade: number | null = null;
-      let validado = false;
-
-      // ── Estratégia de validação ──
-      if (codigoOriginal) {
-        // Caso 1: IA extraiu um código (documento com tabela) → validar por código exato
-        const limiarSimilaridade = 0.55;
-        const validacao = await validarProcedimentoCbhpm(
-          supabase,
-          codigoOriginal,
-          descricaoOriginal,
-          limiarSimilaridade
-        );
-
-        if (validacao.valido && validacao.codigo_validado) {
-          codigoProcedimento = validacao.codigo_validado;
-          descricaoProcedimento = validacao.descricao_validada;
-          metodoValidacao = validacao.metodo_validacao;
-          similaridade = validacao.similaridade ?? null;
+    } else if (descricaoOriginal) {
+      // Documento narrativo → tentar match contra pré-existentes primeiro
+      if (!semItensPreExistentes) {
+        const matchPre = await matchContraItensPreExistentes(descricaoOriginal);
+        if (matchPre && matchPre.codigo) {
+          codigoProcedimento = matchPre.codigo;
+          descricaoProcedimento = matchPre.descricao;
+          metodoValidacao = "match_autorizacao";
+          similaridade = matchPre.similaridade;
           validado = true;
-
-          if (codigoOriginal !== codigoProcedimento) {
-            console.log(
-              `[process-descricao-cirurgica] ⚠️ Código CORRIGIDO: "${codigoOriginal}" → "${codigoProcedimento}" (${metodoValidacao})`
-            );
-          }
+          console.log(`[process-descricao-cirurgica] ✅ "${descricaoOriginal.slice(0, 40)}" → autorizado "${codigoProcedimento}" (${(similaridade * 100).toFixed(1)}%)`);
         } else {
-          // Código não encontrado na CBHPM
-          const sugestao = validacao.melhor_sugestao;
-          procedimentosRevisao.push({
-            item_faturamento_id: null,
-            codigo_original: codigoOriginal,
-            descricao_original: descricaoOriginal,
-            codigo_validado: sugestao?.codigo ?? null,
-            descricao_validada: sugestao?.descricao ?? null,
-            metodo_validacao: sugestao ? "sugestao_baixa_similaridade" : "nao_encontrado",
-            similaridade: sugestao?.similaridade ?? null,
-            necessita_revisao: true,
-          });
-          console.log(
-            `[process-descricao-cirurgica] ❌ Código "${codigoOriginal}" não encontrado na CBHPM`
-          );
-          continue;
-        }
-      } else if (descricaoOriginal) {
-        // Caso 2: IA extraiu apenas descrição (documento narrativo)
-        // Estratégia: primeiro tentar match contra itens pré-existentes (guia de autorização)
-        // Isso garante que usamos os códigos já autorizados quando há correspondência
-
-        if (!semItensPreExistentes) {
-          // Há itens pré-existentes → tentar match contra eles primeiro
-          const matchPreExistente = await matchContraItensPreExistentes(descricaoOriginal);
-
-          if (matchPreExistente && matchPreExistente.codigo) {
-            codigoProcedimento = matchPreExistente.codigo;
-            descricaoProcedimento = matchPreExistente.descricao;
-            metodoValidacao = "match_autorizacao";
-            similaridade = matchPreExistente.similaridade;
-            validado = true;
-            console.log(
-              `[process-descricao-cirurgica] ✅ Procedimento "${descricaoOriginal.slice(0, 40)}" → código autorizado "${codigoProcedimento}" (${(similaridade * 100).toFixed(1)}%)`
-            );
-          } else {
-            // Não encontrou match nos pré-existentes → este é um procedimento ADICIONAL
-            // Tentar validar na CBHPM geral com limiar mais alto para evitar falsos positivos
-            console.log(
-              `[process-descricao-cirurgica] ⚠️ Procedimento "${descricaoOriginal.slice(0, 40)}" não encontrou match nos autorizados. Tentando CBHPM geral...`
-            );
-            const validacao = await validarProcedimentoCbhpm(
-              supabase,
-              null,
-              descricaoOriginal,
-              0.55 // Limiar mais alto para procedimentos adicionais não autorizados
-            );
-
-            if (validacao.valido && validacao.codigo_validado) {
-              codigoProcedimento = validacao.codigo_validado;
-              descricaoProcedimento = validacao.descricao_validada;
-              metodoValidacao = validacao.metodo_validacao;
-              similaridade = validacao.similaridade ?? null;
-              validado = true;
-              console.log(
-                `[process-descricao-cirurgica] ✅ Procedimento adicional validado na CBHPM: "${codigoProcedimento}" (${(similaridade! * 100).toFixed(1)}%)`
-              );
-            } else {
-              // Não encontrado → adicionar para revisão
-              const sugestao = validacao.melhor_sugestao;
-              procedimentosRevisao.push({
-                item_faturamento_id: null,
-                codigo_original: null,
-                descricao_original: descricaoOriginal,
-                codigo_validado: sugestao?.codigo ?? null,
-                descricao_validada: sugestao?.descricao ?? null,
-                metodo_validacao: sugestao ? "sugestao_baixa_similaridade" : "nao_encontrado",
-                similaridade: sugestao?.similaridade ?? null,
-                necessita_revisao: true,
-              });
-              console.log(
-                `[process-descricao-cirurgica] ❌ Procedimento adicional "${descricaoOriginal.slice(0, 40)}" não encontrado na CBHPM`
-              );
-              continue;
-            }
-          }
-        } else {
-          // Sem itens pré-existentes → validar na CBHPM geral
-          const validacao = await validarProcedimentoCbhpm(
-            supabase,
-            null,
-            descricaoOriginal,
-            0.40
-          );
-
+          console.log(`[process-descricao-cirurgica] ⚠️ "${descricaoOriginal.slice(0, 40)}" sem match nos autorizados. Tentando CBHPM geral...`);
+          const validacao = await validarProcedimentoCbhpm(supabase, null, descricaoOriginal, 0.55);
           if (validacao.valido && validacao.codigo_validado) {
             codigoProcedimento = validacao.codigo_validado;
             descricaoProcedimento = validacao.descricao_validada;
             metodoValidacao = validacao.metodo_validacao;
             similaridade = validacao.similaridade ?? null;
             validado = true;
-            console.log(
-              `[process-descricao-cirurgica] ✅ Procedimento validado na CBHPM (sem pré-existentes): "${codigoProcedimento}"`
-            );
+            console.log(`[process-descricao-cirurgica] ✅ Procedimento adicional CBHPM: "${codigoProcedimento}" (${(similaridade! * 100).toFixed(1)}%)`);
           } else {
             const sugestao = validacao.melhor_sugestao;
             procedimentosRevisao.push({
-              item_faturamento_id: null,
-              codigo_original: null,
-              descricao_original: descricaoOriginal,
-              codigo_validado: sugestao?.codigo ?? null,
-              descricao_validada: sugestao?.descricao ?? null,
+              item_faturamento_id: null, codigo_original: null, descricao_original: descricaoOriginal,
+              codigo_validado: sugestao?.codigo ?? null, descricao_validada: sugestao?.descricao ?? null,
               metodo_validacao: sugestao ? "sugestao_baixa_similaridade" : "nao_encontrado",
-              similaridade: sugestao?.similaridade ?? null,
-              necessita_revisao: true,
+              similaridade: sugestao?.similaridade ?? null, necessita_revisao: true,
             });
-            console.log(
-              `[process-descricao-cirurgica] ❌ Procedimento "${descricaoOriginal.slice(0, 40)}" não encontrado na CBHPM`
-            );
+            console.log(`[process-descricao-cirurgica] ❌ Procedimento adicional "${descricaoOriginal.slice(0, 40)}" não encontrado`);
             continue;
           }
         }
       } else {
-        // Sem código e sem descrição → ignorar
-        console.log("[process-descricao-cirurgica] ⚠️ Procedimento sem código e sem descrição, ignorando.");
-        continue;
-      }
-
-      if (!validado || !codigoProcedimento) continue;
-
-      // Determine if this procedure needs review
-      const foiCorrigido = codigoOriginal !== null && codigoOriginal !== codigoProcedimento;
-      const necessitaRevisao = foiCorrigido && metodoValidacao !== "codigo_exato";
-
-      console.log(
-        `[process-descricao-cirurgica] ✅ Procedimento validado (${metodoValidacao}): ${codigoProcedimento} - ${descricaoProcedimento?.slice(0, 60)}`
-      );
-
-      let insertedItemId: string | null = null;
-
-      if (semItensPreExistentes) {
-        // Sem guia de autorização: inserir todos os procedimentos diretamente
-        const { data: newItem, error: insertError } = await supabase
-          .from("itens_faturamento")
-          .insert({
-            faturamento_id: faturamentoId,
-            medico_id: medicoId,
-            codigo_procedimento: codigoProcedimento ?? null,
-            descricao_procedimento: descricaoProcedimento ?? null,
-            quantidade_autorizada: quantidadeExecutada,
-            quantidade_executada: quantidadeExecutada,
-            quantidade: quantidadeExecutada,
-            status_item: "pendente",
-          })
-          .select("id, codigo_procedimento, descricao_procedimento")
-          .single();
-
-        if (insertError) {
-          console.error("[process-descricao-cirurgica] Erro ao inserir item (modo direto):", insertError);
+        const validacao = await validarProcedimentoCbhpm(supabase, null, descricaoOriginal, 0.40);
+        if (validacao.valido && validacao.codigo_validado) {
+          codigoProcedimento = validacao.codigo_validado;
+          descricaoProcedimento = validacao.descricao_validada;
+          metodoValidacao = validacao.metodo_validacao;
+          similaridade = validacao.similaridade ?? null;
+          validado = true;
+          console.log(`[process-descricao-cirurgica] ✅ CBHPM (sem pré-existentes): "${codigoProcedimento}"`);
         } else {
-          console.log(
-            "[process-descricao-cirurgica] Novo item inserido (modo direto):",
-            codigoProcedimento || descricaoProcedimento
-          );
-          if (newItem) {
-            currentItemsList.push(newItem as ProcedimentoPreExistente);
-            insertedItemId = (newItem as any).id;
-          }
-        }
-      } else {
-        // Com itens pré-existentes: atualizar o item correspondente ou inserir se for novo
-        const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
-
-        if (existingItem) {
-          const updateFields: Record<string, unknown> = {
-            quantidade_executada: quantidadeExecutada,
-            medico_id: medicoId,
-            updated_at: new Date().toISOString(),
-          };
-
-          if (descricaoProcedimento && !existingItem.descricao_procedimento) {
-            updateFields.descricao_procedimento = descricaoProcedimento;
-          }
-          if (codigoProcedimento && !existingItem.codigo_procedimento) {
-            updateFields.codigo_procedimento = codigoProcedimento;
-          }
-
-          const { error: updateItemError } = await supabase
-            .from("itens_faturamento")
-            .update(updateFields)
-            .eq("id", existingItem.id);
-
-          if (updateItemError) {
-            console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
-          } else {
-            console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento || descricaoProcedimento);
-            insertedItemId = existingItem.id;
-          }
-        } else if (codigoProcedimento || descricaoProcedimento) {
-          // Procedimento novo não presente na guia de autorização: inserir como adicional
-          const { data: newItem, error: insertError } = await supabase
-            .from("itens_faturamento")
-            .insert({
-              faturamento_id: faturamentoId,
-              medico_id: medicoId,
-              codigo_procedimento: codigoProcedimento ?? null,
-              descricao_procedimento: descricaoProcedimento ?? null,
-              quantidade_autorizada: quantidadeExecutada,
-              quantidade_executada: quantidadeExecutada,
-              quantidade: quantidadeExecutada,
-              status_item: "pendente",
-            })
-            .select("id, codigo_procedimento, descricao_procedimento")
-            .single();
-
-          if (insertError) {
-            console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
-          } else {
-            console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento || descricaoProcedimento);
-            if (newItem) {
-              currentItemsList.push(newItem as ProcedimentoPreExistente);
-              insertedItemId = (newItem as any).id;
-            }
-          }
+          const sugestao = validacao.melhor_sugestao;
+          procedimentosRevisao.push({
+            item_faturamento_id: null, codigo_original: null, descricao_original: descricaoOriginal,
+            codigo_validado: sugestao?.codigo ?? null, descricao_validada: sugestao?.descricao ?? null,
+            metodo_validacao: sugestao ? "sugestao_baixa_similaridade" : "nao_encontrado",
+            similaridade: sugestao?.similaridade ?? null, necessita_revisao: true,
+          });
+          console.log(`[process-descricao-cirurgica] ❌ "${descricaoOriginal.slice(0, 40)}" não encontrado na CBHPM`);
+          continue;
         }
       }
-
-      // Add to review list
-      procedimentosRevisao.push({
-        item_faturamento_id: insertedItemId,
-        codigo_original: codigoOriginal,
-        descricao_original: descricaoOriginal,
-        codigo_validado: codigoProcedimento,
-        descricao_validada: descricaoProcedimento,
-        metodo_validacao: metodoValidacao,
-        similaridade: similaridade,
-        necessita_revisao: necessitaRevisao,
-      });
+    } else {
+      console.log("[process-descricao-cirurgica] ⚠️ Procedimento sem código e sem descrição, ignorando.");
+      continue;
     }
 
-    const temRevisaoPendente = procedimentosRevisao.some(p => p.necessita_revisao);
-    console.log("[process-descricao-cirurgica] Processamento concluído com sucesso.",
-      temRevisaoPendente ? `${procedimentosRevisao.filter(p => p.necessita_revisao).length} procedimento(s) precisam de revisão.` : "Nenhuma revisão necessária.");
+    if (!validado || !codigoProcedimento) continue;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        faturamento_id: faturamentoId,
-        dados_extraidos: {
-          faturamento: faturamentoData,
-          procedimentos: procedimentosData,
-        },
-        revisao_procedimentos: procedimentosRevisao,
-        tem_revisao_pendente: temRevisaoPendente,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    const foiCorrigido = codigoOriginal !== null && codigoOriginal !== codigoProcedimento;
+    const necessitaRevisao = foiCorrigido && metodoValidacao !== "codigo_exato";
+
+    console.log(`[process-descricao-cirurgica] ✅ Validado (${metodoValidacao}): ${codigoProcedimento} - ${descricaoProcedimento?.slice(0, 60)}`);
+
+    let insertedItemId: string | null = null;
+
+    if (semItensPreExistentes) {
+      const { data: newItem, error: insertError } = await supabase.from("itens_faturamento").insert({
+        faturamento_id: faturamentoId, medico_id: medicoId,
+        codigo_procedimento: codigoProcedimento, descricao_procedimento: descricaoProcedimento,
+        quantidade_autorizada: quantidadeExecutada, quantidade_executada: quantidadeExecutada,
+        quantidade: quantidadeExecutada, status_item: "pendente",
+      }).select("id, codigo_procedimento, descricao_procedimento").single();
+
+      if (insertError) console.error("[process-descricao-cirurgica] Erro ao inserir item (direto):", insertError);
+      else {
+        console.log("[process-descricao-cirurgica] Item inserido (direto):", codigoProcedimento);
+        if (newItem) { currentItemsList.push(newItem as ProcedimentoPreExistente); insertedItemId = (newItem as any).id; }
+      }
+    } else {
+      const existingItem = findExistingItem(codigoProcedimento, descricaoProcedimento);
+      if (existingItem) {
+        const updateFields: Record<string, unknown> = {
+          quantidade_executada: quantidadeExecutada, medico_id: medicoId, updated_at: new Date().toISOString(),
+        };
+        if (descricaoProcedimento && !existingItem.descricao_procedimento) updateFields.descricao_procedimento = descricaoProcedimento;
+        if (codigoProcedimento && !existingItem.codigo_procedimento) updateFields.codigo_procedimento = codigoProcedimento;
+
+        const { error: updateItemError } = await supabase.from("itens_faturamento").update(updateFields).eq("id", existingItem.id);
+        if (updateItemError) console.error("[process-descricao-cirurgica] Erro ao atualizar item:", updateItemError);
+        else { console.log("[process-descricao-cirurgica] Item atualizado:", codigoProcedimento); insertedItemId = existingItem.id; }
+      } else {
+        const { data: newItem, error: insertError } = await supabase.from("itens_faturamento").insert({
+          faturamento_id: faturamentoId, medico_id: medicoId,
+          codigo_procedimento: codigoProcedimento, descricao_procedimento: descricaoProcedimento,
+          quantidade_autorizada: quantidadeExecutada, quantidade_executada: quantidadeExecutada,
+          quantidade: quantidadeExecutada, status_item: "pendente",
+        }).select("id, codigo_procedimento, descricao_procedimento").single();
+
+        if (insertError) console.error("[process-descricao-cirurgica] Erro ao inserir item:", insertError);
+        else {
+          console.log("[process-descricao-cirurgica] Novo item inserido:", codigoProcedimento);
+          if (newItem) { currentItemsList.push(newItem as ProcedimentoPreExistente); insertedItemId = (newItem as any).id; }
+        }
+      }
+    }
+
+    procedimentosRevisao.push({
+      item_faturamento_id: insertedItemId, codigo_original: codigoOriginal, descricao_original: descricaoOriginal,
+      codigo_validado: codigoProcedimento, descricao_validada: descricaoProcedimento,
+      metodo_validacao: metodoValidacao, similaridade, necessita_revisao: necessitaRevisao,
+    });
   }
 
-  console.log("[process-descricao-cirurgica] Processamento concluído com sucesso (sem procedimentos).");
+  const temRevisaoPendente = procedimentosRevisao.some(p => p.necessita_revisao);
+  console.log("[process-descricao-cirurgica] Concluído.",
+    temRevisaoPendente
+      ? `${procedimentosRevisao.filter(p => p.necessita_revisao).length} procedimento(s) precisam de revisão.`
+      : "Nenhuma revisão necessária.");
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      faturamento_id: faturamentoId,
-      dados_extraidos: {
-        faturamento: faturamentoData,
-        procedimentos: procedimentosData,
-      },
-      revisao_procedimentos: [],
-      tem_revisao_pendente: false,
-    }),
-    {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    },
-  );
+  return new Response(JSON.stringify({
+    success: true,
+    faturamento_id: faturamentoId,
+    dados_extraidos: { faturamento: faturamentoData, procedimentos: procedimentosData },
+    revisao_procedimentos: procedimentosRevisao,
+    tem_revisao_pendente: temRevisaoPendente,
+    modelo_utilizado: modeloIdentificado?.nome ?? null,
+  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
