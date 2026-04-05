@@ -10,6 +10,7 @@ import {
   MapPin,
   Landmark,
   ChevronRight,
+  Star,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,9 @@ import {
   listarClinicas,
   criarClinica,
   atualizarClinica,
+  listarFavoritos,
+  favoritarClinica,
+  desfavoritarClinica,
   type Clinica,
   type ClinicaInput,
 } from "@/services/clinicas-service";
@@ -30,6 +34,7 @@ type ViewMode = "list" | "form";
 
 const ClinicasList = () => {
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
+  const [favoritos, setFavoritos] = useState<Set<string>>(new Set());
   const [filtered, setFiltered] = useState<Clinica[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,8 +46,12 @@ const ClinicasList = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await listarClinicas();
+        const [data, favData] = await Promise.all([
+          listarClinicas(),
+          listarFavoritos()
+        ]);
         setClinicas(data);
+        setFavoritos(new Set(favData));
         setFiltered(data);
       } catch (err) {
         const message =
@@ -59,13 +68,10 @@ const ClinicasList = () => {
   }, []);
 
   useEffect(() => {
-    if (!search.trim()) {
-      setFiltered(clinicas);
-      return;
-    }
-    const term = search.toLowerCase();
-    setFiltered(
-      clinicas.filter((c) => {
+    let result = clinicas;
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      result = result.filter((c) => {
         return (
           c.razao_social.toLowerCase().includes(term) ||
           c.nome_fantasia.toLowerCase().includes(term) ||
@@ -73,9 +79,45 @@ const ClinicasList = () => {
           (c.cidade ?? "").toLowerCase().includes(term) ||
           (c.codigo_referencial_got ?? "").toLowerCase().includes(term)
         );
-      }),
-    );
-  }, [search, clinicas]);
+      });
+    }
+
+    // Sort by favorites first, then alphabetically by nome_fantasia
+    result.sort((a, b) => {
+      const isAFav = favoritos.has(a.id);
+      const isBFav = favoritos.has(b.id);
+      if (isAFav && !isBFav) return -1;
+      if (!isAFav && isBFav) return 1;
+      return a.nome_fantasia.localeCompare(b.nome_fantasia);
+    });
+
+    setFiltered([...result]);
+  }, [search, clinicas, favoritos]);
+
+  const handleToggleFavorite = async (clinicaId: string) => {
+    try {
+      const isFavorito = favoritos.has(clinicaId);
+      if (isFavorito) {
+        await desfavoritarClinica(clinicaId);
+        setFavoritos(prev => {
+          const next = new Set(prev);
+          next.delete(clinicaId);
+          return next;
+        });
+        showSuccess("Removido dos favoritos");
+      } else {
+        await favoritarClinica(clinicaId);
+        setFavoritos(prev => {
+          const next = new Set(prev);
+          next.add(clinicaId);
+          return next;
+        });
+        showSuccess("Adicionado aos favoritos");
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Erro ao alterar favorito");
+    }
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -240,25 +282,45 @@ const ClinicasList = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {filtered.map((c) => (
-            <div
-              key={c.id}
-              className="group flex items-start gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-indigo-100 hover:shadow-md"
-            >
-              {/* Icon */}
-              <span className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
-                c.tipo_unidade === "HOSPITAL"
-                  ? "bg-violet-100 text-violet-600"
-                  : "bg-sky-100 text-sky-600"
-              }`}>
-                {c.tipo_unidade === "HOSPITAL" ? (
-                  <Landmark className="h-5 w-5" />
-                ) : (
-                  <Building2 className="h-5 w-5" />
-                )}
-              </span>
+          {filtered.map((c) => {
+            const isFavorito = favoritos.has(c.id);
+            return (
+              <div
+                key={c.id}
+                className="group flex items-start gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-indigo-100 hover:shadow-md"
+              >
+                {/* Icon & Favorite */}
+                <div className="flex flex-col items-center gap-2 mt-0.5">
+                  <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
+                    c.tipo_unidade === "HOSPITAL"
+                      ? "bg-violet-100 text-violet-600"
+                      : "bg-sky-100 text-sky-600"
+                  }`}>
+                    {c.tipo_unidade === "HOSPITAL" ? (
+                      <Landmark className="h-5 w-5" />
+                    ) : (
+                      <Building2 className="h-5 w-5" />
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void handleToggleFavorite(c.id);
+                    }}
+                    className={`p-1.5 rounded-full transition-colors ${
+                      isFavorito
+                        ? "text-amber-400 bg-amber-50 hover:bg-amber-100"
+                        : "text-slate-300 hover:text-amber-400 hover:bg-slate-50"
+                    }`}
+                    title={isFavorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                  >
+                    <Star className="h-4 w-4" fill={isFavorito ? "currentColor" : "none"} />
+                  </button>
+                </div>
 
-              {/* Main info */}
+                {/* Main info */}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
@@ -324,14 +386,15 @@ const ClinicasList = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 flex-shrink-0 rounded-full px-3 text-xs text-slate-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-indigo-50 hover:text-indigo-700"
+                className="h-8 flex-shrink-0 rounded-full px-3 text-xs text-slate-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-indigo-50 hover:text-indigo-700 mt-1"
                 onClick={() => openEdit(c)}
               >
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />
                 Editar
               </Button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
