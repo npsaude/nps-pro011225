@@ -1,6 +1,7 @@
 import { Bell, Search, Building2 } from "lucide-react";
 import HospitaisList from "@/components/hospitais/HospitaisList";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 
 const HospitaisCadastro = () => {
   return (
@@ -9,32 +10,30 @@ const HospitaisCadastro = () => {
         <AdminSidebar section="cadastro" cadastroSubsection="hospitais" />
 
         {/* Área principal */}
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl dark:bg-slate-900/90">
+        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 lg:p-6 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl dark:bg-slate-900/90">
           {/* Header */}
-          <header className="flex items-center justify-between gap-3">
+          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-3">
             <div className="flex flex-col">
-              <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
-                  <Building2 className="h-4 w-4" />
+              <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-50 sm:text-xl">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
+                  <Building2 className="h-5 w-5" />
                 </span>
                 <span>Cadastro de hospitais</span>
               </h1>
-              <p className="text-xs text-slate-400 sm:text-sm">
+              <p className="text-xs text-slate-400 sm:text-sm mt-1">
                 Gerencie os hospitais cadastrados e seus documentos específicos.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center self-start sm:self-auto gap-3">
               <div className="hidden items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200/80 focus-within:ring-[#135bec] dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 sm:flex">
                 <Search className="mr-2 h-4 w-4 text-slate-400" />
-                <span className="h-7 w-40 bg-transparent text-xs text-slate-800 dark:text-slate-50 sm:w-52 sm:text-sm">
+                <span className="h-7 w-40 bg-transparent text-xs text-slate-800 dark:text-slate-50 sm:w-52 sm:text-sm flex items-center">
                   Hospitais
                 </span>
               </div>
 
-              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-sm ring-1 ring-slate-200/70 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                <Bell className="h-4 w-4" />
-              </button>
+              <AdminHeaderActions />
             </div>
           </header>
 

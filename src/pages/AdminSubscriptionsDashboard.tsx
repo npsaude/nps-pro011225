@@ -238,10 +238,10 @@ export default function AdminSubscriptionsDashboard() {
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="assinaturas" assinaturasSubsection="dashboard" />
 
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
-          <header className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-white/90 p-4 lg:p-6 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
+          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-3">
             <div className="flex flex-col">
-              <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50 sm:text-xl">
                 Dashboard de Assinaturas
               </h1>
               <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
@@ -249,7 +249,9 @@ export default function AdminSubscriptionsDashboard() {
               </p>
             </div>
 
-            <AdminHeaderActions />
+            <div className="flex items-center self-start sm:self-auto">
+              <AdminHeaderActions />
+            </div>
           </header>
 
           <main className="flex-1 space-y-4">

@@ -562,7 +562,8 @@ const AdminSidebar = ({
   cadastroSubsection,
   documentosSubsection,
   assinaturasSubsection,
-}: AdminSidebarProps) => {
+  isMobile,
+}: AdminSidebarProps & { isMobile?: boolean }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { systemUser, loading: systemUserLoading } = useSystemUser();
@@ -642,7 +643,7 @@ const AdminSidebar = ({
   }, [location.pathname, assinaturasSubsection]);
 
   return (
-    <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-sidebar p-4 text-sidebar-foreground shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:flex">
+    <aside className={isMobile ? "flex w-full flex-col justify-between h-full px-1 py-4" : "hidden w-60 flex-col justify-between rounded-3xl bg-sidebar p-4 text-sidebar-foreground shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:flex"}>
       <div className="flex flex-col gap-8">
         {/* Logo */}
         <div className="flex items-center gap-3 px-2">
