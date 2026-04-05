@@ -543,7 +543,7 @@ const Login = () => {
             © ConMedic. Plataforma segura.
           </p>
           <p className="text-[9px] font-medium text-white/50 mt-1">
-            Versão 1.2.2
+            Versão 1.1.3
           </p>
         </div>
       </div>
