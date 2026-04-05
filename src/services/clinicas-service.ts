@@ -85,3 +85,51 @@ export async function atualizarClinica(
 
   return data as Clinica;
 }
+
+export async function listarFavoritos(): Promise<string[]> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) return [];
+
+  const { data, error } = await supabase
+    .from("medicos_clinicas_favoritas")
+    .select("clinica_id")
+    .eq("medico_id", authData.user.id);
+
+  if (error) {
+    console.error("Erro ao carregar favoritos:", error);
+    return [];
+  }
+
+  return (data ?? []).map(row => row.clinica_id);
+}
+
+export async function favoritarClinica(clinicaId: string): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) throw new Error("Usuário não autenticado");
+
+  const { error } = await supabase
+    .from("medicos_clinicas_favoritas")
+    .insert({
+      medico_id: authData.user.id,
+      clinica_id: clinicaId
+    });
+
+  if (error) {
+    throw new Error(error.message || "Não foi possível favoritar a instituição.");
+  }
+}
+
+export async function desfavoritarClinica(clinicaId: string): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) throw new Error("Usuário não autenticado");
+
+  const { error } = await supabase
+    .from("medicos_clinicas_favoritas")
+    .delete()
+    .eq("medico_id", authData.user.id)
+    .eq("clinica_id", clinicaId);
+
+  if (error) {
+    throw new Error(error.message || "Não foi possível remover o favorito.");
+  }
+}
