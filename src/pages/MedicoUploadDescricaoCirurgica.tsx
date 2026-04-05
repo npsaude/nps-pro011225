@@ -2925,7 +2925,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                             </div>
                           )}
 
-                          {!showAllHospitais && othHosp.length > 0 && (
+                          {!showAllHospitais && favsHosp.length > 0 && othHosp.length > 0 && (
                             <button
                               type="button"
                               onClick={() => setShowAllHospitais(true)}
@@ -3035,7 +3035,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                             </div>
                           )}
 
-                          {!showAllClinicas && othClin.length > 0 && (
+                          {!showAllClinicas && favsClin.length > 0 && othClin.length > 0 && (
                             <button
                               type="button"
                               onClick={() => setShowAllClinicas(true)}
