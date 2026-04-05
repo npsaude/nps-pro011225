@@ -24,6 +24,7 @@ import {
   Zap,
   TrendingUp,
   Scissors,
+  Star,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ import {
   type CheckResult,
 } from "@/utils/consistencyCheck";
 import { useBillingQuota } from "@/hooks/use-billing-quota";
+import { listarFavoritos } from "@/services/clinicas-service";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -281,6 +283,17 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   // Tipo de cirurgia (eletiva ou emergencial)
   const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
+
+  // Favoritos
+  const [favoritosIds, setFavoritosIds] = useState<Set<string>>(new Set());
+  const [showAllHospitais, setShowAllHospitais] = useState(false);
+  const [showAllClinicas, setShowAllClinicas] = useState(false);
+
+  useEffect(() => {
+    listarFavoritos()
+      .then((favs) => setFavoritosIds(new Set(favs)))
+      .catch(console.error);
+  }, []);
 
   // Verificação de consistência entre documentos
   const [consistencyCheckEnabled, setConsistencyCheckEnabled] = useState(false);
@@ -2266,6 +2279,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setClinicaStepView("selector");
     setUseSameAsHospital(false);
     setFaturamentoId(null);
+    setShowAllHospitais(false);
+    setShowAllClinicas(false);
     setFaturamentoData(null);
     setItensFaturamento([]);
     setHtmlGuiaPreenchida("");
@@ -2386,10 +2401,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const handleFecharSelecaoHospital = () => {
     setView("start");
     setHospitalStepView("selector");
+    setShowAllHospitais(false);
+    setShowAllClinicas(false);
   };
 
   const handleVoltarListaParaSelector = () => {
     setHospitalStepView("selector");
+    setShowAllHospitais(false);
   };
 
   const handleContinuarAposHospitalClinica = () => {
@@ -2426,6 +2444,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const handleVoltarListaClinicasParaSelector = () => {
     setClinicaStepView("selector");
+    setShowAllClinicas(false);
   };
 
   const getAnalyzingDocTitle = () => {
@@ -2862,42 +2881,96 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     Selecione o hospital onde a cirurgia foi realizada:
                   </p>
 
-                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+                  <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1 pb-1">
                     {loadingHospitais && (
                       <p className="text-xs text-[#9CA3AF]">
                         Carregando hospitais...
                       </p>
                     )}
 
-                    {!loadingHospitais &&
-                      hospitaisMedico.map((h) => (
-                        <button
-                          key={h.id}
-                          type="button"
-                          onClick={() => {
-                            handleSelecionarHospital(h);
-                            if (useSameAsHospital) {
-                              setSelectedClinicaId(h.id);
-                              setSelectedClinicaName(h.nome_fantasia);
-                            }
-                          }}
-                          className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
-                        >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            <Building2 className="h-4 w-4" />
-                          </span>
-                          <span className="text-sm font-medium">
-                            {h.nome_fantasia}
-                          </span>
-                        </button>
-                      ))}
+                    {(() => {
+                      if (loadingHospitais) return null;
+                      const favsHosp = hospitaisMedico.filter(h => favoritosIds.has(h.id));
+                      const othHosp = hospitaisMedico.filter(h => !favoritosIds.has(h.id));
 
-                    {!loadingHospitais && !hospitaisMedico.length && (
-                      <p className="text-xs text-[#6B7280]">
-                        Não encontramos hospitais disponíveis.
-                        Entre em contato com o administrador.
-                      </p>
-                    )}
+                      return (
+                        <>
+                          {favsHosp.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                              <p className="text-[10px] uppercase tracking-wider text-[#D4A017] font-semibold px-1">Favoritos</p>
+                              {favsHosp.map((h) => (
+                                <button
+                                  key={h.id}
+                                  type="button"
+                                  onClick={() => {
+                                    handleSelecionarHospital(h);
+                                    if (useSameAsHospital) {
+                                      setSelectedClinicaId(h.id);
+                                      setSelectedClinicaName(h.nome_fantasia);
+                                    }
+                                  }}
+                                  className="flex w-full items-center justify-between rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/30 hover:border-[#D4A017]/60 hover:bg-black/40 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/15 text-[#D4A017] border border-[#D4A017]/30 shadow-[0_0_15px_rgba(212,160,23,0.15)]">
+                                      <Building2 className="h-4 w-4" />
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                      {h.nome_fantasia}
+                                    </span>
+                                  </div>
+                                  <Star className="h-4 w-4 text-[#D4A017]" fill="currentColor" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {!showAllHospitais && othHosp.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllHospitais(true)}
+                              className="w-full py-3 text-xs font-medium text-[#9CA3AF] hover:text-[#F5F5F5] border border-dashed border-[#D4A017]/20 rounded-2xl transition-colors hover:bg-white/[0.02]"
+                            >
+                              Ver todos os hospitais
+                            </button>
+                          )}
+
+                          {(showAllHospitais || favsHosp.length === 0) && othHosp.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                              {favsHosp.length > 0 && <p className="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-semibold pt-2 px-1">Outros Hospitais</p>}
+                              {othHosp.map((h) => (
+                                <button
+                                  key={h.id}
+                                  type="button"
+                                  onClick={() => {
+                                    handleSelecionarHospital(h);
+                                    if (useSameAsHospital) {
+                                      setSelectedClinicaId(h.id);
+                                      setSelectedClinicaName(h.nome_fantasia);
+                                    }
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
+                                >
+                                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                                    <Building2 className="h-4 w-4" />
+                                  </span>
+                                  <span className="text-sm font-medium">
+                                    {h.nome_fantasia}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {!hospitaisMedico.length && (
+                            <p className="text-xs text-[#6B7280]">
+                              Não encontramos hospitais disponíveis.
+                              Entre em contato com o administrador.
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ) : clinicaStepView === "list" ? (
@@ -2924,36 +2997,84 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     Selecione a instituição para faturamento:
                   </p>
 
-                  <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+                  <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1 pb-1">
                     {loadingClinicas && (
                       <p className="text-xs text-[#9CA3AF]">
                         Carregando instituições...
                       </p>
                     )}
 
-                    {!loadingClinicas &&
-                      clinicasMedico.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => handleSelecionarClinica(c)}
-                          className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
-                        >
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            <Building2 className="h-4 w-4" />
-                          </span>
-                          <span className="text-sm font-medium">
-                            {c.nome_fantasia}
-                          </span>
-                        </button>
-                      ))}
+                    {(() => {
+                      if (loadingClinicas) return null;
+                      const favsClin = clinicasMedico.filter(c => favoritosIds.has(c.id));
+                      const othClin = clinicasMedico.filter(c => !favoritosIds.has(c.id));
 
-                    {!loadingClinicas && !clinicasMedico.length && (
-                      <p className="text-xs text-[#6B7280]">
-                        Não encontramos instituições disponíveis.
-                        Entre em contato com o administrador.
-                      </p>
-                    )}
+                      return (
+                        <>
+                          {favsClin.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                              <p className="text-[10px] uppercase tracking-wider text-[#D4A017] font-semibold px-1">Favoritos</p>
+                              {favsClin.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => handleSelecionarClinica(c)}
+                                  className="flex w-full items-center justify-between rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/30 hover:border-[#D4A017]/60 hover:bg-black/40 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/15 text-[#D4A017] border border-[#D4A017]/30 shadow-[0_0_15px_rgba(212,160,23,0.15)]">
+                                      <Building2 className="h-4 w-4" />
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                      {c.nome_fantasia}
+                                    </span>
+                                  </div>
+                                  <Star className="h-4 w-4 text-[#D4A017]" fill="currentColor" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {!showAllClinicas && othClin.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllClinicas(true)}
+                              className="w-full py-3 text-xs font-medium text-[#9CA3AF] hover:text-[#F5F5F5] border border-dashed border-[#D4A017]/20 rounded-2xl transition-colors hover:bg-white/[0.02]"
+                            >
+                              Ver todas as instituições
+                            </button>
+                          )}
+
+                          {(showAllClinicas || favsClin.length === 0) && othClin.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                              {favsClin.length > 0 && <p className="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-semibold pt-2 px-1">Outras Instituições</p>}
+                              {othClin.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => handleSelecionarClinica(c)}
+                                  className="flex w-full items-center gap-3 rounded-2xl bg-[#121212] px-4 py-3 text-left text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/35 hover:bg-black/40 transition-colors"
+                                >
+                                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
+                                    <Building2 className="h-4 w-4" />
+                                  </span>
+                                  <span className="text-sm font-medium">
+                                    {c.nome_fantasia}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {!clinicasMedico.length && (
+                            <p className="text-xs text-[#6B7280]">
+                              Não encontramos instituições disponíveis.
+                              Entre em contato com o administrador.
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ) : null}
