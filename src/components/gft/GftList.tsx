@@ -45,33 +45,59 @@ import {
 } from "@/components/ui/alert-dialog";
 import { showError, showSuccess } from "@/utils/toast";
 import {
-  type GuiaFaturamentoHonorarios,
   excluirGuiaFaturamento,
   getArquivoModeloUrl,
   uploadArquivoModelo,
+  type GuiaFaturamentoHonorarios,
 } from "@/services/gft-service";
+import { listarClinicas, type Clinica } from "@/services/clinicas-service";
 
 interface GftListProps {
-  items: GuiaFaturamentoHonorarios[];
-  isLoading: boolean;
-  onNovaGuia: () => void;
-  onEditar: (item: GuiaFaturamentoHonorarios) => void;
+  guias: GuiaFaturamentoHonorarios[];
+  carregando: boolean;
   onRefresh: () => void;
+  onEdit: (item: GuiaFaturamentoHonorarios) => void;
+  onNovaGuia: () => void;
 }
 
 const GftList: React.FC<GftListProps> = ({
-  items,
-  isLoading,
-  onNovaGuia,
-  onEditar,
+  guias,
+  carregando,
   onRefresh,
+  onEdit,
+  onNovaGuia,
 }) => {
-  const [viewItem, setViewItem] = useState<GuiaFaturamentoHonorarios | null>(null);
+  const [deleteItem, setDeleteItem] = useState<GuiaFaturamentoHonorarios | null>(
+    null
+  );
+  const [viewItem, setViewItem] = useState<GuiaFaturamentoHonorarios | null>(
+    null
+  );
+  const [processando, setProcessando] = useState(false);
   const [previewHtmlOpen, setPreviewHtmlOpen] = useState(false);
   const [htmlPreview, setHtmlPreview] = useState("");
-  const [deleteItem, setDeleteItem] = useState<GuiaFaturamentoHonorarios | null>(null);
-  const [processando, setProcessando] = useState(false);
+  const [clinicas, setClinicas] = useState<Clinica[]>([]);
+  const [carregandoClinicas, setCarregandoClinicas] = useState(true);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    async function fetchClinicas() {
+      try {
+        const data = await listarClinicas();
+        setClinicas(data);
+      } catch (err) {
+        console.error("Erro ao listar clínicas:", err);
+      } finally {
+        setCarregandoClinicas(false);
+      }
+    }
+    fetchClinicas();
+  }, []);
+
+  const getClinicasNames = (ids: string[] | null | undefined) => {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(id => clinicas.find(c => c.id === id)).filter(Boolean) as Clinica[];
+  };
 
   const handleVisualizar = (item: GuiaFaturamentoHonorarios) => {
     setViewItem(item);
@@ -126,7 +152,6 @@ const GftList: React.FC<GftListProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingId(item.id);
     try {
       await uploadArquivoModelo(file, item.id);
       showSuccess("Arquivo modelo enviado com sucesso.");
@@ -138,7 +163,6 @@ const GftList: React.FC<GftListProps> = ({
           : "Não foi possível enviar o arquivo.";
       showError(message);
     } finally {
-      setUploadingId(null);
       e.target.value = "";
     }
   };
@@ -161,7 +185,7 @@ const GftList: React.FC<GftListProps> = ({
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 Total:{" "}
                 <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  {items.length}
+                  {guias.length}
                 </span>{" "}
                 registro(s)
               </p>
@@ -204,7 +228,7 @@ const GftList: React.FC<GftListProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {carregando ? (
                   <TableRow>
                     <TableCell
                       colSpan={6}
@@ -213,7 +237,7 @@ const GftList: React.FC<GftListProps> = ({
                       Carregando guias de faturamento...
                     </TableCell>
                   </TableRow>
-                ) : items.length === 0 ? (
+                ) : guias.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={6}
@@ -223,7 +247,7 @@ const GftList: React.FC<GftListProps> = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  items.map((item) => (
+                  guias.map((item) => (
                     <TableRow
                       key={item.id}
                       className="border-b border-slate-100 text-xs hover:bg-white dark:border-slate-800 dark:hover:bg-slate-800/70"
@@ -235,19 +259,21 @@ const GftList: React.FC<GftListProps> = ({
                         {item.nome_guia}
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        {item.clinica ? (
-                          <div className="flex flex-col">
-                            <span className="text-slate-700 dark:text-slate-200">
-                              {item.clinica.nome_fantasia}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className="mt-0.5 w-fit text-[10px]"
-                            >
-                              {item.clinica.tipo_unidade === "HOSPITAL"
-                                ? "Hospital"
-                                : "Clínica"}
-                            </Badge>
+                        {item.clinicas_ids && item.clinicas_ids.length > 0 ? (
+                          <div className="flex flex-col gap-1 max-w-[200px]">
+                            {getClinicasNames(item.clinicas_ids)?.map(c => (
+                              <div key={c.id} className="flex flex-col text-xs">
+                                <span className="text-slate-700 dark:text-slate-200 truncate" title={c.nome_fantasia}>
+                                  {c.nome_fantasia}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="mt-0.5 w-fit text-[9px] py-0 px-1 leading-tight"
+                                >
+                                  {c.tipo_unidade === "HOSPITAL" ? "Hospital" : "Clínica"}
+                                </Badge>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <span className="text-slate-400">—</span>
@@ -300,7 +326,7 @@ const GftList: React.FC<GftListProps> = ({
                             variant="outline"
                             size="icon"
                             className="h-7 w-7 rounded-full border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                            onClick={() => onEditar(item)}
+                            onClick={() => onEdit(item)}
                             aria-label="Editar guia"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -394,20 +420,24 @@ const GftList: React.FC<GftListProps> = ({
                 </div>
               </div>
 
-              <div>
-                <p className="text-xs font-medium text-slate-500">
-                  Clínica / Hospital
-                </p>
-                <p className="text-slate-700 dark:text-slate-200">
-                  {viewItem.clinica?.nome_fantasia || "Não vinculado"}
-                  {viewItem.clinica && (
-                    <Badge variant="outline" className="ml-2 text-[10px]">
-                      {viewItem.clinica.tipo_unidade === "HOSPITAL"
-                        ? "Hospital"
-                        : "Clínica"}
-                    </Badge>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <span className="text-right text-sm font-medium text-slate-500">
+                  Clínicas/Hospitais
+                </span>
+                <div className="col-span-3 text-sm text-slate-900 dark:text-slate-50 flex flex-col gap-2">
+                  {viewItem.clinicas_ids && viewItem.clinicas_ids.length > 0 ? (
+                    getClinicasNames(viewItem.clinicas_ids)?.map(c => (
+                      <div key={c.id} className="flex items-center gap-2">
+                        <span className="font-medium">{c.nome_fantasia}</span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {c.tipo_unidade === "HOSPITAL" ? "Hospital" : "Clínica"}
+                        </Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">Não vinculado</span>
                   )}
-                </p>
+                </div>
               </div>
 
               <div>
