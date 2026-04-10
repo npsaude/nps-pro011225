@@ -40,17 +40,22 @@ function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function intervalLabel(interval: string, count: number) {
-  const n = count ?? 1;
-  const base =
-    interval === "DAY"
-      ? "dia"
-      : interval === "WEEK"
-        ? "semana"
-        : interval === "MONTH"
-          ? "mês"
-          : "ano";
-  return n === 1 ? `todo ${base}` : `a cada ${n} ${base}s`;
+function intervalLabel(interval: string) {
+  switch (interval) {
+    case "WEEKLY":
+      return "Semanal";
+    case "BIWEEKLY":
+      return "Quinzenal";
+    case "QUARTERLY":
+      return "Trimestral";
+    case "SEMIANNUALLY":
+      return "Semestral";
+    case "YEARLY":
+      return "Anual";
+    case "MONTHLY":
+    default:
+      return "Mensal";
+  }
 }
 
 export default function SubscriptionPlansList() {
@@ -233,7 +238,7 @@ export default function SubscriptionPlansList() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                        {intervalLabel(p.billing_interval, p.interval_count)}
+                        {intervalLabel(p.billing_interval)}
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <span

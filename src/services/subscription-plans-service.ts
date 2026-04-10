@@ -1,6 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type BillingInterval = "DAY" | "WEEK" | "MONTH" | "YEAR";
+export type BillingInterval =
+  | "WEEKLY"
+  | "BIWEEKLY"
+  | "MONTHLY"
+  | "QUARTERLY"
+  | "SEMIANNUALLY"
+  | "YEARLY";
 
 export interface SubscriptionPlan {
   id: string;
@@ -61,6 +67,26 @@ function toNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function normalizeBillingInterval(value: unknown): BillingInterval {
+  switch (String(value ?? "").toUpperCase()) {
+    case "WEEKLY":
+      return "WEEKLY";
+    case "BIWEEKLY":
+      return "BIWEEKLY";
+    case "QUARTERLY":
+      return "QUARTERLY";
+    case "SEMIANNUALLY":
+      return "SEMIANNUALLY";
+    case "YEAR":
+    case "YEARLY":
+      return "YEARLY";
+    case "MONTH":
+    case "MONTHLY":
+    default:
+      return "MONTHLY";
+  }
+}
+
 function normalizePlan(row: Record<string, unknown>): SubscriptionPlan {
   return {
     id: String(row.id ?? ""),
@@ -70,7 +96,7 @@ function normalizePlan(row: Record<string, unknown>): SubscriptionPlan {
     price_month: toNumber(row.price_month),
     price_annual: toNumber(row.price_annual),
     currency: String(row.currency ?? "BRL"),
-    billing_interval: (row.billing_interval as BillingInterval) ?? "MONTH",
+    billing_interval: normalizeBillingInterval(row.billing_interval),
     interval_count: toNumber(row.interval_count),
     external_plan_id:
       typeof row.external_plan_id === "string" ? row.external_plan_id : null,

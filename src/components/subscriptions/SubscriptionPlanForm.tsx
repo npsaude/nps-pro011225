@@ -49,10 +49,15 @@ const planSchema = z.object({
   price_month: z.preprocess(toMoney, z.number().min(0, "Preço mensal inválido.")),
   price_annual: z.preprocess(toMoney, z.number().min(0, "Preço anual inválido.")),
   currency: z.string().min(1),
-  billing_interval: z.enum(["DAY", "WEEK", "MONTH", "YEAR"]),
+  billing_interval: z.enum([
+    "WEEKLY",
+    "BIWEEKLY",
+    "MONTHLY",
+    "QUARTERLY",
+    "SEMIANNUALLY",
+    "YEARLY",
+  ]),
   interval_count: z.preprocess(toInt, z.number().min(1, "Mínimo 1.")),
-  setup_fee_reais: z.preprocess(toMoney, z.number().min(0)),
-  trial_days: z.preprocess(toInt, z.number().min(0)),
   external_plan_id: z.string().optional(),
   active: z.boolean(),
 });
@@ -79,10 +84,8 @@ export default function SubscriptionPlanForm({
       price_month: 0,
       price_annual: 0,
       currency: "BRL",
-      billing_interval: "MONTH",
+      billing_interval: "MONTHLY",
       interval_count: 1,
-      setup_fee_reais: 0,
-      trial_days: 0,
       external_plan_id: "",
       active: true,
     },
@@ -100,8 +103,6 @@ export default function SubscriptionPlanForm({
       currency: plan.currency ?? "BRL",
       billing_interval: plan.billing_interval as BillingInterval,
       interval_count: plan.interval_count ?? 1,
-      setup_fee_reais: (plan.setup_fee_cents ?? 0) / 100,
-      trial_days: plan.trial_days ?? 0,
       external_plan_id: plan.external_plan_id ?? "",
       active: Boolean(plan.active),
     });
@@ -118,8 +119,8 @@ export default function SubscriptionPlanForm({
       billing_interval: values.billing_interval as BillingInterval,
       interval_count: values.interval_count,
       external_plan_id: values.external_plan_id?.trim() || null,
-      setup_fee_cents: Math.round((values.setup_fee_reais ?? 0) * 100),
-      trial_days: values.trial_days,
+      setup_fee_cents: 0,
+      trial_days: 0,
       metadata: null,
       active: values.active,
     };
@@ -181,7 +182,7 @@ export default function SubscriptionPlanForm({
           )}
         />
 
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="price_month"
@@ -221,7 +222,9 @@ export default function SubscriptionPlanForm({
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid gap-3 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="billing_interval"
@@ -234,10 +237,12 @@ export default function SubscriptionPlanForm({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="DAY">Diária</SelectItem>
-                      <SelectItem value="WEEK">Semanal</SelectItem>
-                      <SelectItem value="MONTH">Mensal</SelectItem>
-                      <SelectItem value="YEAR">Anual</SelectItem>
+                      <SelectItem value="WEEKLY">Semanal</SelectItem>
+                      <SelectItem value="BIWEEKLY">Quinzenal</SelectItem>
+                      <SelectItem value="MONTHLY">Mensal</SelectItem>
+                      <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                      <SelectItem value="SEMIANNUALLY">Semestral</SelectItem>
+                      <SelectItem value="YEARLY">Anual</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormControl>
@@ -254,42 +259,6 @@ export default function SubscriptionPlanForm({
                 <FormLabel>A cada (n)</FormLabel>
                 <FormControl>
                   <Input {...field} type="number" min="1" step="1" className="h-10" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <FormField
-            control={form.control}
-            name="setup_fee_reais"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Taxa de adesão (R$)</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="h-10"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="trial_days"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dias de teste</FormLabel>
-                <FormControl>
-                  <Input {...field} type="number" min="0" step="1" className="h-10" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
