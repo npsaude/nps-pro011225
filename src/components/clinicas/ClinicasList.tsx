@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Building2,
   Plus,
@@ -27,12 +27,15 @@ import {
   type Clinica,
   type ClinicaInput,
 } from "@/services/clinicas-service";
+import { useSystemUser } from "@/hooks/use-system-user";
 import ClinicaForm from "@/components/clinicas/ClinicaForm";
 import { showError, showSuccess } from "@/utils/toast";
 
 type ViewMode = "list" | "form";
 
 const ClinicasList = () => {
+  const { loading: userLoading, systemUser } = useSystemUser();
+  const authErrorShownRef = useRef(false);
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [favoritos, setFavoritos] = useState<Set<string>>(new Set());
   const [filtered, setFiltered] = useState<Clinica[]>([]);
@@ -43,29 +46,59 @@ const ClinicasList = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (userLoading) return;
+
+    if (!systemUser) {
+      setClinicas([]);
+      setFavoritos(new Set());
+      setFiltered([]);
+      setLoading(false);
+
+      if (!authErrorShownRef.current) {
+        authErrorShownRef.current = true;
+        showError("Sua sessão expirou. Faça login novamente para visualizar as clínicas.");
+      }
+      return;
+    }
+
+    authErrorShownRef.current = false;
+
+    let cancelled = false;
+
     const load = async () => {
       setLoading(true);
       try {
         const [data, favData] = await Promise.all([
           listarClinicas(),
-          listarFavoritos()
+          listarFavoritos(),
         ]);
+
+        if (cancelled) return;
+
         setClinicas(data);
         setFavoritos(new Set(favData));
         setFiltered(data);
       } catch (err) {
+        if (cancelled) return;
+
         const message =
           err instanceof Error
             ? err.message
             : "Erro ao carregar clínicas/hospitais.";
         showError(message);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void load();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userLoading, systemUser]);
 
   useEffect(() => {
     let result = clinicas;
