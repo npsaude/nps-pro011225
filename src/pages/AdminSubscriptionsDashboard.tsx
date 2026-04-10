@@ -23,6 +23,7 @@ import { useSystemUser } from "@/hooks/use-system-user";
 
 type MonthlyPoint = { month: string; cumulative: number };
 type PiePoint = { name: string; value: number; color: string };
+type CyclePoint = { name: string; value: number; color: string };
 
 type EnrollmentRow = {
   status: string | null;
@@ -51,6 +52,11 @@ const PIE_COLORS: Record<string, string> = {
   Intermediário: "#4A90E2",
   Avançado: "#D4A017",
   Outros: "#8A8A8A",
+};
+
+const CYCLE_COLORS: Record<"Mensal" | "Anual", string> = {
+  Mensal: "#6366F1",
+  Anual: "#F59E0B",
 };
 
 function monthKey(date: Date) {
@@ -120,6 +126,10 @@ function getPlanAmount(plan: NonNullable<ReturnType<typeof pickPlan>>) {
   return toNumber(plan.price_month);
 }
 
+function getPlanCycleLabel(plan: ReturnType<typeof pickPlan>) {
+  return norm(plan?.billing_interval) === "year" ? "Anual" : "Mensal";
+}
+
 function renderPieValueLabel(props: any) {
   const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
   if (!value || value <= 0) return null;
@@ -158,6 +168,7 @@ export default function AdminSubscriptionsDashboard() {
   const [cancelations, setCancelations] = useState(0);
   const [barData, setBarData] = useState<MonthlyPoint[]>([]);
   const [pieData, setPieData] = useState<PiePoint[]>([]);
+  const [cycleData, setCycleData] = useState<CyclePoint[]>([]);
 
   useEffect(() => {
     if (blocked) return;
@@ -250,6 +261,22 @@ export default function AdminSubscriptionsDashboard() {
         .filter((p) => p.value > 0);
 
       setPieData(pie);
+
+      const byCycle = new Map<string, number>();
+      activeRows.forEach((r) => {
+        const cycle = getPlanCycleLabel(pickPlan(r.plan));
+        byCycle.set(cycle, (byCycle.get(cycle) ?? 0) + 1);
+      });
+
+      const cycle: CyclePoint[] = ["Mensal", "Anual"]
+        .map((name) => ({
+          name,
+          value: byCycle.get(name) ?? 0,
+          color: CYCLE_COLORS[name as keyof typeof CYCLE_COLORS],
+        }))
+        .filter((item) => item.value > 0);
+
+      setCycleData(cycle);
 
       setLoading(false);
     };
@@ -354,7 +381,7 @@ export default function AdminSubscriptionsDashboard() {
                 </section>
 
                 {/* Gráficos */}
-                <section className="grid gap-4 lg:grid-cols-5">
+                <section className="grid gap-4 lg:grid-cols-6">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-3">
                     <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -426,6 +453,48 @@ export default function AdminSubscriptionsDashboard() {
                               label={renderPieValueLabel}
                             >
                               {pieData.map((entry) => (
+                                <Cell key={entry.name} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-1">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        Mensal x anual
+                      </CardTitle>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        Assinaturas ativas por ciclo
+                      </p>
+                    </CardHeader>
+
+                    <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
+                      {cycleData.length === 0 ? (
+                        <div className="flex h-full items-center justify-center text-center text-sm text-slate-400 dark:text-slate-500">
+                          Nenhuma assinatura ativa para exibir.
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={cycleData}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={42}
+                              outerRadius={68}
+                              paddingAngle={3}
+                              labelLine={false}
+                              label={renderPieValueLabel}
+                            >
+                              {cycleData.map((entry) => (
                                 <Cell key={entry.name} fill={entry.color} />
                               ))}
                             </Pie>
