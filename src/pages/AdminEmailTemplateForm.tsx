@@ -241,10 +241,11 @@ export default function AdminEmailTemplateForm() {
             <div className="grid flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)]">
               <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
                 <div className="space-y-5">
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Button
                       type="button"
                       variant="outline"
+                      className="h-11 rounded-2xl border-slate-200 bg-white px-5 font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                       onClick={() => navigate("/admin/modelos-emails")}
                     >
                       <ArrowLeft className="mr-2 h-4 w-4" />
@@ -254,13 +255,18 @@ export default function AdminEmailTemplateForm() {
                     {isView ? (
                       <Button
                         type="button"
-                        className="bg-amber-500 text-white hover:bg-amber-600"
+                        className="h-11 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 font-semibold text-white shadow-[0_10px_24px_rgba(245,158,11,0.28)] transition hover:from-amber-600 hover:to-orange-600"
                         onClick={() => navigate(`/admin/modelos-emails/${id}/editar`)}
                       >
                         Editar modelo
                       </Button>
                     ) : (
-                      <Button type="button" onClick={handleSave} disabled={saving}>
+                      <Button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="h-11 rounded-2xl bg-blue-600 px-5 font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.22)] transition hover:bg-blue-700"
+                      >
                         <Save className="mr-2 h-4 w-4" />
                         {saving ? "Salvando..." : "Salvar modelo"}
                       </Button>
