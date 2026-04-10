@@ -1,27 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, DollarSign, UserCheck, UserX } from "lucide-react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
   Cell,
   Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
+import MonthlyCumulativeSubscriptionsChart from "@/components/subscriptions/MonthlyCumulativeSubscriptionsChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
 
-type MonthlyPoint = { month: string; cumulative: number };
+type MonthlyPoint = { date: string; month: string; cumulative: number };
 type PiePoint = { name: string; value: number; color: string };
 type CyclePoint = { name: string; value: number; color: string };
 
@@ -219,7 +215,11 @@ export default function AdminSubscriptionsDashboard() {
       let cumulative = 0;
       const bar: MonthlyPoint[] = monthsKeys.map((k) => {
         cumulative += countByMonth.get(k) ?? 0;
-        return { month: monthLabel(k), cumulative };
+        return {
+          date: `${k}-01`,
+          month: monthLabel(k),
+          cumulative,
+        };
       });
       setBarData(bar);
 
@@ -376,45 +376,7 @@ export default function AdminSubscriptionsDashboard() {
 
                 {/* Gráficos */}
                 <section className="grid gap-4 lg:grid-cols-5">
-                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-3">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                          <BarChart3 className="h-4 w-4" />
-                        </span>
-                        Assinaturas mensais (cumulativo)
-                      </CardTitle>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Mês atual + próximos 11 meses
-                      </p>
-                    </CardHeader>
-
-                    <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={barData}>
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="#E2E8F0"
-                            vertical={false}
-                          />
-                          <XAxis
-                            dataKey="month"
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{ fontSize: 11, fill: "#64748B" }}
-                          />
-                          <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            allowDecimals={false}
-                            tick={{ fontSize: 11, fill: "#64748B" }}
-                          />
-                          <RechartsTooltip />
-                          <Bar dataKey="cumulative" radius={[8, 8, 0, 0]} fill="#6366F1" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
+                  <MonthlyCumulativeSubscriptionsChart data={barData} loading={loading} />
 
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-2">
                     <CardHeader className="pb-2">
