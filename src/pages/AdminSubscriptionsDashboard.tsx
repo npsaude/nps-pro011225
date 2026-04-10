@@ -315,7 +315,7 @@ export default function AdminSubscriptionsDashboard() {
                         <UserCheck className="h-4 w-4" />
                       </span>
                     </div>
-                    <p className="mt-4 text-3xl font-bold text-white">{loading ? "—" : activeUsers}</p>
+                    <p className="mt-4 text-center text-3xl font-bold text-white">{loading ? "—" : activeUsers}</p>
                     <p className="mt-4 text-[11px] leading-4 text-slate-400">
                       Assinaturas <span className="text-slate-200">ACTIVE</span> / <span className="text-slate-200">TRIAL</span> não canceladas
                     </p>
@@ -328,7 +328,7 @@ export default function AdminSubscriptionsDashboard() {
                         <DollarSign className="h-4 w-4" />
                       </span>
                     </div>
-                    <p className="mt-4 text-3xl font-bold text-white">{loading ? "—" : formatBRL(revenueAmount)}</p>
+                    <p className="mt-4 text-center text-3xl font-bold text-white">{loading ? "—" : formatBRL(revenueAmount)}</p>
                     <p className="mt-4 text-[11px] leading-4 text-slate-400">
                       Soma dos planos ativos por ciclo mensal ou anual
                     </p>
@@ -341,7 +341,7 @@ export default function AdminSubscriptionsDashboard() {
                         <UserX className="h-4 w-4" />
                       </span>
                     </div>
-                    <p className="mt-4 text-3xl font-bold text-white">{loading ? "—" : cancelations}</p>
+                    <p className="mt-4 text-center text-3xl font-bold text-white">{loading ? "—" : cancelations}</p>
                     <p className="mt-4 text-[11px] leading-4 text-slate-400">
                       Status <span className="text-slate-200">CANCELED</span> ou <span className="text-slate-200">cancelado = true</span>
                     </p>
