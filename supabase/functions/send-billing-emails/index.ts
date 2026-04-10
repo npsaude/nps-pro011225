@@ -80,6 +80,57 @@ interface ModeloEmailRow {
   corpo_html: string;
 }
 
+function isHtmlTemplate(content: string): boolean {
+  const normalized = String(content ?? "").trim().toLowerCase();
+  return normalized.includes("<!doctype") || normalized.includes("<html") || /<\/?[a-z][\s\S]*>/i.test(content);
+}
+
+function escapeHtml(value: string): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function convertPlainTextToEmailHtml(content: string): string {
+  const normalized = String(content ?? "").replace(/\r\n/g, "\n").trim();
+  const sections = normalized
+    ? normalized.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean)
+    : [];
+
+  const paragraphs = sections.length
+    ? sections
+        .map((block) => {
+          const lines = escapeHtml(block).split("\n");
+          return `<p style="margin:0 0 16px;line-height:1.7;font-size:15px;color:#0f172a;">${lines.join("<br />")}</p>`;
+        })
+        .join("")
+    : '<p style="margin:0;line-height:1.7;font-size:15px;color:#64748b;">Corpo do email vazio.</p>';
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email de faturamento</title>
+  </head>
+  <body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(15,23,42,0.08);">
+      <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;background:linear-gradient(135deg,#eff6ff,#f8fafc);">
+        <div style="display:inline-block;padding:6px 10px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">
+          Faturamento
+        </div>
+      </div>
+      <div style="padding:24px;">
+        ${paragraphs}
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
 type Attachment = { filename: string; content: Uint8Array; contentType: string };
 type EncodedAttachment = { filename: string; contentType: string; base64: string };
 
@@ -489,6 +540,14 @@ function applyTemplate(input: string, vars: Record<string, string>): string {
     out = out.replace(re, value);
   }
   return out;
+}
+
+function buildEmailBodyFromTemplate(input: string, vars: Record<string, string>): string {
+  const rendered = applyTemplate(input, vars);
+  if (isHtmlTemplate(rendered)) {
+    return rendered;
+  }
+  return convertPlainTextToEmailHtml(rendered);
 }
 
 serve(async (req) => {
@@ -917,7 +976,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Não foi possível carregar os modelos de email nas configurações.",
+        error: "Não foi possível carregar os modelos de email.",
       }),
       {
         status: 500,
@@ -938,7 +997,7 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error:
-          "Modelos de email não configurados (FATURAR e/ou NAO_FATURAR). Acesse Admin > Configurações.",
+          "Modelos de email não configurados (FATURAR e/ou NAO_FATURAR). Acesse Admin > Modelos de Emails.",
       }),
       {
         status: 400,
@@ -1001,7 +1060,7 @@ serve(async (req) => {
       };
 
       const subject = applyTemplate(templateNaoFaturar.assunto, vars);
-      const htmlBody = applyTemplate(templateNaoFaturar.corpo_html, vars);
+      const htmlBody = buildEmailBodyFromTemplate(templateNaoFaturar.corpo_html, vars);
 
       const result = await sendEmailViaSMTP(
         smtpHost,
@@ -1029,7 +1088,7 @@ serve(async (req) => {
     };
 
     const subjectFat = applyTemplate(templateFaturar.assunto, varsFat);
-    const htmlBodyFat = applyTemplate(templateFaturar.corpo_html, varsFat);
+    const htmlBodyFat = buildEmailBodyFromTemplate(templateFaturar.corpo_html, varsFat);
 
     const resultFat = await sendEmailViaSMTP(
       smtpHost,
@@ -1056,7 +1115,7 @@ serve(async (req) => {
     };
 
     const subjectFat = applyTemplate(templateFaturar.assunto, varsFat);
-    const htmlBodyFat = applyTemplate(templateFaturar.corpo_html, varsFat);
+    const htmlBodyFat = buildEmailBodyFromTemplate(templateFaturar.corpo_html, varsFat);
 
     const resultFat = await sendEmailViaSMTP(
       smtpHost,

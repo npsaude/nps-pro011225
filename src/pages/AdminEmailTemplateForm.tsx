@@ -21,6 +21,7 @@ import {
   carregarModelosEmail,
   criarModeloEmail,
   atualizarModeloEmail,
+  convertStoredTemplateToEditableText,
   EMAIL_TEMPLATE_DESCRIPTIONS,
   EMAIL_TEMPLATE_LABELS,
   EMAIL_TEMPLATE_TYPES,
@@ -63,9 +64,9 @@ export default function AdminEmailTemplateForm() {
 
   const pageDescription =
     mode === "create"
-      ? "Cadastre um novo modelo e acompanhe a pré-visualização do email pronto."
+      ? "Cadastre um novo modelo em texto normal e acompanhe a pré-visualização do email pronto."
       : mode === "edit"
-        ? "Edite o assunto e o HTML do modelo com preview em tempo real."
+        ? "Edite o assunto e o texto do email com preview em tempo real."
         : "Confira o conteúdo salvo e a renderização final do email.";
 
   const hydrateCreateState = useCallback(
@@ -110,7 +111,7 @@ export default function AdminEmailTemplateForm() {
         setForm({
           tipo: template.tipo,
           assunto: template.assunto,
-          corpo_html: template.corpo_html,
+          corpo_html: convertStoredTemplateToEditableText(template.corpo_html),
         });
       } catch (error) {
         showError(
@@ -144,7 +145,7 @@ export default function AdminEmailTemplateForm() {
     }
 
     if (!form.corpo_html.trim()) {
-      showError("Preencha o corpo HTML do modelo.");
+      showError("Preencha o corpo do email.");
       return;
     }
 
@@ -332,7 +333,7 @@ export default function AdminEmailTemplateForm() {
 
                     <div className="space-y-2">
                       <Label htmlFor="corpo_html" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                        Corpo do email (HTML)
+                        Corpo do email
                       </Label>
                       {isView ? (
                         <pre className="max-h-[360px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 font-mono text-[12px] leading-6 text-slate-700 whitespace-pre-wrap">
@@ -345,10 +346,13 @@ export default function AdminEmailTemplateForm() {
                           onChange={(event) =>
                             setForm((current) => ({ ...current, corpo_html: event.target.value }))
                           }
-                          className="min-h-[360px] rounded-2xl border-slate-200 bg-white font-mono text-[12px] leading-6"
-                          placeholder="Cole aqui o HTML do email"
+                          className="min-h-[360px] rounded-2xl border-slate-200 bg-white text-[13px] leading-6"
+                          placeholder="Digite o texto do email. Você pode usar variáveis como {{paciente_nome}} e {{usuario_crm}}."
                         />
                       )}
+                      <p className="text-xs text-slate-500">
+                        Escreva em texto normal. O sistema aplica a formatação final do email automaticamente.
+                      </p>
                     </div>
                   </div>
                 </div>

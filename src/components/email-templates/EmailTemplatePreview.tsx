@@ -31,7 +31,7 @@ export default function EmailTemplatePreview({
           </span>
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Pré-visualização do email</h2>
-            <p className="text-xs text-slate-500">{EMAIL_TEMPLATE_LABELS[tipo]} com variáveis preenchidas.</p>
+            <p className="text-xs text-slate-500">{EMAIL_TEMPLATE_LABELS[tipo]} com variáveis preenchidas e formatação final aplicada.</p>
           </div>
         </div>
       </div>
