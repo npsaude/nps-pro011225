@@ -311,7 +311,7 @@ export default function AdminSubscriptionsDashboard() {
                   <Card className="overflow-hidden rounded-[22px] border border-slate-800 bg-[linear-gradient(180deg,#0B1B33_0%,#051427_100%)] shadow-[0_18px_40px_rgba(2,6,23,0.28)]">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-start justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200/90">
-                        <span className="max-w-[180px] leading-5">Usuários ativos</span>
+                        <span className="max-w-[180px] leading-5">Assinantes ativos</span>
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-[0_10px_24px_rgba(14,165,233,0.35)]">
                           <UserCheck className="h-5 w-5" />
                         </span>
@@ -324,7 +324,7 @@ export default function AdminSubscriptionsDashboard() {
                       <div className="space-y-2">
                         <p className="flex items-center gap-2 text-xs font-medium text-emerald-300">
                           <span>↗</span>
-                          Assinantes ativos / em trial
+                          Assinaturas ativas / em trial
                         </p>
                         <p className="text-[11px] text-slate-400/80">
                           Considera <span className="font-medium text-slate-300">ACTIVE</span> e <span className="font-medium text-slate-300">TRIAL</span> com <span className="font-medium text-slate-300">cancelado = false</span>
@@ -336,7 +336,7 @@ export default function AdminSubscriptionsDashboard() {
                   <Card className="overflow-hidden rounded-[22px] border border-slate-800 bg-[linear-gradient(180deg,#0B1B33_0%,#051427_100%)] shadow-[0_18px_40px_rgba(2,6,23,0.28)]">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-start justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200/90">
-                        <span className="max-w-[180px] leading-5">Faturamento geral</span>
+                        <span className="max-w-[180px] leading-5">Receita recorrente atual</span>
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-500 text-white shadow-[0_10px_24px_rgba(139,92,246,0.35)]">
                           <DollarSign className="h-5 w-5" />
                         </span>
@@ -352,7 +352,7 @@ export default function AdminSubscriptionsDashboard() {
                           Soma dos planos com assinatura ativa
                         </p>
                         <p className="text-[11px] text-slate-400/80">
-                          Total calculado a partir dos ciclos mensal e anual
+                          Valor atual das assinaturas ativas por ciclo mensal ou anual
                         </p>
                       </div>
                     </CardContent>
@@ -361,7 +361,7 @@ export default function AdminSubscriptionsDashboard() {
                   <Card className="overflow-hidden rounded-[22px] border border-slate-800 bg-[linear-gradient(180deg,#0B1B33_0%,#051427_100%)] shadow-[0_18px_40px_rgba(2,6,23,0.28)]">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-start justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200/90">
-                        <span className="max-w-[180px] leading-5">Cancelamentos</span>
+                        <span className="max-w-[180px] leading-5">Assinaturas canceladas</span>
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-500 text-white shadow-[0_10px_24px_rgba(100,116,139,0.35)]">
                           <UserX className="h-5 w-5" />
                         </span>
@@ -377,7 +377,7 @@ export default function AdminSubscriptionsDashboard() {
                           Total de assinaturas canceladas
                         </p>
                         <p className="text-[11px] text-slate-400/80">
-                          Status aceitos: <span className="font-medium text-slate-300">CANCELED</span> e <span className="font-medium text-slate-300">Cancelado</span>
+                          Considera <span className="font-medium text-slate-300">status = CANCELED</span> ou <span className="font-medium text-slate-300">cancelado = true</span>
                         </p>
                       </div>
                     </CardContent>
