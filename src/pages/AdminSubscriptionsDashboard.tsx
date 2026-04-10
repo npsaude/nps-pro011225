@@ -321,7 +321,7 @@ export default function AdminSubscriptionsDashboard() {
             ) : (
               <>
                 {/* Métricas */}
-                <section className="grid gap-4 lg:grid-cols-3">
+                <section className="grid gap-4 lg:grid-cols-4">
                   <Card className="overflow-hidden rounded-[22px] border border-slate-800 bg-[linear-gradient(180deg,#0B1B33_0%,#051427_100%)] shadow-[0_18px_40px_rgba(2,6,23,0.28)]">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-start justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200/90">
@@ -396,10 +396,46 @@ export default function AdminSubscriptionsDashboard() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  <Card className="overflow-hidden rounded-[22px] border border-slate-800 bg-[linear-gradient(180deg,#0B1B33_0%,#051427_100%)] shadow-[0_18px_40px_rgba(2,6,23,0.28)]">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-start justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200/90">
+                        <span className="max-w-[180px] leading-5">Mensal x anual</span>
+                        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-[0_10px_24px_rgba(245,158,11,0.35)]">
+                          <BarChart3 className="h-5 w-5" />
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex min-h-[168px] flex-col justify-between pb-5">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400/90">Mensal</p>
+                          <p className="mt-2 text-3xl font-semibold tracking-tight text-white">
+                            {loading ? "—" : (cycleData.find((item) => item.name === "Mensal")?.value ?? 0)}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400/90">Anual</p>
+                          <p className="mt-2 text-3xl font-semibold tracking-tight text-white">
+                            {loading ? "—" : (cycleData.find((item) => item.name === "Anual")?.value ?? 0)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="flex items-center gap-2 text-xs font-medium text-emerald-300">
+                          <span>↗</span>
+                          Distribuição das assinaturas ativas por ciclo
+                        </p>
+                        <p className="text-[11px] text-slate-400/80">
+                          Comparativo entre planos <span className="font-medium text-slate-300">mensais</span> e <span className="font-medium text-slate-300">anuais</span>
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </section>
 
                 {/* Gráficos */}
-                <section className="grid gap-4 lg:grid-cols-6">
+                <section className="grid gap-4 lg:grid-cols-5">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-3">
                     <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -471,48 +507,6 @@ export default function AdminSubscriptionsDashboard() {
                               label={renderPieValueLabel}
                             >
                               {pieData.map((entry) => (
-                                <Cell key={entry.name} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <RechartsTooltip />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-1">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        Mensal x anual
-                      </CardTitle>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Assinaturas ativas por ciclo
-                      </p>
-                    </CardHeader>
-
-                    <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
-                      {cycleData.length === 0 ? (
-                        <div className="flex h-full items-center justify-center text-center text-sm text-slate-400 dark:text-slate-500">
-                          Nenhuma assinatura ativa para exibir.
-                        </div>
-                      ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={cycleData}
-                              dataKey="value"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={42}
-                              outerRadius={68}
-                              paddingAngle={3}
-                              labelLine={false}
-                              label={renderPieValueLabel}
-                            >
-                              {cycleData.map((entry) => (
                                 <Cell key={entry.name} fill={entry.color} />
                               ))}
                             </Pie>
