@@ -307,131 +307,71 @@ export default function AdminSubscriptionsDashboard() {
             ) : (
               <>
                 {/* Métricas */}
-                <section className="grid gap-4 lg:grid-cols-4">
-                  <Card className="overflow-hidden rounded-[24px] border border-slate-800/80 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.14),transparent_34%),linear-gradient(180deg,#0B1730_0%,#071223_100%)] shadow-[0_18px_42px_rgba(2,6,23,0.28)]">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-start justify-between gap-4">
-                        <span className="max-w-[170px] text-[11px] font-semibold uppercase leading-5 tracking-[0.22em] text-slate-300">
-                          Assinantes ativos
-                        </span>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/90 text-white shadow-[0_12px_28px_rgba(14,165,233,0.30)]">
-                          <UserCheck className="h-5 w-5" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex min-h-[188px] flex-col justify-between gap-6 pb-6">
-                      <div>
-                        <p className="text-[46px] font-semibold leading-none tracking-[-0.03em] text-white">
-                          {loading ? "—" : activeUsers}
-                        </p>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[13px] font-medium leading-5 text-emerald-300">
-                          Assinaturas ativas e em período de trial
-                        </p>
-                        <p className="max-w-[220px] text-[12px] leading-5 text-slate-400">
-                          Considera registros com <span className="font-medium text-slate-200">ACTIVE</span> ou <span className="font-medium text-slate-200">TRIAL</span> e <span className="font-medium text-slate-200">cancelado = false</span>.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Assinantes ativos</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/90 text-white">
+                        <UserCheck className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <p className="mt-4 text-3xl font-bold text-white">{loading ? "—" : activeUsers}</p>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Assinaturas <span className="text-slate-200">ACTIVE</span> / <span className="text-slate-200">TRIAL</span> não canceladas
+                    </p>
+                  </div>
 
-                  <Card className="overflow-hidden rounded-[24px] border border-slate-800/80 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.16),transparent_34%),linear-gradient(180deg,#0B1730_0%,#071223_100%)] shadow-[0_18px_42px_rgba(2,6,23,0.28)]">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-start justify-between gap-4">
-                        <span className="max-w-[170px] text-[11px] font-semibold uppercase leading-5 tracking-[0.22em] text-slate-300">
-                          Receita recorrente atual
-                        </span>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/90 text-white shadow-[0_12px_28px_rgba(139,92,246,0.30)]">
-                          <DollarSign className="h-5 w-5" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex min-h-[188px] flex-col justify-between gap-6 pb-6">
-                      <div>
-                        <p className="text-[46px] font-semibold leading-none tracking-[-0.04em] text-white">
-                          {loading ? "—" : formatBRL(revenueAmount)}
-                        </p>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[13px] font-medium leading-5 text-emerald-300">
-                          Soma dos planos com assinatura ativa
-                        </p>
-                        <p className="max-w-[240px] text-[12px] leading-5 text-slate-400">
-                          Valor recorrente atual calculado conforme o ciclo do plano, mensal ou anual.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Receita recorrente</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/90 text-white">
+                        <DollarSign className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <p className="mt-4 text-3xl font-bold text-white">{loading ? "—" : formatBRL(revenueAmount)}</p>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Soma dos planos ativos por ciclo mensal ou anual
+                    </p>
+                  </div>
 
-                  <Card className="overflow-hidden rounded-[24px] border border-slate-800/80 bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.16),transparent_34%),linear-gradient(180deg,#0B1730_0%,#071223_100%)] shadow-[0_18px_42px_rgba(2,6,23,0.28)]">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-start justify-between gap-4">
-                        <span className="max-w-[170px] text-[11px] font-semibold uppercase leading-5 tracking-[0.22em] text-slate-300">
-                          Assinaturas canceladas
-                        </span>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-400/20 bg-slate-500/90 text-white shadow-[0_12px_28px_rgba(100,116,139,0.30)]">
-                          <UserX className="h-5 w-5" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex min-h-[188px] flex-col justify-between gap-6 pb-6">
-                      <div>
-                        <p className="text-[46px] font-semibold leading-none tracking-[-0.03em] text-white">
-                          {loading ? "—" : cancelations}
-                        </p>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[13px] font-medium leading-5 text-emerald-300">
-                          Total de assinaturas canceladas
-                        </p>
-                        <p className="max-w-[240px] text-[12px] leading-5 text-slate-400">
-                          Considera registros com <span className="font-medium text-slate-200">status = CANCELED</span> ou <span className="font-medium text-slate-200">cancelado = true</span>.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Cancelamentos</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-500/90 text-white">
+                        <UserX className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <p className="mt-4 text-3xl font-bold text-white">{loading ? "—" : cancelations}</p>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Status <span className="text-slate-200">CANCELED</span> ou <span className="text-slate-200">cancelado = true</span>
+                    </p>
+                  </div>
 
-                  <Card className="overflow-hidden rounded-[24px] border border-slate-800/80 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_34%),linear-gradient(180deg,#0B1730_0%,#071223_100%)] shadow-[0_18px_42px_rgba(2,6,23,0.28)]">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-start justify-between gap-4">
-                        <span className="max-w-[170px] text-[11px] font-semibold uppercase leading-5 tracking-[0.22em] text-slate-300">
-                          Mensal x anual
-                        </span>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/90 text-white shadow-[0_12px_28px_rgba(245,158,11,0.30)]">
-                          <BarChart3 className="h-5 w-5" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex min-h-[188px] flex-col justify-between gap-6 pb-6">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-sm">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.20em] text-slate-400">
-                            Mensal
-                          </p>
-                          <p className="mt-2 text-[38px] font-semibold leading-none tracking-[-0.03em] text-white">
-                            {loading ? "—" : (cycleData.find((item) => item.name === "Mensal")?.value ?? 0)}
-                          </p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-sm">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.20em] text-slate-400">
-                            Anual
-                          </p>
-                          <p className="mt-2 text-[38px] font-semibold leading-none tracking-[-0.03em] text-white">
-                            {loading ? "—" : (cycleData.find((item) => item.name === "Anual")?.value ?? 0)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[13px] font-medium leading-5 text-emerald-300">
-                          Distribuição das assinaturas por ciclo
-                        </p>
-                        <p className="max-w-[240px] text-[12px] leading-5 text-slate-400">
-                          Comparativo atual entre planos com recorrência mensal e anual.
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Mensal x anual</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/90 text-white">
+                        <BarChart3 className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Mensal</p>
+                        <p className="mt-1 text-2xl font-bold text-white">
+                          {loading ? "—" : (cycleData.find((i) => i.name === "Mensal")?.value ?? 0)}
                         </p>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Anual</p>
+                        <p className="mt-1 text-2xl font-bold text-white">
+                          {loading ? "—" : (cycleData.find((i) => i.name === "Anual")?.value ?? 0)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Distribuição das assinaturas ativas por ciclo
+                    </p>
+                  </div>
                 </section>
 
                 {/* Gráficos */}
