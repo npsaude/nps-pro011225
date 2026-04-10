@@ -382,47 +382,51 @@ const Dashboard = () => {
                 </section>
 
                 {/* Cards de métricas */}
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {activeMetrics.map((metric) => {
                     const Icon = metric.icon;
                     const isGauge = metric.isGauge;
                     const noData = metric.value === "—";
+
                     return (
-                      <Card
+                      <div
                         key={metric.id}
-                        className="border-0 bg-[#0B1829] text-white shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
+                        className="flex min-h-[196px] flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5 text-white"
                       >
-                        <CardContent className="flex h-44 flex-col rounded-3xl p-5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
-                                {metric.title}
-                              </p>
-                              {!isGauge && (
-                                <p className={`mt-1 text-2xl font-semibold ${noData ? "text-slate-500" : ""}`}>
-                                  {metric.value}
-                                </p>
-                              )}
-                            </div>
-                            <div
-                              className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${metric.iconBg} text-white shadow-md`}
-                            >
-                              <Icon className="h-5 w-5" />
-                            </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="max-w-[170px] text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                            {metric.title}
+                          </p>
+                          <span
+                            className={`flex h-9 w-9 items-center justify-center rounded-xl ${metric.iconBg} text-white`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </span>
+                        </div>
+
+                        {isGauge ? (
+                          <div className="flex flex-1 items-center justify-center py-3">
+                            <GlosaGauge value={(metric as any).gaugeValue ?? 0} />
                           </div>
-                          {isGauge ? (
-                            <div className="mt-3 flex flex-1 items-center justify-center">
-                              <GlosaGauge value={(metric as any).gaugeValue ?? 0} />
-                            </div>
-                          ) : (
-                            <div className="flex-1" />
+                        ) : (
+                          <p className={`mt-4 text-center text-3xl font-bold ${noData ? "text-slate-500" : "text-white"}`}>
+                            {metric.value}
+                          </p>
+                        )}
+
+                        <p
+                          className={`mt-4 text-[11px] leading-4 ${
+                            noData ? "text-slate-500" : "text-slate-400"
+                          }`}
+                        >
+                          {!noData && (
+                            <span className="mr-1 inline-flex items-center text-emerald-300">
+                              <ArrowUpRight className="h-3 w-3" />
+                            </span>
                           )}
-                          <div className={`mt-3 flex items-center gap-2 text-[11px] ${noData ? "text-slate-600" : "text-emerald-300"}`}>
-                            {!noData && <ArrowUpRight className="h-3 w-3" />}
-                            <span>{metric.helper}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          {metric.helper}
+                        </p>
+                      </div>
                     );
                   })}
                 </section>
