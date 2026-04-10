@@ -29,11 +29,6 @@ import type {
   SubscriptionPlanInput,
 } from "@/services/subscription-plans-service";
 
-const toInt = (value: unknown) => {
-  const n = typeof value === "string" ? Number(value) : (value as number);
-  return Number.isFinite(n) ? Math.trunc(n) : 0;
-};
-
 const toMoney = (value: unknown) => {
   const n = typeof value === "string" ? Number(value) : (value as number);
   return Number.isFinite(n) ? n : 0;
@@ -57,7 +52,6 @@ const planSchema = z.object({
     "SEMIANNUALLY",
     "YEARLY",
   ]),
-  interval_count: z.preprocess(toInt, z.number().min(1, "Mínimo 1.")),
   external_plan_id: z.string().optional(),
   active: z.boolean(),
 });
@@ -85,7 +79,6 @@ export default function SubscriptionPlanForm({
       price_annual: 0,
       currency: "BRL",
       billing_interval: "MONTHLY",
-      interval_count: 1,
       external_plan_id: "",
       active: true,
     },
@@ -102,7 +95,6 @@ export default function SubscriptionPlanForm({
       price_annual: plan.price_annual ?? 0,
       currency: plan.currency ?? "BRL",
       billing_interval: plan.billing_interval as BillingInterval,
-      interval_count: plan.interval_count ?? 1,
       external_plan_id: plan.external_plan_id ?? "",
       active: Boolean(plan.active),
     });
@@ -117,7 +109,7 @@ export default function SubscriptionPlanForm({
       price_annual: values.price_annual ?? 0,
       currency: values.currency,
       billing_interval: values.billing_interval as BillingInterval,
-      interval_count: values.interval_count,
+      interval_count: 1,
       external_plan_id: values.external_plan_id?.trim() || null,
       setup_fee_cents: 0,
       trial_days: 0,
@@ -224,7 +216,7 @@ export default function SubscriptionPlanForm({
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="billing_interval"
@@ -245,20 +237,6 @@ export default function SubscriptionPlanForm({
                       <SelectItem value="YEARLY">Anual</SelectItem>
                     </SelectContent>
                   </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="interval_count"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>A cada (n)</FormLabel>
-                <FormControl>
-                  <Input {...field} type="number" min="1" step="1" className="h-10" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
