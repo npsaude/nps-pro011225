@@ -29,8 +29,20 @@ type EnrollmentRow = {
   created_at: string | null;
   started_at: string | null;
   plan:
-    | { price_cents: number; code: string | null; name: string | null }
-    | { price_cents: number; code: string | null; name: string | null }[]
+    | {
+        price_month: number | string | null;
+        price_annual: number | string | null;
+        billing_interval: string | null;
+        code: string | null;
+        name: string | null;
+      }
+    | {
+        price_month: number | string | null;
+        price_annual: number | string | null;
+        billing_interval: string | null;
+        code: string | null;
+        name: string | null;
+      }[]
     | null;
 };
 
@@ -63,9 +75,8 @@ function nextMonthsKeys(count: number) {
   });
 }
 
-function formatBRLFromCents(cents: number) {
-  const value = (cents ?? 0) / 100;
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function formatBRL(value: number) {
+  return (value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function norm(text: unknown) {
@@ -94,6 +105,19 @@ function bucketPlan(planCodeOrName: string) {
   if (t.includes("inter")) return "Intermediário";
   if (t.includes("avan") || t.includes("advanced")) return "Avançado";
   return "Outros";
+}
+
+function toNumber(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getPlanAmount(plan: NonNullable<ReturnType<typeof pickPlan>>) {
+  const interval = norm(plan.billing_interval);
+  if (interval === "year") {
+    return toNumber(plan.price_annual);
+  }
+  return toNumber(plan.price_month);
 }
 
 function renderPieValueLabel(props: any) {
@@ -130,7 +154,7 @@ export default function AdminSubscriptionsDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [activeUsers, setActiveUsers] = useState(0);
-  const [revenueCents, setRevenueCents] = useState(0);
+  const [revenueAmount, setRevenueAmount] = useState(0);
   const [cancelations, setCancelations] = useState(0);
   const [barData, setBarData] = useState<MonthlyPoint[]>([]);
   const [pieData, setPieData] = useState<PiePoint[]>([]);
@@ -159,7 +183,7 @@ export default function AdminSubscriptionsDashboard() {
       const { data, error } = await supabase
         .from("subscription_enrollments")
         .select(
-          "status,created_at,started_at,plan:subscription_plans(price_cents,code,name)",
+          "status,created_at,started_at,plan:plan_id(price_month,price_annual,billing_interval,code,name)",
         );
 
       if (error) {
@@ -175,12 +199,12 @@ export default function AdminSubscriptionsDashboard() {
 
       setCancelations(canceledRows.length);
 
-      // Receita: soma do price_cents do plano nas assinaturas ativas
+      // Receita: soma do valor do plano nas assinaturas ativas
       const revenue = activeRows.reduce((acc, r) => {
         const plan = pickPlan(r.plan);
-        return acc + (plan?.price_cents ?? 0);
+        return acc + (plan ? getPlanAmount(plan) : 0);
       }, 0);
-      setRevenueCents(revenue);
+      setRevenueAmount(revenue);
 
       // Gráfico de barras (cumulativo) — mês corrente + próximos 11 meses
       const monthSet = new Set(monthsKeys);
@@ -301,7 +325,7 @@ export default function AdminSubscriptionsDashboard() {
                     </CardHeader>
                     <CardContent className="pb-5">
                       <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">
-                        {loading ? "—" : formatBRLFromCents(revenueCents)}
+                        {loading ? "—" : formatBRL(revenueAmount)}
                       </div>
                       <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
                         Soma dos planos das assinaturas ativas
@@ -361,23 +385,11 @@ export default function AdminSubscriptionsDashboard() {
                           <YAxis
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fontSize: 11, fill: "#64748B" }}
                             allowDecimals={false}
+                            tick={{ fontSize: 11, fill: "#64748B" }}
                           />
-                          <RechartsTooltip
-                            contentStyle={{
-                              borderRadius: 14,
-                              borderColor: "#E2E8F0",
-                              fontSize: 11,
-                            }}
-                          />
-                          <Bar
-                            dataKey="cumulative"
-                            name="Assinaturas"
-                            barSize={18}
-                            radius={[6, 6, 0, 0]}
-                            fill="#D4A017"
-                          />
+                          <RechartsTooltip />
+                          <Bar dataKey="cumulative" radius={[8, 8, 0, 0]} fill="#6366F1" />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -395,35 +407,20 @@ export default function AdminSubscriptionsDashboard() {
 
                     <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
                       {pieData.length === 0 ? (
-                        <div className="flex h-full items-center justify-center text-xs text-slate-400 dark:text-slate-500">
+                        <div className="flex h-full items-center justify-center text-sm text-slate-400 dark:text-slate-500">
                           Nenhuma assinatura ativa para exibir.
                         </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <RechartsTooltip
-                              contentStyle={{
-                                borderRadius: 14,
-                                borderColor: "#E2E8F0",
-                                fontSize: 11,
-                              }}
-                            />
-                            <Legend
-                              verticalAlign="bottom"
-                              height={36}
-                              wrapperStyle={{
-                                fontSize: 11,
-                                color: "#64748B",
-                              }}
-                            />
                             <Pie
                               data={pieData}
                               dataKey="value"
                               nameKey="name"
                               cx="50%"
-                              cy="45%"
+                              cy="50%"
+                              innerRadius={58}
                               outerRadius={92}
-                              innerRadius={52}
                               paddingAngle={2}
                               labelLine={false}
                               label={renderPieValueLabel}
@@ -432,6 +429,8 @@ export default function AdminSubscriptionsDashboard() {
                                 <Cell key={entry.name} fill={entry.color} />
                               ))}
                             </Pie>
+                            <RechartsTooltip />
+                            <Legend />
                           </PieChart>
                         </ResponsiveContainer>
                       )}
