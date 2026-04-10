@@ -4,8 +4,6 @@ import {
   FileSignature,
   Database,
   FileType2,
-  Mail,
-  Save,
   Upload,
   Bot,
   Zap,
@@ -16,7 +14,6 @@ import { useNavigate } from "react-router-dom";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -44,51 +41,12 @@ import {
   salvarModeloOpenAI,
   salvarTokenAsaas,
 } from "@/services/app-settings-service";
-import {
-  carregarModelosEmail,
-  salvarModeloEmail,
-  type EmailTemplateType,
-} from "@/services/email-templates-service";
 import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { criarDadosExemplo } from "@/services/demo-data-service";
 import CbhpmCsvImportCard from "@/components/admin/CbhpmCsvImportCard";
 import { useSystemUser } from "@/hooks/use-system-user";
 import { purgeUserByEmail } from "@/services/user-purge-service";
-
-type EmailFormState = {
-  assunto: string;
-  corpo_html: string;
-};
-
-const ensureDefaults = (templates: { tipo: string; assunto: string; corpo_html: string }[]) => {
-  const byType = new Map(templates.map((t) => [t.tipo, t] as const));
-
-  const defaults: Record<string, EmailFormState> = {
-    FATURAR: {
-      assunto: "[FATURAMENTO] {{nome_usuario}} - {{paciente_nome}}",
-      corpo_html:
-        "<p>Prezado(a) {{contato}}.</p>\n\n<p>Solicitamos faturamento do(a) paciente <strong>{{paciente_nome}}</strong>, realizado pelo convênio <strong>{{convenio}}</strong>, na data <strong>{{data_cirurgia}}</strong>, horário de início <strong>{{hora_inicio}}</strong>, que ocorreu no <strong>{{hospital_nome}}</strong>.</p>\n\n<p>Em anexo, envio os documentos para consulta.</p>\n\n<p>Atenciosamente,</p>\n<p><strong>{{nome_usuario}}</strong></p>",
-    },
-    NAO_FATURAR: {
-      assunto: "[NÃO FATURAR] {{nome_usuario}} - {{paciente_nome}}",
-      corpo_html:
-        "<p>Prezado(a) {{contato}}.</p>\n\n<p>Informamos que o faturamento do(a) paciente <strong>{{paciente_nome}}</strong>, realizado pelo convênio <strong>{{convenio}}</strong>, na data <strong>{{data_cirurgia}}</strong>, horário de início <strong>{{hora_inicio}}</strong>, <strong>NÃO</strong> deverá ser realizado por essa instituição.</p>\n\n<p>Em anexo, envio os documentos para consulta.</p>\n\n<p>Atenciosamente,</p>\n<p><strong>{{nome_usuario}}</strong></p>",
-    },
-  };
-
-  return {
-    FATURAR: {
-      assunto: byType.get("FATURAR")?.assunto ?? defaults.FATURAR.assunto,
-      corpo_html: byType.get("FATURAR")?.corpo_html ?? defaults.FATURAR.corpo_html,
-    },
-    NAO_FATURAR: {
-      assunto: byType.get("NAO_FATURAR")?.assunto ?? defaults.NAO_FATURAR.assunto,
-      corpo_html:
-        byType.get("NAO_FATURAR")?.corpo_html ?? defaults.NAO_FATURAR.corpo_html,
-    },
-  };
-};
 
 // ─── Componente de seção com título ──────────────────────────────────────────
 function SectionHeader({
@@ -170,31 +128,15 @@ const AdminConfiguracoes = () => {
   const [purgeConfirmEmail, setPurgeConfirmEmail] = useState("");
   const [purgingUser, setPurgingUser] = useState(false);
 
-  const [emailModels, setEmailModels] = useState<{
-    FATURAR: EmailFormState;
-    NAO_FATURAR: EmailFormState;
-  }>({
-    FATURAR: { assunto: "", corpo_html: "" },
-    NAO_FATURAR: { assunto: "", corpo_html: "" },
-  });
-  const [salvandoEmails, setSalvandoEmails] = useState<
-    EmailTemplateType | "ALL" | null
-  >(null);
-
   useEffect(() => {
     const load = async () => {
       setCarregando(true);
       try {
-        const [settings, templates] = await Promise.all([
-          carregarAppSettings(),
-          carregarModelosEmail(),
-        ]);
+        const settings = await carregarAppSettings();
 
         if (settings?.openaiApiToken) setToken(settings.openaiApiToken);
         if (settings?.openaiModel) setOpenaiModel(settings.openaiModel);
         if (settings?.asaasToken) setAsaasToken(settings.asaasToken);
-
-        setEmailModels(ensureDefaults(templates));
       } catch (err) {
         showError(
           err instanceof Error ? err.message : "Não foi possível carregar as configurações.",
@@ -269,49 +211,6 @@ const AdminConfiguracoes = () => {
       );
     } finally {
       setSalvandoAsaas(false);
-    }
-  };
-
-  const handleSalvarModeloEmail = async (tipo: EmailTemplateType) => {
-    setSalvandoEmails(tipo);
-    try {
-      await salvarModeloEmail({
-        tipo,
-        assunto: emailModels[tipo].assunto,
-        corpo_html: emailModels[tipo].corpo_html,
-      });
-      showSuccess("Modelo de email salvo com sucesso.");
-    } catch (err) {
-      showError(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível salvar o modelo de email.",
-      );
-    } finally {
-      setSalvandoEmails(null);
-    }
-  };
-
-  const handleSalvarTodosModelosEmail = async () => {
-    setSalvandoEmails("ALL");
-    try {
-      await salvarModeloEmail({
-        tipo: "FATURAR",
-        assunto: emailModels.FATURAR.assunto,
-        corpo_html: emailModels.FATURAR.corpo_html,
-      });
-      await salvarModeloEmail({
-        tipo: "NAO_FATURAR",
-        assunto: emailModels.NAO_FATURAR.assunto,
-        corpo_html: emailModels.NAO_FATURAR.corpo_html,
-      });
-      showSuccess("Modelos de email salvos com sucesso.");
-    } catch (err) {
-      showError(
-        err instanceof Error ? err.message : "Não foi possível salvar os modelos de email.",
-      );
-    } finally {
-      setSalvandoEmails(null);
     }
   };
 
@@ -533,149 +432,6 @@ const AdminConfiguracoes = () => {
                   description="Importe procedimentos cirúrgicos via arquivo CSV."
                 />
                 <CbhpmCsvImportCard />
-              </section>
-
-              {/* ── Seção: Modelos de email ────────────────────────────── */}
-              <section>
-                <SectionHeader
-                  icon={<Mail className="h-5 w-5" />}
-                  title="Modelos de email (faturamento)"
-                  description="Configure os textos padrão (assunto e corpo em HTML) usados nos emails de faturamento."
-                />
-
-                <ConfigCard>
-                  {/* Variáveis disponíveis */}
-                  <div className="mb-5 rounded-xl border border-border bg-muted/40 p-4">
-                    <p className="mb-1.5 text-xs font-semibold text-foreground">
-                      Variáveis disponíveis
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Use estas variáveis no assunto e no corpo HTML:{" "}
-                      {[
-                        "{{contato}}",
-                        "{{paciente_nome}}",
-                        "{{convenio}}",
-                        "{{data_cirurgia}}",
-                        "{{hora_inicio}}",
-                        "{{hospital_nome}}",
-                        "{{nome_usuario}}",
-                      ].map((v) => (
-                        <code
-                          key={v}
-                          className="mx-0.5 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] text-primary"
-                        >
-                          {v}
-                        </code>
-                      ))}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {/* Email faturar */}
-                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/50 p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                        <p className="text-sm font-semibold text-foreground">Email faturar</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground -mt-1">
-                        Será enviado para a instituição de faturamento.
-                      </p>
-                      <div>
-                        <FieldLabel>Assunto</FieldLabel>
-                        <Input
-                          value={emailModels.FATURAR.assunto}
-                          onChange={(e) =>
-                            setEmailModels((prev) => ({
-                              ...prev,
-                              FATURAR: { ...prev.FATURAR, assunto: e.target.value },
-                            }))
-                          }
-                          placeholder="Assunto do email"
-                        />
-                      </div>
-                      <div>
-                        <FieldLabel>Corpo (HTML)</FieldLabel>
-                        <Textarea
-                          value={emailModels.FATURAR.corpo_html}
-                          onChange={(e) =>
-                            setEmailModels((prev) => ({
-                              ...prev,
-                              FATURAR: { ...prev.FATURAR, corpo_html: e.target.value },
-                            }))
-                          }
-                          className="min-h-[200px] font-mono text-[11px]"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        className="w-full"
-                        onClick={() => handleSalvarModeloEmail("FATURAR")}
-                        disabled={salvandoEmails !== null}
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        {salvandoEmails === "FATURAR" ? "Salvando..." : "Salvar modelo"}
-                      </Button>
-                    </div>
-
-                    {/* Email não faturar */}
-                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/50 p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-red-400" />
-                        <p className="text-sm font-semibold text-foreground">Email não faturar</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground -mt-1">
-                        Será enviado para a instituição informando o não-faturamento.
-                      </p>
-                      <div>
-                        <FieldLabel>Assunto</FieldLabel>
-                        <Input
-                          value={emailModels.NAO_FATURAR.assunto}
-                          onChange={(e) =>
-                            setEmailModels((prev) => ({
-                              ...prev,
-                              NAO_FATURAR: { ...prev.NAO_FATURAR, assunto: e.target.value },
-                            }))
-                          }
-                          placeholder="Assunto do email"
-                        />
-                      </div>
-                      <div>
-                        <FieldLabel>Corpo (HTML)</FieldLabel>
-                        <Textarea
-                          value={emailModels.NAO_FATURAR.corpo_html}
-                          onChange={(e) =>
-                            setEmailModels((prev) => ({
-                              ...prev,
-                              NAO_FATURAR: { ...prev.NAO_FATURAR, corpo_html: e.target.value },
-                            }))
-                          }
-                          className="min-h-[200px] font-mono text-[11px]"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        className="w-full"
-                        onClick={() => handleSalvarModeloEmail("NAO_FATURAR")}
-                        disabled={salvandoEmails !== null}
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        {salvandoEmails === "NAO_FATURAR" ? "Salvando..." : "Salvar modelo"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleSalvarTodosModelosEmail}
-                      disabled={salvandoEmails !== null}
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      {salvandoEmails === "ALL" ? "Salvando..." : "Salvar todos os modelos"}
-                    </Button>
-                  </div>
-                </ConfigCard>
               </section>
 
               {/* ── Seção: Integrações de API ──────────────────────────── */}

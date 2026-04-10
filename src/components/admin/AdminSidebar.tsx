@@ -18,6 +18,7 @@ import {
   Building2,
   UserRound,
   Upload,
+  Mail,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -38,7 +39,8 @@ interface AdminSidebarProps {
     | "cadastro"
     | "config"
     | "assinaturas"
-    | "financas";
+    | "financas"
+    | "modelos-email";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft";
   documentosSubsection?:
     | "guia-solicitacao"
@@ -271,6 +273,19 @@ function SuperAdminMenu({
         </span>
       </button>
 
+      {/* Modelos de Emails */}
+      <button
+        className={currentSection === "modelos-email" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/modelos-emails")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "modelos-email" ? iconWrapperActive : iconWrapperInactive}>
+            <Mail className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Modelos de Emails</span>
+        </span>
+      </button>
+
       {/* Recursos */}
       <button className={inactiveMain}>
         <span className="flex items-center gap-3">
@@ -495,6 +510,19 @@ function DefaultMenu({
         </div>
       </div>
 
+      {/* Modelos de Emails */}
+      <button
+        className={currentSection === "modelos-email" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/modelos-emails")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "modelos-email" ? iconWrapperActive : iconWrapperInactive}>
+            <Mail className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Modelos de Emails</span>
+        </span>
+      </button>
+
       {/* Recursos */}
       {featureEnabled("menu_recursos") ? (
         <button className={inactiveMain}>
@@ -609,6 +637,7 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
+    if (path.startsWith("/admin/modelos-emails")) return "modelos-email";
     if (path.startsWith("/admin/configuracoes")) return "config";
     if (path.startsWith("/admin")) return "home";
     return "home";
