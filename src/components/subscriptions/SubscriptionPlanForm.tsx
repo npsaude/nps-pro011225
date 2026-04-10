@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,10 +29,69 @@ import type {
   SubscriptionPlanInput,
 } from "@/services/subscription-plans-service";
 
+const defaultValues = {
+  name: "",
+  code: "",
+  description: "",
+  price_month: 0,
+  price_annual: 0,
+  currency: "BRL",
+  billing_interval: "MONTHLY" as BillingInterval,
+  external_plan_id: "",
+  active: true,
+};
+
 const toMoney = (value: unknown) => {
   const n = typeof value === "string" ? Number(value) : (value as number);
   return Number.isFinite(n) ? n : 0;
 };
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value ?? 0);
+}
+
+function formatCurrencyEditable(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value ?? 0);
+}
+
+function parseCurrencyInput(value: string) {
+  const raw = value.replace(/\s/g, "").replace("R$", "").trim();
+
+  if (!raw) return 0;
+
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+
+  if (hasComma) {
+    const normalized = raw.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  if (hasDot) {
+    const parts = raw.split(".");
+
+    if (parts.length > 2 || parts[parts.length - 1]?.length === 3) {
+      const normalized = raw.replace(/\./g, "").replace(/[^\d-]/g, "");
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    const normalized = raw.replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  const normalized = raw.replace(/[^\d-]/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 const planSchema = z.object({
   name: z.string().min(1, "Informe o nome do plano."),
@@ -71,33 +130,33 @@ export default function SubscriptionPlanForm({
 }: SubscriptionPlanFormProps) {
   const form = useForm<SubscriptionPlanFormValues>({
     resolver: zodResolver(planSchema),
-    defaultValues: {
-      name: "",
-      code: "",
-      description: "",
-      price_month: 0,
-      price_annual: 0,
-      currency: "BRL",
-      billing_interval: "MONTHLY",
-      external_plan_id: "",
-      active: true,
-    },
+    defaultValues,
   });
+  const [priceMonthDisplay, setPriceMonthDisplay] = useState(
+    formatCurrency(defaultValues.price_month),
+  );
+  const [priceAnnualDisplay, setPriceAnnualDisplay] = useState(
+    formatCurrency(defaultValues.price_annual),
+  );
 
   useEffect(() => {
-    if (!plan) return;
+    const values = plan
+      ? {
+          name: plan.name,
+          code: plan.code,
+          description: plan.description ?? "",
+          price_month: plan.price_month ?? 0,
+          price_annual: plan.price_annual ?? 0,
+          currency: plan.currency ?? "BRL",
+          billing_interval: plan.billing_interval as BillingInterval,
+          external_plan_id: plan.external_plan_id ?? "",
+          active: Boolean(plan.active),
+        }
+      : defaultValues;
 
-    form.reset({
-      name: plan.name,
-      code: plan.code,
-      description: plan.description ?? "",
-      price_month: plan.price_month ?? 0,
-      price_annual: plan.price_annual ?? 0,
-      currency: plan.currency ?? "BRL",
-      billing_interval: plan.billing_interval as BillingInterval,
-      external_plan_id: plan.external_plan_id ?? "",
-      active: Boolean(plan.active),
-    });
+    form.reset(values);
+    setPriceMonthDisplay(formatCurrency(values.price_month));
+    setPriceAnnualDisplay(formatCurrency(values.price_annual));
   }, [plan, form]);
 
   const handleSubmit = (values: SubscriptionPlanFormValues) => {
@@ -183,11 +242,23 @@ export default function SubscriptionPlanForm({
                 <FormLabel>Preço mensal (R$)</FormLabel>
                 <FormControl>
                   <Input
-                    {...field}
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    ref={field.ref}
+                    name={field.name}
+                    type="text"
+                    inputMode="decimal"
+                    value={priceMonthDisplay}
+                    onFocus={() => setPriceMonthDisplay(formatCurrencyEditable(field.value ?? 0))}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setPriceMonthDisplay(raw);
+                      field.onChange(parseCurrencyInput(raw));
+                    }}
+                    onBlur={() => {
+                      field.onBlur();
+                      setPriceMonthDisplay(formatCurrency(field.value ?? 0));
+                    }}
                     className="h-10"
+                    placeholder="R$ 0,00"
                   />
                 </FormControl>
                 <FormMessage />
@@ -203,11 +274,23 @@ export default function SubscriptionPlanForm({
                 <FormLabel>Preço anual (R$)</FormLabel>
                 <FormControl>
                   <Input
-                    {...field}
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    ref={field.ref}
+                    name={field.name}
+                    type="text"
+                    inputMode="decimal"
+                    value={priceAnnualDisplay}
+                    onFocus={() => setPriceAnnualDisplay(formatCurrencyEditable(field.value ?? 0))}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setPriceAnnualDisplay(raw);
+                      field.onChange(parseCurrencyInput(raw));
+                    }}
+                    onBlur={() => {
+                      field.onBlur();
+                      setPriceAnnualDisplay(formatCurrency(field.value ?? 0));
+                    }}
                     className="h-10"
+                    placeholder="R$ 0,00"
                   />
                 </FormControl>
                 <FormMessage />
