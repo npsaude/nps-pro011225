@@ -7,7 +7,8 @@ export interface SubscriptionPlan {
   name: string;
   code: string;
   description: string | null;
-  price_cents: number;
+  price_month: number;
+  price_annual: number;
   currency: string;
   billing_interval: BillingInterval;
   interval_count: number;
@@ -20,15 +21,72 @@ export interface SubscriptionPlan {
   updated_at: string;
 }
 
-export type SubscriptionPlanInput = Omit<
-  SubscriptionPlan,
-  "id" | "created_at" | "updated_at"
->;
+export interface SubscriptionPlanInput {
+  name: string;
+  code: string;
+  description: string | null;
+  price_month: number;
+  price_annual: number;
+  currency: string;
+  billing_interval: BillingInterval;
+  interval_count: number;
+  external_plan_id: string | null;
+  setup_fee_cents: number;
+  trial_days: number;
+  metadata: unknown | null;
+  active: boolean;
+}
+
+const planSelect = `
+  id,
+  name,
+  code,
+  description,
+  price_month,
+  price_annual,
+  currency,
+  billing_interval,
+  interval_count,
+  external_plan_id,
+  setup_fee_cents,
+  trial_days,
+  metadata,
+  active,
+  created_at,
+  updated_at
+`;
+
+function toNumber(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizePlan(row: Record<string, unknown>): SubscriptionPlan {
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+    code: String(row.code ?? ""),
+    description: typeof row.description === "string" ? row.description : null,
+    price_month: toNumber(row.price_month),
+    price_annual: toNumber(row.price_annual),
+    currency: String(row.currency ?? "BRL"),
+    billing_interval: (row.billing_interval as BillingInterval) ?? "MONTH",
+    interval_count: toNumber(row.interval_count),
+    external_plan_id:
+      typeof row.external_plan_id === "string" ? row.external_plan_id : null,
+    setup_fee_cents: toNumber(row.setup_fee_cents),
+    trial_days: toNumber(row.trial_days),
+    metadata: row.metadata ?? null,
+    active: Boolean(row.active),
+    created_at: String(row.created_at ?? ""),
+    updated_at: String(row.updated_at ?? ""),
+  };
+}
 
 export async function listarSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   const { data, error } = await supabase
     .from("subscription_plans")
-    .select("*")
+    .select(planSelect)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -37,7 +95,7 @@ export async function listarSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     );
   }
 
-  return (data ?? []) as SubscriptionPlan[];
+  return (data ?? []).map((row) => normalizePlan(row as Record<string, unknown>));
 }
 
 export async function criarSubscriptionPlan(
@@ -46,14 +104,14 @@ export async function criarSubscriptionPlan(
   const { data, error } = await supabase
     .from("subscription_plans")
     .insert(payload)
-    .select("*")
+    .select(planSelect)
     .single();
 
   if (error || !data) {
     throw new Error(error?.message || "Não foi possível criar o plano.");
   }
 
-  return data as SubscriptionPlan;
+  return normalizePlan(data as Record<string, unknown>);
 }
 
 export async function atualizarSubscriptionPlan(
@@ -67,12 +125,12 @@ export async function atualizarSubscriptionPlan(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .select("*")
+    .select(planSelect)
     .single();
 
   if (error || !data) {
     throw new Error(error?.message || "Não foi possível atualizar o plano.");
   }
 
-  return data as SubscriptionPlan;
+  return normalizePlan(data as Record<string, unknown>);
 }

@@ -46,7 +46,8 @@ const planSchema = z.object({
     .min(1, "Informe o código do plano.")
     .regex(/^[a-zA-Z0-9_-]+$/, "Use apenas letras, números, _ ou -."),
   description: z.string().optional(),
-  price_reais: z.preprocess(toMoney, z.number().min(0, "Preço inválido.")),
+  price_month: z.preprocess(toMoney, z.number().min(0, "Preço mensal inválido.")),
+  price_annual: z.preprocess(toMoney, z.number().min(0, "Preço anual inválido.")),
   currency: z.string().min(1),
   billing_interval: z.enum(["DAY", "WEEK", "MONTH", "YEAR"]),
   interval_count: z.preprocess(toInt, z.number().min(1, "Mínimo 1.")),
@@ -75,7 +76,8 @@ export default function SubscriptionPlanForm({
       name: "",
       code: "",
       description: "",
-      price_reais: 0,
+      price_month: 0,
+      price_annual: 0,
       currency: "BRL",
       billing_interval: "MONTH",
       interval_count: 1,
@@ -93,7 +95,8 @@ export default function SubscriptionPlanForm({
       name: plan.name,
       code: plan.code,
       description: plan.description ?? "",
-      price_reais: (plan.price_cents ?? 0) / 100,
+      price_month: plan.price_month ?? 0,
+      price_annual: plan.price_annual ?? 0,
       currency: plan.currency ?? "BRL",
       billing_interval: plan.billing_interval as BillingInterval,
       interval_count: plan.interval_count ?? 1,
@@ -109,7 +112,8 @@ export default function SubscriptionPlanForm({
       name: values.name.trim(),
       code: values.code.trim(),
       description: values.description?.trim() || null,
-      price_cents: Math.round((values.price_reais ?? 0) * 100),
+      price_month: values.price_month ?? 0,
+      price_annual: values.price_annual ?? 0,
       currency: values.currency,
       billing_interval: values.billing_interval as BillingInterval,
       interval_count: values.interval_count,
@@ -177,13 +181,33 @@ export default function SubscriptionPlanForm({
           )}
         />
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-4">
           <FormField
             control={form.control}
-            name="price_reais"
+            name="price_month"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço (R$)</FormLabel>
+                <FormLabel>Preço mensal (R$)</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="h-10"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="price_annual"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço anual (R$)</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
