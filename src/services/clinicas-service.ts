@@ -20,6 +20,7 @@ export interface Clinica {
   cargo: string | null;
   nome_contato_faturamento: string | null;
   email_contato_faturamento: string | null;
+  email_contato_faturamento_secundario: string | null;
   telefone_contato_faturamento: string | null;
   created_at: string;
   updated_at: string;

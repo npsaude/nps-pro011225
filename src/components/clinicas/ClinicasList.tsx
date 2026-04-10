@@ -361,7 +361,7 @@ const ClinicasList = () => {
                 </div>
 
                 {/* Faturamento info */}
-                {(c.nome_contato_faturamento || c.email_contato_faturamento || c.telefone_contato_faturamento) && (
+                {(c.nome_contato_faturamento || c.email_contato_faturamento || c.email_contato_faturamento_secundario || c.telefone_contato_faturamento) && (
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
                     {c.nome_contato_faturamento && (
                       <span className="font-medium text-slate-600">{c.nome_contato_faturamento}</span>
@@ -370,6 +370,12 @@ const ClinicasList = () => {
                       <span className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
                         {c.email_contato_faturamento}
+                      </span>
+                    )}
+                    {c.email_contato_faturamento_secundario && (
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {c.email_contato_faturamento_secundario}
                       </span>
                     )}
                     {c.telefone_contato_faturamento && (

@@ -33,6 +33,7 @@ interface ClinicaData {
   nome_fantasia: string;
   contato: string | null;
   email_contato_faturamento: string | null;
+  email_contato_faturamento_secundario: string | null;
 }
 
 interface ProcedimentoCirurgico {
@@ -550,6 +551,16 @@ function buildEmailBodyFromTemplate(input: string, vars: Record<string, string>)
   return convertPlainTextToEmailHtml(rendered);
 }
 
+function getBillingRecipients(clinica: ClinicaData): string[] {
+  return [
+    clinica.email_contato_faturamento,
+    clinica.email_contato_faturamento_secundario,
+  ].filter((email, index, list): email is string => {
+    if (!email) return false;
+    return list.indexOf(email) === index;
+  });
+}
+
 serve(async (req) => {
   const method = req.method.toUpperCase();
 
@@ -841,7 +852,7 @@ serve(async (req) => {
 
   const { data: clinicaFaturamento, error: clinicaFatError } = await supabase
     .from("clinicas")
-    .select("id, nome_fantasia, contato, email_contato_faturamento")
+    .select("id, nome_fantasia, contato, email_contato_faturamento, email_contato_faturamento_secundario")
     .eq("id", instituicaoFaturamentoId)
     .single();
 
@@ -860,8 +871,9 @@ serve(async (req) => {
   }
 
   const clinicaFat = clinicaFaturamento as ClinicaData;
+  const clinicaFatRecipients = getBillingRecipients(clinicaFat);
 
-  if (!clinicaFat.email_contato_faturamento) {
+  if (clinicaFatRecipients.length === 0) {
     return new Response(
       JSON.stringify({
         success: false,
@@ -881,7 +893,7 @@ serve(async (req) => {
   if (instituicoesDiferentes) {
     const { data: clinicaCir, error: clinicaCirError } = await supabase
       .from("clinicas")
-      .select("id, nome_fantasia, contato, email_contato_faturamento")
+      .select("id, nome_fantasia, contato, email_contato_faturamento, email_contato_faturamento_secundario")
       .eq("id", instituicaoCirurgiaId)
       .single();
 
@@ -1051,8 +1063,10 @@ serve(async (req) => {
   const errosEnvio: string[] = [];
 
   if (instituicoesDiferentes && clinicaCirurgia) {
+    const clinicaCirurgiaRecipients = getBillingRecipients(clinicaCirurgia);
+
     // Email 1: instituição da cirurgia (NÃO faturar)
-    if (clinicaCirurgia.email_contato_faturamento) {
+    if (clinicaCirurgiaRecipients.length > 0) {
       const vars = {
         ...commonVars,
         contato: clinicaCirurgia.contato || "Responsável",
@@ -1062,22 +1076,24 @@ serve(async (req) => {
       const subject = applyTemplate(templateNaoFaturar.assunto, vars);
       const htmlBody = buildEmailBodyFromTemplate(templateNaoFaturar.corpo_html, vars);
 
-      const result = await sendEmailViaSMTP(
-        smtpHost,
-        smtpPort,
-        smtpUser,
-        smtpPass,
-        smtpFrom,
-        smtpFromName,
-        clinicaCirurgia.email_contato_faturamento,
-        userEmail,
-        subject,
-        htmlBody,
-        encodedAttachments,
-      );
+      for (const recipient of clinicaCirurgiaRecipients) {
+        const result = await sendEmailViaSMTP(
+          smtpHost,
+          smtpPort,
+          smtpUser,
+          smtpPass,
+          smtpFrom,
+          smtpFromName,
+          recipient,
+          userEmail,
+          subject,
+          htmlBody,
+          encodedAttachments,
+        );
 
-      if (result.success) emailsEnviados.push(clinicaCirurgia.email_contato_faturamento);
-      else errosEnvio.push(`Falha ao enviar para ${clinicaCirurgia.nome_fantasia}: ${result.error}`);
+        if (result.success) emailsEnviados.push(recipient);
+        else errosEnvio.push(`Falha ao enviar para ${recipient} (${clinicaCirurgia.nome_fantasia}): ${result.error}`);
+      }
     }
 
     // Email 2: instituição de faturamento (FATURAR)
@@ -1090,22 +1106,24 @@ serve(async (req) => {
     const subjectFat = applyTemplate(templateFaturar.assunto, varsFat);
     const htmlBodyFat = buildEmailBodyFromTemplate(templateFaturar.corpo_html, varsFat);
 
-    const resultFat = await sendEmailViaSMTP(
-      smtpHost,
-      smtpPort,
-      smtpUser,
-      smtpPass,
-      smtpFrom,
-      smtpFromName,
-      clinicaFat.email_contato_faturamento,
-      userEmail,
-      subjectFat,
-      htmlBodyFat,
-      encodedAttachments,
-    );
+    for (const recipient of clinicaFatRecipients) {
+      const resultFat = await sendEmailViaSMTP(
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPass,
+        smtpFrom,
+        smtpFromName,
+        recipient,
+        userEmail,
+        subjectFat,
+        htmlBodyFat,
+        encodedAttachments,
+      );
 
-    if (resultFat.success) emailsEnviados.push(clinicaFat.email_contato_faturamento);
-    else errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}: ${resultFat.error}`);
+      if (resultFat.success) emailsEnviados.push(recipient);
+      else errosEnvio.push(`Falha ao enviar para ${recipient} (${clinicaFat.nome_fantasia}): ${resultFat.error}`);
+    }
   } else {
     // Email único (FATURAR)
     const varsFat = {
@@ -1117,22 +1135,24 @@ serve(async (req) => {
     const subjectFat = applyTemplate(templateFaturar.assunto, varsFat);
     const htmlBodyFat = buildEmailBodyFromTemplate(templateFaturar.corpo_html, varsFat);
 
-    const resultFat = await sendEmailViaSMTP(
-      smtpHost,
-      smtpPort,
-      smtpUser,
-      smtpPass,
-      smtpFrom,
-      smtpFromName,
-      clinicaFat.email_contato_faturamento,
-      userEmail,
-      subjectFat,
-      htmlBodyFat,
-      encodedAttachments,
-    );
+    for (const recipient of clinicaFatRecipients) {
+      const resultFat = await sendEmailViaSMTP(
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPass,
+        smtpFrom,
+        smtpFromName,
+        recipient,
+        userEmail,
+        subjectFat,
+        htmlBodyFat,
+        encodedAttachments,
+      );
 
-    if (resultFat.success) emailsEnviados.push(clinicaFat.email_contato_faturamento);
-    else errosEnvio.push(`Falha ao enviar para ${clinicaFat.nome_fantasia}: ${resultFat.error}`);
+      if (resultFat.success) emailsEnviados.push(recipient);
+      else errosEnvio.push(`Falha ao enviar para ${recipient} (${clinicaFat.nome_fantasia}): ${resultFat.error}`);
+    }
   }
 
   if (emailsEnviados.length > 0) {

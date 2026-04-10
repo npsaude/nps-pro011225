@@ -46,6 +46,7 @@ export async function criarDadosExemplo(): Promise<void> {
         cargo: "Coordenadora de Faturamento",
         nome_contato_faturamento: "Carla Andrade",
         email_contato_faturamento: "faturamento@saolucas.com.br",
+        email_contato_faturamento_secundario: "financeiro@saolucas.com.br",
         telefone_contato_faturamento: "(11) 4000-5678",
       },
       {
@@ -65,6 +66,7 @@ export async function criarDadosExemplo(): Promise<void> {
         cargo: "Supervisor de Faturamento",
         nome_contato_faturamento: "Marcos Figueiredo",
         email_contato_faturamento: "faturamento@bemviver.com.br",
+        email_contato_faturamento_secundario: "contas@bemviver.com.br",
         telefone_contato_faturamento: "(19) 3555-9091",
       },
     ];
