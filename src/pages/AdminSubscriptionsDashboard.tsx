@@ -176,25 +176,10 @@ export default function AdminSubscriptionsDashboard() {
     const load = async () => {
       setLoading(true);
 
-      // 1) Usuários ativos
-      const { count: usersCount, error: usersError } = await supabase
-        .from("usuarios_sistema")
-        .select("id_user", { head: true, count: "exact" })
-        .eq("ativo", true);
-
-      if (usersError) {
-        showError(usersError.message);
-        setLoading(false);
-        return;
-      }
-
-      setActiveUsers(usersCount ?? 0);
-
-      // 2) Assinaturas + join do plano
       const { data, error } = await supabase
         .from("subscription_enrollments")
         .select(
-          "status,created_at,started_at,plan:plan_id(price_month,price_annual,billing_interval,code,name)",
+          "status,cancelado,created_at,started_at,plan:plan_id(price_month,price_annual,billing_interval,code,name)",
         );
 
       if (error) {
@@ -203,11 +188,12 @@ export default function AdminSubscriptionsDashboard() {
         return;
       }
 
-      const rows = (data ?? []) as unknown as EnrollmentRow[];
+      const rows = (data ?? []) as unknown as (EnrollmentRow & { cancelado?: boolean | null })[];
 
-      const activeRows = rows.filter((r) => isActiveStatus(r.status));
-      const canceledRows = rows.filter((r) => isCanceledStatus(r.status));
+      const activeRows = rows.filter((r) => isActiveStatus(r.status) && !r.cancelado);
+      const canceledRows = rows.filter((r) => isCanceledStatus(r.status) || r.cancelado);
 
+      setActiveUsers(activeRows.length);
       setCancelations(canceledRows.length);
 
       // Receita: soma do valor do plano nas assinaturas ativas
@@ -338,10 +324,10 @@ export default function AdminSubscriptionsDashboard() {
                       <div className="space-y-2">
                         <p className="flex items-center gap-2 text-xs font-medium text-emerald-300">
                           <span>↗</span>
-                          Base de usuários ativos do sistema
+                          Assinantes ativos / em trial
                         </p>
                         <p className="text-[11px] text-slate-400/80">
-                          Considera registros com <span className="font-medium text-slate-300">ativo = true</span>
+                          Considera <span className="font-medium text-slate-300">ACTIVE</span> e <span className="font-medium text-slate-300">TRIAL</span> com <span className="font-medium text-slate-300">cancelado = false</span>
                         </p>
                       </div>
                     </CardContent>
