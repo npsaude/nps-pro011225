@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Send } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemUser } from "@/hooks/use-system-user";
@@ -102,6 +103,15 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
   return (
     <div className="flex items-center gap-2">
       <BellButton count={notificationsCount} onClick={() => {}} />
+
+      <button
+        type="button"
+        onClick={() => navigate("/medico/faturamentos/enviar")}
+        className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-3 py-1.5 text-xs font-semibold text-black shadow-[0_0_12px_rgba(212,160,23,0.35)] transition-all hover:shadow-[0_0_20px_rgba(212,160,23,0.55)] hover:scale-[1.02]"
+      >
+        <Send className="h-3.5 w-3.5" />
+        Enviar Guias
+      </button>
 
       {isMedico && <SurgeryQuotaBadge />}
 
