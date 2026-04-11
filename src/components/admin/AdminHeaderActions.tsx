@@ -107,9 +107,9 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
       <button
         type="button"
         onClick={() => navigate("/medico/faturamentos/enviar")}
-        className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-3 py-1.5 text-xs font-semibold text-black shadow-[0_0_12px_rgba(212,160,23,0.35)] transition-all hover:shadow-[0_0_20px_rgba(212,160,23,0.55)] hover:scale-[1.02]"
+        className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-5 text-sm font-bold text-black shadow-[0_0_14px_rgba(212,160,23,0.45)] transition-all hover:shadow-[0_0_24px_rgba(212,160,23,0.65)] hover:scale-[1.03] animate-pulse-gold"
       >
-        <Send className="h-3.5 w-3.5" />
+        <Send className="h-4 w-4" />
         Enviar Guias
       </button>
 
