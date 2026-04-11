@@ -156,20 +156,39 @@ export default function AdminSubscriptionsDashboard() {
 
       setActiveUsers(usersCount ?? 0);
 
-      // 2) Assinaturas + join do plano
-      const { data, error } = await supabase
+      // 2) Assinaturas (sem join)
+      const { data: enrollData, error: enrollError } = await supabase
         .from("subscription_enrollments")
-        .select(
-          "status,created_at,started_at,plan_id,subscription_plans(price_cents,code,name)",
-        );
+        .select("status,created_at,started_at,plan_id");
 
-      if (error) {
-        showError(error.message);
+      if (enrollError) {
+        showError(enrollError.message);
         setLoading(false);
         return;
       }
 
-      const rows = (data ?? []) as unknown as EnrollmentRow[];
+      // 3) Planos
+      const { data: plansData, error: plansError } = await supabase
+        .from("subscription_plans")
+        .select("id,price_cents,code,name");
+
+      if (plansError) {
+        showError(plansError.message);
+        setLoading(false);
+        return;
+      }
+
+      const plansMap = new Map<string, { price_cents: number; code: string | null; name: string | null }>(
+        (plansData ?? []).map((p: any) => [p.id, { price_cents: p.price_cents, code: p.code, name: p.name }])
+      );
+
+      const rows: EnrollmentRow[] = (enrollData ?? []).map((e: any) => ({
+        status: e.status,
+        created_at: e.created_at,
+        started_at: e.started_at,
+        plan_id: e.plan_id,
+        subscription_plans: e.plan_id ? (plansMap.get(e.plan_id) ?? null) : null,
+      }));
 
       const activeRows = rows.filter((r) => isActiveStatus(r.status));
       const canceledRows = rows.filter((r) => isCanceledStatus(r.status));
