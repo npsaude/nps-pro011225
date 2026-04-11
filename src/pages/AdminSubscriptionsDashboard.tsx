@@ -28,7 +28,8 @@ type EnrollmentRow = {
   status: string | null;
   created_at: string | null;
   started_at: string | null;
-  plan:
+  plan_id: string | null;
+  subscription_plans:
     | { price_cents: number; code: string | null; name: string | null }
     | { price_cents: number; code: string | null; name: string | null }[]
     | null;
@@ -82,7 +83,7 @@ function isCanceledStatus(status: unknown) {
   return s === "canceled" || s === "cancelado" || s === "cancelada";
 }
 
-function pickPlan(plan: EnrollmentRow["plan"]) {
+function pickPlan(plan: EnrollmentRow["subscription_plans"]) {
   if (!plan) return null;
   if (Array.isArray(plan)) return plan[0] ?? null;
   return plan;
@@ -159,7 +160,7 @@ export default function AdminSubscriptionsDashboard() {
       const { data, error } = await supabase
         .from("subscription_enrollments")
         .select(
-          "status,created_at,started_at,plan:subscription_plans(price_cents,code,name)",
+          "status,created_at,started_at,plan_id,subscription_plans(price_cents,code,name)",
         );
 
       if (error) {
@@ -177,7 +178,7 @@ export default function AdminSubscriptionsDashboard() {
 
       // Receita: soma do price_cents do plano nas assinaturas ativas
       const revenue = activeRows.reduce((acc, r) => {
-        const plan = pickPlan(r.plan);
+        const plan = pickPlan(r.subscription_plans);
         return acc + (plan?.price_cents ?? 0);
       }, 0);
       setRevenueCents(revenue);
@@ -205,7 +206,7 @@ export default function AdminSubscriptionsDashboard() {
       // Pizza: assinaturas ativas por plano (básico/intermediário/avançado)
       const byPlan = new Map<string, number>();
       activeRows.forEach((r) => {
-        const p = pickPlan(r.plan);
+        const p = pickPlan(r.subscription_plans);
         const key = bucketPlan(p?.code ?? p?.name ?? "");
         byPlan.set(key, (byPlan.get(key) ?? 0) + 1);
       });
