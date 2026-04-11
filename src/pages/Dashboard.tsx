@@ -8,15 +8,20 @@ import {
   Loader2,
 } from "lucide-react";
 import {
-  ResponsiveContainer,
   ComposedChart,
   Bar,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardHeader,
@@ -184,6 +189,22 @@ const topDoctorsByRevenue = [
   },
 ];
 
+// Configuração do ChartContainer para o gráfico principal do dashboard
+const dashboardChartConfig = {
+  enviadas: {
+    label: "Faturamentos enviados",
+    color: "#38bdf8",
+  },
+  pagas: {
+    label: "Faturamentos pagos",
+    color: "#22c55e",
+  },
+  glosa: {
+    label: "Glosa",
+    color: "#f97316",
+  },
+} satisfies ChartConfig;
+
 const Dashboard = () => {
   const [selectedClinic, setSelectedClinic] = useState<string>("todas");
   const [selectedDoctor, setSelectedDoctor] = useState<string>("todos");
@@ -312,9 +333,18 @@ const Dashboard = () => {
           {/* Conteúdo */}
           <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:bg-slate-900/90">
             {systemUserLoading && (
-              <div className="flex flex-1 items-center justify-center py-32">
-                <Loader2 className="mr-2 h-6 w-6 animate-spin text-slate-400" />
-                <span className="text-sm text-slate-400">Carregando dashboard...</span>
+              <div className="flex flex-1 flex-col gap-4 py-4">
+                {/* KPI cards skeleton */}
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-44 rounded-3xl bg-slate-100" />
+                  ))}
+                </div>
+                {/* Charts skeleton */}
+                <div className="grid gap-4 lg:grid-cols-5">
+                  <Skeleton className="lg:col-span-3 h-80 rounded-3xl bg-slate-100" />
+                  <Skeleton className="lg:col-span-2 h-80 rounded-3xl bg-slate-100" />
+                </div>
               </div>
             )}
 
@@ -440,31 +470,47 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
                       {isSuperAdmin && saChartLoading ? (
-                        <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Carregando...
+                        <div className="flex h-full flex-col gap-2 items-end justify-end px-4 pb-2">
+                          <div className="flex items-end gap-2 h-full w-full">
+                            {[35, 60, 50, 80, 40, 30, 70, 75, 85, 90, 95, 70].map((h, i) => (
+                              <div
+                                key={i}
+                                className="flex-1 rounded-t bg-slate-100 dark:bg-slate-800 animate-pulse"
+                                style={{ height: `${h}%` }}
+                              />
+                            ))}
+                          </div>
                         </div>
                       ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ChartContainer
+                          config={dashboardChartConfig}
+                          className="aspect-auto h-full w-full"
+                        >
                           <ComposedChart data={activeChartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                             <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }} />
                             <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748B" }}
                               tickFormatter={(v) => isSuperAdmin && v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}
                             />
-                            <RechartsTooltip
-                              contentStyle={{ borderRadius: 12, borderColor: "#E2E8F0", fontSize: 11 }}
-                              formatter={(value: number, name: string) =>
-                                isSuperAdmin
-                                  ? [value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), name]
-                                  : [value, name]
+                            <ChartTooltip
+                              content={
+                                <ChartTooltipContent
+                                  formatter={(value, name) => (
+                                    <span className="font-medium text-foreground">
+                                      {isSuperAdmin
+                                        ? (value as number).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                                        : String(value)}{" "}
+                                      <span className="text-muted-foreground">{name as string}</span>
+                                    </span>
+                                  )}
+                                />
                               }
                             />
-                            <Bar dataKey="enviadas" name="Faturamentos enviados" barSize={16} radius={[4, 4, 0, 0]} fill="#38bdf8" />
-                            <Bar dataKey="pagas" name="Faturamentos pagos" barSize={16} radius={[4, 4, 0, 0]} fill="#22c55e" />
-                            <Line type="monotone" dataKey="glosa" name="Glosa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                            <Bar dataKey="enviadas" name="Faturamentos enviados" barSize={16} radius={[4, 4, 0, 0]} fill="var(--color-enviadas)" />
+                            <Bar dataKey="pagas" name="Faturamentos pagos" barSize={16} radius={[4, 4, 0, 0]} fill="var(--color-pagas)" />
+                            <Line type="monotone" dataKey="glosa" name="Glosa" stroke="var(--color-glosa)" strokeWidth={2} dot={{ r: 3 }} />
                           </ComposedChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                       )}
                     </CardContent>
                   </Card>
@@ -480,9 +526,15 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent className="overflow-x-auto pt-0 pb-3">
                       {isSuperAdmin && saChartLoading ? (
-                        <div className="flex items-center justify-center py-10 text-sm text-slate-400">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Carregando...
+                        <div className="space-y-3 py-3">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-3 px-1">
+                              <Skeleton className="h-4 w-5 rounded" />
+                              <Skeleton className="h-7 w-7 rounded-full" />
+                              <Skeleton className="h-4 flex-1 rounded" />
+                              <Skeleton className="h-4 w-16 rounded" />
+                            </div>
+                          ))}
                         </div>
                       ) : activeTopDoctors.length === 0 ? (
                         <div className="flex items-center justify-center py-10 text-sm text-slate-400">

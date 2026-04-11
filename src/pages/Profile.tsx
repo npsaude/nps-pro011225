@@ -1,9 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { useSystemUser } from "@/hooks/use-system-user";
 import ProfileHeaderCard from "@/components/profile/ProfileHeaderCard";
-import UserProfileForm from "@/components/profile/UserProfileForm";
+import ProfileAccountAndSecurity from "@/components/profile/ProfileAccountAndSecurity";
 import UserSubscriptionPanel from "@/components/profile/UserSubscriptionPanel";
 import { Button } from "@/components/ui/button";
 
@@ -12,30 +14,43 @@ export default function Profile() {
   const { loading } = useSystemUser();
 
   return (
-    <div className="relative min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.10)_0,rgba(18,18,18,1)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.08)_0,rgba(18,18,18,1)_55%)] text-foreground">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6 sm:py-8">
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-10 rounded-full"
-            onClick={() => navigate(-1)}
-            disabled={loading}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
+    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+      <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
+        <AdminSidebar />
 
-          <span className="text-xs text-muted-foreground">
-            Perfil e assinatura
-          </span>
-        </div>
+        <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
+          {/* Header */}
+          <header className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                disabled={loading}
+                className="h-9 w-9 rounded-2xl p-0 text-slate-500 hover:bg-slate-200/60 hover:text-slate-900 dark:hover:bg-slate-800"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Voltar</span>
+              </Button>
+              <div className="flex flex-col">
+                <h1 className="text-[26px] font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                  Perfil
+                </h1>
+                <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+                  Gerencie suas informações pessoais e assinatura.
+                </p>
+              </div>
+            </div>
+            <AdminHeaderActions notificationsCount={0} />
+          </header>
 
-        <ProfileHeaderCard planLabel={null} />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <UserProfileForm />
-          <UserSubscriptionPanel />
+          {/* Conteúdo */}
+          <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:bg-slate-900/90">
+            <ProfileHeaderCard planLabel={null} />
+            <ProfileAccountAndSecurity />
+            <UserSubscriptionPanel />
+          </div>
         </div>
       </div>
     </div>

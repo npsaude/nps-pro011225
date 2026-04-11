@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ReceiptText,
   DollarSign,
@@ -7,13 +7,11 @@ import {
   Building2,
 } from "lucide-react";
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
   PieChart,
   Pie,
   Cell,
@@ -34,6 +32,13 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { supabase } from "@/integrations/supabase/client";
 
 type MonthBar = { month: string; valor: number };
@@ -52,6 +57,9 @@ const PIE_COLORS = [
   "#fb923c",
   "#6366f1",
 ];
+
+// Alturas fixas para o skeleton do gráfico de barras (12 meses)
+const BAR_SKELETON_HEIGHTS = [35, 60, 50, 80, 40, 30, 70, 75, 85, 90, 95, 70];
 
 const ATUACAO_LABEL: Record<string, string> = {
   CIRURGIAO: "Cirurgião",
@@ -94,6 +102,14 @@ function buildLast12Months(): { key: string; label: string }[] {
   return months;
 }
 
+// Configuração do ChartContainer para o gráfico de barras
+const barChartConfig = {
+  valor: {
+    label: "Valor faturado",
+    color: "#38bdf8",
+  },
+} satisfies ChartConfig;
+
 export default function DashboardMedicoAdmin() {
   const [stats, setStats] = useState<Stats>({
     qtdFaturamentos: 0,
@@ -104,6 +120,16 @@ export default function DashboardMedicoAdmin() {
   const [instituicoes, setInstituicoes] = useState<InstituicaoRow[]>([]);
   const [atuacaoData, setAtuacaoData] = useState<AtuacaoSlice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Configuração dinâmica do ChartContainer para o gráfico de pizza
+  const atuacaoChartConfig = useMemo((): ChartConfig => {
+    return Object.fromEntries(
+      atuacaoData.map((item, i) => [
+        item.name,
+        { label: item.name, color: PIE_COLORS[i % PIE_COLORS.length] },
+      ]),
+    );
+  }, [atuacaoData]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,8 +168,13 @@ export default function DashboardMedicoAdmin() {
 
       // ── KPIs ──
       const qtdFaturamentos = fats.length;
-      const valorFaturado = itensData.reduce((acc, r) => acc + toNumber(r.valor_total), 0);
-      const emailsNaoEnviados = fats.filter((r) => r.email_status === "NAO_ENVIADO").length;
+      const valorFaturado = itensData.reduce(
+        (acc, r) => acc + toNumber(r.valor_total),
+        0,
+      );
+      const emailsNaoEnviados = fats.filter(
+        (r) => r.email_status === "NAO_ENVIADO",
+      ).length;
 
       setStats({ qtdFaturamentos, valorFaturado, emailsNaoEnviados });
 
@@ -156,7 +187,8 @@ export default function DashboardMedicoAdmin() {
         let dateStr = item.data_procedimento as string | null;
         if (!dateStr && item.guia_id) {
           const fat = guiaToFat[item.guia_id];
-          dateStr = fat?.data_cirurgia ?? fat?.created_at?.slice(0, 10) ?? null;
+          dateStr =
+            fat?.data_cirurgia ?? fat?.created_at?.slice(0, 10) ?? null;
         }
         if (!dateStr) return;
         const key = dateStr.slice(0, 7);
@@ -213,7 +245,7 @@ export default function DashboardMedicoAdmin() {
     {
       id: "qtd",
       title: "Faturamentos",
-      value: loading ? "—" : String(stats.qtdFaturamentos),
+      value: String(stats.qtdFaturamentos),
       helper: "registros ativos",
       icon: ReceiptText,
       iconBg: "bg-sky-500",
@@ -221,7 +253,7 @@ export default function DashboardMedicoAdmin() {
     {
       id: "valor",
       title: "Valor Faturado",
-      value: loading ? "—" : formatCurrency(stats.valorFaturado),
+      value: formatCurrency(stats.valorFaturado),
       helper: "total acumulado",
       icon: DollarSign,
       iconBg: "bg-emerald-500",
@@ -229,7 +261,7 @@ export default function DashboardMedicoAdmin() {
     {
       id: "emails",
       title: "E-mails não enviados",
-      value: loading ? "—" : String(stats.emailsNaoEnviados),
+      value: String(stats.emailsNaoEnviados),
       helper: "faturamentos pendentes",
       icon: MailX,
       iconBg: "bg-rose-500",
@@ -253,7 +285,11 @@ export default function DashboardMedicoAdmin() {
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
                       {kpi.title}
                     </p>
-                    <p className="mt-1 text-2xl font-semibold">{kpi.value}</p>
+                    {loading ? (
+                      <Skeleton className="mt-1 h-8 w-24 rounded-lg bg-slate-700" />
+                    ) : (
+                      <p className="mt-1 text-2xl font-semibold">{kpi.value}</p>
+                    )}
                   </div>
                   <div
                     className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${kpi.iconBg} text-white shadow-md`}
@@ -277,17 +313,25 @@ export default function DashboardMedicoAdmin() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
               Atuação
             </p>
-            <div className="mt-1 flex-1">
+            <div className="mt-1 flex-1 min-h-0">
               {loading ? (
-                <div className="flex h-full items-center justify-center text-[11px] text-slate-400">
-                  Carregando...
+                <div className="flex h-full items-center justify-center gap-3">
+                  <Skeleton className="h-16 w-16 rounded-full bg-slate-700" />
+                  <div className="space-y-1.5">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-2.5 w-16 rounded bg-slate-700" />
+                    ))}
+                  </div>
                 </div>
               ) : atuacaoData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-[11px] text-slate-400">
                   Sem dados
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer
+                  config={atuacaoChartConfig}
+                  className="aspect-auto h-full w-full"
+                >
                   <PieChart>
                     <Pie
                       data={atuacaoData}
@@ -307,15 +351,16 @@ export default function DashboardMedicoAdmin() {
                         />
                       ))}
                     </Pie>
-                    <RechartsTooltip
-                      contentStyle={{
-                        borderRadius: 10,
-                        border: "1px solid #334155",
-                        backgroundColor: "#1e293b",
-                        fontSize: 11,
-                        color: "#e2e8f0",
-                      }}
-                      formatter={(value: number, name: string) => [`${value}`, name]}
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => (
+                            <span className="font-medium text-foreground">
+                              {name}: {String(value)}
+                            </span>
+                          )}
+                        />
+                      }
                     />
                     <Legend
                       verticalAlign="middle"
@@ -331,7 +376,7 @@ export default function DashboardMedicoAdmin() {
                       }}
                     />
                   </PieChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               )}
             </div>
           </CardContent>
@@ -352,11 +397,20 @@ export default function DashboardMedicoAdmin() {
           </CardHeader>
           <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
             {loading ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                Carregando...
+              <div className="flex h-full items-end gap-1.5 px-4 pb-2">
+                {BAR_SKELETON_HEIGHTS.map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-t bg-slate-100 dark:bg-slate-800"
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer
+                config={barChartConfig}
+                className="aspect-auto h-full w-full"
+              >
                 <BarChart data={chartData}>
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -373,25 +427,30 @@ export default function DashboardMedicoAdmin() {
                     tickLine={false}
                     axisLine={false}
                     tick={{ fontSize: 11, fill: "#64748B" }}
-                    tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
+                    }
                   />
-                  <RechartsTooltip
-                    contentStyle={{
-                      borderRadius: 12,
-                      borderColor: "#E2E8F0",
-                      fontSize: 11,
-                    }}
-                    formatter={(v: number) => [formatCurrency(v), "Valor"]}
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => (
+                          <span className="font-mono font-medium text-foreground">
+                            {formatCurrency(value as number)}
+                          </span>
+                        )}
+                      />
+                    }
                   />
                   <Bar
                     dataKey="valor"
                     name="Valor faturado"
                     barSize={20}
                     radius={[4, 4, 0, 0]}
-                    fill="#38bdf8"
+                    fill="var(--color-valor)"
                   />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
@@ -408,9 +467,20 @@ export default function DashboardMedicoAdmin() {
           </CardHeader>
           <CardContent className="overflow-x-auto pt-0 pb-3">
             {loading ? (
-              <p className="px-2 py-4 text-xs text-slate-400">Carregando...</p>
+              <div className="space-y-3 px-1 pt-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-5 rounded" />
+                    <Skeleton className="h-7 w-7 rounded-full" />
+                    <Skeleton className="h-4 flex-1 rounded" />
+                    <Skeleton className="h-4 w-5 rounded" />
+                  </div>
+                ))}
+              </div>
             ) : instituicoes.length === 0 ? (
-              <p className="px-2 py-4 text-xs text-slate-400">Nenhum faturamento encontrado.</p>
+              <p className="px-2 py-4 text-xs text-slate-400">
+                Nenhum faturamento encontrado.
+              </p>
             ) : (
               <Table>
                 <TableHeader>
