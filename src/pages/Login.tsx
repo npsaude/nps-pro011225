@@ -96,8 +96,6 @@ const Login = () => {
 
       if (result.role === "SUPER_ADMIN") {
         navigate("/admin/assinaturas/dashboard");
-      } else if (result.role === "MEDICO") {
-        navigate("/medico/dashboard");
       } else {
         navigate("/admin/dashboard");
       }
