@@ -20,21 +20,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
-import { listarSubscriptionEnrollments } from "@/services/subscription-enrollments-service";
-import { listarSubscriptionPlans } from "@/services/subscription-plans-service";
 
 type MonthlyPoint = { month: string; cumulative: number };
 type PiePoint = { name: string; value: number; color: string };
 
+type PlanRow = {
+  price_cents: number;
+  code: string | null;
+  name: string | null;
+};
+
 type EnrollmentRow = {
+  id: string;
+  user_email: string | null;
   status: string | null;
+  cancelado: boolean | null;
   created_at: string | null;
   started_at: string | null;
-  plan_id: string | null;
-  subscription_plans:
-    | { price_cents: number; code: string | null; name: string | null }
-    | { price_cents: number; code: string | null; name: string | null }[]
-    | null;
+  current_period_end: string | null;
+  plan: PlanRow | PlanRow[] | null;
 };
 
 const PIE_COLORS: Record<string, string> = {
@@ -57,9 +61,9 @@ function monthLabel(key: string) {
     .replace(".", "");
 }
 
-function nextMonthsKeys(count: number) {
+function lastMonthsKeys(count: number) {
   const now = new Date();
-  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const first = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
   return Array.from({ length: count }).map((_, i) => {
     const d = new Date(first.getFullYear(), first.getMonth() + i, 1);
     return monthKey(d);
@@ -75,17 +79,17 @@ function norm(text: unknown) {
   return String(text ?? "").trim().toLowerCase();
 }
 
-function isActiveStatus(status: unknown) {
-  const s = norm(status);
-  return s === "active" || s === "ativo";
+function isActiveEnrollment(row: Pick<EnrollmentRow, "status" | "cancelado">) {
+  const status = String(row.status ?? "").trim().toUpperCase();
+  return ["ACTIVE", "TRIAL", "PENDING", "ATIVO"].includes(status) && row.cancelado !== true;
 }
 
-function isCanceledStatus(status: unknown) {
-  const s = norm(status);
-  return s === "canceled" || s === "cancelado" || s === "cancelada";
+function isCanceledEnrollment(row: Pick<EnrollmentRow, "status" | "cancelado">) {
+  const status = String(row.status ?? "").trim().toUpperCase();
+  return row.cancelado === true || ["CANCELED", "CANCELADO", "CANCELADA"].includes(status);
 }
 
-function pickPlan(plan: EnrollmentRow["subscription_plans"]) {
+function pickPlan(plan: EnrollmentRow["plan"]) {
   if (!plan) return null;
   if (Array.isArray(plan)) return plan[0] ?? null;
   return plan;
@@ -122,6 +126,44 @@ function renderPieValueLabel(props: any) {
   );
 }
 
+function normalizeEmail(email: string | null) {
+  return String(email ?? "").trim().toLowerCase();
+}
+
+function enrollmentSortScore(row: EnrollmentRow) {
+  const currentPeriodEndMs = row.current_period_end
+    ? new Date(row.current_period_end).getTime()
+    : Number.NEGATIVE_INFINITY;
+
+  if (Number.isFinite(currentPeriodEndMs)) {
+    return currentPeriodEndMs;
+  }
+
+  const startedAtMs = row.started_at ? new Date(row.started_at).getTime() : Number.NEGATIVE_INFINITY;
+  if (Number.isFinite(startedAtMs)) {
+    return startedAtMs;
+  }
+
+  const createdAtMs = row.created_at ? new Date(row.created_at).getTime() : Number.NEGATIVE_INFINITY;
+  return Number.isFinite(createdAtMs) ? createdAtMs : Number.NEGATIVE_INFINITY;
+}
+
+function pickLatestEnrollmentPerUser(rows: EnrollmentRow[]) {
+  const byEmail = new Map<string, EnrollmentRow>();
+
+  for (const row of rows) {
+    const email = normalizeEmail(row.user_email);
+    if (!email) continue;
+
+    const current = byEmail.get(email);
+    if (!current || enrollmentSortScore(row) > enrollmentSortScore(current)) {
+      byEmail.set(email, row);
+    }
+  }
+
+  return Array.from(byEmail.values());
+}
+
 export default function AdminSubscriptionsDashboard() {
   const { loading: userLoading, systemUser, error: userError } = useSystemUser();
   const blocked =
@@ -129,7 +171,7 @@ export default function AdminSubscriptionsDashboard() {
     (!systemUser ||
       String(systemUser.regra ?? "").trim().toUpperCase() !== "SUPER_ADMIN");
 
-  const monthsKeys = useMemo(() => nextMonthsKeys(12), []);
+  const monthsKeys = useMemo(() => lastMonthsKeys(12), []);
 
   const [loading, setLoading] = useState(true);
   const [activeUsers, setActiveUsers] = useState(0);
@@ -144,85 +186,68 @@ export default function AdminSubscriptionsDashboard() {
     const load = async () => {
       setLoading(true);
 
-      // 1) Usuários ativos
-      const { count: usersCount, error: usersError } = await supabase
-        .from("usuarios_sistema")
-        .select("id_user", { head: true, count: "exact" })
-        .eq("ativo", true);
+      const { data, error } = await supabase
+        .from("subscription_enrollments")
+        .select(`
+          id,
+          user_email,
+          status,
+          cancelado,
+          created_at,
+          started_at,
+          current_period_end,
+          plan:plan_id (
+            price_cents,
+            code,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false });
 
-      if (usersError) {
-        showError(usersError.message);
+      if (error) {
+        showError(error.message);
         setLoading(false);
         return;
       }
 
-      setActiveUsers(usersCount ?? 0);
+      const allRows = ((data ?? []) as EnrollmentRow[]).filter((row) => normalizeEmail(row.user_email));
+      const latestRows = pickLatestEnrollmentPerUser(allRows);
+      const activeRows = latestRows.filter(isActiveEnrollment);
+      const canceledRows = latestRows.filter(isCanceledEnrollment);
 
-      // 2) Assinaturas + Planos (via serviços existentes, com fallback)
-      let enrollments: any[] = [];
-      let plans: any[] = [];
-
-      try {
-        enrollments = await listarSubscriptionEnrollments();
-      } catch (err) {
-        console.warn("Não foi possível carregar assinaturas:", err);
-      }
-
-      try {
-        plans = await listarSubscriptionPlans();
-      } catch (err) {
-        console.warn("Não foi possível carregar planos:", err);
-      }
-
-      const plansMap = new Map<string, { price_cents: number; code: string | null; name: string | null }>(
-        plans.map((p: any) => [p.id, { price_cents: p.price_cents, code: p.code, name: p.name }])
-      );
-
-      const rows: EnrollmentRow[] = enrollments.map((e: any) => ({
-        status: e.status,
-        created_at: e.created_at,
-        started_at: e.started_at,
-        plan_id: e.plan_id,
-        subscription_plans: e.plan_id ? (plansMap.get(e.plan_id) ?? null) : null,
-      }));
-
-      const activeRows = rows.filter((r) => isActiveStatus(r.status));
-      const canceledRows = rows.filter((r) => isCanceledStatus(r.status));
-
+      setActiveUsers(activeRows.length);
       setCancelations(canceledRows.length);
 
-      // Receita: soma do price_cents do plano nas assinaturas ativas
-      const revenue = activeRows.reduce((acc, r) => {
-        const plan = pickPlan(r.subscription_plans);
+      const revenue = activeRows.reduce((acc, row) => {
+        const plan = pickPlan(row.plan);
         return acc + (plan?.price_cents ?? 0);
       }, 0);
       setRevenueCents(revenue);
 
-      // Gráfico de barras (cumulativo) — mês corrente + próximos 11 meses
       const monthSet = new Set(monthsKeys);
       const countByMonth = new Map<string, number>();
 
-      activeRows.forEach((r) => {
-        const raw = r.started_at ?? r.created_at;
+      activeRows.forEach((row) => {
+        const raw = row.started_at ?? row.created_at;
         if (!raw) return;
         const d = new Date(raw);
+        if (!Number.isFinite(d.getTime())) return;
         const key = monthKey(new Date(d.getFullYear(), d.getMonth(), 1));
         if (!monthSet.has(key)) return;
         countByMonth.set(key, (countByMonth.get(key) ?? 0) + 1);
       });
 
       let cumulative = 0;
-      const bar: MonthlyPoint[] = monthsKeys.map((k) => {
-        cumulative += countByMonth.get(k) ?? 0;
-        return { month: monthLabel(k), cumulative };
+      const nextBarData: MonthlyPoint[] = monthsKeys.map((key) => {
+        cumulative += countByMonth.get(key) ?? 0;
+        return { month: monthLabel(key), cumulative };
       });
-      setBarData(bar);
+      setBarData(nextBarData);
 
-      // Pizza: assinaturas ativas por plano (básico/intermediário/avançado)
       const byPlan = new Map<string, number>();
-      activeRows.forEach((r) => {
-        const p = pickPlan(r.subscription_plans);
-        const key = bucketPlan(p?.code ?? p?.name ?? "");
+      activeRows.forEach((row) => {
+        const plan = pickPlan(row.plan);
+        const key = bucketPlan(plan?.code ?? plan?.name ?? "");
         byPlan.set(key, (byPlan.get(key) ?? 0) + 1);
       });
 
@@ -233,16 +258,15 @@ export default function AdminSubscriptionsDashboard() {
         "Outros",
       ];
 
-      const pie: PiePoint[] = ordered
+      const nextPieData: PiePoint[] = ordered
         .map((name) => ({
           name,
           value: byPlan.get(name) ?? 0,
           color: PIE_COLORS[name],
         }))
-        .filter((p) => p.value > 0);
+        .filter((item) => item.value > 0);
 
-      setPieData(pie);
-
+      setPieData(nextPieData);
       setLoading(false);
     };
 
@@ -261,7 +285,7 @@ export default function AdminSubscriptionsDashboard() {
                 Dashboard de Assinaturas
               </h1>
               <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                Visão geral • próximos 12 meses (mês atual + 11)
+                Baseado na última assinatura de cada usuário nos últimos 12 meses
               </p>
             </div>
 
@@ -283,7 +307,6 @@ export default function AdminSubscriptionsDashboard() {
               </Card>
             ) : (
               <>
-                {/* Métricas */}
                 <section className="grid gap-4 lg:grid-cols-3">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
                     <CardHeader className="pb-2">
@@ -299,7 +322,7 @@ export default function AdminSubscriptionsDashboard() {
                         {loading ? "—" : activeUsers}
                       </div>
                       <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        Base: usuarios_sistema (ativo = true)
+                        Última assinatura por e-mail com status ativo/trial/pending
                       </p>
                     </CardContent>
                   </Card>
@@ -318,7 +341,7 @@ export default function AdminSubscriptionsDashboard() {
                         {loading ? "—" : formatBRLFromCents(revenueCents)}
                       </div>
                       <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        Soma dos planos das assinaturas ativas
+                        Soma do valor do plano da última assinatura ativa por usuário
                       </p>
                     </CardContent>
                   </Card>
@@ -337,13 +360,12 @@ export default function AdminSubscriptionsDashboard() {
                         {loading ? "—" : cancelations}
                       </div>
                       <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        Status "CANCELED/Cancelado" (dependendo do banco)
+                        Última assinatura por e-mail marcada como cancelada
                       </p>
                     </CardContent>
                   </Card>
                 </section>
 
-                {/* Gráficos */}
                 <section className="grid gap-4 lg:grid-cols-5">
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-3">
                     <CardHeader className="pb-2">
@@ -351,10 +373,10 @@ export default function AdminSubscriptionsDashboard() {
                         <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
                           <BarChart3 className="h-4 w-4" />
                         </span>
-                        Assinaturas mensais (cumulativo)
+                        Assinaturas ativas acumuladas
                       </CardTitle>
                       <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Mês atual + próximos 11 meses
+                        Evolução da base ativa nos últimos 12 meses
                       </p>
                     </CardHeader>
 
@@ -403,7 +425,7 @@ export default function AdminSubscriptionsDashboard() {
                         Assinaturas por plano
                       </CardTitle>
                       <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Quantidade de assinaturas ativas por categoria
+                        Distribuição da base ativa por categoria de plano
                       </p>
                     </CardHeader>
 
