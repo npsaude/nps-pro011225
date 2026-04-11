@@ -20,6 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
+import { listarSubscriptionEnrollments } from "@/services/subscription-enrollments-service";
+import { listarSubscriptionPlans } from "@/services/subscription-plans-service";
 
 type MonthlyPoint = { month: string; cumulative: number };
 type PiePoint = { name: string; value: number; color: string };
@@ -156,33 +158,27 @@ export default function AdminSubscriptionsDashboard() {
 
       setActiveUsers(usersCount ?? 0);
 
-      // 2) Assinaturas (sem join)
-      const { data: enrollData, error: enrollError } = await supabase
-        .from("subscription_enrollments")
-        .select("status,created_at,started_at,plan_id");
+      // 2) Assinaturas + Planos (via serviços existentes, com fallback)
+      let enrollments: any[] = [];
+      let plans: any[] = [];
 
-      if (enrollError) {
-        showError(enrollError.message);
-        setLoading(false);
-        return;
+      try {
+        enrollments = await listarSubscriptionEnrollments();
+      } catch (err) {
+        console.warn("Não foi possível carregar assinaturas:", err);
       }
 
-      // 3) Planos
-      const { data: plansData, error: plansError } = await supabase
-        .from("subscription_plans")
-        .select("id,price_cents,code,name");
-
-      if (plansError) {
-        showError(plansError.message);
-        setLoading(false);
-        return;
+      try {
+        plans = await listarSubscriptionPlans();
+      } catch (err) {
+        console.warn("Não foi possível carregar planos:", err);
       }
 
       const plansMap = new Map<string, { price_cents: number; code: string | null; name: string | null }>(
-        (plansData ?? []).map((p: any) => [p.id, { price_cents: p.price_cents, code: p.code, name: p.name }])
+        plans.map((p: any) => [p.id, { price_cents: p.price_cents, code: p.code, name: p.name }])
       );
 
-      const rows: EnrollmentRow[] = (enrollData ?? []).map((e: any) => ({
+      const rows: EnrollmentRow[] = enrollments.map((e: any) => ({
         status: e.status,
         created_at: e.created_at,
         started_at: e.started_at,
