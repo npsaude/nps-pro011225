@@ -1641,7 +1641,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       const { data: modeloData, error: modeloError } = await supabase
         .from("modelo_guia_faturamento")
         .select("id, html_documento")
-        .eq("clinica_id", selectedClinicaId)
+        .contains("clinicas_ids", [selectedClinicaId])
         .maybeSingle();
 
       if (modeloError) {

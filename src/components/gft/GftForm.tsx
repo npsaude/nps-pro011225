@@ -62,7 +62,7 @@ interface GftFormProps {
 
 interface FormData {
   nome_guia: string;
-  clinica_id: string;
+  clinicas_ids: string[];
   html_documento: string;
 }
 
@@ -91,16 +91,16 @@ const GftForm: React.FC<GftFormProps> = ({
   } = useForm<FormData>({
     defaultValues: {
       nome_guia: "",
-      clinica_id: "",
+      clinicas_ids: [],
       html_documento: "",
     },
   });
 
   const htmlDocumento = watch("html_documento");
   const nomeGuia = watch("nome_guia");
-  const clinicaId = watch("clinica_id");
+  const clinicasIds = watch("clinicas_ids") || [];
 
-  const selectedClinica = clinicas.find((c) => c.id === clinicaId);
+  const selectedClinicas = clinicas.filter((c) => clinicasIds.includes(c.id));
 
   useEffect(() => {
     const carregarClinicas = async () => {
@@ -126,13 +126,13 @@ const GftForm: React.FC<GftFormProps> = ({
     if (editingItem) {
       reset({
         nome_guia: editingItem.nome_guia || "",
-        clinica_id: editingItem.clinica_id || "",
+        clinicas_ids: editingItem.clinicas_ids || [],
         html_documento: editingItem.html_documento || "",
       });
     } else {
       reset({
         nome_guia: "",
-        clinica_id: "",
+        clinicas_ids: [],
         html_documento: "",
       });
     }
@@ -142,12 +142,10 @@ const GftForm: React.FC<GftFormProps> = ({
   const onSubmit = async (data: FormData) => {
     setSalvando(true);
     try {
-      // Garantir que clinica_id seja null se for string vazia
-      const clinicaIdValue = data.clinica_id && data.clinica_id.trim() !== "" ? data.clinica_id : null;
       
       const payload: GftInput = {
         nome_guia: data.nome_guia,
-        clinica_id: clinicaIdValue,
+        clinicas_ids: data.clinicas_ids,
         html_documento: data.html_documento || null,
         arquivo_modelo_path: editingItem?.arquivo_modelo_path || null,
       };
@@ -289,22 +287,33 @@ const GftForm: React.FC<GftFormProps> = ({
 
                 {/* Clínica/Hospital */}
                 <div className="space-y-2">
-                  <Label htmlFor="clinica_id" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Clínica / Hospital
+                  <Label htmlFor="clinicas_ids" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Clínicas / Hospitais
                   </Label>
                   <Select
-                    value={clinicaId || "none"}
-                    onValueChange={(value) => setValue("clinica_id", value === "none" ? "" : value, { shouldDirty: true })}
+                    value="none"
+                    onValueChange={(val) => {
+                      if (val === "none") {
+                        setValue("clinicas_ids", []);
+                      } else if (val) {
+                        const current = watch("clinicas_ids") || [];
+                        if (!current.includes(val)) {
+                          setValue("clinicas_ids", [...current, val], { shouldDirty: true });
+                        }
+                      }
+                    }}
                     disabled={carregandoClinicas}
                   >
                     <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
-                      <SelectValue placeholder="Selecione uma clínica ou hospital" />
+                      <SelectValue placeholder="Selecione para adicionar clínica/hospital" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">
-                        <span className="text-slate-400">Nenhum selecionado</span>
+                        <span className="text-slate-400">Nenhum selecionado (limpar)</span>
                       </SelectItem>
-                      {clinicas.map((clinica) => (
+                      {clinicas
+                        .filter((c) => !(watch("clinicas_ids") || []).includes(c.id))
+                        .map((clinica) => (
                         <SelectItem key={clinica.id} value={clinica.id}>
                           <div className="flex items-center gap-2">
                             <Building2 className="h-3.5 w-3.5 text-slate-400" />
@@ -317,12 +326,34 @@ const GftForm: React.FC<GftFormProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedClinica && (
-                    <div className="flex items-center gap-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                      <Building2 className="h-3.5 w-3.5" />
-                      <span>
-                        {selectedClinica.nome_fantasia} - {selectedClinica.cidade}/{selectedClinica.uf}
-                      </span>
+
+                  {/* Display selected clinics */}
+                  {selectedClinicas.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedClinicas.map((clinica) => (
+                        <div
+                          key={clinica.id}
+                          className="flex items-center gap-2 rounded-lg bg-violet-50 px-3 py-1.5 text-xs text-violet-700 border border-violet-100 dark:border-violet-800/30 dark:bg-violet-900/30 dark:text-violet-300"
+                        >
+                          <Building2 className="h-3.5 w-3.5" />
+                          <span>
+                            {clinica.nome_fantasia} - {clinica.cidade}/{clinica.uf}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setValue(
+                                "clinicas_ids",
+                                (watch("clinicas_ids") || []).filter((id) => id !== clinica.id),
+                                { shouldDirty: true }
+                              );
+                            }}
+                            className="ml-1 rounded-full p-0.5 hover:bg-violet-200 dark:hover:bg-violet-800 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -584,7 +615,7 @@ const GftForm: React.FC<GftFormProps> = ({
             </div>
 
             {/* Resumo */}
-            {(nomeGuia || selectedClinica || htmlDocumento || arquivoModelo) && (
+            {(nomeGuia || selectedClinicas.length > 0 || htmlDocumento || arquivoModelo) && (
               <div className="rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-purple-50 p-5 dark:border-violet-900 dark:from-violet-900/20 dark:to-purple-900/20">
                 <h3 className="mb-3 text-sm font-semibold text-violet-800 dark:text-violet-200">
                   Resumo da Guia
@@ -597,9 +628,11 @@ const GftForm: React.FC<GftFormProps> = ({
                     </p>
                   </div>
                   <div className="rounded-lg bg-white/70 px-3 py-2 dark:bg-slate-800/50">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Clínica/Hospital</p>
-                    <p className="mt-0.5 font-medium text-slate-800 dark:text-slate-100">
-                      {selectedClinica?.nome_fantasia || "Não vinculado"}
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Clínicas/Hospitais</p>
+                    <p className="mt-0.5 font-medium text-slate-800 dark:text-slate-100 truncate" title={selectedClinicas.map((c) => c.nome_fantasia).join(", ")}>
+                      {selectedClinicas.length > 0
+                        ? `${selectedClinicas.length} selecionado(s)`
+                        : "Não vinculado"}
                     </p>
                   </div>
                   <div className="rounded-lg bg-white/70 px-3 py-2 dark:bg-slate-800/50">

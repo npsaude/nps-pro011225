@@ -4,17 +4,17 @@ import type { Clinica } from "./clinicas-service";
 export interface GuiaFaturamentoHonorarios {
   id: string;
   nome_guia: string;
-  clinica_id: string | null;
+  clinicas_ids: string[];
   html_documento: string | null;
   arquivo_modelo_path: string | null;
   created_at: string;
   updated_at: string;
-  clinica?: Clinica | null;
+  // Note: we can map the actual clinics in the UI if needed
 }
 
 export type GftInput = {
   nome_guia: string;
-  clinica_id: string | null;
+  clinicas_ids: string[];
   html_documento: string | null;
   arquivo_modelo_path: string | null;
 };
@@ -22,10 +22,7 @@ export type GftInput = {
 export async function listarGuiasFaturamento(): Promise<GuiaFaturamentoHonorarios[]> {
   const { data, error } = await supabase
     .from("modelo_guia_faturamento")
-    .select(`
-      *,
-      clinica:clinicas(id, nome_fantasia, razao_social, tipo_unidade)
-    `)
+    .select("*")
     .order("nome_guia", { ascending: true });
 
   if (error) {
@@ -42,10 +39,7 @@ export async function buscarGuiaFaturamentoPorId(
 ): Promise<GuiaFaturamentoHonorarios | null> {
   const { data, error } = await supabase
     .from("modelo_guia_faturamento")
-    .select(`
-      *,
-      clinica:clinicas(id, nome_fantasia, razao_social, tipo_unidade)
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 

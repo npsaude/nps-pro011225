@@ -114,6 +114,11 @@ const clinicaSchema = z.object({
     .email("E-mail inválido.")
     .optional()
     .or(z.literal("")),
+  email_contato_faturamento_secundario: z
+    .string()
+    .email("E-mail secundário inválido.")
+    .optional()
+    .or(z.literal("")),
   telefone_contato_faturamento: z.string().optional(),
 });
 
@@ -154,6 +159,7 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
       cargo: "",
       nome_contato_faturamento: "",
       email_contato_faturamento: "",
+      email_contato_faturamento_secundario: "",
       telefone_contato_faturamento: "",
     },
   });
@@ -179,6 +185,8 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
         cargo: clinica.cargo ?? "",
         nome_contato_faturamento: clinica.nome_contato_faturamento ?? "",
         email_contato_faturamento: clinica.email_contato_faturamento ?? "",
+        email_contato_faturamento_secundario:
+          clinica.email_contato_faturamento_secundario ?? "",
         telefone_contato_faturamento: clinica.telefone_contato_faturamento ?? "",
       });
     }
@@ -202,6 +210,8 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
       cargo: values.cargo || null,
       nome_contato_faturamento: values.nome_contato_faturamento || null,
       email_contato_faturamento: values.email_contato_faturamento || null,
+      email_contato_faturamento_secundario:
+        values.email_contato_faturamento_secundario || null,
       telefone_contato_faturamento: values.telefone_contato_faturamento || null,
     };
     void onSubmit(payload);
@@ -430,7 +440,7 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
           />
         </Field>
 
-        <Field label="E-mail">
+        <Field label="E-mail principal">
           <input
             {...register("email_contato_faturamento")}
             className={inputCls}
@@ -442,7 +452,21 @@ const ClinicaForm = ({ clinica, onSubmit, onCancel, isSubmitting }: ClinicaFormP
           )}
         </Field>
 
-        <Field label="Telefone">
+        <Field label="E-mail secundário">
+          <input
+            {...register("email_contato_faturamento_secundario")}
+            className={inputCls}
+            placeholder="faturamento2@clinica.com.br"
+            type="email"
+          />
+          {errors.email_contato_faturamento_secundario && (
+            <p className="mt-1 text-xs text-rose-500">
+              {errors.email_contato_faturamento_secundario.message}
+            </p>
+          )}
+        </Field>
+
+        <Field label="Telefone" span="2">
           <input
             {...register("telefone_contato_faturamento")}
             className={inputCls}

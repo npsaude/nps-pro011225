@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Send } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -20,16 +20,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import BellButton from "@/components/admin/BellButton";
 import UserAvatarButton from "@/components/admin/UserAvatarButton";
 import SurgeryQuotaBadge from "@/components/admin/SurgeryQuotaBadge";
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 export default function AdminHeaderActions(props: { notificationsCount?: number }) {
   const { notificationsCount = 0 } = props;
   const navigate = useNavigate();
+  const location = useLocation();
   const { systemUser } = useSystemUser();
   const { status: subscriptionStatus } = useSubscriptionStatus();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Fecha o menu mobile automaticamente ao mudar de rota
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
@@ -102,6 +113,17 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
 
   return (
     <div className="flex items-center gap-2">
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetTrigger asChild>
+          <Button variant="outline" size="icon" className="lg:hidden h-9 w-9 border-slate-200 bg-white/50 text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-300">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-slate-200 dark:border-r-slate-800">
+          <AdminSidebar isMobile />
+        </SheetContent>
+      </Sheet>
+
       <BellButton count={notificationsCount} onClick={() => {}} />
 
       <button

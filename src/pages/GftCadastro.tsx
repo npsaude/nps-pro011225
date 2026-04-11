@@ -108,10 +108,10 @@ const GftCadastro: React.FC = () => {
               />
             ) : (
               <GftList
-                items={guias}
-                isLoading={carregando}
+                guias={guias}
+                carregando={carregando}
                 onNovaGuia={handleNovaGuia}
-                onEditar={handleEditar}
+                onEdit={handleEditar}
                 onRefresh={carregarGuias}
               />
             )}

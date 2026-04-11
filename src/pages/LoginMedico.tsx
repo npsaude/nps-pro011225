@@ -363,7 +363,7 @@ const LoginMedico = () => {
           </form>
 
           {/* Footer Access Admin */}
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center text-xs text-[#9CA3AF]">
             <button
               type="button"
               className="hover:text-[#D4A017] transition-colors"
@@ -371,6 +371,9 @@ const LoginMedico = () => {
             >
               Acessar como administrador
             </button>
+            <p className="mt-4 text-[10px] text-[#6B7280]">
+              Versão 1.1.3
+            </p>
           </div>
         </div>
       </div>

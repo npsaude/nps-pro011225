@@ -1,31 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, DollarSign, UserCheck, UserX } from "lucide-react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
   Cell,
   Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
+import MonthlyCumulativeSubscriptionsChart from "@/components/subscriptions/MonthlyCumulativeSubscriptionsChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
 
-type MonthlyPoint = { month: string; cumulative: number };
+type MonthlyPoint = { date: string; month: string; cumulative: number };
 type PiePoint = { name: string; value: number; color: string };
+type CyclePoint = { name: string; value: number; color: string };
 
 type PlanRow = {
-  price_cents: number;
+  price_month: number | string | null;
+  price_annual: number | string | null;
+  billing_interval: string | null;
   code: string | null;
   name: string | null;
 };
@@ -46,6 +45,11 @@ const PIE_COLORS: Record<string, string> = {
   Intermediário: "#4A90E2",
   Avançado: "#D4A017",
   Outros: "#8A8A8A",
+};
+
+const CYCLE_COLORS: Record<"Mensal" | "Anual", string> = {
+  Mensal: "#6366F1",
+  Anual: "#F59E0B",
 };
 
 function monthKey(date: Date) {
@@ -70,9 +74,8 @@ function lastMonthsKeys(count: number) {
   });
 }
 
-function formatBRLFromCents(cents: number) {
-  const value = (cents ?? 0) / 100;
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function formatBRL(value: number) {
+  return (value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function norm(text: unknown) {
@@ -101,6 +104,23 @@ function bucketPlan(planCodeOrName: string) {
   if (t.includes("inter")) return "Intermediário";
   if (t.includes("avan") || t.includes("advanced")) return "Avançado";
   return "Outros";
+}
+
+function toNumber(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getPlanAmount(plan: NonNullable<ReturnType<typeof pickPlan>>) {
+  const interval = norm(plan.billing_interval);
+  if (interval === "year") {
+    return toNumber(plan.price_annual);
+  }
+  return toNumber(plan.price_month);
+}
+
+function getPlanCycleLabel(plan: ReturnType<typeof pickPlan>) {
+  return norm(plan?.billing_interval) === "year" ? "Anual" : "Mensal";
 }
 
 function renderPieValueLabel(props: any) {
@@ -175,10 +195,11 @@ export default function AdminSubscriptionsDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [activeUsers, setActiveUsers] = useState(0);
-  const [revenueCents, setRevenueCents] = useState(0);
+  const [revenueAmount, setRevenueAmount] = useState(0);
   const [cancelations, setCancelations] = useState(0);
   const [barData, setBarData] = useState<MonthlyPoint[]>([]);
   const [pieData, setPieData] = useState<PiePoint[]>([]);
+  const [cycleData, setCycleData] = useState<CyclePoint[]>([]);
 
   useEffect(() => {
     if (blocked) return;
@@ -197,7 +218,9 @@ export default function AdminSubscriptionsDashboard() {
           started_at,
           current_period_end,
           plan:plan_id (
-            price_cents,
+            price_month,
+            price_annual,
+            billing_interval,
             code,
             name
           )
@@ -218,11 +241,12 @@ export default function AdminSubscriptionsDashboard() {
       setActiveUsers(activeRows.length);
       setCancelations(canceledRows.length);
 
+      // Receita: soma do valor do plano nas assinaturas ativas
       const revenue = activeRows.reduce((acc, row) => {
         const plan = pickPlan(row.plan);
-        return acc + (plan?.price_cents ?? 0);
+        return acc + (plan ? getPlanAmount(plan) : 0);
       }, 0);
-      setRevenueCents(revenue);
+      setRevenueAmount(revenue);
 
       const monthSet = new Set(monthsKeys);
       const countByMonth = new Map<string, number>();
@@ -238,9 +262,13 @@ export default function AdminSubscriptionsDashboard() {
       });
 
       let cumulative = 0;
-      const nextBarData: MonthlyPoint[] = monthsKeys.map((key) => {
-        cumulative += countByMonth.get(key) ?? 0;
-        return { month: monthLabel(key), cumulative };
+      const nextBarData: MonthlyPoint[] = monthsKeys.map((k) => {
+        cumulative += countByMonth.get(k) ?? 0;
+        return {
+          date: `${k}-01`,
+          month: monthLabel(k),
+          cumulative,
+        };
       });
       setBarData(nextBarData);
 
@@ -267,6 +295,23 @@ export default function AdminSubscriptionsDashboard() {
         .filter((item) => item.value > 0);
 
       setPieData(nextPieData);
+
+      const byCycle = new Map<string, number>();
+      activeRows.forEach((r) => {
+        const cycle = getPlanCycleLabel(pickPlan(r.plan));
+        byCycle.set(cycle, (byCycle.get(cycle) ?? 0) + 1);
+      });
+
+      const cycle: CyclePoint[] = ["Mensal", "Anual"]
+        .map((name) => ({
+          name,
+          value: byCycle.get(name) ?? 0,
+          color: CYCLE_COLORS[name as keyof typeof CYCLE_COLORS],
+        }))
+        .filter((item) => item.value > 0);
+
+      setCycleData(cycle);
+
       setLoading(false);
     };
 
@@ -278,10 +323,10 @@ export default function AdminSubscriptionsDashboard() {
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="assinaturas" assinaturasSubsection="dashboard" />
 
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
-          <header className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-white/90 p-4 lg:p-6 lg:shadow-[0_18px_60px_rgba(15,23,42,0.12)] lg:backdrop-blur-xl dark:bg-slate-900/90">
+          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-3">
             <div className="flex flex-col">
-              <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50 sm:text-2xl">
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50 sm:text-xl">
                 Dashboard de Assinaturas
               </h1>
               <p className="text-xs text-slate-500 sm:text-sm dark:text-slate-400">
@@ -289,7 +334,9 @@ export default function AdminSubscriptionsDashboard() {
               </p>
             </div>
 
-            <AdminHeaderActions />
+            <div className="flex items-center self-start sm:self-auto">
+              <AdminHeaderActions />
+            </div>
           </header>
 
           <main className="flex-1 space-y-4">
@@ -307,117 +354,76 @@ export default function AdminSubscriptionsDashboard() {
               </Card>
             ) : (
               <>
-                <section className="grid gap-4 lg:grid-cols-3">
-                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                        <span>Usuários ativos</span>
-                        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
-                          <UserCheck className="h-4 w-4" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-5">
-                      <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">
-                        {loading ? "—" : activeUsers}
-                      </div>
-                      <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        Última assinatura por e-mail com status ativo/trial/pending
-                      </p>
-                    </CardContent>
-                  </Card>
+                {/* Métricas */}
+                <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Assinantes ativos</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/90 text-white">
+                        <UserCheck className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <p className="mt-4 text-center text-3xl font-bold text-white">{loading ? "—" : activeUsers}</p>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Última assinatura por e-mail com status <span className="text-slate-200">ACTIVE</span> / <span className="text-slate-200">TRIAL</span> não canceladas
+                    </p>
+                  </div>
 
-                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                        <span>Faturamento geral</span>
-                        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
-                          <DollarSign className="h-4 w-4" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-5">
-                      <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">
-                        {loading ? "—" : formatBRLFromCents(revenueCents)}
-                      </div>
-                      <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        Soma do valor do plano da última assinatura ativa por usuário
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Receita recorrente</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/90 text-white">
+                        <DollarSign className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <p className="mt-4 text-center text-3xl font-bold text-white">{loading ? "—" : formatBRL(revenueAmount)}</p>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Soma dos planos ativos por ciclo mensal ou anual
+                    </p>
+                  </div>
 
-                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                        <span>Cancelamentos</span>
-                        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200">
-                          <UserX className="h-4 w-4" />
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-5">
-                      <div className="text-3xl font-semibold text-slate-900 dark:text-slate-50">
-                        {loading ? "—" : cancelations}
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Cancelamentos</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-500/90 text-white">
+                        <UserX className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <p className="mt-4 text-center text-3xl font-bold text-white">{loading ? "—" : cancelations}</p>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Status <span className="text-slate-200">CANCELED</span> ou <span className="text-slate-200">cancelado = true</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col justify-between rounded-2xl border border-slate-700/60 bg-gradient-to-b from-[#0d1b2e] to-[#091422] p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Mensal x anual</p>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/90 text-white">
+                        <BarChart3 className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Mensal</p>
+                        <p className="mt-1 text-2xl font-bold text-white">
+                          {loading ? "—" : (cycleData.find((i) => i.name === "Mensal")?.value ?? 0)}
+                        </p>
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        Última assinatura por e-mail marcada como cancelada
-                      </p>
-                    </CardContent>
-                  </Card>
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Anual</p>
+                        <p className="mt-1 text-2xl font-bold text-white">
+                          {loading ? "—" : (cycleData.find((i) => i.name === "Anual")?.value ?? 0)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                      Distribuição das assinaturas ativas por ciclo
+                    </p>
+                  </div>
                 </section>
 
                 <section className="grid gap-4 lg:grid-cols-5">
-                  <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-3">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                          <BarChart3 className="h-4 w-4" />
-                        </span>
-                        Assinaturas ativas acumuladas
-                      </CardTitle>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Evolução da base ativa nos últimos 12 meses
-                      </p>
-                    </CardHeader>
-
-                    <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={barData}>
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="#E2E8F0"
-                            vertical={false}
-                          />
-                          <XAxis
-                            dataKey="month"
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{ fontSize: 11, fill: "#64748B" }}
-                          />
-                          <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{ fontSize: 11, fill: "#64748B" }}
-                            allowDecimals={false}
-                          />
-                          <RechartsTooltip
-                            contentStyle={{
-                              borderRadius: 14,
-                              borderColor: "#E2E8F0",
-                              fontSize: 11,
-                            }}
-                          />
-                          <Bar
-                            dataKey="cumulative"
-                            name="Assinaturas"
-                            barSize={18}
-                            radius={[6, 6, 0, 0]}
-                            fill="#D4A017"
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
+                  <MonthlyCumulativeSubscriptionsChart data={barData} loading={loading} />
 
                   <Card className="rounded-3xl border border-[#E2E8F0] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/95 lg:col-span-2">
                     <CardHeader className="pb-2">
@@ -431,35 +437,20 @@ export default function AdminSubscriptionsDashboard() {
 
                     <CardContent className="h-72 px-2 pb-6 pt-2 sm:h-80">
                       {pieData.length === 0 ? (
-                        <div className="flex h-full items-center justify-center text-xs text-slate-400 dark:text-slate-500">
+                        <div className="flex h-full items-center justify-center text-sm text-slate-400 dark:text-slate-500">
                           Nenhuma assinatura ativa para exibir.
                         </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <RechartsTooltip
-                              contentStyle={{
-                                borderRadius: 14,
-                                borderColor: "#E2E8F0",
-                                fontSize: 11,
-                              }}
-                            />
-                            <Legend
-                              verticalAlign="bottom"
-                              height={36}
-                              wrapperStyle={{
-                                fontSize: 11,
-                                color: "#64748B",
-                              }}
-                            />
                             <Pie
                               data={pieData}
                               dataKey="value"
                               nameKey="name"
                               cx="50%"
-                              cy="45%"
+                              cy="50%"
+                              innerRadius={58}
                               outerRadius={92}
-                              innerRadius={52}
                               paddingAngle={2}
                               labelLine={false}
                               label={renderPieValueLabel}
@@ -468,6 +459,8 @@ export default function AdminSubscriptionsDashboard() {
                                 <Cell key={entry.name} fill={entry.color} />
                               ))}
                             </Pie>
+                            <RechartsTooltip />
+                            <Legend />
                           </PieChart>
                         </ResponsiveContainer>
                       )}

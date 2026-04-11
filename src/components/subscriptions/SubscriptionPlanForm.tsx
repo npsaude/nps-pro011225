@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,15 +29,69 @@ import type {
   SubscriptionPlanInput,
 } from "@/services/subscription-plans-service";
 
-const toInt = (value: unknown) => {
-  const n = typeof value === "string" ? Number(value) : (value as number);
-  return Number.isFinite(n) ? Math.trunc(n) : 0;
+const defaultValues = {
+  name: "",
+  code: "",
+  description: "",
+  price_month: 0,
+  price_annual: 0,
+  currency: "BRL",
+  billing_interval: "MONTHLY" as BillingInterval,
+  external_plan_id: "",
+  active: true,
 };
 
 const toMoney = (value: unknown) => {
   const n = typeof value === "string" ? Number(value) : (value as number);
   return Number.isFinite(n) ? n : 0;
 };
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value ?? 0);
+}
+
+function formatCurrencyEditable(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value ?? 0);
+}
+
+function parseCurrencyInput(value: string) {
+  const raw = value.replace(/\s/g, "").replace("R$", "").trim();
+
+  if (!raw) return 0;
+
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+
+  if (hasComma) {
+    const normalized = raw.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  if (hasDot) {
+    const parts = raw.split(".");
+
+    if (parts.length > 2 || parts[parts.length - 1]?.length === 3) {
+      const normalized = raw.replace(/\./g, "").replace(/[^\d-]/g, "");
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    const normalized = raw.replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  const normalized = raw.replace(/[^\d-]/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 const planSchema = z.object({
   name: z.string().min(1, "Informe o nome do plano."),
@@ -46,12 +100,17 @@ const planSchema = z.object({
     .min(1, "Informe o código do plano.")
     .regex(/^[a-zA-Z0-9_-]+$/, "Use apenas letras, números, _ ou -."),
   description: z.string().optional(),
-  price_reais: z.preprocess(toMoney, z.number().min(0, "Preço inválido.")),
+  price_month: z.preprocess(toMoney, z.number().min(0, "Preço mensal inválido.")),
+  price_annual: z.preprocess(toMoney, z.number().min(0, "Preço anual inválido.")),
   currency: z.string().min(1),
-  billing_interval: z.enum(["DAY", "WEEK", "MONTH", "YEAR"]),
-  interval_count: z.preprocess(toInt, z.number().min(1, "Mínimo 1.")),
-  setup_fee_reais: z.preprocess(toMoney, z.number().min(0)),
-  trial_days: z.preprocess(toInt, z.number().min(0)),
+  billing_interval: z.enum([
+    "WEEKLY",
+    "BIWEEKLY",
+    "MONTHLY",
+    "QUARTERLY",
+    "SEMIANNUALLY",
+    "YEARLY",
+  ]),
   external_plan_id: z.string().optional(),
   active: z.boolean(),
 });
@@ -71,37 +130,33 @@ export default function SubscriptionPlanForm({
 }: SubscriptionPlanFormProps) {
   const form = useForm<SubscriptionPlanFormValues>({
     resolver: zodResolver(planSchema),
-    defaultValues: {
-      name: "",
-      code: "",
-      description: "",
-      price_reais: 0,
-      currency: "BRL",
-      billing_interval: "MONTH",
-      interval_count: 1,
-      setup_fee_reais: 0,
-      trial_days: 0,
-      external_plan_id: "",
-      active: true,
-    },
+    defaultValues,
   });
+  const [priceMonthDisplay, setPriceMonthDisplay] = useState(
+    formatCurrency(defaultValues.price_month),
+  );
+  const [priceAnnualDisplay, setPriceAnnualDisplay] = useState(
+    formatCurrency(defaultValues.price_annual),
+  );
 
   useEffect(() => {
-    if (!plan) return;
+    const values = plan
+      ? {
+          name: plan.name,
+          code: plan.code,
+          description: plan.description ?? "",
+          price_month: plan.price_month ?? 0,
+          price_annual: plan.price_annual ?? 0,
+          currency: plan.currency ?? "BRL",
+          billing_interval: plan.billing_interval as BillingInterval,
+          external_plan_id: plan.external_plan_id ?? "",
+          active: Boolean(plan.active),
+        }
+      : defaultValues;
 
-    form.reset({
-      name: plan.name,
-      code: plan.code,
-      description: plan.description ?? "",
-      price_reais: (plan.price_cents ?? 0) / 100,
-      currency: plan.currency ?? "BRL",
-      billing_interval: plan.billing_interval as BillingInterval,
-      interval_count: plan.interval_count ?? 1,
-      setup_fee_reais: (plan.setup_fee_cents ?? 0) / 100,
-      trial_days: plan.trial_days ?? 0,
-      external_plan_id: plan.external_plan_id ?? "",
-      active: Boolean(plan.active),
-    });
+    form.reset(values);
+    setPriceMonthDisplay(formatCurrency(values.price_month));
+    setPriceAnnualDisplay(formatCurrency(values.price_annual));
   }, [plan, form]);
 
   const handleSubmit = (values: SubscriptionPlanFormValues) => {
@@ -109,13 +164,14 @@ export default function SubscriptionPlanForm({
       name: values.name.trim(),
       code: values.code.trim(),
       description: values.description?.trim() || null,
-      price_cents: Math.round((values.price_reais ?? 0) * 100),
+      price_month: values.price_month ?? 0,
+      price_annual: values.price_annual ?? 0,
       currency: values.currency,
       billing_interval: values.billing_interval as BillingInterval,
-      interval_count: values.interval_count,
+      interval_count: 1,
       external_plan_id: values.external_plan_id?.trim() || null,
-      setup_fee_cents: Math.round((values.setup_fee_reais ?? 0) * 100),
-      trial_days: values.trial_days,
+      setup_fee_cents: 0,
+      trial_days: 0,
       metadata: null,
       active: values.active,
     };
@@ -177,20 +233,32 @@ export default function SubscriptionPlanForm({
           )}
         />
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <FormField
             control={form.control}
-            name="price_reais"
+            name="price_month"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço (R$)</FormLabel>
+                <FormLabel>Preço mensal (R$)</FormLabel>
                 <FormControl>
                   <Input
-                    {...field}
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    ref={field.ref}
+                    name={field.name}
+                    type="text"
+                    inputMode="decimal"
+                    value={priceMonthDisplay}
+                    onFocus={() => setPriceMonthDisplay(formatCurrencyEditable(field.value ?? 0))}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setPriceMonthDisplay(raw);
+                      field.onChange(parseCurrencyInput(raw));
+                    }}
+                    onBlur={() => {
+                      field.onBlur();
+                      setPriceMonthDisplay(formatCurrency(field.value ?? 0));
+                    }}
                     className="h-10"
+                    placeholder="R$ 0,00"
                   />
                 </FormControl>
                 <FormMessage />
@@ -198,6 +266,40 @@ export default function SubscriptionPlanForm({
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="price_annual"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço anual (R$)</FormLabel>
+                <FormControl>
+                  <Input
+                    ref={field.ref}
+                    name={field.name}
+                    type="text"
+                    inputMode="decimal"
+                    value={priceAnnualDisplay}
+                    onFocus={() => setPriceAnnualDisplay(formatCurrencyEditable(field.value ?? 0))}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setPriceAnnualDisplay(raw);
+                      field.onChange(parseCurrencyInput(raw));
+                    }}
+                    onBlur={() => {
+                      field.onBlur();
+                      setPriceAnnualDisplay(formatCurrency(field.value ?? 0));
+                    }}
+                    className="h-10"
+                    placeholder="R$ 0,00"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="billing_interval"
@@ -210,62 +312,14 @@ export default function SubscriptionPlanForm({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="DAY">Diária</SelectItem>
-                      <SelectItem value="WEEK">Semanal</SelectItem>
-                      <SelectItem value="MONTH">Mensal</SelectItem>
-                      <SelectItem value="YEAR">Anual</SelectItem>
+                      <SelectItem value="WEEKLY">Semanal</SelectItem>
+                      <SelectItem value="BIWEEKLY">Quinzenal</SelectItem>
+                      <SelectItem value="MONTHLY">Mensal</SelectItem>
+                      <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                      <SelectItem value="SEMIANNUALLY">Semestral</SelectItem>
+                      <SelectItem value="YEARLY">Anual</SelectItem>
                     </SelectContent>
                   </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="interval_count"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>A cada (n)</FormLabel>
-                <FormControl>
-                  <Input {...field} type="number" min="1" step="1" className="h-10" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <FormField
-            control={form.control}
-            name="setup_fee_reais"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Taxa de adesão (R$)</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="h-10"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="trial_days"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dias de teste</FormLabel>
-                <FormControl>
-                  <Input {...field} type="number" min="0" step="1" className="h-10" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

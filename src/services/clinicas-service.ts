@@ -20,6 +20,7 @@ export interface Clinica {
   cargo: string | null;
   nome_contato_faturamento: string | null;
   email_contato_faturamento: string | null;
+  email_contato_faturamento_secundario: string | null;
   telefone_contato_faturamento: string | null;
   created_at: string;
   updated_at: string;
@@ -67,20 +68,34 @@ export async function atualizarClinica(
   id: string,
   payload: Partial<ClinicaInput>,
 ): Promise<Clinica> {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("clinicas")
     .update({
       ...payload,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .select("*")
-    .single();
+    .eq("id", id);
 
   if (error) {
     throw new Error(
       error.message || "Não foi possível atualizar a clínica/hospital.",
     );
+  }
+
+  const { data, error: fetchError } = await supabase
+    .from("clinicas")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(
+      fetchError.message || "A clínica/hospital foi atualizada, mas não pôde ser recarregada.",
+    );
+  }
+
+  if (!data) {
+    throw new Error("A clínica/hospital foi atualizada, mas não foi encontrada para recarregar.");
   }
 
   return data as Clinica;

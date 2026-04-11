@@ -36,22 +36,26 @@ import {
   type SubscriptionPlanInput,
 } from "@/services/subscription-plans-service";
 
-function formatBRLFromCents(cents: number) {
-  const value = (cents ?? 0) / 100;
+function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function intervalLabel(interval: string, count: number) {
-  const n = count ?? 1;
-  const base =
-    interval === "DAY"
-      ? "dia"
-      : interval === "WEEK"
-        ? "semana"
-        : interval === "MONTH"
-          ? "mês"
-          : "ano";
-  return n === 1 ? `todo ${base}` : `a cada ${n} ${base}s`;
+function intervalLabel(interval: string) {
+  switch (interval) {
+    case "WEEKLY":
+      return "Semanal";
+    case "BIWEEKLY":
+      return "Quinzenal";
+    case "QUARTERLY":
+      return "Trimestral";
+    case "SEMIANNUALLY":
+      return "Semestral";
+    case "YEARLY":
+      return "Anual";
+    case "MONTHLY":
+    default:
+      return "Mensal";
+  }
 }
 
 export default function SubscriptionPlansList() {
@@ -224,10 +228,17 @@ export default function SubscriptionPlansList() {
                         {p.code}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                        {formatBRLFromCents(p.price_cents)}
+                        <div className="space-y-1">
+                          <p className="font-medium text-slate-900 dark:text-slate-50">
+                            Mensal: {formatBRL(p.price_month)}
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Anual: {formatBRL(p.price_annual)}
+                          </p>
+                        </div>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                        {intervalLabel(p.billing_interval, p.interval_count)}
+                        {intervalLabel(p.billing_interval)}
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <span
@@ -267,7 +278,7 @@ export default function SubscriptionPlansList() {
           if (!open) setEditing(null);
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Editar plano" : "Novo plano"}

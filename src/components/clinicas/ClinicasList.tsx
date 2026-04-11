@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Building2,
   Plus,
@@ -27,12 +27,15 @@ import {
   type Clinica,
   type ClinicaInput,
 } from "@/services/clinicas-service";
+import { useSystemUser } from "@/hooks/use-system-user";
 import ClinicaForm from "@/components/clinicas/ClinicaForm";
 import { showError, showSuccess } from "@/utils/toast";
 
 type ViewMode = "list" | "form";
 
 const ClinicasList = () => {
+  const { loading: userLoading, systemUser } = useSystemUser();
+  const authErrorShownRef = useRef(false);
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
   const [favoritos, setFavoritos] = useState<Set<string>>(new Set());
   const [filtered, setFiltered] = useState<Clinica[]>([]);
@@ -43,29 +46,59 @@ const ClinicasList = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (userLoading) return;
+
+    if (!systemUser) {
+      setClinicas([]);
+      setFavoritos(new Set());
+      setFiltered([]);
+      setLoading(false);
+
+      if (!authErrorShownRef.current) {
+        authErrorShownRef.current = true;
+        showError("Sua sessão expirou. Faça login novamente para visualizar as clínicas.");
+      }
+      return;
+    }
+
+    authErrorShownRef.current = false;
+
+    let cancelled = false;
+
     const load = async () => {
       setLoading(true);
       try {
         const [data, favData] = await Promise.all([
           listarClinicas(),
-          listarFavoritos()
+          listarFavoritos(),
         ]);
+
+        if (cancelled) return;
+
         setClinicas(data);
         setFavoritos(new Set(favData));
         setFiltered(data);
       } catch (err) {
+        if (cancelled) return;
+
         const message =
           err instanceof Error
             ? err.message
             : "Erro ao carregar clínicas/hospitais.";
         showError(message);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void load();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userLoading, systemUser]);
 
   useEffect(() => {
     let result = clinicas;
@@ -305,12 +338,13 @@ const ClinicasList = () => {
                   <button
                     type="button"
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       void handleToggleFavorite(c.id);
                     }}
                     className={`p-1.5 rounded-full transition-colors ${
-                      isFavorito 
-                        ? "text-amber-400 bg-amber-50 hover:bg-amber-100" 
+                      isFavorito
+                        ? "text-amber-400 bg-amber-50 hover:bg-amber-100"
                         : "text-slate-300 hover:text-amber-400 hover:bg-slate-50"
                     }`}
                     title={isFavorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
@@ -360,7 +394,7 @@ const ClinicasList = () => {
                   </div>
 
                   {/* Faturamento info */}
-                  {(c.nome_contato_faturamento || c.email_contato_faturamento || c.telefone_contato_faturamento) && (
+                  {(c.nome_contato_faturamento || c.email_contato_faturamento || c.email_contato_faturamento_secundario || c.telefone_contato_faturamento) && (
                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
                       {c.nome_contato_faturamento && (
                         <span className="font-medium text-slate-600">{c.nome_contato_faturamento}</span>
@@ -369,6 +403,12 @@ const ClinicasList = () => {
                         <span className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
                           {c.email_contato_faturamento}
+                        </span>
+                      )}
+                      {c.email_contato_faturamento_secundario && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {c.email_contato_faturamento_secundario}
                         </span>
                       )}
                       {c.telefone_contato_faturamento && (

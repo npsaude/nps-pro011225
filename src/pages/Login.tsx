@@ -278,6 +278,7 @@ const Login = () => {
             <button type="button" className="hover:text-white/90 transition-colors">Termos</button>
             <button type="button" className="hover:text-white/90 transition-colors">Ajuda</button>
           </div>
+
           <p className="text-[10px] text-white/50">© ConMedic. Plataforma segura.</p>
           <p className="text-[9px] text-white/30">Versão 1.2.2</p>
         </div>

@@ -12,7 +12,7 @@ const ClinicasCadastro = () => {
         {/* Área principal */}
         <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-white/90 p-4 lg:p-6 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl dark:bg-slate-900/90">
           {/* Header */}
-          <header className="flex items-start justify-between gap-3">
+          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-3">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300">
                 <Building2 className="h-5 w-5" />
@@ -27,7 +27,9 @@ const ClinicasCadastro = () => {
               </div>
             </div>
 
-            <AdminHeaderActions />
+            <div className="flex items-center self-start sm:self-auto">
+              <AdminHeaderActions />
+            </div>
           </header>
 
           {/* Divider */}

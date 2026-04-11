@@ -53,6 +53,8 @@ import GftCadastro from "./pages/GftCadastro";
 import AdminOrSuperAdminGuard from "@/components/auth/AdminOrSuperAdminGuard";
 import AdminModelosDescricaoCirurgica from "./pages/AdminModelosDescricaoCirurgica";
 import AdminModelosDescricaoCirurgicaForm from "./pages/AdminModelosDescricaoCirurgicaForm";
+import AdminEmailTemplates from "./pages/AdminEmailTemplates";
+import AdminEmailTemplateForm from "./pages/AdminEmailTemplateForm";
 
 const queryClient = new QueryClient();
 
@@ -204,6 +206,11 @@ const App = () => (
           <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
           <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
           <Route path="/admin/descricao-cirurgica/editar/:id" element={<DescricaoCirurgicaAdminFormPage />} />
+
+          <Route path="/admin/modelos-emails" element={<AdminEmailTemplates />} />
+          <Route path="/admin/modelos-emails/novo" element={<AdminEmailTemplateForm />} />
+          <Route path="/admin/modelos-emails/:id" element={<AdminEmailTemplateForm />} />
+          <Route path="/admin/modelos-emails/:id/editar" element={<AdminEmailTemplateForm />} />
 
           <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
           <Route

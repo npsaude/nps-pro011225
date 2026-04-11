@@ -19,6 +19,7 @@ import {
   UserRound,
   Upload,
   Scissors,
+  Mail,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -35,9 +36,12 @@ interface AdminSidebarProps {
     | "guia-solicitacao"
     | "guia-autorizacao"
     | "descricao-cirurgica"
+    | "descricao"
     | "cadastro"
     | "config"
-    | "assinaturas";
+    | "assinaturas"
+    | "financas"
+    | "modelos-email";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft" | "modelos-descricao";
   documentosSubsection?:
     | "guia-solicitacao"
@@ -279,6 +283,19 @@ function SuperAdminMenu({
         </span>
       </button>
 
+      {/* Modelos de Emails */}
+      <button
+        className={currentSection === "modelos-email" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/modelos-emails")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "modelos-email" ? iconWrapperActive : iconWrapperInactive}>
+            <Mail className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Modelos de Emails</span>
+        </span>
+      </button>
+
       {/* Recursos */}
       <button className={inactiveMain}>
         <span className="flex items-center gap-3">
@@ -503,6 +520,19 @@ function DefaultMenu({
         </div>
       </div>
 
+      {/* Modelos de Emails */}
+      <button
+        className={currentSection === "modelos-email" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/modelos-emails")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "modelos-email" ? iconWrapperActive : iconWrapperInactive}>
+            <Mail className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Modelos de Emails</span>
+        </span>
+      </button>
+
       {/* Recursos */}
       {featureEnabled("menu_recursos") ? (
         <button className={inactiveMain}>
@@ -572,7 +602,8 @@ const AdminSidebar = ({
   cadastroSubsection,
   documentosSubsection,
   assinaturasSubsection,
-}: AdminSidebarProps) => {
+  isMobile,
+}: AdminSidebarProps & { isMobile?: boolean }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { systemUser, loading: systemUserLoading } = useSystemUser();
@@ -616,6 +647,7 @@ const AdminSidebar = ({
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
     if (path.startsWith("/cadastro/medicos")) return "cadastro";
+    if (path.startsWith("/admin/modelos-emails")) return "modelos-email";
     if (path.startsWith("/admin/configuracoes")) return "config";
     if (path.startsWith("/admin")) return "home";
     return "home";
@@ -653,7 +685,7 @@ const AdminSidebar = ({
   }, [location.pathname, assinaturasSubsection]);
 
   return (
-    <aside className="hidden w-60 flex-col justify-between rounded-3xl bg-sidebar p-4 text-sidebar-foreground shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:flex">
+    <aside className={isMobile ? "flex w-full flex-col justify-between h-full px-1 py-4" : "hidden w-60 flex-col justify-between rounded-3xl bg-sidebar p-4 text-sidebar-foreground shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:flex"}>
       <div className="flex flex-col gap-8">
         {/* Logo */}
         <div className="flex items-center gap-3 px-2">
