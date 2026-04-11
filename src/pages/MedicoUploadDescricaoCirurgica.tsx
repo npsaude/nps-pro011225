@@ -288,10 +288,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Favoritos
   const [favoritosIds, setFavoritosIds] = useState<Set<string>>(new Set());
 
+  const carregarFavoritosDoMedico = async () => {
+    try {
+      const favs = await listarFavoritos();
+      setFavoritosIds(new Set(favs));
+    } catch (error) {
+      console.error("Erro ao carregar favoritos do médico:", error);
+      setFavoritosIds(new Set());
+    }
+  };
+
   useEffect(() => {
-    listarFavoritos()
-      .then((favs) => setFavoritosIds(new Set(favs)))
-      .catch(console.error);
+    void carregarFavoritosDoMedico();
   }, []);
 
   // Verificação de consistência entre documentos
@@ -2348,6 +2356,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setView("hospital");
     setHospitalStepView("selector");
     setClinicaStepView("selector");
+    void carregarFavoritosDoMedico();
     if (!hospitaisMedico.length) {
       void carregarHospitaisDoMedico();
     }
