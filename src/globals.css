@@ -119,15 +119,17 @@
 
 @keyframes pulse-gold {
   0%, 100% {
-    box-shadow: 0 0 14px rgba(212, 160, 23, 0.45);
+    box-shadow: 0 0 10px rgba(212, 160, 23, 0.5), 0 0 4px rgba(255, 215, 0, 0.3);
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 28px rgba(212, 160, 23, 0.75), 0 0 8px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 36px rgba(255, 215, 0, 0.95), 0 0 16px rgba(212, 160, 23, 0.8), 0 0 6px rgba(255, 215, 0, 0.6);
+    transform: scale(1.03);
   }
 }
 
 @layer utilities {
   .animate-pulse-gold {
-    animation: pulse-gold 2s ease-in-out infinite;
+    animation: pulse-gold 1.4s ease-in-out infinite;
   }
 }
