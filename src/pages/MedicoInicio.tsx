@@ -53,7 +53,7 @@ const MedicoInicio: React.FC = () => {
 
       <div className="relative z-10">
         <MedicoHeader
-          statusLabel="Portal do Médico"
+          statusLabel="Dashboard"
           containerClassName="max-w-sm"
           onStatusClick={() => navigate("/admin/dashboard")}
         />

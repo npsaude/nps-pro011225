@@ -2612,6 +2612,26 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {view === "start" && (
             <div className="flex w-full flex-1 items-center justify-center">
               <div className="flex w-full max-w-sm flex-col items-center text-center">
+                <div className="mb-6 flex w-full items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
+                    onClick={() => navigate("/medico/dashboard")}
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Início</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/admin/dashboard")}
+                    className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25 hover:bg-[#D4A017]/20 hover:border-[#D4A017]/50 transition-colors cursor-pointer"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
+                    <span>Dashboard</span>
+                  </button>
+                </div>
+
                 <div className="mb-4 flex items-center gap-3">
                   <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.4)]">
                     <img
