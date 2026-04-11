@@ -1,108 +1,67 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Mail,
-  Lock,
-  ArrowRightCircle,
-  Stethoscope,
-  ArrowLeft,
-} from "lucide-react";
+import { Mail, Lock, ArrowRightCircle, Eye, EyeOff } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
-import {
-  loginWithRole,
-  registerUser,
-  sendPasswordReset,
-} from "@/services/auth-service";
+import { loginAny, sendPasswordReset } from "@/services/auth-service";
 import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
 import { SUBSCRIPTION_EXPIRED_CODE } from "@/services/subscription-validity-service";
+import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { carregarAppSettings } from "@/services/app-settings-service";
-
-const LOGO_URL =
-  "https://pokyribuibmbeorrcsgk.supabase.co/storage/v1/object/sign/NPS-pro/site/logo-conmagic-favicon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kZDc4YzM5NC1hMTFlLTQ3MTEtYTVmNi1lMjU4ZGU4MGRiYzgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJOUFMtcHJvL3NpdGUvbG9nby1jb25tYWdpYy1mYXZpY29uLnBuZyIsImlhdCI6MTc3MTAwMjQxMywiZXhwIjoyNDAxNzIyNDEzfQ.EFdbCwJ0scnjf4oFCJRg5YA_JtHfA2LZf_gugIB4WcY";
 
 const FALLBACK_YOUTUBE_VIDEO_ID = "5w1NdK6GtEE";
 
 function extractYouTubeId(input: string | null | undefined): string | null {
   const raw = String(input ?? "").trim();
   if (!raw) return null;
-
-  // Already an ID?
   if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) return raw;
-
-  // Try parsing URL
   try {
     const url = new URL(raw);
-
     if (url.hostname === "youtu.be") {
       const id = url.pathname.replace("/", "").trim();
       return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
     }
-
     if (url.hostname.includes("youtube.com")) {
-      // /watch?v=...
       const v = url.searchParams.get("v");
       if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
-
-      // /embed/ID
       const embedMatch = url.pathname.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
       if (embedMatch?.[1]) return embedMatch[1];
-
-      // /shorts/ID
-      const shortsMatch = url.pathname.match(
-        /\/shorts\/([a-zA-Z0-9_-]{11})/,
-      );
+      const shortsMatch = url.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
       if (shortsMatch?.[1]) return shortsMatch[1];
     }
   } catch {
     // ignore
   }
-
   return null;
 }
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => localStorage.getItem("loginEmail") || "");
   const [senha, setSenha] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(() => !!localStorage.getItem("loginEmail"));
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const [subscriptionExpiredOpen, setSubscriptionExpiredOpen] = useState(false);
-
-  const [showRegister, setShowRegister] = useState(false);
-  const [registerNome, setRegisterNome] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerSenha, setRegisterSenha] = useState("");
-  const [registerSenhaConfirm, setRegisterSenhaConfirm] = useState("");
-  const [registerLoading, setRegisterLoading] = useState(false);
-
   const [resetLoading, setResetLoading] = useState(false);
-
+  const [subscriptionExpiredOpen, setSubscriptionExpiredOpen] = useState(false);
   const [youtubeSetting, setYoutubeSetting] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-
     const load = async () => {
       try {
         const settings = await carregarAppSettings();
         if (!alive) return;
         setYoutubeSetting(settings?.videoYoutube ?? null);
       } catch {
-        // Silencioso: login não depende disso.
         if (!alive) return;
         setYoutubeSetting(null);
       }
     };
-
     void load();
-
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
   const videoId = useMemo(() => {
@@ -125,127 +84,16 @@ const Login = () => {
     }
     setIsLoading(true);
     try {
-      const result = await loginWithRole({
-        email: email.trim(),
-        password: senha,
-        allowedRole: "ADMIN",
-      });
+      if (rememberLogin) {
+        localStorage.setItem("loginEmail", email.trim());
+      } else {
+        localStorage.removeItem("loginEmail");
+      }
+
+      const result = await loginAny({ email: email.trim(), password: senha });
 
       showSuccess("Login realizado com sucesso.");
 
-      if (result.role === "SUPER_ADMIN") {
-        navigate("/admin/assinaturas/dashboard");
-      } else {
-        navigate("/admin/dashboard");
-      }
-    } catch (err) {
-      const code = (err as any)?.code as string | undefined;
-      if (code === SUBSCRIPTION_EXPIRED_CODE) {
-        setSubscriptionExpiredOpen(true);
-        return;
-      }
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível fazer login. Verifique seus dados.";
-      showError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateAccount = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    if (!registerNome.trim()) {
-      showError("Informe o nome completo.");
-      return;
-    }
-    if (!registerEmail.trim()) {
-      showError("Informe o e-mail.");
-      return;
-    }
-    if (registerSenha.length < 6) {
-      showError("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-    if (registerSenha !== registerSenhaConfirm) {
-      showError("As senhas não conferem.");
-      return;
-    }
-
-    setRegisterLoading(true);
-    try {
-      await registerUser({
-        nome: registerNome.trim(),
-        email: registerEmail.trim(),
-        password: registerSenha,
-        role: "ADMIN",
-      });
-
-      showSuccess(
-        "Usuário administrador criado. Verifique seu e-mail e confirme o cadastro antes do primeiro acesso.",
-      );
-      setEmail(registerEmail.trim());
-      setSenha(registerSenha);
-      setShowRegister(false);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível criar o usuário. Verifique os dados.";
-      showError(message);
-    } finally {
-      setRegisterLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      showError("Informe o e-mail no campo de login para recuperar a senha.");
-      return;
-    }
-
-    setResetLoading(true);
-    try {
-      await sendPasswordReset(email.trim());
-      showSuccess(
-        "Enviamos um e-mail com instruções para redefinir sua senha.",
-      );
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível enviar o e-mail de recuperação.";
-      showError(message);
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const handleAdminShortcutLogin = async () => {
-    if (isLoading) return;
-
-    const shortcutEmail = "newpersonsaude@gmail.com";
-    const shortcutSenha = "123456";
-
-    setEmail(shortcutEmail);
-    setSenha(shortcutSenha);
-    setIsLoading(true);
-
-    try {
-      const result = await loginWithRole({
-        email: shortcutEmail,
-        password: shortcutSenha,
-        allowedRole: "ADMIN",
-      });
-
-      showSuccess("Login rápido (admin) realizado com sucesso.");
-
-      // Redireciona conforme o role do usuário
       if (result.role === "SUPER_ADMIN") {
         navigate("/admin/assinaturas/dashboard");
       } else if (result.role === "MEDICO") {
@@ -259,37 +107,44 @@ const Login = () => {
         setSubscriptionExpiredOpen(true);
         return;
       }
-
       const message =
         err instanceof Error
           ? err.message
-          : "Não foi possível fazer login rápido. Verifique o usuário de teste.";
+          : "Não foi possível fazer login. Verifique seus dados.";
       showError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.code === "Digit2") {
-        event.preventDefault();
-        void handleAdminShortcutLogin();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      showError("Informe o e-mail no campo acima para recuperar a senha.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await sendPasswordReset(email.trim());
+      showSuccess("Enviamos um e-mail com instruções para redefinir sua senha.");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível enviar o e-mail de recuperação.";
+      showError(message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#0b0b0b] text-[#F5F5F5]">
       <SubscriptionExpiredDialog
         open={subscriptionExpiredOpen}
         onOpenChange={setSubscriptionExpiredOpen}
       />
 
-      {/* Background video (z-0) - com pointer-events-none no container */}
+      {/* Background video */}
       {youtubeEmbedUrl ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <iframe
@@ -304,247 +159,129 @@ const Login = () => {
         </div>
       ) : null}
 
-      {/* Máscara transparente (z-10) - redundância de bloqueio */}
+      {/* Overlays */}
       <div className="absolute inset-0 z-10 h-full w-full bg-transparent" />
-
-      {/* Overlay visual (z-10) */}
-      <div className="pointer-events-none absolute inset-0 z-10 bg-black/5" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-black/40" />
       <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_0%_0%,rgba(254,230,122,0.10)_0,rgba(0,0,0,0.25)_55%),radial-gradient(circle_at_100%_100%,rgba(212,160,23,0.06)_0,rgba(0,0,0,0.25)_55%)]" />
 
-      <div className="relative z-20 flex w-full max-w-md flex-col items-center px-4 py-8 sm:py-10">
-        <div className="mb-6 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-card shadow-[0_12px_30px_rgba(0,0,0,0.55)] ring-1 ring-border">
+      <div className="relative z-20 mx-auto flex min-h-screen w-full max-w-sm flex-col items-stretch justify-center px-4 py-10">
+        {/* Logo */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.5)]">
             <img
-              src={LOGO_URL}
-              alt="Logo CONMEDIC"
-              className="h-10 w-10 rounded-2xl object-contain"
+              src={MEDICO_LOGO_URL}
+              alt="Logo Conmedic"
+              className="h-9 w-9 object-contain"
+              loading="eager"
             />
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-semibold text-foreground">
-              CONMEDIC
-            </span>
-            <span className="text-[11px] font-semibold tracking-[0.22em] text-foreground/90 drop-shadow-md">
-              ACESSO ADMINISTRATIVO
-            </span>
-          </div>
+          <span className="text-2xl font-black bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent tracking-wide">
+            CONMEDIC
+          </span>
         </div>
 
-        <div className="w-full rounded-[32px] bg-card px-6 py-7 text-card-foreground shadow-[0_24px_70px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur-md sm:px-8 sm:py-8">
-          {showRegister ? (
-            <div className="mb-5 flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => setShowRegister(false)}
-                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Voltar ao login</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">
-                  Criar conta
-                </h1>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Solicite seu acesso administrativo.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-5">
-              <h1 className="text-2xl font-semibold text-foreground">Entrar</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Bem-vindo de volta ao portal administrativo.
-              </p>
-            </div>
-          )}
+        {/* Card */}
+        <div className="w-full rounded-2xl border border-[#D4A017]/30 bg-black/65 p-7 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-[#F5F5F5]">Entrar</h1>
+            <p className="mt-1 text-sm text-[#9CA3AF]">
+              Bem-vindo de volta à plataforma.
+            </p>
+          </div>
 
-          {!showRegister ? (
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-muted-foreground">
-                  E-mail
-                </label>
-                <div className="flex items-center rounded-xl bg-background ring-1 ring-border focus-within:ring-2 focus-within:ring-ring">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-border text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type="email"
-                    placeholder="seu@email.com"
-                    className="h-11 border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-medium text-muted-foreground">
-                    Senha
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    disabled={resetLoading}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
-                  </button>
-                </div>
-                <div className="flex items-center rounded-xl bg-background ring-1 ring-border focus-within:ring-2 focus-within:ring-ring">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-l-xl border-r border-border text-muted-foreground">
-                    <Lock className="h-4 w-4" />
-                  </span>
-                  <Input
-                    type="password"
-                    placeholder="Sua senha"
-                    className="h-11 border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
-                    required
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <Checkbox className="h-3.5 w-3.5" />
-                <span className="text-xs text-muted-foreground">
-                  Lembrar acesso
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* E-mail */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-[#9CA3AF]">
+                E-mail
+              </label>
+              <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_14px_rgba(212,160,23,0.25)]">
+                  <Mail className="h-4 w-4" />
                 </span>
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-transform hover:translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-75"
-                >
-                  <span>{isLoading ? "Acessando..." : "Acessar conta"}</span>
-                  <ArrowRightCircle className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <p className="pt-1 text-center text-xs text-muted-foreground">
-                Não tem uma conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => setShowRegister(true)}
-                  className="font-semibold text-primary hover:underline"
-                >
-                  Cadastre-se
-                </button>
-              </p>
-            </form>
-          ) : (
-            <form className="space-y-4" onSubmit={handleCreateAccount}>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-muted-foreground">
-                  Nome completo
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Seu nome"
-                  value={registerNome}
-                  onChange={(e) => setRegisterNome(e.target.value)}
-                  className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-muted-foreground">
-                  E-mail
-                </label>
                 <Input
                   type="email"
                   placeholder="seu@email.com"
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                  className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+            </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-muted-foreground">
-                    Senha
-                  </label>
-                  <Input
-                    type="password"
-                    placeholder="Mín. 6 caracteres"
-                    value={registerSenha}
-                    onChange={(e) => setRegisterSenha(e.target.value)}
-                    className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-muted-foreground">
-                    Confirmar
-                  </label>
-                  <Input
-                    type="password"
-                    placeholder="Repita a senha"
-                    value={registerSenhaConfirm}
-                    onChange={(e) => setRegisterSenhaConfirm(e.target.value)}
-                    className="h-10 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  disabled={registerLoading}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-transform hover:translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-75"
+            {/* Senha */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-[#9CA3AF]">
+                  Senha
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  className="text-[11px] font-semibold text-[#D4A017] underline-offset-2 hover:underline disabled:opacity-60"
                 >
-                  {registerLoading ? "Criando conta..." : "Criar conta"}
-                </Button>
+                  {resetLoading ? "Enviando..." : "Esqueceu a senha?"}
+                </button>
               </div>
+              <div className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-2 border border-[#D4A017]/20 focus-within:border-[#D4A017] focus-within:ring-2 focus-within:ring-[#D4A017]/20 transition-colors">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4A017] to-[#B8860B] text-black shadow-[0_0_14px_rgba(212,160,23,0.25)]">
+                  <Lock className="h-4 w-4" />
+                </span>
+                <Input
+                  type={passwordVisible ? "text" : "password"}
+                  placeholder="Sua senha"
+                  className="h-9 flex-1 border-none bg-transparent px-0 text-sm text-[#F5F5F5] placeholder:text-[#6B7280] focus-visible:ring-0"
+                  required
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible((v) => !v)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-[#9CA3AF] hover:text-[#D4A017] hover:bg-[#D4A017]/10 transition-colors"
+                  aria-label={passwordVisible ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
 
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                Ao se cadastrar, você concorda com nossos Termos de Serviço e
-                Política de Privacidade.
-              </p>
-            </form>
-          )}
+            {/* Lembrar */}
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={rememberLogin}
+                onChange={(e) => setRememberLogin(e.target.checked)}
+                className="rounded border-[#D4A017]/30 bg-black/40 text-[#D4A017] focus:ring-[#D4A017]"
+              />
+              <span className="text-xs text-[#9CA3AF]">Lembrar acesso</span>
+            </label>
+
+            {/* Botão */}
+            <div className="pt-2">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] hover:scale-[1.01] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <ArrowRightCircle className="h-4 w-4" />
+                <span>{isLoading ? "Acessando..." : "Acessar conta"}</span>
+              </Button>
+            </div>
+          </form>
         </div>
 
-        <div className="mt-4 flex w-full max-w-md flex-col items-center gap-4">
-          <div className="text-center text-xs text-white drop-shadow-md">
-            <p className="mb-2 font-medium">
-              Você é médico e deseja acompanhar suas cirurgias?
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border-border bg-background px-4 text-[11px] font-semibold text-foreground shadow-sm hover:bg-secondary"
-              onClick={() => navigate("/login-medico")}
-            >
-              <Stethoscope className="h-4 w-4" />
-              <span>Acessar como médico</span>
-            </Button>
+        {/* Footer */}
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-6 text-[11px] text-white/70 font-medium">
+            <button type="button" className="hover:text-white/90 transition-colors">Privacidade</button>
+            <button type="button" className="hover:text-white/90 transition-colors">Termos</button>
+            <button type="button" className="hover:text-white/90 transition-colors">Ajuda</button>
           </div>
-
-          <div className="mt-2 flex items-center justify-center gap-6 text-[11px] text-white/90 font-medium drop-shadow-sm">
-            <button type="button" className="hover:underline">
-              Privacidade
-            </button>
-            <button type="button" className="hover:underline">
-              Termos
-            </button>
-            <button type="button" className="hover:underline">
-              Ajuda
-            </button>
-          </div>
-
-          <p className="text-[10px] font-medium text-white/90 drop-shadow-md">
-            © ConMedic. Plataforma segura.
-          </p>
-          <p className="text-[9px] font-medium text-white/50 mt-1">
-            Versão 1.2.2
-          </p>
+          <p className="text-[10px] text-white/50">© ConMedic. Plataforma segura.</p>
+          <p className="text-[9px] text-white/30">Versão 1.2.2</p>
         </div>
       </div>
     </div>

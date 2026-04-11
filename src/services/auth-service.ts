@@ -434,6 +434,17 @@ export async function registerUser(params: {
 }
 
 /**
+ * Login unificado: aceita qualquer role (ADMIN, SUPER_ADMIN, MEDICO).
+ * Redireciona conforme o role retornado.
+ */
+export async function loginAny(params: {
+  email: string;
+  password: string;
+}): Promise<LoginResult> {
+  return loginWithRole({ ...params, allowedRole: "ADMIN" });
+}
+
+/**
  * Inicia fluxo de recuperação de senha via e-mail do Supabase.
  */
 export async function sendPasswordReset(email: string): Promise<void> {
