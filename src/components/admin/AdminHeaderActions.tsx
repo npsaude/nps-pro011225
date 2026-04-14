@@ -44,6 +44,7 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
 
   const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
+  const isSuperAdmin = role === "SUPER_ADMIN";
 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";
@@ -126,14 +127,16 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
 
       <BellButton count={notificationsCount} onClick={() => {}} />
 
-      <button
-        type="button"
-        onClick={() => navigate("/medico/faturamentos/enviar")}
-        className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-5 text-sm font-bold text-black shadow-[0_0_14px_rgba(212,160,23,0.45)] transition-all hover:shadow-[0_0_24px_rgba(212,160,23,0.65)] hover:scale-[1.03] animate-pulse-gold"
-      >
-        <Send className="h-4 w-4" />
-        Enviar Guias
-      </button>
+      {!isSuperAdmin && (
+        <button
+          type="button"
+          onClick={() => navigate("/medico/faturamentos/enviar")}
+          className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-5 text-sm font-bold text-black shadow-[0_0_14px_rgba(212,160,23,0.45)] transition-all hover:shadow-[0_0_24px_rgba(212,160,23,0.65)] hover:scale-[1.03] animate-pulse-gold"
+        >
+          <Send className="h-4 w-4" />
+          Enviar Guias
+        </button>
+      )}
 
       {isMedico && <SurgeryQuotaBadge />}
 
