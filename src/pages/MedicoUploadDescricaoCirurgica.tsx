@@ -203,7 +203,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [medicoEmail, setMedicoEmail] = useState<string>("");
   const [medicoCrm, setMedicoCrm] = useState<string>("");
-  const [view, setView] = useState<ViewState>("start");
+  // Inicia direto na tela de seleção do hospital — a antiga tela "start"
+  // (botão "Iniciar Agora") foi removida; o checkbox de consistência foi
+  // movido para a primeira etapa (seleção de hospital/clínica).
+  const [view, setView] = useState<ViewState>("hospital");
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefSolicitacao = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
@@ -300,6 +303,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   useEffect(() => {
     void carregarFavoritosDoMedico();
+    // Carrega hospitais e clínicas já na entrada do fluxo (sem etapa "start")
+    void carregarHospitaisDoMedico();
+    void carregarClinicasDoMedico();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Verificação de consistência entre documentos
@@ -2277,7 +2284,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setFilesSolicitacao([]);
     setFilesDescricao([]);
     setStep(1);
-    setView("start");
+    setView("hospital");
     setSelectedHospitalId(undefined);
     setSelectedHospitalName("");
     setHospitalStepView("selector");
@@ -2405,8 +2412,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   const handleFecharSelecaoHospital = () => {
-    setView("start");
-    setHospitalStepView("selector");
+    // A tela "start" foi removida; ao fechar, volta para o dashboard do médico.
+    navigate("/medico/dashboard");
   };
 
   const handleVoltarListaParaSelector = () => {
@@ -2537,10 +2544,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                 className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
                 onClick={
                   view === "hospital"
-                    ? () => {
-                        setView("start");
-                        setStep(1);
-                      }
+                    ? () => navigate("/medico/dashboard")
                     : view === "pergunta_solicitacao"
                       ? () => {
                           setView("hospital");
@@ -2608,147 +2612,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
         {/* Conteúdo principal */}
         <main className="flex flex-1 flex-col items-center justify-start">
-          {/* TELA 1 - START */}
-          {view === "start" && (
-            <div className="flex w-full flex-1 items-center justify-center">
-              <div className="flex w-full max-w-sm flex-col items-center text-center">
-                <div className="mb-6 flex w-full items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-[#F5F5F5] shadow-sm border border-[#D4A017]/20 hover:border-[#D4A017]/40 transition-colors"
-                    onClick={() => navigate("/medico/dashboard")}
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    <span>Início</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/admin/dashboard")}
-                    className="flex items-center gap-2 rounded-full bg-[#D4A017]/10 px-3 py-1.5 text-[11px] text-[#D4A017] border border-[#D4A017]/25 hover:bg-[#D4A017]/20 hover:border-[#D4A017]/50 transition-colors cursor-pointer"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-[#D4A017] shadow-[0_0_8px_rgba(212,160,23,0.8)]" />
-                    <span>Dashboard</span>
-                  </button>
-                </div>
-
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_20px_rgba(212,160,23,0.4)]">
-                    <img
-                      src={MEDICO_LOGO_URL}
-                      alt="Logo Conmedic"
-                      className="h-7 w-7 object-contain"
-                      loading="eager"
-                    />
-                  </div>
-                  <span className="text-lg font-bold bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] bg-clip-text text-transparent">
-                    CONMEDIC
-                  </span>
-                </div>
-
-                <p className="mb-2 text-sm font-semibold text-[#D4A017]">
-                  {saudacao}
-                </p>
-                <h1 className="text-xl font-semibold text-[#F5F5F5] sm:text-2xl">
-                  Novo Faturamento
-                </h1>
-                <p className="mt-3 max-w-xs text-sm text-[#9CA3AF]">
-                  Vamos iniciar o processo de Acompanhamento de Faturamento
-                </p>
-
-                {/* Contador de faturamentos do mês */}
-                {!billingQuota.loading && billingQuota.limit !== null && (
-                  <div className={`mt-5 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 w-full max-w-sm ${
-                    billingQuota.isOverLimit
-                      ? "border-rose-500/40 bg-[#2a0a0a]"
-                      : billingQuota.isNearLimit
-                        ? "border-amber-500/40 bg-amber-950/20"
-                        : "border-[#D4A017]/20 bg-black/40"
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <Scissors className={`h-4 w-4 flex-shrink-0 ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`} />
-                      <div>
-                        <p className="text-xs font-semibold text-[#F5F5F5]">Faturamentos do mês</p>
-                        <p className="text-[11px] text-[#9CA3AF]">
-                          {billingQuota.used} de {billingQuota.limit} do seu plano
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`text-sm font-bold flex-shrink-0 ${billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"}`}>
-                      {billingQuota.used}/{billingQuota.limit}
-                    </span>
-                  </div>
-                )}
-
-                {/* Checkbox de consistência — oculto quando limite excedido */}
-                {(!billingQuota.isOverLimit) && (
-                  <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3 w-full max-w-sm">
-                    <Checkbox
-                      id="consistency-check"
-                      checked={consistencyCheckEnabled}
-                      onCheckedChange={(v) => setConsistencyCheckEnabled(!!v)}
-                      className="border-[#D4A017]/50 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
-                    />
-                    <label htmlFor="consistency-check" className="text-sm text-[#F5F5F5] cursor-pointer leading-snug">
-                      Verificar consistência entre documentos
-                      <span className="block text-xs text-[#9CA3AF] mt-0.5">
-                        O sistema compara os dados de cada documento ao longo do processo
-                      </span>
-                    </label>
-                  </div>
-                )}
-
-                {/* Limite excedido: bloquear e mostrar upgrade */}
-                {!billingQuota.loading && billingQuota.isOverLimit ? (
-                  <div className="mt-5 flex w-full max-w-sm flex-col items-center gap-4">
-                    {/* Card de alerta */}
-                    <div className="w-full rounded-2xl border border-rose-500/25 bg-[#2a0a0a] px-5 py-6 text-center">
-                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/15">
-                        <AlertCircle className="h-7 w-7 text-rose-400" />
-                      </div>
-                      <p className="text-sm font-semibold text-rose-300">
-                        Limite de faturamentos atingido
-                      </p>
-                      <p className="mt-2 text-xs leading-relaxed text-rose-400/80">
-                        Você utilizou {billingQuota.used} de {billingQuota.limit} faturamentos do seu plano neste mês.
-                      </p>
-                    </div>
-
-                    {/* Botão upgrade */}
-                    <a
-                      href="https://site.conmedic.com.br"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] px-4 py-3.5 text-sm font-semibold text-black shadow-[0_0_25px_rgba(212,160,23,0.45)] hover:shadow-[0_0_40px_rgba(212,160,23,0.65)] hover:scale-[1.01] transition-all duration-300"
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      Fazer Upgrade do Plano
-                    </a>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleIniciarFluxo}
-                    disabled={billingQuota.loading}
-                    className="mt-10 flex h-52 w-52 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] text-center text-black shadow-[0_0_60px_rgba(212,160,23,0.35)] ring-8 ring-[#D4A017]/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_90px_rgba(212,160,23,0.45)] sm:h-56 sm:w-56 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-black shadow-inner">
-                        <ShieldCheck className="h-5 w-5" />
-                      </div>
-                      <span className="text-[15px] font-semibold">
-                        Iniciar Agora
-                      </span>
-                    </div>
-                  </button>
-                )}
-
-                <p className="mt-8 text-[11px] text-[#6B7280]">
-                  Seus dados são criptografados ponta a ponta.
-                </p>
-              </div>
-            </div>
-          )}
+          {/* TELA 1 - START removida: o usuário entra direto na seleção de hospital. */}
 
           {/* TELA 2 - HOSPITAL + CLÍNICA */}
           {view === "hospital" && (
@@ -2862,6 +2726,22 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                       />
                       <span className="text-[11px] text-[#9CA3AF]">
                         Mesma instituição que foi realizada a cirurgia
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Verificação de consistência entre documentos (movida da tela "Iniciar Agora") */}
+                  <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#D4A017]/20 bg-black/40 px-4 py-3">
+                    <Checkbox
+                      id="consistency-check-hospital"
+                      checked={consistencyCheckEnabled}
+                      onCheckedChange={(v) => setConsistencyCheckEnabled(!!v)}
+                      className="border-[#D4A017]/50 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
+                    />
+                    <label htmlFor="consistency-check-hospital" className="text-sm text-[#F5F5F5] cursor-pointer leading-snug">
+                      Verificar consistência entre documentos
+                      <span className="block text-xs text-[#9CA3AF] mt-0.5">
+                        O sistema compara os dados de cada documento ao longo do processo
                       </span>
                     </label>
                   </div>

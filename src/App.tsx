@@ -213,6 +213,8 @@ const App = () => (
           <Route path="/medico/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
           <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
           <Route path="/medico/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
+          {/* Alias amigável para o fluxo de acompanhamento (usado pelo menu flutuante do médico) */}
+          <Route path="/medico/acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
 
           <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
           <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
