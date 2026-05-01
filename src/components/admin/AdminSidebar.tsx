@@ -33,6 +33,7 @@ interface AdminSidebarProps {
   section?:
     | "home"
     | "faturamento"
+    | "sadt-acompanhamento"
     | "documentos"
     | "guia-solicitacao"
     | "guia-autorizacao"
@@ -49,7 +50,6 @@ interface AdminSidebarProps {
     | "guia-autorizacao"
     | "descricao-cirurgica"
     | "guia-honorarios"
-    | "sadt-acompanhamento"
     | "relatorio-repasse";
   assinaturasSubsection?: "dashboard" | "assinantes" | "planos" | "formulario-site";
 }
@@ -268,15 +268,6 @@ function SuperAdminMenu({
               Guia de Honorários
             </span>
           </button>
-          <button
-            className={currentDocumentosSub === "sadt-acompanhamento" ? blockItemActive : blockItemInactive}
-            onClick={() => navigate("/admin/sadt-acompanhamento")}
-          >
-            <span className="ml-7 flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 opacity-70" />
-              Acompanhamento SADT
-            </span>
-          </button>
           <LockedMenuItem label="Relatório de Repasse" isSubItem className={blockItemInactive} />
         </div>
       </div>
@@ -291,6 +282,19 @@ function SuperAdminMenu({
             <LineChart className="h-4 w-4" />
           </span>
           <span className="font-medium">Faturamento</span>
+        </span>
+      </button>
+
+      {/* Acompanhamento SADT */}
+      <button
+        className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/sadt-acompanhamento")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
+            <Activity className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Acompanhamento SADT</span>
         </span>
       </button>
 
@@ -407,6 +411,21 @@ function DefaultMenu({
         />
       )}
 
+      {/* Acompanhamento SADT */}
+      <button
+        className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
+        onClick={() =>
+          navigate(isMedico ? "/medico/sadt-acompanhamento" : "/admin/sadt-acompanhamento")
+        }
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
+            <Activity className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Acompanhamento SADT</span>
+        </span>
+      </button>
+
       {/* Documentos */}
       <div className={blockContainer}>
         <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
@@ -471,18 +490,6 @@ function DefaultMenu({
           ) : (
             <LockedMenuItem label="Guia de Honorários" isSubItem className={blockItemInactive} />
           )}
-
-          <button
-            className={currentDocumentosSub === "sadt-acompanhamento" ? blockItemActive : blockItemInactive}
-            onClick={() =>
-              navigate(isMedico ? "/medico/sadt-acompanhamento" : "/admin/sadt-acompanhamento")
-            }
-          >
-            <span className="ml-7 flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 opacity-70" />
-              Acompanhamento SADT
-            </span>
-          </button>
 
           <LockedMenuItem label="Relatório de Repasse" isSubItem className={blockItemInactive} />
         </div>
@@ -662,12 +669,12 @@ const AdminSidebar = ({
     const path = location.pathname;
     if (path.startsWith("/admin/assinaturas")) return "assinaturas";
     if (path.startsWith("/admin/faturamento")) return "faturamento";
+    if (path.startsWith("/admin/sadt-acompanhamento")) return "sadt-acompanhamento";
+    if (path.startsWith("/medico/sadt-acompanhamento")) return "sadt-acompanhamento";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
     if (path.startsWith("/admin/guia-honorarios")) return "documentos";
     if (path.startsWith("/admin/descricao-cirurgica")) return "documentos";
-    if (path.startsWith("/admin/sadt-acompanhamento")) return "documentos";
-    if (path.startsWith("/medico/sadt-acompanhamento")) return "documentos";
     if (path.startsWith("/descricao-cirurgica")) return "documentos";
     if (path.startsWith("/cadastro/clinicas")) return "cadastro";
     if (path.startsWith("/cadastro/hospitais")) return "cadastro";
@@ -696,8 +703,6 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/guia-autorizacao")) return "guia-autorizacao";
     if (path.startsWith("/admin/guia-honorarios")) return "guia-honorarios";
     if (path.startsWith("/admin/descricao-cirurgica")) return "descricao-cirurgica";
-    if (path.startsWith("/admin/sadt-acompanhamento")) return "sadt-acompanhamento";
-    if (path.startsWith("/medico/sadt-acompanhamento")) return "sadt-acompanhamento";
     return undefined;
   }, [location.pathname, documentosSubsection]);
 
