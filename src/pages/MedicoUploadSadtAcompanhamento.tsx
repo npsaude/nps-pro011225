@@ -6,6 +6,7 @@ import {
   Loader2,
   Upload,
   X,
+  AlertTriangle,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,16 @@ import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { showError, showSuccess } from "@/utils/toast";
 import { compressFiles } from "@/utils/image-compression";
 
-type ViewState = "upload" | "processing" | "success";
+type ViewState = "upload" | "processing" | "duplicate" | "success";
+
+interface GuiaExistente {
+  id: string;
+  numero_guia_prestador: string;
+  nome_beneficiario: string | null;
+  data_inicio_atendimento: string | null;
+  valor_total_geral: string | number | null;
+  created_at: string;
+}
 
 const isPdfFile = (file: File) =>
   file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
@@ -35,6 +45,11 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [view, setView] = useState<ViewState>("upload");
   const [isUploading, setIsUploading] = useState(false);
+  const [guiaExistente, setGuiaExistente] = useState<GuiaExistente | null>(null);
+  const [numeroDuplicado, setNumeroDuplicado] = useState<string>("");
+  const [nomeBeneficiarioDuplicado, setNomeBeneficiarioDuplicado] = useState<string>("");
+  // Paths já enviados ao storage — reutilizados se o usuário confirmar envio duplicado
+  const uploadedPathsRef = useRef<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -139,16 +154,10 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleUpload = async () => {
-    if (files.length === 0) {
-      showError("Selecione pelo menos um arquivo para enviar.");
-      return;
-    }
-
+  // Faz upload dos arquivos para o storage e chama a edge function
+  const processarEnvio = async (forceInsert = false) => {
     setIsUploading(true);
     setView("processing");
-
-    const uploadedFilePaths: string[] = [];
 
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -162,29 +171,39 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
       const userId = userData.user.id;
       const bucketName = "NPS-pro";
 
-      const uploadItems = await expandFilesToUploadItems(files);
-      if (uploadItems.length === 0) {
-        throw new Error("Nenhum arquivo válido foi gerado para envio.");
-      }
+      // Reutilizar paths já enviados se for reenvio forçado (duplicata confirmada)
+      let uploadedFilePaths: string[] = forceInsert
+        ? uploadedPathsRef.current
+        : [];
 
-      for (const item of uploadItems) {
-        const safeName = sanitizeFileName(item.suggestedName);
-        const timestamp = Date.now();
-        const filePath = `sadt_acompanhamento/${userId}/${timestamp}-${safeName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, item.data, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: item.contentType,
-          });
-
-        if (uploadError) {
-          throw new Error(`Falha ao enviar "${safeName}": ${uploadError.message}`);
+      if (!forceInsert) {
+        const uploadItems = await expandFilesToUploadItems(files);
+        if (uploadItems.length === 0) {
+          throw new Error("Nenhum arquivo válido foi gerado para envio.");
         }
 
-        uploadedFilePaths.push(filePath);
+        for (const item of uploadItems) {
+          const safeName = sanitizeFileName(item.suggestedName);
+          const timestamp = Date.now();
+          const filePath = `sadt_acompanhamento/${userId}/${timestamp}-${safeName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, item.data, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: item.contentType,
+            });
+
+          if (uploadError) {
+            throw new Error(`Falha ao enviar "${safeName}": ${uploadError.message}`);
+          }
+
+          uploadedFilePaths.push(filePath);
+        }
+
+        // Guardar paths para possível reenvio forçado
+        uploadedPathsRef.current = uploadedFilePaths;
       }
 
       const functionUrl =
@@ -192,12 +211,11 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
 
       const response = await fetch(functionUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
           files: uploadedFilePaths.map((path) => ({ path })),
+          forceInsert,
         }),
       });
 
@@ -215,8 +233,19 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
         throw new Error(errorMessage);
       }
 
+      // Duplicata detectada — mostrar aviso
+      if (responseJson?.duplicate === true) {
+        setGuiaExistente(responseJson.guia_existente ?? null);
+        setNumeroDuplicado(responseJson.numero_guia_prestador ?? "");
+        setNomeBeneficiarioDuplicado(responseJson.nome_beneficiario ?? "");
+        setView("duplicate");
+        setIsUploading(false);
+        return;
+      }
+
       showSuccess("SADT processada com sucesso!");
       setFiles([]);
+      uploadedPathsRef.current = [];
       setView("success");
     } catch (err) {
       const message =
@@ -228,6 +257,36 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleUpload = () => processarEnvio(false);
+
+  const handleConfirmarDuplicata = () => processarEnvio(true);
+
+  const handleCancelarDuplicata = () => {
+    uploadedPathsRef.current = [];
+    setGuiaExistente(null);
+    setNumeroDuplicado("");
+    setNomeBeneficiarioDuplicado("");
+    setFiles([]);
+    setView("upload");
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "—";
+    try {
+      const [year, month, day] = dateStr.split("T")[0].split("-");
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatCurrency = (val: string | number | null) => {
+    if (val === null || val === undefined) return "—";
+    const n = Number(val);
+    if (isNaN(n)) return "—";
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
   const totalArquivos = files.length;
@@ -261,6 +320,7 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
         </header>
 
         <main className="flex flex-1 flex-col items-center justify-start">
+          {/* TELA DE UPLOAD */}
           {view === "upload" && (
             <div className="mt-2 flex w-full max-w-md flex-col">
               <Input
@@ -394,6 +454,7 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
             </div>
           )}
 
+          {/* TELA DE PROCESSAMENTO */}
           {view === "processing" && (
             <div className="flex w-full max-w-md flex-col items-center justify-center py-16">
               <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#FFD700] via-[#D4A017] to-[#B8860B] shadow-[0_0_60px_rgba(212,160,23,0.35)]">
@@ -417,6 +478,89 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
             </div>
           )}
 
+          {/* TELA DE DUPLICATA */}
+          {view === "duplicate" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl border border-amber-500/30 px-6 py-7 shadow-[0_0_40px_rgba(212,160,23,0.12)]">
+                {/* Ícone de aviso */}
+                <div className="mb-5 flex flex-col items-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15 border border-amber-500/30">
+                    <AlertTriangle className="h-8 w-8 text-amber-400" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-[#F5F5F5]">
+                    Guia já enviada anteriormente
+                  </h2>
+                  <p className="mt-1 text-xs text-[#9CA3AF]">
+                    Esta guia já existe no sistema. Deseja enviar novamente?
+                  </p>
+                </div>
+
+                {/* Dados da guia duplicada */}
+                <div className="mb-6 rounded-xl bg-black/50 border border-[#D4A017]/15 px-4 py-4 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#D4A017]/70 mb-3">
+                    Registro existente
+                  </p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#9CA3AF]">Nº Guia Prestador</span>
+                    <span className="font-semibold text-[#F5F5F5]">{numeroDuplicado || "—"}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#9CA3AF]">Beneficiário</span>
+                    <span className="font-semibold text-[#F5F5F5] text-right max-w-[55%]">
+                      {guiaExistente?.nome_beneficiario || nomeBeneficiarioDuplicado || "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#9CA3AF]">Data atendimento</span>
+                    <span className="font-semibold text-[#F5F5F5]">
+                      {formatDate(guiaExistente?.data_inicio_atendimento ?? null)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#9CA3AF]">Valor total</span>
+                    <span className="font-semibold text-[#D4A017]">
+                      {formatCurrency(guiaExistente?.valor_total_geral ?? null)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#9CA3AF]">Enviada em</span>
+                    <span className="font-semibold text-[#F5F5F5]">
+                      {guiaExistente?.created_at
+                        ? formatDate(guiaExistente.created_at)
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Botões */}
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                    onClick={handleConfirmarDuplicata}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                    ) : (
+                      "Sim, enviar mesmo assim"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                    onClick={handleCancelarDuplicata}
+                    disabled={isUploading}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TELA DE SUCESSO */}
           {view === "success" && (
             <div className="flex w-full max-w-md flex-col items-center justify-center py-16 text-center">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#D4A017]/10 border border-[#D4A017]/25">

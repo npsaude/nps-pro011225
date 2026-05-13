@@ -425,7 +425,37 @@ Retorne no formato:
   const guia = parsed?.guia ?? {};
   const itens = Array.isArray(parsed?.itens) ? parsed.itens : [];
 
-  // 4) Inserir sadt_acompanhamento
+  // 4) Verificar duplicata pelo número da guia prestador
+  const numeroGuiaPrestador = guia.numero_guia_prestador ?? null;
+  const forceInsert = (body as any).forceInsert === true;
+
+  if (numeroGuiaPrestador && !forceInsert) {
+    const { data: existente } = await supabase
+      .from("sadt_acompanhamento")
+      .select("id, numero_guia_prestador, nome_beneficiario, data_inicio_atendimento, valor_total_geral, created_at")
+      .eq("medico_id", userId)
+      .eq("numero_guia_prestador", numeroGuiaPrestador)
+      .maybeSingle();
+
+    if (existente) {
+      console.log("[process-sadt-acompanhamento] Duplicata detectada para guia:", numeroGuiaPrestador);
+      return new Response(
+        JSON.stringify({
+          duplicate: true,
+          numero_guia_prestador: numeroGuiaPrestador,
+          nome_beneficiario: guia.nome_beneficiario ?? null,
+          guia_existente: existente,
+          message: `A guia ${numeroGuiaPrestador} já foi enviada anteriormente.`,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+  }
+
+  // 5) Inserir sadt_acompanhamento
   const filePaths = files.map((f) => f.path);
 
   const insertSadt: Record<string, unknown> = {
