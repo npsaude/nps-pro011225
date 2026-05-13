@@ -474,7 +474,17 @@ Retorne no formato:
     valor_total_taxas: toNumberOrNull(guia.valor_total_taxas),
     valor_total_materiais: toNumberOrNull(guia.valor_total_materiais),
     valor_total_medicamentos: toNumberOrNull(guia.valor_total_medicamentos),
-    valor_total_geral: toNumberOrNull(guia.valor_total_geral),
+    // Fallback: se a IA não extraiu valor_total_geral, soma os subtotais disponíveis
+    valor_total_geral: (() => {
+      const geral = toNumberOrNull(guia.valor_total_geral);
+      if (geral !== null) return geral;
+      const proc = toNumberOrNull(guia.valor_total_procedimentos) ?? 0;
+      const taxas = toNumberOrNull(guia.valor_total_taxas) ?? 0;
+      const mat = toNumberOrNull(guia.valor_total_materiais) ?? 0;
+      const med = toNumberOrNull(guia.valor_total_medicamentos) ?? 0;
+      const soma = proc + taxas + mat + med;
+      return soma > 0 ? soma : null;
+    })(),
     observacao: guia.observacao ?? null,
     data_emissao: normalizeDate(guia.data_emissao),
 
@@ -551,6 +561,18 @@ Retorne no formato:
         "[process-sadt-acompanhamento] Erro ao inserir itens_sadt_acompanhamento:",
         itensError,
       );
+    }
+
+    // Fallback secundário: se valor_total_geral ainda for null, somar valor_total dos itens
+    if (insertSadt.valor_total_geral === null && rows.length > 0) {
+      const somaItens = rows.reduce((acc: number, r: any) => acc + (r.valor_total ?? 0), 0);
+      if (somaItens > 0) {
+        console.log("[process-sadt-acompanhamento] Aplicando fallback: valor_total_geral = soma dos itens:", somaItens);
+        await supabase
+          .from("sadt_acompanhamento")
+          .update({ valor_total_geral: somaItens })
+          .eq("id", sadtId);
+      }
     }
   }
 
