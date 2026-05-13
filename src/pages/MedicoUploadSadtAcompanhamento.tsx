@@ -16,7 +16,7 @@ import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { showError, showSuccess } from "@/utils/toast";
 import { compressFiles } from "@/utils/image-compression";
 
-type ViewState = "upload" | "processing" | "duplicate" | "success";
+type ViewState = "upload" | "processing" | "duplicate" | "not_owner" | "success";
 
 interface GuiaExistente {
   id: string;
@@ -48,6 +48,12 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
   const [guiaExistente, setGuiaExistente] = useState<GuiaExistente | null>(null);
   const [numeroDuplicado, setNumeroDuplicado] = useState<string>("");
   const [nomeBeneficiarioDuplicado, setNomeBeneficiarioDuplicado] = useState<string>("");
+  const [notOwnerInfo, setNotOwnerInfo] = useState<{
+    profissional_nome_guia: string | null;
+    profissional_conselho_guia: string | null;
+    nome_beneficiario: string | null;
+    numero_guia_prestador: string | null;
+  } | null>(null);
   // Paths já enviados ao storage — reutilizados se o usuário confirmar envio duplicado
   const uploadedPathsRef = useRef<string[]>([]);
 
@@ -155,7 +161,7 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
   };
 
   // Faz upload dos arquivos para o storage e chama a edge function
-  const processarEnvio = async (forceInsert = false) => {
+  const processarEnvio = async (forceInsert = false, forceOwnership = false) => {
     setIsUploading(true);
     setView("processing");
 
@@ -216,6 +222,7 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
           userId,
           files: uploadedFilePaths.map((path) => ({ path })),
           forceInsert,
+          forceOwnership,
         }),
       });
 
@@ -231,6 +238,19 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
           responseJson?.error ??
           "Arquivos enviados, mas houve erro ao processar a SADT.";
         throw new Error(errorMessage);
+      }
+
+      // Guia não pertence ao médico — mostrar aviso
+      if (responseJson?.not_owner === true) {
+        setNotOwnerInfo({
+          profissional_nome_guia: responseJson.profissional_nome_guia ?? null,
+          profissional_conselho_guia: responseJson.profissional_conselho_guia ?? null,
+          nome_beneficiario: responseJson.nome_beneficiario ?? null,
+          numero_guia_prestador: responseJson.numero_guia_prestador ?? null,
+        });
+        setView("not_owner");
+        setIsUploading(false);
+        return;
       }
 
       // Duplicata detectada — mostrar aviso
@@ -259,15 +279,25 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
     }
   };
 
-  const handleUpload = () => processarEnvio(false);
+  const handleUpload = () => processarEnvio(false, false);
 
-  const handleConfirmarDuplicata = () => processarEnvio(true);
+  const handleConfirmarDuplicata = () => processarEnvio(true, true);
 
   const handleCancelarDuplicata = () => {
     uploadedPathsRef.current = [];
     setGuiaExistente(null);
     setNumeroDuplicado("");
     setNomeBeneficiarioDuplicado("");
+    setFiles([]);
+    setView("upload");
+  };
+
+  // Confirmar importação mesmo sem ser dono da guia
+  const handleConfirmarNotOwner = () => processarEnvio(false, true);
+
+  const handleCancelarNotOwner = () => {
+    uploadedPathsRef.current = [];
+    setNotOwnerInfo(null);
     setFiles([]);
     setView("upload");
   };
@@ -474,6 +504,90 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
 
               <div className="mt-6 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-black/50 border border-[#D4A017]/10">
                 <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] animate-[pulse_1.8s_ease-in-out_infinite]" />
+              </div>
+            </div>
+          )}
+
+          {/* TELA: GUIA NÃO PERTENCE AO MÉDICO */}
+          {view === "not_owner" && (
+            <div className="mt-2 flex w-full max-w-md flex-col items-center">
+              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl border border-red-500/30 px-6 py-7 shadow-[0_0_40px_rgba(239,68,68,0.10)]">
+                {/* Ícone de aviso */}
+                <div className="mb-5 flex flex-col items-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
+                    <AlertTriangle className="h-8 w-8 text-red-400" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-[#F5F5F5]">
+                    Guia não pertence a você
+                  </h2>
+                  <p className="mt-1 text-xs text-[#9CA3AF]">
+                    O profissional identificado nesta guia é diferente do seu cadastro. Deseja importar mesmo assim?
+                  </p>
+                </div>
+
+                {/* Dados da guia */}
+                <div className="mb-6 rounded-xl bg-black/50 border border-red-500/15 px-4 py-4 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-red-400/70 mb-3">
+                    Profissional identificado na guia
+                  </p>
+                  {notOwnerInfo?.profissional_nome_guia && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#9CA3AF]">Nome</span>
+                      <span className="font-semibold text-[#F5F5F5] text-right max-w-[60%]">
+                        {notOwnerInfo.profissional_nome_guia}
+                      </span>
+                    </div>
+                  )}
+                  {notOwnerInfo?.profissional_conselho_guia && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#9CA3AF]">Nº Conselho</span>
+                      <span className="font-semibold text-[#F5F5F5]">
+                        {notOwnerInfo.profissional_conselho_guia}
+                      </span>
+                    </div>
+                  )}
+                  {notOwnerInfo?.nome_beneficiario && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#9CA3AF]">Beneficiário</span>
+                      <span className="font-semibold text-[#F5F5F5] text-right max-w-[55%]">
+                        {notOwnerInfo.nome_beneficiario}
+                      </span>
+                    </div>
+                  )}
+                  {notOwnerInfo?.numero_guia_prestador && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#9CA3AF]">Nº Guia</span>
+                      <span className="font-semibold text-[#F5F5F5]">
+                        {notOwnerInfo.numero_guia_prestador}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botões */}
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
+                    onClick={handleConfirmarNotOwner}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importando...</>
+                    ) : (
+                      "Sim, importar mesmo assim"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
+                    onClick={handleCancelarNotOwner}
+                    disabled={isUploading}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
               </div>
             </div>
           )}

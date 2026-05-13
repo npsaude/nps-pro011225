@@ -425,9 +425,61 @@ Retorne no formato:
   const guia = parsed?.guia ?? {};
   const itens = Array.isArray(parsed?.itens) ? parsed.itens : [];
 
-  // 4) Verificar duplicata pelo número da guia prestador
-  const numeroGuiaPrestador = guia.numero_guia_prestador ?? null;
+  // 4) Buscar dados do médico logado para verificar pertencimento da guia
+  const { data: medicoData } = await supabase
+    .from("medicos")
+    .select("nome, crm")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const medicoNome: string = (medicoData as any)?.nome ?? "";
+  const medicoCrm: string = (medicoData as any)?.crm ?? "";
+
+  // Campos da guia que identificam o profissional executante/solicitante
+  const guiaProfNome: string = guia.profissional_nome ?? guia.solicitante_profissional_nome ?? "";
+  const guiaProfConselho: string = guia.profissional_numero_conselho ?? guia.solicitante_profissional_numero_conselho ?? "";
+
   const forceInsert = (body as any).forceInsert === true;
+  const forceOwnership = (body as any).forceOwnership === true;
+
+  // Verificar se o médico participa da guia (por CRM ou nome)
+  if (!forceOwnership && !forceInsert) {
+    const normalizeStr = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+    const crmMatch =
+      medicoCrm &&
+      guiaProfConselho &&
+      normalizeStr(medicoCrm).replace(/\D/g, "") === normalizeStr(guiaProfConselho).replace(/\D/g, "");
+
+    const nomeMatch =
+      medicoNome &&
+      guiaProfNome &&
+      normalizeStr(guiaProfNome).includes(normalizeStr(medicoNome).split(" ")[0]);
+
+    const pertence = crmMatch || nomeMatch;
+
+    if (!pertence && (guiaProfNome || guiaProfConselho)) {
+      console.log("[process-sadt-acompanhamento] Guia não pertence ao médico. Médico:", medicoNome, medicoCrm, "| Guia profissional:", guiaProfNome, guiaProfConselho);
+      return new Response(
+        JSON.stringify({
+          not_owner: true,
+          profissional_nome_guia: guiaProfNome || null,
+          profissional_conselho_guia: guiaProfConselho || null,
+          nome_beneficiario: guia.nome_beneficiario ?? null,
+          numero_guia_prestador: guia.numero_guia_prestador ?? null,
+          message: `Esta guia pertence ao profissional "${guiaProfNome || guiaProfConselho}" e não ao médico logado.`,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+  }
+
+  // 5) Verificar duplicata pelo número da guia prestador
+  const numeroGuiaPrestador = guia.numero_guia_prestador ?? null;
 
   if (numeroGuiaPrestador && !forceInsert) {
     const { data: existente } = await supabase
@@ -455,7 +507,7 @@ Retorne no formato:
     }
   }
 
-  // 5) Inserir sadt_acompanhamento
+  // 6) Inserir sadt_acompanhamento
   const filePaths = files.map((f) => f.path);
 
   const insertSadt: Record<string, unknown> = {
@@ -558,7 +610,7 @@ Retorne no formato:
 
   const sadtId = sadtCreated.id;
 
-  // 5) Inserir itens (se houver)
+  // 7) Inserir itens (se houver)
   if (Array.isArray(itens) && itens.length > 0) {
     const rows = itens.map((it: any) => ({
       sadt_id: sadtId,
