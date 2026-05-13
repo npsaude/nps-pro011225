@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://pokyribuibmbeorrcsgk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBva3lyaWJ1aWJtYmVvcnJjc2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzc3OTAsImV4cCI6MjA3OTg1Mzc5MH0.YRSDKlnIdJPkQCXjo9FEci_YvRXgO717PqbkZpm3h2k";
+// Projeto ativo: pokyribuibmbeorrcsgk (dados reais)
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

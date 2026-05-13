@@ -20,6 +20,7 @@ import {
   Upload,
   Scissors,
   Mail,
+  Activity,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -32,6 +33,7 @@ interface AdminSidebarProps {
   section?:
     | "home"
     | "faturamento"
+    | "sadt-acompanhamento"
     | "documentos"
     | "guia-solicitacao"
     | "guia-autorizacao"
@@ -283,6 +285,19 @@ function SuperAdminMenu({
         </span>
       </button>
 
+      {/* Acompanhamento SADT */}
+      <button
+        className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/sadt-acompanhamento")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
+            <Activity className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Acompanhamento SADT</span>
+        </span>
+      </button>
+
       {/* Modelos de Emails */}
       <button
         className={currentSection === "modelos-email" ? activeMain : inactiveMain}
@@ -395,6 +410,21 @@ function DefaultMenu({
           className={inactiveMain}
         />
       )}
+
+      {/* Acompanhamento SADT */}
+      <button
+        className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
+        onClick={() =>
+          navigate(isMedico ? "/medico/sadt-acompanhamento" : "/admin/sadt-acompanhamento")
+        }
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
+            <Activity className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Acompanhamento SADT</span>
+        </span>
+      </button>
 
       {/* Documentos */}
       <div className={blockContainer}>
@@ -639,6 +669,8 @@ const AdminSidebar = ({
     const path = location.pathname;
     if (path.startsWith("/admin/assinaturas")) return "assinaturas";
     if (path.startsWith("/admin/faturamento")) return "faturamento";
+    if (path.startsWith("/admin/sadt-acompanhamento")) return "sadt-acompanhamento";
+    if (path.startsWith("/medico/sadt-acompanhamento")) return "sadt-acompanhamento";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
     if (path.startsWith("/admin/guia-honorarios")) return "documentos";

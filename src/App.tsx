@@ -55,6 +55,9 @@ import AdminModelosDescricaoCirurgica from "./pages/AdminModelosDescricaoCirurgi
 import AdminModelosDescricaoCirurgicaForm from "./pages/AdminModelosDescricaoCirurgicaForm";
 import AdminEmailTemplates from "./pages/AdminEmailTemplates";
 import AdminEmailTemplateForm from "./pages/AdminEmailTemplateForm";
+import SadtAcompanhamentoPage from "./pages/SadtAcompanhamento";
+import SadtAcompanhamentoFormPage from "./pages/SadtAcompanhamentoForm";
+import MedicoUploadSadtAcompanhamento from "./pages/MedicoUploadSadtAcompanhamento";
 
 const queryClient = new QueryClient();
 
@@ -202,6 +205,16 @@ const App = () => (
           <Route path="/admin/guia-honorarios" element={<GuiaHonorariosPage />} />
           <Route path="/admin/guia-honorarios/nova" element={<GuiaHonorariosFormPage />} />
           <Route path="/admin/guia-honorarios/editar/:id" element={<GuiaHonorariosFormPage />} />
+
+          {/* Acompanhamento de SADT */}
+          <Route path="/admin/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
+          <Route path="/admin/sadt-acompanhamento/nova" element={<SadtAcompanhamentoFormPage />} />
+          <Route path="/admin/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
+          <Route path="/medico/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
+          <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
+          <Route path="/medico/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
+          {/* Alias amigável para o fluxo de acompanhamento (usado pelo menu flutuante do médico) */}
+          <Route path="/medico/acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
 
           <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
           <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
