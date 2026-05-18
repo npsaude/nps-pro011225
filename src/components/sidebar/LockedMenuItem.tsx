@@ -37,10 +37,10 @@ export function LockedMenuItem({
           onClick={() => setOpen(true)}
           className={className}
         >
-          <span className="ml-7 flex items-center gap-1.5 opacity-40">
-            {label}
+          <span className="ml-4 flex min-w-0 flex-1 items-start gap-1.5 text-left opacity-40">
+            <span className="leading-tight">{label}</span>
           </span>
-          <Lock className="h-3 w-3 opacity-40" />
+          <Lock className="ml-auto h-3 w-3 opacity-40" />
         </button>
 
         <LockedDialog open={open} onOpenChange={setOpen} onViewPlans={() => navigate("/planos")} />

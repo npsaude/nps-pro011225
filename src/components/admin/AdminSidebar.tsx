@@ -74,7 +74,7 @@ const blockContainer =
   "mt-1 rounded-2xl bg-sidebar-accent/40 p-2 text-xs text-sidebar-foreground ring-1 ring-sidebar-border";
 
 const blockItemBase =
-  "flex w-full items-center justify-between rounded-xl px-3 py-1.5 text-xs transition-colors";
+  "flex w-full items-start justify-start rounded-xl px-3 py-1.5 text-left text-xs transition-colors";
 const blockItemActive =
   blockItemBase + " bg-primary text-primary-foreground shadow-sm";
 const blockItemInactive =
