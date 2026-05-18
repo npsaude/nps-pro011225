@@ -136,7 +136,7 @@ const SadtAcompanhamentoPage: React.FC = () => {
                 Acompanhamento de SADT
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Gerencie as guias SP/SADT processadas.
+                Gerencie as guias SADT processadas.
               </p>
             </div>
             <div className="flex items-center gap-3">

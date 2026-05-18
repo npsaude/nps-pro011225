@@ -258,9 +258,9 @@ serve(async (req) => {
 
   // 3) Prompt e formato JSON
   const jsonFormatInstructions = `
-Você é um assistente especializado em leitura de GUIAS DE SP/SADT (TISS/ANS) — Guia de Serviço Profissional/Serviço Auxiliar de Diagnóstico e Terapia — e extração estruturada de dados.
+Você é um assistente especializado em leitura de GUIAS SADT (TISS/ANS) — Guia de Serviço Profissional/Serviço Auxiliar de Diagnóstico e Terapia — e extração estruturada de dados.
 
-A partir das IMAGENS anexadas (fotos da guia SP/SADT), extraia os campos abaixo.
+A partir das IMAGENS anexadas (fotos da guia SADT), extraia os campos abaixo.
 
 REGRAS:
 - Analise TODAS as imagens e consolide em um único JSON.
@@ -360,7 +360,7 @@ Retorne no formato:
       apiKey: openaiToken,
       model: openaiModel,
       systemPrompt:
-        "Você é um assistente de IA especializado em leitura de guias TISS/ANS (SP/SADT) brasileiras. Extraia TODOS os dados visíveis com máxima precisão. Sempre responda com JSON válido e completo.",
+        "Você é um assistente de IA especializado em leitura de guias TISS/ANS SADT brasileiras. Extraia TODOS os dados visíveis com máxima precisão. Sempre responda com JSON válido e completo.",
       userText: jsonFormatInstructions,
       imageBase64List,
       maxTokens: 4096,

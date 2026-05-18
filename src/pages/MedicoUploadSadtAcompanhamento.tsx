@@ -382,7 +382,7 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
                   Enviar Guia SADT
                 </h1>
                 <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  Envie imagens ou PDF da guia SP/SADT para a IA extrair e salvar os dados.
+                  Envie imagens ou PDF da guia SADT para a IA extrair e salvar os dados.
                 </p>
               </div>
 
