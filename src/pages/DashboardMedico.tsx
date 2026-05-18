@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
+import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 type Period = "mes" | "trimestre" | "ano";
 
@@ -296,7 +297,7 @@ const DashboardMedico: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 text-[#F5F5F5]">
       <Dialog open={hospitalModalOpen} onOpenChange={setHospitalModalOpen}>
         <DialogContent className="bg-[#0b0b0b] border border-[#D4A017]/20 text-[#F5F5F5]">
           <DialogHeader>
@@ -523,6 +524,8 @@ const DashboardMedico: React.FC = () => {
           </p>
         </section>
       </div>
+
+      <MedicoFloatingNav />
     </div>
   );
 };

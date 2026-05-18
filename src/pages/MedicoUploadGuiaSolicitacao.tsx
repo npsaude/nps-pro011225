@@ -425,8 +425,8 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
               <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
                 Analisando Guia de Solicitação
               </h2>
-              <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs text-center max-w-xs">
-                A IA está extraindo as informações. Isso pode levar alguns
+              <p className="mt-2 max-w-xs text-center text-[11px] text-[#9CA3AF] sm:text-xs">
+                O sistema está extraindo as informações. Isso pode levar alguns
                 segundos...
               </p>
 

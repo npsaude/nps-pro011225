@@ -9,7 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -31,6 +31,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 type SadtRow = {
   id: string;
@@ -60,6 +61,8 @@ function formatCurrency(v: number | null) {
 
 const SadtAcompanhamentoPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMedicoRoute = location.pathname.startsWith("/medico/");
   const [rows, setRows] = useState<SadtRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -121,7 +124,7 @@ const SadtAcompanhamentoPage: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900">
+    <div className={`relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 ${isMedicoRoute ? "pb-32" : ""}`}>
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="sadt-acompanhamento" />
 
@@ -372,6 +375,8 @@ const SadtAcompanhamentoPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isMedicoRoute && <MedicoFloatingNav />}
     </div>
   );
 };

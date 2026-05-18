@@ -54,6 +54,7 @@ import {
 } from "@/utils/consistencyCheck";
 import { useBillingQuota } from "@/hooks/use-billing-quota";
 import { listarFavoritos } from "@/services/clinicas-service";
+import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -2526,7 +2527,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 text-[#F5F5F5]">
       {/* Fundo premium */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
@@ -3774,6 +3775,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           onSkip={handleSkipEmails}
         />
       ) : null}
+
+      <MedicoFloatingNav />
     </div>
   );
 };

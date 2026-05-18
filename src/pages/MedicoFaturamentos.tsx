@@ -27,6 +27,7 @@ import MedicoFaturamentosSummary from "@/components/faturamento/MedicoFaturament
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import MedicoFaturamentosTable from "@/components/faturamento/MedicoFaturamentosTable";
 import MedicoFaturamentoDetailsSheet from "@/components/faturamento/MedicoFaturamentoDetailsSheet";
+import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 function hasAny(arr: string[] | null | undefined): boolean {
   return Array.isArray(arr) && arr.length > 0;
@@ -203,7 +204,7 @@ export default function MedicoFaturamentos() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 text-[#F5F5F5]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
 
@@ -431,6 +432,8 @@ export default function MedicoFaturamentos() {
           record={selected}
         />
       </div>
+
+      <MedicoFloatingNav />
     </div>
   );
 }

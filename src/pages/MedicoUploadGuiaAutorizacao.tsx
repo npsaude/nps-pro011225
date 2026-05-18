@@ -27,6 +27,7 @@ import {
   showLoading,
   dismissToast,
 } from "@/utils/toast";
+import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 type ViewState = "choice" | "upload" | "processing" | "success";
 type TipoCirurgia = "ELETIVA" | "EMERGENCIAL" | null;
@@ -307,7 +308,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 text-[#F5F5F5]">
       {/* Fundo premium */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
@@ -616,9 +617,9 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
               <h2 className="text-base font-semibold text-[#F5F5F5] sm:text-lg">
                 Analisando Guia de Autorização
               </h2>
-              <p className="mt-2 text-[11px] text-[#9CA3AF] sm:text-xs text-center max-w-xs">
-                A IA está extraindo as informações das imagens. Isso pode levar
-                alguns segundos...
+              <p className="mt-2 max-w-xs text-center text-[11px] text-[#9CA3AF] sm:text-xs">
+                O sistema está extraindo as informações das imagens. Isso pode
+                levar alguns segundos...
               </p>
 
               {/* Barra de progresso animada */}
@@ -714,6 +715,8 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
           )}
         </main>
       </div>
+
+      <MedicoFloatingNav />
     </div>
   );
 };
