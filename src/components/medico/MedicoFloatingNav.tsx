@@ -48,7 +48,7 @@ const MedicoFloatingNav: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[env(safe-area-inset-bottom)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       {/* Backdrop quando o menu está aberto */}
       {open && (
