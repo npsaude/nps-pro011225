@@ -294,7 +294,7 @@ function SuperAdminMenu({
           <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
             <Activity className="h-4 w-4" />
           </span>
-          <span className="font-medium">Acompanhamento SADT</span>
+          <span className="font-medium">Acomp. SADT</span>
         </span>
       </button>
 
@@ -420,7 +420,7 @@ function DefaultMenu({
           <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
             <Activity className="h-4 w-4" />
           </span>
-          <span className="font-medium">Acompanhamento SADT</span>
+          <span className="font-medium">Acomp. SADT</span>
         </span>
       </button>
 
