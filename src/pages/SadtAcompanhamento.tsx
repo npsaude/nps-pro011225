@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableHeader,
@@ -129,182 +130,189 @@ const SadtAcompanhamentoPage: React.FC = () => {
         <AdminSidebar section="sadt-acompanhamento" />
 
         <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
-          {/* Header */}
-          <header className="mb-1 flex items-center justify-between gap-3">
+          <header className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col">
-              <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-900 sm:text-2xl">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
-                  <Activity className="h-4 w-4" />
-                </span>
+              <h1 className="text-[26px] font-semibold tracking-tight text-slate-900">
                 Acompanhamento de SADT
               </h1>
-              <p className="text-xs text-slate-400 sm:text-sm">
+              <p className="mt-1 text-[13px] text-slate-500">
                 Gerencie as guias SADT processadas.
               </p>
             </div>
+
             <div className="flex items-center gap-3">
-              <div className="hidden items-center rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200/80 focus-within:ring-teal-500 sm:flex">
-                <Search className="mr-2 h-4 w-4 text-slate-400" />
+              <div className="hidden items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-xs text-slate-500 shadow-sm ring-1 ring-slate-200 backdrop-blur md:flex">
+                <Search className="h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Buscar SADT..."
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="h-7 w-40 bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none sm:w-52 sm:text-sm"
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-40 bg-transparent text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none"
                 />
               </div>
+
               <AdminHeaderActions notificationsCount={0} />
             </div>
           </header>
 
-          {/* Conteúdo */}
-          <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl">
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-500">
-                    Guias SADT cadastradas
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Total:{" "}
-                    <span className="font-medium text-teal-600">
-                      {filtered.length} registro(s)
-                    </span>
-                  </p>
-                </div>
-                <Button
-                  onClick={() => navigate("/admin/sadt-acompanhamento/nova")}
-                  className="gap-2 rounded-full bg-teal-600 px-5 text-sm font-semibold text-white hover:bg-teal-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nova SADT
-                </Button>
-              </div>
+          <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <main className="flex-1 space-y-4">
+              <Card className="rounded-[22px] border-[#E0E7F5] bg-white shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <CardTitle className="text-[14px] font-semibold text-slate-900">
+                        Guias SADT cadastradas
+                      </CardTitle>
+                      <CardDescription className="mt-1 text-[12px] text-slate-500">
+                        Total:{" "}
+                        <span className="font-medium text-teal-600">
+                          {filtered.length} registro(s)
+                        </span>
+                      </CardDescription>
+                    </div>
 
-              {/* Busca mobile */}
-              <div className="mb-3 flex items-center rounded-full bg-slate-100 px-3 py-1 ring-1 ring-slate-200/80 sm:hidden">
-                <Search className="mr-2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar SADT..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="h-7 w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
-                />
-              </div>
-
-              {/* Tabela */}
-              <div className="overflow-x-auto rounded-xl border border-slate-100">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
-                      <TableHead className="py-3 pl-4">Nº Guia Prestador</TableHead>
-                      <TableHead>Nº Guia SADT</TableHead>
-                      <TableHead>Beneficiário</TableHead>
-                      <TableHead>Solicitante</TableHead>
-                      <TableHead>Executante</TableHead>
-                      <TableHead>Autorização</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="text-center">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
-                          Carregando...
-                        </TableCell>
-                      </TableRow>
-                    ) : paginated.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
-                          Nenhuma SADT encontrada.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginated.map((g) => (
-                        <TableRow
-                          key={g.id}
-                          className="border-b border-slate-50 text-sm hover:bg-slate-50/60"
-                        >
-                          <TableCell className="pl-4 font-medium text-slate-800">
-                            {g.numero_guia_prestador || "—"}
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {g.numero_guia_sadt || "—"}
-                          </TableCell>
-                          <TableCell className="text-slate-800">
-                            {g.nome_beneficiario || "—"}
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {g.solicitante_nome || "—"}
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {g.executante_nome || "—"}
-                          </TableCell>
-                          <TableCell className="text-slate-500 text-xs">
-                            {formatDate(g.data_autorizacao)}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-slate-800">
-                            {formatCurrency(g.valor_total_geral)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                title="Visualizar"
-                                onClick={() => setViewTarget(g)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-teal-50 hover:text-teal-600"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
-                                title="Editar"
-                                onClick={() => navigate(`/admin/sadt-acompanhamento/editar/${g.id}`)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                title="Excluir"
-                                onClick={() => setDeleteTarget(g)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Paginação */}
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                  <span>
-                    Página {page} de {totalPages}
-                  </span>
-                  <div className="flex gap-1">
-                    <button
-                      disabled={page === 1}
-                      onClick={() => setPage((p) => p - 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
+                    <Button
+                      onClick={() => navigate("/admin/sadt-acompanhamento/nova")}
+                      className="gap-2 rounded-[14px] bg-teal-600 px-5 text-sm font-semibold text-white hover:bg-teal-700"
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      disabled={page === totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
+                      <Plus className="h-4 w-4" />
+                      Nova SADT
+                    </Button>
                   </div>
-                </div>
-              )}
-            </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4 pt-1">
+                  <div className="flex items-center rounded-full bg-slate-100 px-3 py-1 ring-1 ring-slate-200/80 md:hidden">
+                    <Search className="mr-2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar SADT..."
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setPage(1);
+                      }}
+                      className="h-7 w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-100">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
+                          <TableHead className="py-3 pl-4">Nº Guia Prestador</TableHead>
+                          <TableHead>Nº Guia SADT</TableHead>
+                          <TableHead>Beneficiário</TableHead>
+                          <TableHead>Solicitante</TableHead>
+                          <TableHead>Executante</TableHead>
+                          <TableHead>Autorização</TableHead>
+                          <TableHead className="text-right">Valor Total</TableHead>
+                          <TableHead className="text-center">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loading ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                              Carregando...
+                            </TableCell>
+                          </TableRow>
+                        ) : paginated.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                              Nenhuma SADT encontrada.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          paginated.map((g) => (
+                            <TableRow
+                              key={g.id}
+                              className="border-b border-slate-50 text-sm hover:bg-slate-50/60"
+                            >
+                              <TableCell className="pl-4 font-medium text-slate-800">
+                                {g.numero_guia_prestador || "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-600">
+                                {g.numero_guia_sadt || "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-800">
+                                {g.nome_beneficiario || "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-600">
+                                {g.solicitante_nome || "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-600">
+                                {g.executante_nome || "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-500 text-xs">
+                                {formatDate(g.data_autorizacao)}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold text-slate-800">
+                                {formatCurrency(g.valor_total_geral)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    title="Visualizar"
+                                    onClick={() => setViewTarget(g)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-teal-50 hover:text-teal-600"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    title="Editar"
+                                    onClick={() => navigate(`/admin/sadt-acompanhamento/editar/${g.id}`)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    title="Excluir"
+                                    onClick={() => setDeleteTarget(g)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>
+                        Página {page} de {totalPages}
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          disabled={page === 1}
+                          onClick={() => setPage((p) => p - 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                          disabled={page === totalPages}
+                          onClick={() => setPage((p) => p + 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-100"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </main>
           </div>
         </div>
       </div>
