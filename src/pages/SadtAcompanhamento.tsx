@@ -8,6 +8,7 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  MoreHorizontal,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
@@ -257,28 +266,43 @@ const SadtAcompanhamentoPage: React.FC = () => {
                                 {formatCurrency(g.valor_total_geral)}
                               </TableCell>
                               <TableCell>
-                                <div className="flex items-center justify-center gap-1">
-                                  <button
-                                    title="Visualizar"
-                                    onClick={() => setViewTarget(g)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-teal-50 hover:text-teal-600"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    title="Editar"
-                                    onClick={() => navigate(`/admin/sadt-acompanhamento/editar/${g.id}`)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    title="Excluir"
-                                    onClick={() => setDeleteTarget(g)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
+                                <div className="flex items-center justify-center">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        title="Ações"
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                                      >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-44">
+                                      <DropdownMenuLabel className="text-xs">Ações</DropdownMenuLabel>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => setViewTarget(g)}
+                                        className="cursor-pointer"
+                                      >
+                                        <Eye className="mr-2 h-4 w-4 text-teal-600" />
+                                        Visualizar
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => navigate(`/admin/sadt-acompanhamento/editar/${g.id}`)}
+                                        className="cursor-pointer"
+                                      >
+                                        <Pencil className="mr-2 h-4 w-4 text-amber-600" />
+                                        Editar
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => setDeleteTarget(g)}
+                                        className="cursor-pointer text-rose-600 focus:text-rose-700"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Excluir
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </TableCell>
                             </TableRow>
