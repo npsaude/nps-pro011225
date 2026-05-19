@@ -60,7 +60,7 @@ const AdminFinancas = () => {
               </div>
 
               <div className="flex items-center justify-end gap-3">
-                <AdminHeaderActions notificationsCount={1} />
+                <AdminHeaderActions notificationsCount={0} />
 
                 <div className="flex rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-300">
                   {periodOptions.map((opt) => (

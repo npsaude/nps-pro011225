@@ -140,7 +140,7 @@ const AdminFaturamento = () => {
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="faturamento" />
 
-        <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
           {/* Page header (fora do retângulo) */}
           <header className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col">
@@ -163,7 +163,7 @@ const AdminFaturamento = () => {
                 />
               </div>
 
-              <AdminHeaderActions notificationsCount={1} />
+              <AdminHeaderActions notificationsCount={0} />
             </div>
           </header>
 
