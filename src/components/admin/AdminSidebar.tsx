@@ -414,9 +414,7 @@ function DefaultMenu({
       {/* Acompanhamento SADT */}
       <button
         className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
-        onClick={() =>
-          navigate(isMedico ? "/medico/sadt-acompanhamento" : "/admin/sadt-acompanhamento")
-        }
+        onClick={() => navigate("/admin/sadt-acompanhamento")}
       >
         <span className="flex items-center gap-3">
           <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>

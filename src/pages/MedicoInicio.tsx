@@ -109,7 +109,7 @@ const MedicoInicio: React.FC = () => {
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, Doutor(a).";
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden pb-32">
+    <div className="min-h-screen bg-[#0b0b0b] text-[#F5F5F5] relative overflow-hidden pb-32 lg:pb-0">
       {/* Fundo premium */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
