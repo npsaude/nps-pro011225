@@ -14,6 +14,11 @@ type QuotaData = {
   loading: boolean;
 };
 
+// Cache em memória compartilhado entre montagens do componente.
+// Permite que, ao alternar de tela, a badge apareça imediatamente
+// com o último valor conhecido, evitando o "pulo" visual no header.
+let quotaCache: { used: number; limit: number | null } | null = null;
+
 function extractLimit(description: string | null): number | null {
   if (!description) return null;
   const match = description.match(/(\d+)\s*cirurgia/i);
@@ -21,11 +26,11 @@ function extractLimit(description: string | null): number | null {
 }
 
 export default function SurgeryQuotaBadge() {
-  const [quota, setQuota] = useState<QuotaData>({
-    used: 0,
-    limit: null,
-    loading: true,
-  });
+  const [quota, setQuota] = useState<QuotaData>(() =>
+    quotaCache
+      ? { ...quotaCache, loading: false }
+      : { used: 0, limit: null, loading: true },
+  );
   const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
@@ -39,7 +44,10 @@ export default function SurgeryQuotaBadge() {
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;
       if (!user) {
-        if (!cancelled) setQuota({ used: 0, limit: null, loading: false });
+        if (!cancelled) {
+          quotaCache = null;
+          setQuota({ used: 0, limit: null, loading: false });
+        }
         return;
       }
 
@@ -74,14 +82,27 @@ export default function SurgeryQuotaBadge() {
       const description = (enrollment as any)?.subscription_plans?.description ?? null;
       const limit = extractLimit(description);
 
+      quotaCache = { used, limit };
       setQuota({ used, limit, loading: false });
     }
 
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [reloadTick]);
 
-  if (quota.loading) return null;
+  // Placeholder com mesmas dimensões enquanto carrega pela 1ª vez
+  // — assim o header não "salta" ao montar a tela.
+  if (quota.loading) {
+    return (
+      <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-400 ring-1 ring-slate-200">
+        <Scissors className="h-3.5 w-3.5 opacity-60" />
+        <span className="inline-block h-3 w-8 animate-pulse rounded bg-slate-200" />
+      </div>
+    );
+  }
+
   if (quota.limit === null) return null;
 
   const isOver = quota.used >= quota.limit;
