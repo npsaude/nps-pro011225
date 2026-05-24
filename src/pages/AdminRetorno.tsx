@@ -249,7 +249,7 @@ const AdminRetorno: React.FC = () => {
                   className="gap-2 rounded-full bg-amber-600 px-5 text-sm font-semibold text-white hover:bg-amber-700"
                 >
                   <Upload className="h-4 w-4" />
-                  Importar PDF
+                  Importar Relatório de Retorno
                 </Button>
               </div>
 
