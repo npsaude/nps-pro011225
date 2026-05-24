@@ -299,7 +299,7 @@ function SuperAdminMenu({
         </span>
       </button>
 
-      {/* Relatório de Repasse (bloqueado por enquanto) */}
+      {/* Relatório de Repasse — menu item abaixo de Acomp. SADT v2 */}
       <LockedMenuItem
         label="Relatório de Repasse"
         icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
@@ -445,7 +445,7 @@ function DefaultMenu({
         </span>
       </button>
 
-      {/* Relatório de Repasse (bloqueado por enquanto) */}
+      {/* Relatório de Repasse — menu item abaixo de Acomp. SADT v2 */}
       <LockedMenuItem
         label="Relatório de Repasse"
         icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
