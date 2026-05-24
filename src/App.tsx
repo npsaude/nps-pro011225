@@ -58,6 +58,7 @@ import AdminEmailTemplateForm from "./pages/AdminEmailTemplateForm";
 import SadtAcompanhamentoPage from "./pages/SadtAcompanhamento";
 import SadtAcompanhamentoFormPage from "./pages/SadtAcompanhamentoForm";
 import MedicoUploadSadtAcompanhamento from "./pages/MedicoUploadSadtAcompanhamento";
+import AdminRetorno from "./pages/AdminRetorno";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
           <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/admin/faturamento" element={<AdminFaturamento />} />
           <Route path="/admin/financas" element={<AdminFinancas />} />
+          <Route path="/admin/retorno" element={<AdminRetorno />} />
 
           <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
           <Route

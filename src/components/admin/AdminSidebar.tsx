@@ -21,6 +21,7 @@ import {
   Scissors,
   Mail,
   Activity,
+  RotateCcw,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -43,7 +44,8 @@ interface AdminSidebarProps {
     | "config"
     | "assinaturas"
     | "financas"
-    | "modelos-email";
+    | "modelos-email"
+    | "retorno";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft" | "modelos-descricao";
   documentosSubsection?:
     | "guia-solicitacao"
@@ -298,6 +300,19 @@ function SuperAdminMenu({
         </span>
       </button>
 
+      {/* Retorno */}
+      <button
+        className={currentSection === "retorno" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/retorno")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "retorno" ? iconWrapperActive : iconWrapperInactive}>
+            <RotateCcw className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Retorno</span>
+        </span>
+      </button>
+
       {/* Modelos de Emails */}
       <button
         className={currentSection === "modelos-email" ? activeMain : inactiveMain}
@@ -421,6 +436,19 @@ function DefaultMenu({
             <Activity className="h-4 w-4" />
           </span>
           <span className="font-medium">Acomp. SADT</span>
+        </span>
+      </button>
+
+      {/* Retorno */}
+      <button
+        className={currentSection === "retorno" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/retorno")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "retorno" ? iconWrapperActive : iconWrapperInactive}>
+            <RotateCcw className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Retorno</span>
         </span>
       </button>
 
@@ -669,6 +697,7 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/faturamento")) return "faturamento";
     if (path.startsWith("/admin/sadt-acompanhamento")) return "sadt-acompanhamento";
     if (path.startsWith("/medico/sadt-acompanhamento")) return "sadt-acompanhamento";
+    if (path.startsWith("/admin/retorno")) return "retorno";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
     if (path.startsWith("/admin/guia-honorarios")) return "documentos";
