@@ -21,7 +21,6 @@ import {
   Scissors,
   Mail,
   Activity,
-  RotateCcw,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -45,7 +44,7 @@ interface AdminSidebarProps {
     | "assinaturas"
     | "financas"
     | "modelos-email"
-    | "retorno";
+    | "relatorio-repasse";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft" | "modelos-descricao";
   documentosSubsection?:
     | "guia-solicitacao"
@@ -251,23 +250,16 @@ function SuperAdminMenu({
         </span>
       </button>
 
-      {/* Relatório de Repasse — item principal abaixo de Acomp. SADT */}
-      <LockedMenuItem
-        label="Relatório de Repasse"
-        icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
-        className={inactiveMain}
-      />
-
-      {/* Retorno */}
+      {/* Relatório de Repasse */}
       <button
-        className={currentSection === "retorno" ? activeMain : inactiveMain}
+        className={currentSection === "relatorio-repasse" ? activeMain : inactiveMain}
         onClick={() => navigate("/admin/retorno")}
       >
         <span className="flex items-center gap-3">
-          <span className={currentSection === "retorno" ? iconWrapperActive : iconWrapperInactive}>
-            <RotateCcw className="h-4 w-4" />
+          <span className={currentSection === "relatorio-repasse" ? iconWrapperActive : iconWrapperInactive}>
+            <FileText className="h-4 w-4" />
           </span>
-          <span className="font-medium">Retorno</span>
+          <span className="font-medium">Relatório de Repasse</span>
         </span>
       </button>
 
@@ -445,23 +437,16 @@ function DefaultMenu({
         </span>
       </button>
 
-      {/* Relatório de Repasse — menu item abaixo de Acomp. SADT v2 */}
-      <LockedMenuItem
-        label="Relatório de Repasse"
-        icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
-        className={inactiveMain}
-      />
-
-      {/* Retorno */}
+      {/* Relatório de Repasse */}
       <button
-        className={currentSection === "retorno" ? activeMain : inactiveMain}
+        className={currentSection === "relatorio-repasse" ? activeMain : inactiveMain}
         onClick={() => navigate("/admin/retorno")}
       >
         <span className="flex items-center gap-3">
-          <span className={currentSection === "retorno" ? iconWrapperActive : iconWrapperInactive}>
-            <RotateCcw className="h-4 w-4" />
+          <span className={currentSection === "relatorio-repasse" ? iconWrapperActive : iconWrapperInactive}>
+            <FileText className="h-4 w-4" />
           </span>
-          <span className="font-medium">Retorno</span>
+          <span className="font-medium">Relatório de Repasse</span>
         </span>
       </button>
 
@@ -708,7 +693,7 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/faturamento")) return "faturamento";
     if (path.startsWith("/admin/sadt-acompanhamento")) return "sadt-acompanhamento";
     if (path.startsWith("/medico/sadt-acompanhamento")) return "sadt-acompanhamento";
-    if (path.startsWith("/admin/retorno")) return "retorno";
+    if (path.startsWith("/admin/retorno")) return "relatorio-repasse";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
     if (path.startsWith("/admin/guia-honorarios")) return "documentos";

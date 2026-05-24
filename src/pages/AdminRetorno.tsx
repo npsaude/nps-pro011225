@@ -4,11 +4,10 @@ import {
   Eye,
   Trash2,
   Upload,
-  RotateCcw,
+  FileText,
   Loader2,
   ChevronLeft,
   ChevronRight,
-  FileText,
 } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
@@ -195,7 +194,7 @@ const AdminRetorno: React.FC = () => {
   return (
     <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900">
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
-        <AdminSidebar section="retorno" />
+        <AdminSidebar section="relatorio-repasse" />
 
         <div className="flex flex-1 flex-col gap-5 rounded-3xl bg-transparent lg:py-1">
           {/* Header */}
@@ -203,12 +202,12 @@ const AdminRetorno: React.FC = () => {
             <div className="flex flex-col">
               <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-900 sm:text-2xl">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                  <RotateCcw className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                 </span>
-                Retorno
+                Relatório de Repasse
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Importe relatórios de retorno (extratos de pagamento) em PDF. A
+                Importe relatórios de repasse (extratos de pagamento) em PDF. A
                 IA extrai os procedimentos, valores e glosas.
               </p>
             </div>
@@ -249,7 +248,7 @@ const AdminRetorno: React.FC = () => {
                   className="gap-2 rounded-full bg-amber-600 px-5 text-sm font-semibold text-white hover:bg-amber-700"
                 >
                   <Upload className="h-4 w-4" />
-                  Importar Relatório de Retorno
+                  Importar Relatório de Repasse
                 </Button>
               </div>
 
@@ -284,7 +283,7 @@ const AdminRetorno: React.FC = () => {
                           colSpan={8}
                           className="py-10 text-center text-sm text-slate-400"
                         >
-                          Nenhum relatório de retorno importado.
+                          Nenhum relatório de repasse importado.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -392,7 +391,7 @@ const AdminRetorno: React.FC = () => {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Importar Relatório de Retorno</DialogTitle>
+            <DialogTitle>Importar Relatório de Repasse</DialogTitle>
             <DialogDescription>
               Envie o PDF do extrato de pagamento. A IA vai identificar o formato
               da clínica e extrair médico, paciente, procedimentos, valores e
@@ -469,7 +468,7 @@ const AdminRetorno: React.FC = () => {
       >
         <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Detalhes do Relatório de Retorno</DialogTitle>
+            <DialogTitle>Detalhes do Relatório de Repasse</DialogTitle>
             <DialogDescription>
               Dados extraídos pela IA a partir do PDF importado.
             </DialogDescription>
@@ -636,7 +635,7 @@ const AdminRetorno: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirmar exclusão</DialogTitle>
             <DialogDescription>
-              Deseja realmente excluir este relatório de retorno?
+              Deseja realmente excluir este relatório de repasse?
               <br />
               <strong>{deleteTarget?.arquivo_nome || deleteTarget?.id}</strong>
               <br />
