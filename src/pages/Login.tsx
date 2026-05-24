@@ -280,7 +280,7 @@ const Login = () => {
           </div>
 
           <p className="text-[10px] text-white/50">© ConMedic. Plataforma segura.</p>
-          <p className="text-[9px] text-white/30">Versão 1.2.2</p>
+          <p className="text-[9px] text-white/30">Versão 1.2.3</p>
         </div>
       </div>
     </div>
