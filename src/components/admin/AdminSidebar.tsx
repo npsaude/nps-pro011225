@@ -270,7 +270,6 @@ function SuperAdminMenu({
               Guia de Honorários
             </span>
           </button>
-          <LockedMenuItem label="Relatório de Repasse" isSubItem className={blockItemInactive} />
         </div>
       </div>
 
@@ -299,6 +298,13 @@ function SuperAdminMenu({
           <span className="font-medium">Acomp. SADT</span>
         </span>
       </button>
+
+      {/* Relatório de Repasse (bloqueado por enquanto) */}
+      <LockedMenuItem
+        label="Relatório de Repasse"
+        icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
+        className={inactiveMain}
+      />
 
       {/* Retorno */}
       <button
@@ -439,6 +445,13 @@ function DefaultMenu({
         </span>
       </button>
 
+      {/* Relatório de Repasse (bloqueado por enquanto) */}
+      <LockedMenuItem
+        label="Relatório de Repasse"
+        icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
+        className={inactiveMain}
+      />
+
       {/* Retorno */}
       <button
         className={currentSection === "retorno" ? activeMain : inactiveMain}
@@ -516,8 +529,6 @@ function DefaultMenu({
           ) : (
             <LockedMenuItem label="Guia de Honorários" isSubItem className={blockItemInactive} />
           )}
-
-          <LockedMenuItem label="Relatório de Repasse" isSubItem className={blockItemInactive} />
         </div>
       </div>
 
