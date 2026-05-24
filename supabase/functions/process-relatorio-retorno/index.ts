@@ -11,7 +11,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
-import { extractJson } from "../_shared/openai-chat.ts";
+import {
+  extractJson,
+  modelDisallowsTemperature,
+  modelUsesMaxCompletionTokens,
+} from "../_shared/openai-chat.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -355,6 +359,31 @@ RETORNE APENAS O JSON, sem markdown e sem comentários.
   let jsonText = "";
   let openaiUsage: any = null;
 
+  const noTemperature = modelDisallowsTemperature(openaiModel);
+  const useMaxCompletionTokens = modelUsesMaxCompletionTokens(openaiModel);
+  console.log(
+    `[process-relatorio-retorno] modelo=${openaiModel} | no_temperature=${noTemperature} | max_completion_tokens=${useMaxCompletionTokens}`,
+  );
+
+  const openaiBody: Record<string, unknown> = {
+    model: openaiModel,
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: prompt },
+          { type: "input_file", file_id: fileId },
+        ],
+      },
+    ],
+  };
+  if (!noTemperature) {
+    openaiBody.temperature = 0;
+  }
+  // A Responses API usa max_output_tokens em vez de max_tokens.
+  // Modelos novos (gpt-5 / o-series) também aceitam esse campo.
+  openaiBody.max_output_tokens = 16384;
+
   try {
     const resp = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -362,22 +391,7 @@ RETORNE APENAS O JSON, sem markdown e sem comentários.
         "Content-Type": "application/json",
         Authorization: `Bearer ${openaiToken}`,
       },
-      body: JSON.stringify({
-        model: openaiModel,
-        // temperature 0 — alguns modelos novos (gpt-5/o3) não aceitam; nesse caso
-        // a API ignora ou retorna erro. Mantemos o try/catch para fallback.
-        temperature: 0,
-        max_output_tokens: 16384,
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: prompt },
-              { type: "input_file", file_id: fileId },
-            ],
-          },
-        ],
-      }),
+      body: JSON.stringify(openaiBody),
     });
 
     if (!resp.ok) {
