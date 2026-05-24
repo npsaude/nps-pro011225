@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
+import { modelDisallowsTemperature } from "../_shared/openai-chat.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -167,7 +168,7 @@ serve(async (req) => {
 
     const formData = new FormData();
     formData.append("file", pdfBlob, "extrato_pagamento.pdf");
-    formData.append("purpose", "assistants");
+    formData.append("purpose", "user_data");
 
     console.log("Enviando PDF para OpenAI Files API...");
     const uploadResp = await fetch("https://api.openai.com/v1/files", {
@@ -273,32 +274,34 @@ serve(async (req) => {
   try {
     console.log("Chamando OpenAI Responses API com input_file para extrato...");
 
+    const noTemperature = modelDisallowsTemperature(openaiModel);
+    const openaiBody: Record<string, unknown> = {
+      model: openaiModel,
+      max_output_tokens: 32000,
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: csvPrompt },
+            { type: "input_file", file_id: fileId },
+          ],
+        },
+      ],
+    };
+    if (!noTemperature) {
+      openaiBody.temperature = 0;
+    }
+    console.log(
+      `[process-extrato-pagamento] modelo=${openaiModel} | no_temperature=${noTemperature}`,
+    );
+
     const resp = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${openaiToken}`,
       },
-      body: JSON.stringify({
-        model: openaiModel,
-        temperature: 0,
-        max_tokens: 16384,
-        input: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: csvPrompt,
-              },
-              {
-                type: "input_file",
-                file_id: fileId,
-              },
-            ],
-          },
-        ],
-      }),
+      body: JSON.stringify(openaiBody),
     });
 
     if (!resp.ok) {

@@ -1,0 +1,1 @@
+UPDATE app_settings SET openai_model = 'gpt-5.3';
