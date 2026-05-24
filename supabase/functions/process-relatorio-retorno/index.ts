@@ -233,7 +233,7 @@ serve(async (req) => {
 
     const formData = new FormData();
     formData.append("file", pdfBlob, fileName || "relatorio_retorno.pdf");
-    formData.append("purpose", "assistants");
+    formData.append("purpose", "user_data");
 
     const uploadResp = await fetch("https://api.openai.com/v1/files", {
       method: "POST",
@@ -281,12 +281,19 @@ Você é um assistente especializado em RELATÓRIOS DE RETORNO / EXTRATOS DE PAG
 Os relatórios podem vir de várias fontes (cada clínica/operadora tem seu próprio layout). Exemplos comuns:
 
 - UNIMED (Extrato de Pagamento de Cooperado) — geralmente lista atendimentos por paciente, com colunas de valor apresentado, glosa, líquido, e totalizadores no rodapé.
-- MAX CLINICAS (Extrato de Repasse) — agrupa por médico/competência, com data, procedimento, valor bruto, descontos e líquido.
+- MAX CLINICAS (Extrato de Repasse) — agrupa por médico/competência, com data, procedimento, valor bruto, descontos e líquido. Tipicamente tem várias páginas com DEZENAS ou CENTENAS de consultas/procedimentos, uma por linha.
 - Relatório "Analítico" de clínica/hospital — agrupa por paciente/atendimento, lista os procedimentos do médico (cirurgião / 1º auxiliar / anestesista...), com valor base, glosa, desconto e líquido.
 
-Sua tarefa: ler o PDF anexo e extrair os dados em um JSON único, identificando o formato e
+Sua tarefa: ler o PDF anexo INTEGRALMENTE (TODAS AS PÁGINAS) e extrair os dados em um JSON único, identificando o formato e
 adaptando a leitura. Use APENAS o que está visível. Se um campo não estiver presente, use null.
 Não invente dados.
+
+⚠️ REGRA CRÍTICA — COMPLETUDE DOS ITENS:
+- Você DEVE extrair TODOS os itens do relatório, sem exceção, percorrendo todas as páginas do PDF.
+- NÃO resuma, NÃO mostre só os primeiros, NÃO use frases como "... e outros itens".
+- Se o relatório tem 50, 100, 200 ou mais linhas/consultas/procedimentos, retorne TODAS no array "itens".
+- Cada linha de paciente/procedimento do PDF deve gerar UM objeto no array "itens".
+- Antes de finalizar, confira mentalmente: a soma dos "valor_liquido" dos itens deve bater (aproximadamente) com o total líquido do rodapé. Se está MUITO diferente, é porque você esqueceu de incluir itens — volte e inclua todos.
 
 REGRAS GERAIS:
 - Datas: use o formato "YYYY-MM-DD" ou copie a string do PDF se ambígua.
@@ -352,6 +359,11 @@ FORMATO DE SAÍDA (JSON):
 }
 
 RETORNE APENAS O JSON, sem markdown e sem comentários.
+
+LEMBRETE FINAL — antes de finalizar a resposta:
+1. Confira se você incluiu TODOS os itens/linhas do PDF, de TODAS as páginas.
+2. NUNCA pare em 3, 5 ou 10 itens "para resumir". Se o PDF tem 80 itens, retorne 80.
+3. Não pule pacientes, não pule procedimentos, não pule páginas.
 `;
 
   // 6) Chamar Responses API com input_file
@@ -382,7 +394,12 @@ RETORNE APENAS O JSON, sem markdown e sem comentários.
   }
   // A Responses API usa max_output_tokens em vez de max_tokens.
   // Modelos novos (gpt-5 / o-series) também aceitam esse campo.
-  openaiBody.max_output_tokens = 16384;
+  // Relatórios grandes (MAXCLINICAS / UNIMED) podem ter centenas de itens,
+  // então usamos um teto bem alto.
+  openaiBody.max_output_tokens = 32000;
+
+  // Força JSON mode na Responses API para evitar texto solto/markdown
+  openaiBody.text = { format: { type: "json_object" } };
 
   try {
     const resp = await fetch("https://api.openai.com/v1/responses", {
@@ -409,6 +426,10 @@ RETORNE APENAS O JSON, sem markdown e sem comentários.
     const respJson = await resp.json();
     openaiUsage = respJson?.usage;
 
+    console.log(
+      `[process-relatorio-retorno] OpenAI response status="${respJson?.status}" incomplete_reason="${respJson?.incomplete_details?.reason ?? ""}"`,
+    );
+
     // Extrai texto da resposta (Responses API)
     try {
       const out = respJson?.output ?? [];
@@ -431,6 +452,10 @@ RETORNE APENAS O JSON, sem markdown e sem comentários.
     } catch (e) {
       console.error("[process-relatorio-retorno] erro lendo resposta:", e);
     }
+
+    console.log(
+      `[process-relatorio-retorno] jsonText length=${jsonText.length}`,
+    );
   } catch (e) {
     console.error("[process-relatorio-retorno] Erro inesperado OpenAI:", e);
     return new Response(

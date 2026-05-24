@@ -1,0 +1,1 @@
+SELECT openai_model FROM app_settings LIMIT 1;
