@@ -225,6 +225,52 @@ function SuperAdminMenu({
         </div>
       </div>
 
+      {/* Faturamento */}
+      <button
+        className={currentSection === "faturamento" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/faturamento")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "faturamento" ? iconWrapperActive : iconWrapperInactive}>
+            <LineChart className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Faturamento</span>
+        </span>
+      </button>
+
+      {/* Acompanhamento SADT */}
+      <button
+        className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/sadt-acompanhamento")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
+            <Activity className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Acomp. SADT</span>
+        </span>
+      </button>
+
+      {/* Relatório de Repasse — item principal abaixo de Acomp. SADT */}
+      <LockedMenuItem
+        label="Relatório de Repasse"
+        icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
+        className={inactiveMain}
+      />
+
+      {/* Retorno */}
+      <button
+        className={currentSection === "retorno" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/retorno")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "retorno" ? iconWrapperActive : iconWrapperInactive}>
+            <RotateCcw className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Retorno</span>
+        </span>
+      </button>
+
       {/* Documentos */}
       <div className={blockContainer}>
         <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
@@ -272,52 +318,6 @@ function SuperAdminMenu({
           </button>
         </div>
       </div>
-
-      {/* Faturamento */}
-      <button
-        className={currentSection === "faturamento" ? activeMain : inactiveMain}
-        onClick={() => navigate("/admin/faturamento")}
-      >
-        <span className="flex items-center gap-3">
-          <span className={currentSection === "faturamento" ? iconWrapperActive : iconWrapperInactive}>
-            <LineChart className="h-4 w-4" />
-          </span>
-          <span className="font-medium">Faturamento</span>
-        </span>
-      </button>
-
-      {/* Acompanhamento SADT */}
-      <button
-        className={currentSection === "sadt-acompanhamento" ? activeMain : inactiveMain}
-        onClick={() => navigate("/admin/sadt-acompanhamento")}
-      >
-        <span className="flex items-center gap-3">
-          <span className={currentSection === "sadt-acompanhamento" ? iconWrapperActive : iconWrapperInactive}>
-            <Activity className="h-4 w-4" />
-          </span>
-          <span className="font-medium">Acomp. SADT</span>
-        </span>
-      </button>
-
-      {/* Relatório de Repasse — menu item abaixo de Acomp. SADT v2 */}
-      <LockedMenuItem
-        label="Relatório de Repasse"
-        icon={<span className={iconWrapperInactive}><FileText className="h-4 w-4" /></span>}
-        className={inactiveMain}
-      />
-
-      {/* Retorno */}
-      <button
-        className={currentSection === "retorno" ? activeMain : inactiveMain}
-        onClick={() => navigate("/admin/retorno")}
-      >
-        <span className="flex items-center gap-3">
-          <span className={currentSection === "retorno" ? iconWrapperActive : iconWrapperInactive}>
-            <RotateCcw className="h-4 w-4" />
-          </span>
-          <span className="font-medium">Retorno</span>
-        </span>
-      </button>
 
       {/* Modelos de Emails */}
       <button
