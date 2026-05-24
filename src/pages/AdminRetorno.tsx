@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Search,
-  Eye,
   Trash2,
   Upload,
   FileText,
@@ -34,22 +33,20 @@ import { useSystemUser } from "@/hooks/use-system-user";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import {
-  RelatorioRetorno,
-  ItemRelatorioRetorno,
-  listarRelatoriosRetorno,
-  listarItensDoRelatorio,
-  excluirRelatorioRetorno,
+  ItemRelatorioComCabecalho,
+  listarTodosItensRetorno,
+  excluirItemRelatorioRetorno,
   importarRelatorioRetorno,
   formatBRL,
   formatDateBR,
 } from "@/services/relatorios-retorno-service";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 const AdminRetorno: React.FC = () => {
   const { systemUser, loading: userLoading } = useSystemUser();
 
-  const [relatorios, setRelatorios] = useState<RelatorioRetorno[]>([]);
+  const [itens, setItens] = useState<ItemRelatorioComCabecalho[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -58,20 +55,17 @@ const AdminRetorno: React.FC = () => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
 
-  const [viewTarget, setViewTarget] = useState<RelatorioRetorno | null>(null);
-  const [viewItens, setViewItens] = useState<ItemRelatorioRetorno[]>([]);
-  const [loadingItens, setLoadingItens] = useState(false);
-
-  const [deleteTarget, setDeleteTarget] = useState<RelatorioRetorno | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<ItemRelatorioComCabecalho | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listarRelatoriosRetorno();
-      setRelatorios(rows);
+      const rows = await listarTodosItensRetorno();
+      setItens(rows);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro ao carregar relatórios.";
+      const msg = err instanceof Error ? err.message : "Erro ao carregar itens.";
       showError(msg);
     } finally {
       setLoading(false);
@@ -84,19 +78,37 @@ const AdminRetorno: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return relatorios;
-    return relatorios.filter((r) =>
+    if (!q) return itens;
+    return itens.filter((it) =>
       [
-        r.origem,
-        r.clinica_hospital,
-        r.medico_nome,
-        r.competencia,
-        r.arquivo_nome,
+        it.paciente_nome,
+        it.convenio,
+        it.codigo_procedimento,
+        it.descricao_procedimento,
+        it.funcao_profissional,
+        it.numero_guia,
+        it.relatorio_origem,
+        it.relatorio_clinica_hospital,
+        it.relatorio_medico_nome,
+        it.relatorio_competencia,
       ]
         .filter(Boolean)
         .some((v) => (v as string).toLowerCase().includes(q)),
     );
-  }, [relatorios, search]);
+  }, [itens, search]);
+
+  // Totais do que está filtrado
+  const totais = useMemo(() => {
+    return filtered.reduce(
+      (acc, it) => {
+        acc.base += it.valor_base ?? it.valor_apresentado ?? 0;
+        acc.glosa += it.valor_glosa ?? 0;
+        acc.liquido += it.valor_liquido ?? 0;
+        return acc;
+      },
+      { base: 0, glosa: 0, liquido: 0 },
+    );
+  }, [filtered]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -147,7 +159,7 @@ const AdminRetorno: React.FC = () => {
       }
 
       showSuccess(
-        `Relatório importado com sucesso. ${res.total_itens ?? 0} itens lidos.`,
+        `Relatório importado com sucesso. ${res.total_itens ?? 0} itens adicionados.`,
       );
       setImportOpen(false);
       setImportFile(null);
@@ -160,27 +172,12 @@ const AdminRetorno: React.FC = () => {
     }
   };
 
-  const openView = async (r: RelatorioRetorno) => {
-    setViewTarget(r);
-    setLoadingItens(true);
-    try {
-      const itens = await listarItensDoRelatorio(r.id);
-      setViewItens(itens);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro ao carregar itens.";
-      showError(msg);
-      setViewItens([]);
-    } finally {
-      setLoadingItens(false);
-    }
-  };
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await excluirRelatorioRetorno(deleteTarget.id);
-      showSuccess("Relatório excluído.");
+      await excluirItemRelatorioRetorno(deleteTarget.id);
+      showSuccess("Item excluído.");
       setDeleteTarget(null);
       await load();
     } catch (err) {
@@ -207,8 +204,8 @@ const AdminRetorno: React.FC = () => {
                 Relatório de Repasse
               </h1>
               <p className="text-xs text-slate-400 sm:text-sm">
-                Importe relatórios de repasse (extratos de pagamento) em PDF. A
-                IA extrai os procedimentos, valores e glosas.
+                Cada linha representa um procedimento extraído pela IA. Importe
+                novos PDFs para adicionar mais itens à lista.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -232,17 +229,30 @@ const AdminRetorno: React.FC = () => {
           <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl">
             <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-500">
-                    Relatórios importados
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Total:{" "}
-                    <span className="font-medium text-amber-600">
-                      {filtered.length} relatório(s)
-                    </span>
-                  </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-500">
+                      Itens do Relatório de Repasse
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      Total:{" "}
+                      <span className="font-medium text-amber-600">
+                        {filtered.length} item(ns)
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="hidden gap-3 sm:flex">
+                    <TotalChip label="Base" value={formatBRL(totais.base)} color="slate" />
+                    <TotalChip label="Glosa" value={formatBRL(totais.glosa)} color="rose" />
+                    <TotalChip
+                      label="Líquido"
+                      value={formatBRL(totais.liquido)}
+                      color="emerald"
+                    />
+                  </div>
                 </div>
+
                 <Button
                   onClick={() => setImportOpen(true)}
                   className="gap-2 rounded-full bg-amber-600 px-5 text-sm font-semibold text-white hover:bg-amber-700"
@@ -257,12 +267,15 @@ const AdminRetorno: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
-                      <TableHead className="py-3 pl-4">Arquivo</TableHead>
-                      <TableHead>Origem</TableHead>
-                      <TableHead>Clínica / Hospital</TableHead>
-                      <TableHead>Médico</TableHead>
+                      <TableHead className="py-3 pl-4">Origem</TableHead>
                       <TableHead>Competência</TableHead>
-                      <TableHead>Pagamento</TableHead>
+                      <TableHead>Atendimento</TableHead>
+                      <TableHead>Paciente</TableHead>
+                      <TableHead>Convênio</TableHead>
+                      <TableHead>Procedimento</TableHead>
+                      <TableHead>Função</TableHead>
+                      <TableHead className="text-right">Base</TableHead>
+                      <TableHead className="text-right">Glosa</TableHead>
                       <TableHead className="text-right">Líquido</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
@@ -271,7 +284,7 @@ const AdminRetorno: React.FC = () => {
                     {loading || userLoading ? (
                       <TableRow>
                         <TableCell
-                          colSpan={8}
+                          colSpan={11}
                           className="py-10 text-center text-sm text-slate-400"
                         >
                           Carregando...
@@ -280,63 +293,70 @@ const AdminRetorno: React.FC = () => {
                     ) : paginated.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={8}
+                          colSpan={11}
                           className="py-10 text-center text-sm text-slate-400"
                         >
-                          Nenhum relatório de repasse importado.
+                          Nenhum item importado. Clique em "Importar Relatório
+                          de Repasse" para começar.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginated.map((r) => (
+                      paginated.map((it) => (
                         <TableRow
-                          key={r.id}
+                          key={it.id}
                           className="border-b border-slate-50 text-sm hover:bg-slate-50/60"
                         >
-                          <TableCell className="pl-4 max-w-[220px] truncate text-xs text-slate-600">
-                            <span className="inline-flex items-center gap-1.5">
-                              <FileText className="h-3.5 w-3.5 text-amber-500" />
-                              {r.arquivo_nome || "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {r.origem ? (
+                          <TableCell className="pl-4">
+                            {it.relatorio_origem ? (
                               <Badge
                                 variant="outline"
                                 className="border-amber-200 bg-amber-50 text-[10px] font-semibold text-amber-700"
                               >
-                                {r.origem}
+                                {it.relatorio_origem}
                               </Badge>
                             ) : (
                               <span className="text-slate-400">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-slate-700">
-                            {r.clinica_hospital || "—"}
-                          </TableCell>
-                          <TableCell className="text-slate-700">
-                            {r.medico_nome || "—"}
+                          <TableCell className="text-xs text-slate-500">
+                            {it.relatorio_competencia || "—"}
                           </TableCell>
                           <TableCell className="text-xs text-slate-500">
-                            {r.competencia || "—"}
+                            {formatDateBR(it.data_atendimento)}
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-800 max-w-[200px] truncate">
+                            {it.paciente_nome || "—"}
+                          </TableCell>
+                          <TableCell className="text-slate-600 max-w-[140px] truncate">
+                            {it.convenio || "—"}
+                          </TableCell>
+                          <TableCell className="max-w-[260px] text-slate-700">
+                            <div className="flex flex-col">
+                              <span className="font-mono text-[10px] text-slate-400">
+                                {it.codigo_procedimento || ""}
+                              </span>
+                              <span className="truncate">
+                                {it.descricao_procedimento || "—"}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-xs text-slate-500">
-                            {formatDateBR(r.data_pagamento)}
+                            {it.funcao_profissional || "—"}
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-slate-600">
+                            {formatBRL(it.valor_base ?? it.valor_apresentado)}
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-rose-500">
+                            {formatBRL(it.valor_glosa)}
                           </TableCell>
                           <TableCell className="text-right text-xs font-semibold text-emerald-600">
-                            {formatBRL(r.total_liquido)}
+                            {formatBRL(it.valor_liquido)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-1">
                               <button
-                                title="Visualizar"
-                                onClick={() => openView(r)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
-                                title="Excluir"
-                                onClick={() => setDeleteTarget(r)}
+                                title="Excluir item"
+                                onClick={() => setDeleteTarget(it)}
                                 className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -456,176 +476,6 @@ const AdminRetorno: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visualização */}
-      <Dialog
-        open={!!viewTarget}
-        onOpenChange={(o) => {
-          if (!o) {
-            setViewTarget(null);
-            setViewItens([]);
-          }
-        }}
-      >
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Relatório de Repasse</DialogTitle>
-            <DialogDescription>
-              Dados extraídos pela IA a partir do PDF importado.
-            </DialogDescription>
-          </DialogHeader>
-
-          {viewTarget && (
-            <div className="space-y-4">
-              {/* Cabeçalho */}
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 text-sm sm:grid-cols-2 md:grid-cols-3">
-                <InfoCell label="Origem" value={viewTarget.origem} />
-                <InfoCell
-                  label="Clínica / Hospital"
-                  value={viewTarget.clinica_hospital}
-                />
-                <InfoCell label="Médico" value={viewTarget.medico_nome} />
-                <InfoCell label="CRM" value={viewTarget.medico_crm} />
-                <InfoCell
-                  label="Especialidade"
-                  value={viewTarget.medico_especialidade}
-                />
-                <InfoCell label="Função" value={viewTarget.medico_funcao} />
-                <InfoCell
-                  label="Competência"
-                  value={viewTarget.competencia}
-                />
-                <InfoCell
-                  label="Data pagamento"
-                  value={formatDateBR(viewTarget.data_pagamento)}
-                />
-                <InfoCell
-                  label="Período"
-                  value={
-                    viewTarget.periodo_inicio || viewTarget.periodo_fim
-                      ? `${formatDateBR(viewTarget.periodo_inicio)} → ${formatDateBR(
-                          viewTarget.periodo_fim,
-                        )}`
-                      : null
-                  }
-                />
-                <InfoCell
-                  label="Total bruto"
-                  value={formatBRL(viewTarget.total_bruto)}
-                />
-                <InfoCell
-                  label="Total glosa"
-                  value={formatBRL(viewTarget.total_glosa)}
-                />
-                <InfoCell
-                  label="Total líquido"
-                  value={formatBRL(viewTarget.total_liquido)}
-                  highlight
-                />
-              </div>
-
-              {/* Itens */}
-              <div>
-                <p className="mb-2 text-sm font-semibold text-slate-600">
-                  Itens ({viewItens.length})
-                </p>
-                <div className="max-h-[55vh] overflow-auto rounded-xl border border-slate-100">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400 hover:bg-slate-50">
-                        <TableHead className="py-2 pl-4">#</TableHead>
-                        <TableHead>Paciente</TableHead>
-                        <TableHead>Atendimento</TableHead>
-                        <TableHead>Convênio</TableHead>
-                        <TableHead>Procedimento</TableHead>
-                        <TableHead>Função</TableHead>
-                        <TableHead className="text-right">Base</TableHead>
-                        <TableHead className="text-right">Glosa</TableHead>
-                        <TableHead className="text-right">Líquido</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loadingItens ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={9}
-                            className="py-6 text-center text-xs text-slate-400"
-                          >
-                            Carregando itens...
-                          </TableCell>
-                        </TableRow>
-                      ) : viewItens.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={9}
-                            className="py-6 text-center text-xs text-slate-400"
-                          >
-                            Nenhum item registrado.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        viewItens.map((it) => (
-                          <TableRow
-                            key={it.id}
-                            className="border-b border-slate-50 text-xs hover:bg-slate-50/60"
-                          >
-                            <TableCell className="pl-4 text-slate-400">
-                              {it.ordem ?? "—"}
-                            </TableCell>
-                            <TableCell className="font-medium text-slate-800">
-                              {it.paciente_nome || "—"}
-                            </TableCell>
-                            <TableCell className="text-slate-500">
-                              {formatDateBR(it.data_atendimento)}
-                            </TableCell>
-                            <TableCell className="text-slate-500">
-                              {it.convenio || "—"}
-                            </TableCell>
-                            <TableCell className="max-w-[260px] text-slate-700">
-                              <div className="flex flex-col">
-                                <span className="font-mono text-[10px] text-slate-400">
-                                  {it.codigo_procedimento || ""}
-                                </span>
-                                <span className="truncate">
-                                  {it.descricao_procedimento || "—"}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-slate-500">
-                              {it.funcao_profissional || "—"}
-                            </TableCell>
-                            <TableCell className="text-right text-slate-600">
-                              {formatBRL(it.valor_base ?? it.valor_apresentado)}
-                            </TableCell>
-                            <TableCell className="text-right text-rose-500">
-                              {formatBRL(it.valor_glosa)}
-                            </TableCell>
-                            <TableCell className="text-right font-semibold text-emerald-600">
-                              {formatBRL(it.valor_liquido)}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setViewTarget(null);
-                setViewItens([]);
-              }}
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal de exclusão */}
       <Dialog
         open={!!deleteTarget}
@@ -635,12 +485,15 @@ const AdminRetorno: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirmar exclusão</DialogTitle>
             <DialogDescription>
-              Deseja realmente excluir este relatório de repasse?
+              Deseja realmente excluir este item do relatório de repasse?
               <br />
-              <strong>{deleteTarget?.arquivo_nome || deleteTarget?.id}</strong>
+              <strong>
+                {deleteTarget?.paciente_nome ||
+                  deleteTarget?.descricao_procedimento ||
+                  deleteTarget?.id}
+              </strong>
               <br />
-              Esta ação não pode ser desfeita e os itens vinculados também serão
-              removidos.
+              Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -665,27 +518,28 @@ const AdminRetorno: React.FC = () => {
   );
 };
 
-function InfoCell({
+function TotalChip({
   label,
   value,
-  highlight,
+  color,
 }: {
   label: string;
-  value: string | null | undefined;
-  highlight?: boolean;
+  value: string;
+  color: "slate" | "rose" | "emerald";
 }) {
+  const colorMap: Record<typeof color, string> = {
+    slate: "bg-slate-50 text-slate-700 ring-slate-200",
+    rose: "bg-rose-50 text-rose-600 ring-rose-200",
+    emerald: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  };
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] uppercase tracking-wider text-slate-400">
+    <div
+      className={`flex flex-col items-start rounded-xl px-3 py-1.5 ring-1 ${colorMap[color]}`}
+    >
+      <span className="text-[9px] font-semibold uppercase tracking-wider opacity-70">
         {label}
       </span>
-      <span
-        className={`text-sm ${
-          highlight ? "font-semibold text-emerald-600" : "text-slate-800"
-        }`}
-      >
-        {value || "—"}
-      </span>
+      <span className="text-xs font-semibold">{value}</span>
     </div>
   );
 }

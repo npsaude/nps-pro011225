@@ -79,6 +79,63 @@ export async function listarItensDoRelatorio(
   return (data ?? []) as ItemRelatorioRetorno[];
 }
 
+/**
+ * Item enriquecido com dados do cabeçalho do relatório de origem
+ * (usado para listar todos os itens em uma única tabela).
+ */
+export interface ItemRelatorioComCabecalho extends ItemRelatorioRetorno {
+  relatorio_origem: string | null;
+  relatorio_clinica_hospital: string | null;
+  relatorio_medico_nome: string | null;
+  relatorio_competencia: string | null;
+  relatorio_arquivo_nome: string | null;
+  relatorio_created_at: string | null;
+}
+
+export async function listarTodosItensRetorno(): Promise<
+  ItemRelatorioComCabecalho[]
+> {
+  const { data, error } = await supabase
+    .from("itens_relatorio_retorno")
+    .select(
+      `
+        *,
+        relatorios_retorno:relatorio_id (
+          origem,
+          clinica_hospital,
+          medico_nome,
+          competencia,
+          arquivo_nome,
+          created_at
+        )
+      `,
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return ((data ?? []) as any[]).map((row) => {
+    const rel = row.relatorios_retorno ?? {};
+    return {
+      ...(row as ItemRelatorioRetorno),
+      relatorio_origem: rel.origem ?? null,
+      relatorio_clinica_hospital: rel.clinica_hospital ?? null,
+      relatorio_medico_nome: rel.medico_nome ?? null,
+      relatorio_competencia: rel.competencia ?? null,
+      relatorio_arquivo_nome: rel.arquivo_nome ?? null,
+      relatorio_created_at: rel.created_at ?? null,
+    } as ItemRelatorioComCabecalho;
+  });
+}
+
+export async function excluirItemRelatorioRetorno(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("itens_relatorio_retorno")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function excluirRelatorioRetorno(id: string): Promise<void> {
   const { error } = await supabase
     .from("relatorios_retorno")
