@@ -102,10 +102,10 @@ const App = () => (
           <Route path="/sadt/nova" element={<SadtNova />} />
           <Route path="/sadt/editar/:id" element={<SadtEditar />} />
 
-          <Route path="/admin/dashboard" element={<Dashboard />} />
-          <Route path="/admin/faturamento" element={<AdminFaturamento />} />
-          <Route path="/admin/financas" element={<AdminFinancas />} />
-          <Route path="/admin/retorno" element={<AdminRetorno />} />
+          <Route path="/admin/dashboard" element={<AdminOrSuperAdminGuard redirectTo="/login"><Dashboard /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/faturamento" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminFaturamento /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/financas" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminFinancas /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/retorno" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminRetorno /></AdminOrSuperAdminGuard>} />
 
           <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
           <Route
@@ -209,41 +209,45 @@ const App = () => (
             }
           />
 
-          <Route path="/admin/guia-solicitacao" element={<GuiaSolicitacaoPage />} />
-          <Route path="/admin/guia-solicitacao/nova" element={<GuiaSolicitacaoFormPage />} />
-          <Route path="/admin/guia-solicitacao/editar/:id" element={<GuiaSolicitacaoFormPage />} />
+          <Route path="/admin/guia-solicitacao" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaSolicitacaoPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/guia-solicitacao/nova" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaSolicitacaoFormPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/guia-solicitacao/editar/:id" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaSolicitacaoFormPage /></AdminOrSuperAdminGuard>} />
 
-          <Route path="/admin/guia-autorizacao" element={<GuiaAutorizacaoPage />} />
-          <Route path="/admin/guia-autorizacao/nova" element={<GuiaAutorizacaoFormPage />} />
-          <Route path="/admin/guia-autorizacao/editar/:id" element={<GuiaAutorizacaoFormPage />} />
+          <Route path="/admin/guia-autorizacao" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaAutorizacaoPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/guia-autorizacao/nova" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaAutorizacaoFormPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/guia-autorizacao/editar/:id" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaAutorizacaoFormPage /></AdminOrSuperAdminGuard>} />
 
-          <Route path="/admin/guia-honorarios" element={<GuiaHonorariosPage />} />
-          <Route path="/admin/guia-honorarios/nova" element={<GuiaHonorariosFormPage />} />
-          <Route path="/admin/guia-honorarios/editar/:id" element={<GuiaHonorariosFormPage />} />
+          <Route path="/admin/guia-honorarios" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaHonorariosPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/guia-honorarios/nova" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaHonorariosFormPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/guia-honorarios/editar/:id" element={<AdminOrSuperAdminGuard redirectTo="/login"><GuiaHonorariosFormPage /></AdminOrSuperAdminGuard>} />
 
           {/* Acompanhamento de SADT */}
-          <Route path="/admin/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
-          <Route path="/admin/sadt-acompanhamento/nova" element={<SadtAcompanhamentoFormPage />} />
-          <Route path="/admin/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
+          <Route path="/admin/sadt-acompanhamento" element={<AdminOrSuperAdminGuard redirectTo="/login"><SadtAcompanhamentoPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/sadt-acompanhamento/nova" element={<AdminOrSuperAdminGuard redirectTo="/login"><SadtAcompanhamentoFormPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/sadt-acompanhamento/editar/:id" element={<AdminOrSuperAdminGuard redirectTo="/login"><SadtAcompanhamentoFormPage /></AdminOrSuperAdminGuard>} />
           <Route path="/medico/sadt-acompanhamento" element={<MedicoGuard><SadtAcompanhamentoPage /></MedicoGuard>} />
           <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoGuard><MedicoUploadSadtAcompanhamento /></MedicoGuard>} />
           <Route path="/medico/sadt-acompanhamento/editar/:id" element={<MedicoGuard><SadtAcompanhamentoFormPage /></MedicoGuard>} />
           {/* Alias amigável para o fluxo de acompanhamento (usado pelo menu flutuante do médico) */}
           <Route path="/medico/acompanhamento/enviar" element={<MedicoGuard><MedicoUploadSadtAcompanhamento /></MedicoGuard>} />
 
-          <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
-          <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
-          <Route path="/admin/descricao-cirurgica/editar/:id" element={<DescricaoCirurgicaAdminFormPage />} />
+          <Route path="/admin/descricao-cirurgica" element={<AdminOrSuperAdminGuard redirectTo="/login"><DescricaoCirurgicaAdminPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/descricao-cirurgica/nova" element={<AdminOrSuperAdminGuard redirectTo="/login"><DescricaoCirurgicaAdminFormPage /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/descricao-cirurgica/editar/:id" element={<AdminOrSuperAdminGuard redirectTo="/login"><DescricaoCirurgicaAdminFormPage /></AdminOrSuperAdminGuard>} />
 
-          <Route path="/admin/modelos-emails" element={<AdminEmailTemplates />} />
-          <Route path="/admin/modelos-emails/novo" element={<AdminEmailTemplateForm />} />
-          <Route path="/admin/modelos-emails/:id" element={<AdminEmailTemplateForm />} />
-          <Route path="/admin/modelos-emails/:id/editar" element={<AdminEmailTemplateForm />} />
+          <Route path="/admin/modelos-emails" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminEmailTemplates /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/modelos-emails/novo" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminEmailTemplateForm /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/modelos-emails/:id" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminEmailTemplateForm /></AdminOrSuperAdminGuard>} />
+          <Route path="/admin/modelos-emails/:id/editar" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminEmailTemplateForm /></AdminOrSuperAdminGuard>} />
 
-          <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
+          <Route path="/admin/configuracoes" element={<AdminOrSuperAdminGuard redirectTo="/login"><AdminConfiguracoes /></AdminOrSuperAdminGuard>} />
           <Route
             path="/admin/configuracoes/converter-pdf"
-            element={<AdminConverterPdf />}
+            element={
+              <AdminOrSuperAdminGuard redirectTo="/login">
+                <AdminConverterPdf />
+              </AdminOrSuperAdminGuard>
+            }
           />
 
           <Route path="*" element={<NotFound />} />
