@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { Button } from "@/components/ui/button";
 import { compressFiles } from "@/utils/image-compression";
+import { sanitizeFileName } from "@/features/medico/faturamento/lib/file-upload";
+import { processGuiaAutorizacao } from "@/features/medico/faturamento/services/edge-functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -190,7 +192,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
       // Upload das imagens para o bucket
       for (const file of files) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const safeName = sanitizeFileName(file.name);
         const timestamp = Date.now();
         const filePath = `guia_autorizacao_cirurgia/${userId}/${timestamp}-${safeName}`;
 
@@ -210,36 +212,13 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      // Chamar a Edge Function para processar as imagens
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-autorizacao";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-          tipoCirurgia, // Enviar o tipo de cirurgia para a edge function
-        }),
+      // Chamar a Edge Function (via cliente tipado: anexa o JWT do usuário)
+      const responseJson: any = await processGuiaAutorizacao({
+        userId,
+        faturamentoId,
+        files: uploadedFilePaths.map((path) => ({ path })),
+        tipoCirurgia,
       });
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // se não veio JSON, seguimos só com o status HTTP
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ??
-          "Arquivos enviados, mas houve erro ao processar a guia de autorização.";
-        throw new Error(errorMessage);
-      }
 
       // Atualizar o tipo_cirurgia no faturamento (caso a edge function não faça)
       await supabase
