@@ -38,6 +38,11 @@ import {
   expandFilesToUploadItems,
   classifyUploadFiles,
 } from "@/features/medico/faturamento/lib/file-upload";
+import {
+  processGuiaSolicitacao,
+  processGuiaAutorizacao,
+  processDescricaoCirurgica,
+} from "@/features/medico/faturamento/services/edge-functions";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -668,35 +673,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setAnalyzingStep("analyzing");
       setAnalyzingProgress(35);
 
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-solicitacao";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId: ensuredFaturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-        }),
+      await processGuiaSolicitacao({
+        userId,
+        faturamentoId: ensuredFaturamentoId,
+        files: uploadedFilePaths.map((path) => ({ path })),
       });
 
       setAnalyzingProgress(70);
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // ignore
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ?? "Houve erro ao processar a guia de solicitação.";
-        throw new Error(errorMessage);
-      }
 
       setAnalyzingStep("saving");
       setAnalyzingProgress(100);
@@ -967,36 +950,14 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           .filter(Boolean);
       }
 
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-autorizacao";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId: ensuredFaturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-          tipoCirurgia,
-        }),
+      await processGuiaAutorizacao({
+        userId,
+        faturamentoId: ensuredFaturamentoId,
+        files: uploadedFilePaths.map((path) => ({ path })),
+        tipoCirurgia,
       });
 
       setAnalyzingProgress(70);
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // se não veio JSON, seguimos só com o status HTTP
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ?? "Houve erro ao processar a guia de autorização.";
-        throw new Error(errorMessage);
-      }
 
       setAnalyzingStep("saving");
       setAnalyzingProgress(85);
@@ -1241,35 +1202,15 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           .filter(Boolean);
       }
 
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-        }),
-      });
+      const responseJson = (await processDescricaoCirurgica({
+        userId,
+        faturamentoId,
+        files: uploadedFilePaths.map((path) => ({ path })),
+      })) as
+        | { revisao_procedimentos?: ProcedimentoRevisao[]; tem_revisao_pendente?: boolean }
+        | null;
 
       setAnalyzingProgress(70);
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // se não veio JSON, seguimos só com o status HTTP
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ?? "Houve erro ao processar a descrição cirúrgica.";
-        throw new Error(errorMessage);
-      }
 
       setAnalyzingStep("saving");
       setAnalyzingProgress(85);
