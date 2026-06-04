@@ -40,6 +40,19 @@ export async function fetchGuiaHonorariosPdfField(
   return data as GuiaHonorariosRow;
 }
 
+/**
+ * Lê os paths de documentos da guia (campo `pdf_guia_honorario`, que pode ser
+ * uma string única ou um array) e normaliza para uma lista de paths.
+ */
+export async function fetchGuiaHonorariosDocPaths(id: string): Promise<string[]> {
+  const data = await fetchGuiaHonorariosPdfField(id);
+  if (!data) return [];
+
+  const rawPdf = data.pdf_guia_honorario;
+  if (!rawPdf) return [];
+  return Array.isArray(rawPdf) ? (rawPdf as string[]) : [rawPdf as string];
+}
+
 /** Insere uma nova guia ou atualiza a existente (quando `id` é informado). */
 export async function saveGuiaHonorarios(
   payload: Record<string, unknown>,

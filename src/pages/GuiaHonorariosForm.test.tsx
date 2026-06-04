@@ -26,5 +26,11 @@ describe("GuiaHonorariosForm (render)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Nova Guia de Honorários")).toBeInTheDocument();
+    // Âncoras: campo regular, grupo de procedimento cirúrgico, equipe e extra.
+    expect(screen.getByText("Nome do Profissional")).toBeInTheDocument();
+    expect(screen.getByText("Procedimento 1")).toBeInTheDocument();
+    expect(screen.getByText("Instrumentador")).toBeInTheDocument();
+    expect(screen.getByText("Extra 2")).toBeInTheDocument();
+    expect(screen.getByText("Salvar Guia")).toBeInTheDocument();
   });
 });
