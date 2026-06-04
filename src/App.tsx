@@ -12,6 +12,7 @@ import { SystemUserProvider } from "@/contexts/SystemUserContext";
 // isoladas nos chunks das páginas que as usam.
 import SuperAdminGuard from "@/components/auth/SuperAdminGuard";
 import AdminOrSuperAdminGuard from "@/components/auth/AdminOrSuperAdminGuard";
+import MedicoGuard from "@/components/auth/MedicoGuard";
 import AuthUrlRouter from "@/components/auth/AuthUrlRouter";
 import InactivityLogout from "@/components/auth/InactivityLogout";
 
@@ -112,19 +113,19 @@ const App = () => (
             element={<DescricaoCirurgicaArquivosPage />}
           />
 
-          <Route path="/medico/dashboard" element={<MedicoInicio />} />
-          <Route path="/medico/informacoes" element={<DashboardMedico />} />
+          <Route path="/medico/dashboard" element={<MedicoGuard><MedicoInicio /></MedicoGuard>} />
+          <Route path="/medico/informacoes" element={<MedicoGuard><DashboardMedico /></MedicoGuard>} />
 
           {/* Novo fluxo (renomeado) */}
           <Route
             path="/medico/faturamentos/enviar"
-            element={<MedicoUploadDescricaoCirurgica />}
+            element={<MedicoGuard><MedicoUploadDescricaoCirurgica /></MedicoGuard>}
           />
           <Route
             path="/medico/guia-autorizacao/enviar"
-            element={<MedicoUploadGuiaAutorizacao />}
+            element={<MedicoGuard><MedicoUploadGuiaAutorizacao /></MedicoGuard>}
           />
-          <Route path="/medico/faturamentos" element={<MedicoFaturamentos />} />
+          <Route path="/medico/faturamentos" element={<MedicoGuard><MedicoFaturamentos /></MedicoGuard>} />
 
           {/* Compatibilidade: rotas antigas */}
           <Route
@@ -224,11 +225,11 @@ const App = () => (
           <Route path="/admin/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
           <Route path="/admin/sadt-acompanhamento/nova" element={<SadtAcompanhamentoFormPage />} />
           <Route path="/admin/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
-          <Route path="/medico/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
-          <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
-          <Route path="/medico/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
+          <Route path="/medico/sadt-acompanhamento" element={<MedicoGuard><SadtAcompanhamentoPage /></MedicoGuard>} />
+          <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoGuard><MedicoUploadSadtAcompanhamento /></MedicoGuard>} />
+          <Route path="/medico/sadt-acompanhamento/editar/:id" element={<MedicoGuard><SadtAcompanhamentoFormPage /></MedicoGuard>} />
           {/* Alias amigável para o fluxo de acompanhamento (usado pelo menu flutuante do médico) */}
-          <Route path="/medico/acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
+          <Route path="/medico/acompanhamento/enviar" element={<MedicoGuard><MedicoUploadSadtAcompanhamento /></MedicoGuard>} />
 
           <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
           <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
