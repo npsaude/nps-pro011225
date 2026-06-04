@@ -13,7 +13,6 @@ import {
   X,
   CircleDollarSign,
   Loader2,
-  Download,
   TrendingUp,
   Scissors,
   Star,
@@ -74,6 +73,7 @@ import { GeneratingHonorariosStep } from "@/features/medico/faturamento/componen
 import { NoModelStep } from "@/features/medico/faturamento/components/NoModelStep";
 import { UploadStep } from "@/features/medico/faturamento/components/UploadStep";
 import { HonorariosQuestionStep } from "@/features/medico/faturamento/components/HonorariosQuestionStep";
+import { HonorariosPreviewStep } from "@/features/medico/faturamento/components/HonorariosPreviewStep";
 import {
   FaturamentoFlowProvider,
   type FaturamentoFlowValue,
@@ -222,11 +222,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [procedimentosRevisao, setProcedimentosRevisao] = useState<ProcedimentoRevisao[]>([]);
   const [procedureReviewEditMode, setProcedureReviewEditMode] = useState(false);
 
-  // Zoom do preview da guia de honorários (inicia em 50%)
+  // Zoom do preview da guia de honorários (inicia em 50%). Os limites/passo
+  // de zoom vivem no componente HonorariosPreviewStep.
   const [guiaZoom, setGuiaZoom] = useState(0.5);
-  const ZOOM_STEP = 0.15;
-  const ZOOM_MIN = 0.25;
-  const ZOOM_MAX = 2.0;
 
   // Tipo de cirurgia (eletiva ou emergencial)
   const [tipoCirurgia, setTipoCirurgia] = useState<"ELETIVA" | "EMERGENCIAL" | null>(null);
@@ -2765,102 +2763,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           {view === "sem_modelo" && <NoModelStep />}
 
           {view === "preview_honorarios" && (
-            <div className="flex w-full max-w-5xl flex-col gap-4">
-              <div className="flex flex-col gap-3 rounded-3xl border border-[#D4A017]/20 bg-black/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-[#F5F5F5]">Preview da guia de honorários</h2>
-                  <p className="text-xs text-[#9CA3AF]">Revise o documento antes de concluir o faturamento.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-9 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => setGuiaZoom((prev) => Math.max(ZOOM_MIN, Number((prev - ZOOM_STEP).toFixed(2))))}
-                  >
-                    - Zoom
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-9 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => setGuiaZoom((prev) => Math.min(ZOOM_MAX, Number((prev + ZOOM_STEP).toFixed(2))))}
-                  >
-                    + Zoom
-                  </Button>
-                  <span className="rounded-full border border-[#D4A017]/20 px-3 py-1 text-xs text-[#D4A017]">
-                    {Math.round(guiaZoom * 100)}%
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-[#D4A017]/20 bg-black/40 p-4">
-                <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-[#9CA3AF]">
-                  <span className="flex items-center gap-2 rounded-full border border-[#D4A017]/20 px-3 py-1">
-                    <Building2 className="h-3.5 w-3.5 text-[#D4A017]" />
-                    Cirurgia: {selectedHospitalName || "Não informado"}
-                  </span>
-                  <span className="flex items-center gap-2 rounded-full border border-[#D4A017]/20 px-3 py-1">
-                    <CircleDollarSign className="h-3.5 w-3.5 text-[#D4A017]" />
-                    Faturamento: {selectedClinicaName || "Não informado"}
-                  </span>
-                </div>
-                <div className="overflow-auto rounded-2xl bg-white p-4">
-                  <div
-                    ref={guiaPreviewRef}
-                    className="origin-top transition-transform"
-                    style={{
-                      transform: `scale(${guiaZoom})`,
-                      transformOrigin: "top left",
-                      width: `${100 / guiaZoom}%`,
-                    }}
-                    dangerouslySetInnerHTML={{ __html: htmlGuiaPreenchida }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                  onClick={() => goTo("pergunta_honorarios")}
-                >
-                  Voltar
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                  onClick={pdfGerado ? handleBaixarPdf : () => void handleGerarPdf()}
-                  disabled={isGeneratingPdf}
-                >
-                  {isGeneratingPdf ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Gerando PDF...
-                    </>
-                  ) : pdfGerado ? (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Baixar PDF
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Gerar PDF
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  className="h-11 rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] transition-shadow hover:shadow-[0_0_30px_rgba(212,160,23,0.6)]"
-                  onClick={() => void handleAvancarAposPreview()}
-                >
-                  Concluir faturamento
-                </Button>
-              </div>
-            </div>
+            <HonorariosPreviewStep
+              hospitalNome={selectedHospitalName}
+              clinicaNome={selectedClinicaName}
+              html={htmlGuiaPreenchida}
+              previewRef={guiaPreviewRef}
+              zoom={guiaZoom}
+              setZoom={setGuiaZoom}
+              pdfGerado={pdfGerado}
+              isGeneratingPdf={isGeneratingPdf}
+              onPdfAction={pdfGerado ? handleBaixarPdf : () => void handleGerarPdf()}
+              onConcluir={() => void handleAvancarAposPreview()}
+            />
           )}
 
           {view === "success" && (
