@@ -28,7 +28,8 @@ export default defineConfig(() => ({
           if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id))
             return "react-vendor";
           if (id.includes("@radix-ui")) return "radix";
-          if (id.includes("recharts") || id.includes("/d3-")) return "charts";
+          if (id.includes("/d3-") || id.includes("/victory-vendor/")) return "d3";
+          if (id.includes("recharts")) return "charts";
           if (id.includes("@supabase")) return "supabase";
           if (id.includes("@tanstack")) return "query";
           if (id.includes("react-hook-form") || id.includes("@hookform")) return "forms";
