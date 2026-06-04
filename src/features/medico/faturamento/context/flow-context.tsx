@@ -16,6 +16,7 @@ export type TipoCirurgia = "ELETIVA" | "EMERGENCIAL";
 export type FaturamentoFlowValue = {
   view: FaturamentoView;
   goTo: (next: FaturamentoView) => void;
+  medicoNome: string;
   fileInputRefSolicitacao: React.MutableRefObject<HTMLInputElement | null>;
   fileInputRefGuia: React.MutableRefObject<HTMLInputElement | null>;
   fileInputRefDescricao: React.MutableRefObject<HTMLInputElement | null>;

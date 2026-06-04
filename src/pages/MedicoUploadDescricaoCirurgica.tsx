@@ -7,9 +7,6 @@ import { GlobalWorkerOptions } from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   ArrowLeft,
-  Upload,
-  Image as ImageIcon,
-  FileText,
   ShieldCheck,
   Building2,
   ChevronDown,
@@ -76,6 +73,7 @@ import { SolicitacaoQuestionStep } from "@/features/medico/faturamento/component
 import { AutorizacaoQuestionStep } from "@/features/medico/faturamento/components/AutorizacaoQuestionStep";
 import { GeneratingHonorariosStep } from "@/features/medico/faturamento/components/GeneratingHonorariosStep";
 import { NoModelStep } from "@/features/medico/faturamento/components/NoModelStep";
+import { UploadStep } from "@/features/medico/faturamento/components/UploadStep";
 import {
   FaturamentoFlowProvider,
   type FaturamentoFlowValue,
@@ -2275,6 +2273,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const flowValue: FaturamentoFlowValue = {
     view,
     goTo,
+    medicoNome,
     fileInputRefSolicitacao,
     fileInputRefGuia,
     fileInputRefDescricao,
@@ -2707,417 +2706,55 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
           {/* TELA 2.6 - UPLOAD GUIA DE SOLICITAÇÃO */}
           {view === "upload_solicitacao" && (
-            <div className="mt-2 flex w-full max-w-md flex-col">
-              <Input
-                id="files-upload-solicitacao"
-                ref={fileInputRefSolicitacao}
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/*,image/heic,image/heif,.heic,.heif,application/pdf"
-                onChange={handleFileChangeSolicitacao}
-              />
-
-              <div className="mb-6">
-                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                </h1>
-                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  {filesSolicitacao.length === 0 ? (
-                    <>
-                      <span>
-                        Faça upload das imagens/PDF da{" "}
-                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                          Guia de Solicitação
-                        </span>
-                        .
-                      </span>
-                      <br />
-                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
-                        Obs: Tire várias imagens com os detalhes dos campos para melhor
-                        análise da IA
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      Confira os arquivos antes de enviar a{" "}
-                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                        Guia de Solicitação
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {filesSolicitacao.length === 0 ? (
-                <>
-                  <label
-                    htmlFor="files-upload-solicitacao"
-                    className="bg-[#1a1a1a] border-2 border-dashed border-[#D4A017]/30 rounded-2xl p-8 hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5 transition-all cursor-pointer group text-center"
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] flex items-center justify-center shadow-[0_0_30px_rgba(212,160,23,0.4)] group-hover:shadow-[0_0_40px_rgba(212,160,23,0.6)] transition-shadow">
-                        <Upload className="h-8 w-8 text-black" />
-                      </div>
-                      <p className="text-[#F5F5F5] font-medium">
-                        Adicionar Arquivos
-                      </p>
-                      <p className="text-[#9CA3AF] text-sm">Câmera ou Galeria</p>
-                      <p className="text-[#6B7280] text-[11px]">
-                        Formatos aceitos: PNG, JPEG, GIF, WEBP, HEIC e PDF.
-                      </p>
-                    </div>
-                  </label>
-
-                  <Button
-                    type="button"
-                    disabled
-                    className="mt-8 h-11 w-full rounded-lg bg-black/50 text-xs font-semibold text-[#6B7280] border border-[#D4A017]/10"
-                  >
-                    Selecione arquivos acima
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#F5F5F5]">
-                      Seus Arquivos ({arquivosLabel})
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                      onClick={handleAdicionarMaisSolicitacao}
-                    >
-                      + Adicionar mais
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {filesSolicitacao.map((file, index) => (
-                      <div
-                        key={file.name + file.lastModified + index}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] border border-[#D4A017]/15 hover:border-[#D4A017]/30 transition-colors"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20">
-                            {isImage(file) ? (
-                              <ImageIcon className="h-4 w-4" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] sm:text-xs">{file.name}</p>
-                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoverArquivoSolicitacao(index)}
-                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-[#D4A017]/15 bg-black/50 text-[#9CA3AF] hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button
-                    type="button"
-                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] disabled:opacity-70"
-                    disabled={isUploading || filesSolicitacao.length === 0}
-                    onClick={handleUploadGuiaSolicitacao}
-                  >
-                    {isUploading ? "Processando..." : "Processar Guia"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => goTo("pergunta_solicitacao")}
-                    disabled={isUploading}
-                  >
-                    Voltar
-                  </Button>
-                </>
-              )}
-            </div>
+            <UploadStep
+              docLabel="Guia de Solicitação"
+              emptyLead="Faça upload das imagens/PDF da"
+              emptyObs="Obs: Tire várias imagens com os detalhes dos campos para melhor análise da IA"
+              processarLabel="Processar Guia"
+              inputId="files-upload-solicitacao"
+              inputRef={fileInputRefSolicitacao}
+              files={filesSolicitacao}
+              onFilesChange={handleFileChangeSolicitacao}
+              onAdicionarMais={handleAdicionarMaisSolicitacao}
+              onRemover={handleRemoverArquivoSolicitacao}
+              onProcessar={handleUploadGuiaSolicitacao}
+              onVoltar={() => goTo("pergunta_solicitacao")}
+            />
           )}
 
           {view === "upload_guia" && (
-            <div className="mt-2 flex w-full max-w-md flex-col">
-              <Input
-                id="files-upload-guia"
-                ref={fileInputRefGuia}
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/*,image/heic,image/heif,.heic,.heif,application/pdf"
-                onChange={handleFileChangeGuia}
-              />
-
-              <div className="mb-6">
-                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                </h1>
-                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  {filesGuia.length === 0 ? (
-                    <>
-                      <span>
-                        Faça upload das imagens da{" "}
-                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                          Guia de Autorização de Cirurgia
-                        </span>
-                        .
-                      </span>
-                      <br />
-                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
-                        Obs: Tire várias imagens com os detalhes dos campos da mesma
-                        guia para melhor análise da IA
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      Confira os arquivos antes de enviar a{" "}
-                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                        Guia de Autorização de Cirurgia
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {filesGuia.length === 0 ? (
-                <>
-                  <label
-                    htmlFor="files-upload-guia"
-                    className="cursor-pointer rounded-2xl border-2 border-dashed border-[#D4A017]/30 bg-[#1a1a1a] p-8 text-center transition-all hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5"
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] shadow-[0_0_30px_rgba(212,160,23,0.4)] transition-shadow hover:shadow-[0_0_40px_rgba(212,160,23,0.6)]">
-                        <Upload className="h-8 w-8 text-black" />
-                      </div>
-                      <p className="font-medium text-[#F5F5F5]">Adicionar Arquivos</p>
-                      <p className="text-sm text-[#9CA3AF]">Câmera ou Galeria</p>
-                      <p className="text-[11px] text-[#6B7280]">
-                        Formatos aceitos: PNG, JPEG, GIF, WEBP, HEIC e PDF.
-                      </p>
-                    </div>
-                  </label>
-                  <Button
-                    type="button"
-                    disabled
-                    className="mt-8 h-11 w-full rounded-lg border border-[#D4A017]/10 bg-black/50 text-xs font-semibold text-[#6B7280]"
-                  >
-                    Selecione arquivos acima
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#F5F5F5]">
-                      Seus Arquivos ({arquivosLabel})
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                      onClick={handleAdicionarMaisGuia}
-                    >
-                      + Adicionar mais
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {filesGuia.map((file, index) => (
-                      <div
-                        key={file.name + file.lastModified + index}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-[#D4A017]/15 bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] transition-colors hover:border-[#D4A017]/30"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]">
-                            {isImage(file) ? (
-                              <ImageIcon className="h-4 w-4" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] sm:text-xs">{file.name}</p>
-                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoverArquivoGuia(index)}
-                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-[#D4A017]/15 bg-black/50 text-[#9CA3AF] hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    type="button"
-                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] disabled:opacity-70"
-                    disabled={isUploading || filesGuia.length === 0}
-                    onClick={handleUploadGuiaAutorizacao}
-                  >
-                    {isUploading ? "Processando..." : "Processar Guia"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => goTo("pergunta_guia_autorizacao")}
-                    disabled={isUploading}
-                  >
-                    Voltar
-                  </Button>
-                </>
-              )}
-            </div>
+            <UploadStep
+              docLabel="Guia de Autorização de Cirurgia"
+              emptyLead="Faça upload das imagens da"
+              emptyObs="Obs: Tire várias imagens com os detalhes dos campos da mesma guia para melhor análise da IA"
+              processarLabel="Processar Guia"
+              inputId="files-upload-guia"
+              inputRef={fileInputRefGuia}
+              files={filesGuia}
+              onFilesChange={handleFileChangeGuia}
+              onAdicionarMais={handleAdicionarMaisGuia}
+              onRemover={handleRemoverArquivoGuia}
+              onProcessar={handleUploadGuiaAutorizacao}
+              onVoltar={() => goTo("pergunta_guia_autorizacao")}
+            />
           )}
 
           {view === "upload_descricao" && (
-            <div className="mt-2 flex w-full max-w-md flex-col">
-              <Input
-                id="files-upload-descricao"
-                ref={fileInputRefDescricao}
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/*,image/heic,image/heif,.heic,.heif,application/pdf"
-                onChange={handleFileChangeDescricao}
-              />
-              <div className="mb-6">
-                <h1 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl">
-                  {medicoNome ? `Dr. ${medicoNome},` : "Doutor(a),"}
-                </h1>
-                <p className="mt-1 text-xs text-[#9CA3AF] sm:text-sm">
-                  {filesDescricao.length === 0 ? (
-                    <>
-                      <span>
-                        Faça upload da{" "}
-                        <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                          Descrição Cirúrgica
-                        </span>
-                        .
-                      </span>
-                      <br />
-                      <span className="text-[11px] text-[#6B7280] sm:text-xs">
-                        Envie imagens nítidas ou PDF para extrair os procedimentos com precisão.
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      Confira os arquivos antes de enviar a{" "}
-                      <span className="rounded-md bg-[#FFD700]/20 px-1.5 py-0.5 font-semibold text-[#FFD700] ring-1 ring-[#D4A017]/30">
-                        Descrição Cirúrgica
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
-              {filesDescricao.length === 0 ? (
-                <>
-                  <label
-                    htmlFor="files-upload-descricao"
-                    className="cursor-pointer rounded-2xl border-2 border-dashed border-[#D4A017]/30 bg-[#1a1a1a] p-8 text-center transition-all hover:border-[#D4A017]/60 hover:bg-[#D4A017]/5"
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] shadow-[0_0_30px_rgba(212,160,23,0.4)]">
-                        <Scissors className="h-8 w-8 text-black" />
-                      </div>
-                      <p className="font-medium text-[#F5F5F5]">Adicionar Arquivos</p>
-                      <p className="text-sm text-[#9CA3AF]">Câmera ou Galeria</p>
-                      <p className="text-[11px] text-[#6B7280]">
-                        Formatos aceitos: PNG, JPEG, GIF, WEBP, HEIC e PDF.
-                      </p>
-                    </div>
-                  </label>
-                  <Button
-                    type="button"
-                    disabled
-                    className="mt-8 h-11 w-full rounded-lg border border-[#D4A017]/10 bg-black/50 text-xs font-semibold text-[#6B7280]"
-                  >
-                    Selecione arquivos acima
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#F5F5F5]">
-                      Seus Arquivos ({arquivosLabel})
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 rounded-full border-[#D4A017]/30 bg-black/40 text-[11px] font-semibold text-[#D4A017] hover:bg-[#D4A017]/10 hover:text-[#FFD700]"
-                      onClick={handleAdicionarMaisDescricao}
-                    >
-                      + Adicionar mais
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {filesDescricao.map((file, index) => (
-                      <div
-                        key={file.name + file.lastModified + index}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-[#D4A017]/15 bg-black/60 px-4 py-3 text-xs text-[#F5F5F5] transition-colors hover:border-[#D4A017]/30"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]">
-                            {isImage(file) ? (
-                              <ImageIcon className="h-4 w-4" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] sm:text-xs">{file.name}</p>
-                            <p className="mt-0.5 text-[10px] text-[#6B7280]">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoverArquivoDescricao(index)}
-                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-[#D4A017]/15 bg-black/50 text-[#9CA3AF] hover:border-[#D4A017]/30 hover:text-[#F5F5F5]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    type="button"
-                    className="mt-8 h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black shadow-[0_0_20px_rgba(212,160,23,0.4)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] disabled:opacity-70"
-                    disabled={isUploading || filesDescricao.length === 0}
-                    onClick={handleUploadDescricaoCirurgica}
-                  >
-                    {isUploading ? "Processando..." : "Processar Descrição"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => goTo(autorizacaoEnviada ? "upload_guia" : "pergunta_guia_autorizacao")}
-                    disabled={isUploading}
-                  >
-                    Voltar
-                  </Button>
-                </>
-              )}
-            </div>
+            <UploadStep
+              docLabel="Descrição Cirúrgica"
+              emptyLead="Faça upload da"
+              emptyObs="Envie imagens nítidas ou PDF para extrair os procedimentos com precisão."
+              dropIcon={Scissors}
+              processarLabel="Processar Descrição"
+              inputId="files-upload-descricao"
+              inputRef={fileInputRefDescricao}
+              files={filesDescricao}
+              onFilesChange={handleFileChangeDescricao}
+              onAdicionarMais={handleAdicionarMaisDescricao}
+              onRemover={handleRemoverArquivoDescricao}
+              onProcessar={handleUploadDescricaoCirurgica}
+              onVoltar={() => goTo(autorizacaoEnviada ? "upload_guia" : "pergunta_guia_autorizacao")}
+            />
           )}
 
           {view === "pergunta_honorarios" && (
