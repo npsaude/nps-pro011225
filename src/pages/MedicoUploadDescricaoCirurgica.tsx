@@ -34,7 +34,6 @@ import {
   markResultsAsIgnored,
   type CheckResult,
 } from "@/utils/consistencyCheck";
-import { useBillingQuota } from "@/hooks/use-billing-quota";
 import { listarFavoritos } from "@/services/clinicas-service";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 import {
@@ -105,9 +104,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     initialView?: ViewState | "email_faturamento";
   };
 
-  // Quota de faturamentos mensais
-  const billingQuota = useBillingQuota();
-
   // Arquivos da Guia de Autorização
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
   // Arquivos da Guia de Solicitação
@@ -116,7 +112,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [filesDescricao, setFilesDescricao] = useState<File[]>([]);
   
   const [isUploading, setIsUploading] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [, setStep] = useState<1 | 2>(1);
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [medicoEmail, setMedicoEmail] = useState<string>("");
   const [medicoCrm, setMedicoCrm] = useState<string>("");
@@ -147,8 +143,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Dados do faturamento para preencher a guia de honorários
-  const [faturamentoData, setFaturamentoData] = useState<FaturamentoData | null>(null);
-  const [itensFaturamento, setItensFaturamento] = useState<ItemFaturamento[]>([]);
+  const [, setFaturamentoData] = useState<FaturamentoData | null>(null);
+  const [, setItensFaturamento] = useState<ItemFaturamento[]>([]);
 
   // HTML da guia de honorários preenchida
   const [htmlGuiaPreenchida, setHtmlGuiaPreenchida] = useState<string>("");
@@ -914,27 +910,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setAnalyzingStep("analyzing");
       setAnalyzingProgress(35);
 
-      // ── Snapshot ANTES de chamar a edge function (dados da autorização) ──
-      let autSnapshot: Record<string, any> | null = null;
-      let autProcCodes: string[] = [];
-
-      if (consistencyCheckEnabled && autorizacaoEnviada) {
-        const { data: snapRow } = await supabase
-          .from("faturamentos")
-          .select("paciente_nome, data_cirurgia, hora_inicio, hora_fim, cirurgiao_principal_nome, cirurgiao_principal_crm, auxiliar1_nome, auxiliar1_crm, auxiliar2_nome, auxiliar2_crm, auxiliar3_nome, auxiliar3_crm, anestesista_nome, anestesista_crm, instrumentador_nome, instrumentador_crm")
-          .eq("id", faturamentoId)
-          .single();
-        if (snapRow) autSnapshot = snapRow;
-
-        const { data: snapItens } = await supabase
-          .from("itens_faturamento")
-          .select("codigo_procedimento")
-          .eq("faturamento_id", faturamentoId);
-        autProcCodes = (snapItens ?? [])
-          .map((it: any) => it.codigo_procedimento)
-          .filter(Boolean);
-      }
-
       await processGuiaAutorizacao({
         userId,
         faturamentoId: ensuredFaturamentoId,
@@ -1371,36 +1346,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       navigate("/medico/faturamentos");
     } else {
       goTo("pergunta_honorarios");
-    }
-  };
-
-  // Abre o diálogo de edição de procedimentos a partir da tela de consistência
-  const handleEditProcedimentos = async () => {
-    if (!faturamentoId) return;
-
-    try {
-      const { data: itens } = await supabase
-        .from("itens_faturamento")
-        .select("id, codigo_procedimento, descricao_procedimento")
-        .eq("faturamento_id", faturamentoId)
-        .order("created_at", { ascending: true });
-
-      const procs: ProcedimentoRevisao[] = (itens ?? []).map((item: any) => ({
-        item_faturamento_id: item.id,
-        codigo_original: item.codigo_procedimento ?? null,
-        descricao_original: item.descricao_procedimento ?? null,
-        codigo_validado: item.codigo_procedimento ?? null,
-        descricao_validada: item.descricao_procedimento ?? null,
-        metodo_validacao: "manual",
-        similaridade: null,
-        necessita_revisao: false,
-      }));
-
-      setProcedimentosRevisao(procs);
-      setProcedureReviewEditMode(true);
-      setShowProcedureReview(true);
-    } catch {
-      // ignore
     }
   };
 
@@ -2093,23 +2038,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setAutorizacaoEnviada(false);
   };
 
-  const currentFiles =
-    view === "upload_guia"
-      ? filesGuia
-      : view === "upload_solicitacao"
-        ? filesSolicitacao
-        : filesDescricao;
-
-  const totalArquivos = currentFiles.length;
-  const arquivosLabel =
-    totalArquivos === 0
-      ? "Nenhum arquivo"
-      : totalArquivos === 1
-        ? "1 arquivo"
-        : `${totalArquivos} arquivos`;
-
-  const isImage = (file: File) => file.type.startsWith("image/");
-
   const handleAdicionarMaisGuia = () => {
     fileInputRefGuia.current?.click();
   };
@@ -2132,19 +2060,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
   const handleRemoverArquivoDescricao = (index: number) => {
     setFilesDescricao((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleIniciarFluxo = () => {
-    goTo("hospital");
-    setHospitalStepView("selector");
-    setClinicaStepView("selector");
-    void carregarFavoritosDoMedico();
-    if (!hospitaisMedico.length) {
-      void carregarHospitaisDoMedico();
-    }
-    if (!clinicasMedico.length) {
-      void carregarClinicasDoMedico();
-    }
   };
 
   const handleUseSameAsHospitalChange = (checked: boolean) => {

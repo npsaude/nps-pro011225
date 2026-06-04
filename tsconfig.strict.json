@@ -24,7 +24,6 @@
   "exclude": [
     "**/*.test.ts",
     "**/*.test.tsx",
-    "src/pages/MedicoUploadDescricaoCirurgica.tsx",
     "src/pages/DashboardMedico.tsx"
   ]
 }
