@@ -53,7 +53,7 @@ async function loadSystemUsersByEmail(email: string): Promise<DbSystemUser[]> {
 
   const rows = ((data ?? []) as DbSystemUser[]).map((r) => ({
     ...r,
-    email: typeof (r as any).email === "string" ? (r as any).email : "",
+    email: typeof r.email === "string" ? r.email : "",
   }));
 
   // Preferência: match exato após normalização (trim + lowercase)
@@ -67,12 +67,12 @@ function pickBestSystemUser(
 ): DbSystemUser | null {
   if (!users.length) return null;
 
-  const active = users.filter((u) => (u as any)?.ativo === true);
+  const active = users.filter((u) => u?.ativo === true);
   const pool = active.length ? active : users;
 
   const withRole = pool.map((u) => ({
     user: u,
-    role: normalizeRole((u as any)?.regra),
+    role: normalizeRole(u?.regra),
   }));
 
   const pick = (roles: AllowedRole[]) =>
@@ -152,7 +152,7 @@ export async function loginWithRole(params: {
     systemUser = pickBestSystemUser(systemUsers, allowedRole);
 
     // Se achou por e-mail mas id_user está incorreto, tenta corrigir (se o banco permitir)
-    if (systemUser && (systemUser as any).id_user !== authUid) {
+    if (systemUser && systemUser.id_user !== authUid) {
       const { data: fixed, error: fixError } = await supabase
         .from("usuarios_sistema")
         .update({ id_user: authUid, email: authEmail })
@@ -178,14 +178,14 @@ export async function loginWithRole(params: {
     );
   }
 
-  if ((systemUser as any)?.ativo === false) {
+  if (systemUser?.ativo === false) {
     await supabase.auth.signOut();
     throw new Error(
       "Seu acesso está desativado. Entre em contato com o administrador.",
     );
   }
 
-  const userRole = normalizeRole((systemUser as any)?.regra);
+  const userRole = normalizeRole(systemUser?.regra);
 
   // Cache do role (melhora performance do menu/sidebar)
   if (typeof window !== "undefined") {

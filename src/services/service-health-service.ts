@@ -53,11 +53,12 @@ export async function carregarSaudeDosServicos(): Promise<ServicesHealth> {
     throw new Error(error.message || "Não foi possível verificar os serviços.");
   }
 
-  if ((data as any)?.error) {
-    throw new Error((data as any).error);
+  const result = data as ServicesHealth & { error?: string };
+  if (result?.error) {
+    throw new Error(result.error);
   }
 
-  return data as ServicesHealth;
+  return result;
 }
 
 export async function carregarUsoIA(): Promise<IAUsageMetrics> {

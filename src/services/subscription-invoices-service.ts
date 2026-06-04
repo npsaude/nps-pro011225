@@ -21,9 +21,10 @@ export async function listarFaturasAssinatura(params: {
     throw new Error(error.message || "Não foi possível carregar o histórico de faturamento.");
   }
 
-  if ((data as any)?.error) {
-    throw new Error((data as any).error);
+  const result = data as { error?: string; invoices?: SubscriptionInvoice[] };
+  if (result?.error) {
+    throw new Error(result.error);
   }
 
-  return ((data as any)?.invoices ?? []) as SubscriptionInvoice[];
+  return result?.invoices ?? [];
 }

@@ -16,11 +16,14 @@ export async function purgeUserByEmail(email: string): Promise<PurgeUserResult> 
   });
 
   if (error) {
-    const anyErr = error as any;
+    const invokeErr = error as {
+      context?: { response?: { status?: number }; status?: number };
+      status?: number;
+    };
     const status =
-      anyErr?.context?.response?.status ??
-      anyErr?.status ??
-      anyErr?.context?.status ??
+      invokeErr?.context?.response?.status ??
+      invokeErr?.status ??
+      invokeErr?.context?.status ??
       undefined;
 
     if (status === 404) {
@@ -30,9 +33,10 @@ export async function purgeUserByEmail(email: string): Promise<PurgeUserResult> 
     throw new Error(error.message || "Não foi possível excluir o usuário.");
   }
 
-  if ((data as any)?.error) {
-    throw new Error((data as any).error);
+  const result = data as PurgeUserResult & { error?: string };
+  if (result?.error) {
+    throw new Error(result.error);
   }
 
-  return data as PurgeUserResult;
+  return result;
 }

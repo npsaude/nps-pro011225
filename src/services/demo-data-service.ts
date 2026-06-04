@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { criarClinica, type ClinicaInput } from "@/services/clinicas-service";
 import { salvarMedico } from "@/services/medicos-service";
-import type { DbDescricaoCirurgicaStatus } from "@/db/schema";
+import type { DbDescricaoCirurgicaStatus, DbSystemUser } from "@/db/schema";
 
 /**
  * Cria dados de exemplo nas principais tabelas:
@@ -95,7 +95,7 @@ export async function criarDadosExemplo(): Promise<void> {
     );
   }
 
-  let medicoUser: any | null = null;
+  let medicoUser: DbSystemUser | null = null;
 
   if (medicoUsers && medicoUsers.length > 0) {
     medicoUser = medicoUsers[0];
@@ -120,6 +120,10 @@ export async function criarDadosExemplo(): Promise<void> {
     }
 
     medicoUser = novoMedicoUser;
+  }
+
+  if (!medicoUser) {
+    throw new Error("Não foi possível obter o usuário médico de exemplo.");
   }
 
   // 3) Garante que esse usuário médico tenha cadastro em medicos

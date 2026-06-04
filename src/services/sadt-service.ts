@@ -99,7 +99,14 @@ async function extrairDadosSadtComGpt(
     }),
   });
 
-  const data = (await response.json()) as any;
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
+  };
   const content: string | undefined =
     data?.choices?.[0]?.message?.content ?? undefined;
 
