@@ -31,12 +31,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
-import { compressFiles, isHeicFile } from "@/utils/image-compression";
+import { compressFiles } from "@/utils/image-compression";
 import {
   type UploadItem,
-  isUnsupportedRawFormat,
   sanitizeFileName,
   expandFilesToUploadItems,
+  classifyUploadFiles,
 } from "@/features/medico/faturamento/lib/file-upload";
 
 import { Button } from "@/components/ui/button";
@@ -471,24 +471,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
-  // Handler para arquivos da Guia de Autorização
-  const handleFileChangeGuia = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler genérico para seleção de arquivos: valida, avisa sobre formatos
+  // não suportados e adiciona os arquivos comprimidos ao estado informado.
+  // Unifica a lógica antes duplicada em handleFileChangeGuia/Descricao/Solicitacao.
+  const handleFilesSelected = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    setFiles: React.Dispatch<React.SetStateAction<File[]>>,
+  ) => {
     if (!event.target.files) return;
     const selectedFiles = Array.from(event.target.files);
 
-    const hasRawFiles = selectedFiles.some(isUnsupportedRawFormat);
+    const { allowed, hasRawFiles, ignoredCount } = classifyUploadFiles(selectedFiles);
+
     if (hasRawFiles) {
       showError(
         "Arquivos RAW (.DNG, .CR2, .NEF, etc.) não são suportados. Por favor, tire fotos no formato JPEG/PNG ou exporte como PDF.",
       );
     }
-
-    const allowedFiles = selectedFiles.filter(
-      (file) =>
-        (file.type.startsWith("image/") || file.type === "application/pdf" || isHeicFile(file)) &&
-        !isUnsupportedRawFormat(file),
-    );
-    const ignoredCount = selectedFiles.length - allowedFiles.length;
 
     if (ignoredCount > 0 && !hasRawFiles) {
       showError(
@@ -496,8 +495,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       );
     }
 
-    if (allowedFiles.length === 0) {
-      setFilesGuia([]);
+    if (allowed.length === 0) {
+      setFiles([]);
       if (!hasRawFiles) {
         showError(
           "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
@@ -506,93 +505,23 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    compressFiles(allowedFiles).then((compressedFiles) => {
-      setFilesGuia((prev) => [...prev, ...compressedFiles]);
+    void compressFiles(allowed).then((compressedFiles) => {
+      setFiles((prev) => [...prev, ...compressedFiles]);
     });
     event.target.value = "";
   };
+
+  // Handler para arquivos da Guia de Autorização
+  const handleFileChangeGuia = (event: React.ChangeEvent<HTMLInputElement>) =>
+    handleFilesSelected(event, setFilesGuia);
 
   // Handler para arquivos da Descrição Cirúrgica
-  const handleFileChangeDescricao = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) return;
-    const selectedFiles = Array.from(event.target.files);
-
-    const hasRawFiles = selectedFiles.some(isUnsupportedRawFormat);
-    if (hasRawFiles) {
-      showError(
-        "Arquivos RAW (.DNG, .CR2, .NEF, etc.) não são suportados. Por favor, tire fotos no formato JPEG/PNG ou exporte como PDF.",
-      );
-    }
-
-    const allowedFiles = selectedFiles.filter(
-      (file) =>
-        (file.type.startsWith("image/") || file.type === "application/pdf" || isHeicFile(file)) &&
-        !isUnsupportedRawFormat(file),
-    );
-    const ignoredCount = selectedFiles.length - allowedFiles.length;
-
-    if (ignoredCount > 0 && !hasRawFiles) {
-      showError(
-        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
-    }
-
-    if (allowedFiles.length === 0) {
-      setFilesDescricao([]);
-      if (!hasRawFiles) {
-        showError(
-          "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-        );
-      }
-      return;
-    }
-
-    compressFiles(allowedFiles).then((compressedFiles) => {
-      setFilesDescricao((prev) => [...prev, ...compressedFiles]);
-    });
-    event.target.value = "";
-  };
+  const handleFileChangeDescricao = (event: React.ChangeEvent<HTMLInputElement>) =>
+    handleFilesSelected(event, setFilesDescricao);
 
   // Handler para arquivos da Guia de Solicitação
-  const handleFileChangeSolicitacao = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) return;
-    const selectedFiles = Array.from(event.target.files);
-
-    const hasRawFiles = selectedFiles.some(isUnsupportedRawFormat);
-    if (hasRawFiles) {
-      showError(
-        "Arquivos RAW (.DNG, .CR2, .NEF, etc.) não são suportados. Por favor, tire fotos no formato JPEG/PNG ou exporte como PDF.",
-      );
-    }
-
-    const allowedFiles = selectedFiles.filter(
-      (file) =>
-        (file.type.startsWith("image/") || file.type === "application/pdf" || isHeicFile(file)) &&
-        !isUnsupportedRawFormat(file),
-    );
-    const ignoredCount = selectedFiles.length - allowedFiles.length;
-
-    if (ignoredCount > 0 && !hasRawFiles) {
-      showError(
-        "Alguns arquivos foram ignorados por não serem imagens ou PDFs. Envie apenas imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-      );
-    }
-
-    if (allowedFiles.length === 0) {
-      setFilesSolicitacao([]);
-      if (!hasRawFiles) {
-        showError(
-          "Nenhum arquivo válido foi selecionado. Envie imagens (PNG, JPEG, GIF, WEBP) ou PDFs.",
-        );
-      }
-      return;
-    }
-
-    compressFiles(allowedFiles).then((compressedFiles) => {
-      setFilesSolicitacao((prev) => [...prev, ...compressedFiles]);
-    });
-    event.target.value = "";
-  };
+  const handleFileChangeSolicitacao = (event: React.ChangeEvent<HTMLInputElement>) =>
+    handleFilesSelected(event, setFilesSolicitacao);
 
   const upsertFaturamentoParcial = async (params: {
     instituicaoCirurgiaId: string;
