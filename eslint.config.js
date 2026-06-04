@@ -29,10 +29,6 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
-      // Débito conhecido (~214 ocorrências, sobretudo retornos não-tipados do
-      // Supabase). Mantido como warning para não bloquear o CI enquanto é
-      // tipado por etapas; o restante do lint é bloqueante.
-      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 );
