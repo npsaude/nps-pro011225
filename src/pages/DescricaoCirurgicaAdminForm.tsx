@@ -31,6 +31,11 @@ import {
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchDescricaoCirurgicaRow,
+  fetchDescricaoStorageFolder,
+  salvarDescricaoCirurgicaAdmin,
+} from "@/services/descricao-cirurgica-service";
 import { showError, showSuccess } from "@/utils/toast";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -154,11 +159,7 @@ function DocumentosTab({ descricaoId }: { descricaoId: string }) {
 
       // 2) Fallback: storage_folder da própria descrição
       if (paths.length === 0) {
-        const { data: desc } = await supabase
-          .from("descricoes_cirurgicas")
-          .select("storage_folder")
-          .eq("id", descricaoId)
-          .single();
+        const desc = await fetchDescricaoStorageFolder(descricaoId);
 
         if (desc?.storage_folder) {
           const { data: listData } = await supabase.storage
@@ -450,13 +451,9 @@ const DescricaoCirurgicaAdminFormPage: React.FC = () => {
     if (!id) return;
     void (async () => {
       setLoadingData(true);
-      const { data, error } = await supabase
-        .from("descricoes_cirurgicas")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await fetchDescricaoCirurgicaRow(id);
 
-      if (error || !data) {
+      if (!data) {
         showError("Não foi possível carregar a descrição.");
         navigate("/admin/descricao-cirurgica");
         return;
@@ -552,12 +549,7 @@ const DescricaoCirurgicaAdminFormPage: React.FC = () => {
       outras_orientacoes: values.outras_orientacoes || null,
     };
 
-    let error;
-    if (isEdit) {
-      ({ error } = await supabase.from("descricoes_cirurgicas").update(payload).eq("id", id));
-    } else {
-      ({ error } = await supabase.from("descricoes_cirurgicas").insert(payload));
-    }
+    const { error } = await salvarDescricaoCirurgicaAdmin(payload, isEdit ? id : undefined);
 
     setSaving(false);
 

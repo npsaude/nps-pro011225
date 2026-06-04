@@ -515,3 +515,55 @@ export async function listarArquivosDescricaoCirurgica(
 
   return (data ?? []) as DescricaoCirurgicaArquivo[];
 }
+
+// ── Formulário admin (acesso direto à linha descricoes_cirurgicas) ───────────
+// Funções "cruas" usadas pela página de formulário admin, distintas das
+// funções acima que aplicam transformações (criar/atualizar completa).
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DescricaoCirurgicaRow = Record<string, any>;
+
+/** Carrega a descrição cirúrgica completa (select *) por id. */
+export async function fetchDescricaoCirurgicaRow(
+  id: string,
+): Promise<DescricaoCirurgicaRow | null> {
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as DescricaoCirurgicaRow;
+}
+
+/** Carrega apenas o campo storage_folder de uma descrição cirúrgica. */
+export async function fetchDescricaoStorageFolder(
+  id: string,
+): Promise<DescricaoCirurgicaRow | null> {
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select("storage_folder")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as DescricaoCirurgicaRow;
+}
+
+/** Insere/atualiza (quando `id` é informado) a descrição cirúrgica (admin). */
+export async function salvarDescricaoCirurgicaAdmin(
+  payload: Record<string, unknown>,
+  id?: string,
+): Promise<{ error: { message: string } | null }> {
+  if (id) {
+    const { error } = await supabase
+      .from("descricoes_cirurgicas")
+      .update(payload)
+      .eq("id", id);
+    return { error };
+  }
+
+  const { error } = await supabase.from("descricoes_cirurgicas").insert(payload);
+  return { error };
+}
