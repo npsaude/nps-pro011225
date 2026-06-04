@@ -17,7 +17,6 @@ import {
   CircleDollarSign,
   Loader2,
   FileCheck,
-  AlertCircle,
   Download,
   TrendingUp,
   Scissors,
@@ -75,6 +74,8 @@ import {
 import { SuccessStep } from "@/features/medico/faturamento/components/SuccessStep";
 import { SolicitacaoQuestionStep } from "@/features/medico/faturamento/components/SolicitacaoQuestionStep";
 import { AutorizacaoQuestionStep } from "@/features/medico/faturamento/components/AutorizacaoQuestionStep";
+import { GeneratingHonorariosStep } from "@/features/medico/faturamento/components/GeneratingHonorariosStep";
+import { NoModelStep } from "@/features/medico/faturamento/components/NoModelStep";
 import {
   FaturamentoFlowProvider,
   type FaturamentoFlowValue,
@@ -2282,6 +2283,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setTipoCirurgia,
     onEnviarGuiaAutorizacao: handleContinuarParaUploadGuiaAutorizacao,
     onPularGuiaAutorizacao: handlePularGuiaAutorizacao,
+    onContinuarSemGuiaHonorarios: handlePularGuiaHonorarios,
   };
 
   return (
@@ -3153,50 +3155,9 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             </div>
           )}
 
-          {view === "gerando_honorarios" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-3xl border border-[#D4A017]/20 bg-black/40 p-8 text-center">
-                <Loader2 className="mx-auto h-10 w-10 animate-spin text-[#FFD700]" />
-                <h2 className="mt-4 text-lg font-semibold text-[#F5F5F5]">
-                  Gerando guia de honorários
-                </h2>
-                <p className="mt-2 text-sm text-[#9CA3AF]">
-                  Estamos preenchendo o modelo da instituição com os dados extraídos do faturamento.
-                </p>
-              </div>
-            </div>
-          )}
+          {view === "gerando_honorarios" && <GeneratingHonorariosStep />}
 
-          {view === "sem_modelo" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-3xl border border-[#D4A017]/20 bg-black/40 p-8 text-center">
-                <AlertCircle className="mx-auto h-10 w-10 text-[#D4A017]" />
-                <h2 className="mt-4 text-lg font-semibold text-[#F5F5F5]">
-                  Modelo de guia não encontrado
-                </h2>
-                <p className="mt-2 text-sm text-[#9CA3AF]">
-                  Não existe um modelo configurado para a instituição selecionada.
-                </p>
-                <div className="mt-6 space-y-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => goTo("pergunta_honorarios")}
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    type="button"
-                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] font-semibold text-black"
-                    onClick={() => void handlePularGuiaHonorarios()}
-                  >
-                    Continuar sem guia
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {view === "sem_modelo" && <NoModelStep />}
 
           {view === "preview_honorarios" && (
             <div className="flex w-full max-w-5xl flex-col gap-4">

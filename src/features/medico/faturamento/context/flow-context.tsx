@@ -24,6 +24,7 @@ export type FaturamentoFlowValue = {
   setTipoCirurgia: React.Dispatch<React.SetStateAction<TipoCirurgia | null>>;
   onEnviarGuiaAutorizacao: () => void;
   onPularGuiaAutorizacao: () => void;
+  onContinuarSemGuiaHonorarios: () => void | Promise<void>;
 };
 
 const FaturamentoFlowContext = createContext<FaturamentoFlowValue | null>(null);
