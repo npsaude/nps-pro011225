@@ -26,6 +26,7 @@ export type FaturamentoFlowValue = {
   onEnviarGuiaAutorizacao: () => void;
   onPularGuiaAutorizacao: () => void;
   onContinuarSemGuiaHonorarios: () => void | Promise<void>;
+  onGerarGuiaHonorarios: () => void;
 };
 
 const FaturamentoFlowContext = createContext<FaturamentoFlowValue | null>(null);
