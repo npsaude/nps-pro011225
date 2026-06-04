@@ -17,7 +17,6 @@ import {
   X,
   CircleDollarSign,
   Loader2,
-  Brain,
   FileCheck,
   AlertCircle,
   Download,
@@ -71,6 +70,11 @@ import {
   TOTAL_STEPS,
   getCurrentStep,
 } from "@/features/medico/faturamento/lib/flow-steps";
+import {
+  AnalyzingOverlay,
+  type AnalyzingDocType,
+  type AnalyzingStep,
+} from "@/features/medico/faturamento/components/AnalyzingOverlay";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -150,8 +154,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Tela de análise da IA
   const [showAnalyzingScreen, setShowAnalyzingScreen] = useState(false);
   const [analyzingProgress, setAnalyzingProgress] = useState(0);
-  const [analyzingStep, setAnalyzingStep] = useState<"uploading" | "analyzing" | "saving">("uploading");
-  const [analyzingDocType, setAnalyzingDocType] = useState<"solicitacao" | "guia" | "descricao" | "honorarios">("guia");
+  const [analyzingStep, setAnalyzingStep] = useState<AnalyzingStep>("uploading");
+  const [analyzingDocType, setAnalyzingDocType] = useState<AnalyzingDocType>("guia");
 
   // ID do faturamento criado no início do fluxo (fica INATIVO até registrar guia de autorização)
   const [faturamentoId, setFaturamentoId] = useState<string | null>(null);
@@ -2240,52 +2244,6 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setClinicaStepView("selector");
   };
 
-  const getAnalyzingDocTitle = () => {
-    switch (analyzingDocType) {
-      case "solicitacao":
-        return "Guia de Solicitação";
-      case "guia":
-        return "Guia de Autorização de Cirurgia";
-      case "descricao":
-        return "Descrição Cirúrgica";
-      case "honorarios":
-        return "Guia de Faturamento de Honorários";
-      default:
-        return "";
-    }
-  };
-
-  const getAnalyzingStepDescription = () => {
-    if (analyzingStep === "uploading") {
-      switch (analyzingDocType) {
-        case "solicitacao":
-          return "Fazendo upload das imagens da guia de solicitação.";
-        case "guia":
-          return "Fazendo upload das imagens da guia de autorização.";
-        case "descricao":
-          return "Fazendo upload das imagens da descrição cirúrgica.";
-        case "honorarios":
-          return "Fazendo upload das imagens da guia de faturamento de honorários.";
-        default:
-          return "";
-      }
-    } else if (analyzingStep === "analyzing") {
-      switch (analyzingDocType) {
-        case "solicitacao":
-          return "O sistema está extraindo as informações da guia de solicitação.";
-        case "guia":
-          return "O sistema está extraindo as informações da guia.";
-        case "descricao":
-          return "O sistema está extraindo as informações da descrição cirúrgica.";
-        case "honorarios":
-          return "O sistema está extraindo as informações da guia de faturamento de honorários.";
-        default:
-          return "";
-      }
-    }
-    return "Gravando os dados extraídos no sistema.";
-  };
-
   const getStepLabel = () => {
     switch (view) {
       case "hospital":
@@ -3493,21 +3451,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         </main>
       </div>
 
-      {showAnalyzingScreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md rounded-3xl border border-[#D4A017]/20 bg-[#111111] text-[#F5F5F5] shadow-2xl">
-            <CardContent className="p-6 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#D4A017]/15 text-[#FFD700]">
-                <Brain className="h-7 w-7" />
-              </div>
-              <h3 className="mt-4 text-lg font-semibold">{getAnalyzingDocTitle()}</h3>
-              <p className="mt-2 text-sm text-[#9CA3AF]">{getAnalyzingStepDescription()}</p>
-              <Progress value={analyzingProgress} className="mt-5 h-2 bg-white/10" />
-              <p className="mt-3 text-xs text-[#D4A017]">{analyzingProgress}% concluído</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <AnalyzingOverlay
+        open={showAnalyzingScreen}
+        progress={analyzingProgress}
+        step={analyzingStep}
+        docType={analyzingDocType}
+      />
 
       {showConsistencyTable && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 px-4 py-6 backdrop-blur-sm">
