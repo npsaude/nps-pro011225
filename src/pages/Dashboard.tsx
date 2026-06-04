@@ -5,7 +5,6 @@ import {
   MessageCircle,
   Search,
   ArrowUpRight,
-  Loader2,
 } from "lucide-react";
 import {
   ComposedChart,

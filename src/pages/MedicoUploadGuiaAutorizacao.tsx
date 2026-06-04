@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -7,28 +7,20 @@ import {
   FileText,
   X,
   CheckCircle2,
-  FileCheck,
   Loader2,
-  AlertCircle,
   Calendar,
   Zap,
   ArrowRight,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { Button } from "@/components/ui/button";
 import { compressFiles } from "@/utils/image-compression";
 import { sanitizeFileName } from "@/features/medico/faturamento/lib/file-upload";
 import { processGuiaAutorizacao } from "@/features/medico/faturamento/services/edge-functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  showError,
-  showSuccess,
-  showLoading,
-  dismissToast,
-} from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 type ViewState = "choice" | "upload" | "processing" | "success";
@@ -45,7 +37,6 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [dadosExtraidos, setDadosExtraidos] = useState<any>(null);
   const [tipoCirurgia, setTipoCirurgia] = useState<TipoCirurgia>(null);
-  const [skipGuia, setSkipGuia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Carrega o nome do médico logado para exibir na saudação

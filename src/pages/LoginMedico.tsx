@@ -6,8 +6,6 @@ import {
   ArrowRightCircle,
   Eye,
   EyeOff,
-  Phone,
-  Hash,
   ShieldCheck,
 } from "lucide-react";
 
@@ -48,8 +46,6 @@ function extractYouTubeId(input: string | null | undefined): string | null {
   }
   return null;
 }
-
-type Mode = "login" | "register";
 
 const LoginMedico = () => {
   const navigate = useNavigate();

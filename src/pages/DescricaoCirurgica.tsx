@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Bell, Search, FileSignature, Plus } from "lucide-react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { Bell, Search, FileSignature } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,13 +19,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Select as UiSelect,
-  SelectTrigger as UiSelectTrigger,
-  SelectContent as UiSelectContent,
-  SelectItem as UiSelectItem,
-  SelectValue as UiSelectValue,
-} from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
 import {
   criarDescricaoCirurgica,
@@ -199,27 +190,10 @@ const DescricaoCirurgicaPage: React.FC = () => {
   });
 
   const {
-    register,
     handleSubmit,
-    control,
     reset,
     formState: { isSubmitting },
   } = form;
-
-  const procedimentosArray = useFieldArray({
-    control,
-    name: "procedimentos",
-  });
-
-  const equipeArray = useFieldArray({
-    control,
-    name: "equipe",
-  });
-
-  const materiaisArray = useFieldArray({
-    control,
-    name: "materiais",
-  });
 
   const onSubmit = async (data: DescricaoCirurgicaFormData) => {
     setSalvando(true);

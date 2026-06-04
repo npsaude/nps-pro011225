@@ -5,7 +5,6 @@ import {
   Eye,
   Pencil,
   Trash2,
-  Activity,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,

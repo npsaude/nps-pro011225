@@ -1,4 +1,4 @@
-import { Bell, Search, Building2 } from "lucide-react";
+import { Search, Building2 } from "lucide-react";
 import HospitaisList from "@/components/hospitais/HospitaisList";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";

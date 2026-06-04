@@ -16,7 +16,13 @@
     "src/integrations",
     "src/lib",
     "src/components",
-    "src/types"
+    "src/types",
+    "src/pages"
   ],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/pages/MedicoUploadDescricaoCirurgica.tsx",
+    "src/pages/DashboardMedico.tsx"
+  ]
 }

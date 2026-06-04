@@ -5,8 +5,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 // pelo módulo lib/file-upload (não há mais setup estático aqui).
 import { ArrowLeft, Scissors } from "lucide-react";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { compressFiles } from "@/utils/image-compression";
 import {
   type UploadItem,
