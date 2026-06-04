@@ -7,8 +7,8 @@
   },
   "include": [
     "src/vite-env.d.ts",
-    "src/features/admin/forms",
-    "src/features/medico/faturamento",
+    "src/types",
+    "src/features",
     "src/services",
     "src/hooks",
     "src/utils",
@@ -16,8 +16,10 @@
     "src/integrations",
     "src/lib",
     "src/components",
-    "src/types",
-    "src/pages"
+    "src/pages",
+    "src/config",
+    "src/constants",
+    "src/db"
   ],
   "exclude": [
     "**/*.test.ts",
