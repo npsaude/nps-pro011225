@@ -5,6 +5,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src/features/admin/forms", "src/services"],
+  "include": [
+    "src/vite-env.d.ts",
+    "src/features/admin/forms",
+    "src/features/medico/faturamento",
+    "src/services",
+    "src/hooks",
+    "src/utils",
+    "src/contexts"
+  ],
   "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }
