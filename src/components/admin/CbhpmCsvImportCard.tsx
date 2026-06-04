@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import { Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -264,7 +265,7 @@ export default function CbhpmCsvImportCard() {
         const batch = parsedRows.slice(i, i + batchSize);
 
         const resp = await fetch(
-          "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/import-cbhpm-csv",
+          edgeFunctionUrl("import-cbhpm-csv"),
           {
             method: "POST",
             headers: {

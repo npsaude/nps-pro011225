@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -53,7 +54,7 @@ interface Correction {
 type GlobalMode = null | "manual" | "camera";
 
 const FUNCTION_URL =
-  "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
+  edgeFunctionUrl("process-descricao-cirurgica");
 
 const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
   open,

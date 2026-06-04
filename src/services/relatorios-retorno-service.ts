@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { edgeFunctionUrl } from "@/config/supabase";
 
 export interface RelatorioRetorno {
   id: string;
@@ -56,7 +57,7 @@ export interface ItemRelatorioRetorno {
 
 const BUCKET = "NPS-pro";
 const PROCESS_FN_URL =
-  "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-relatorio-retorno";
+  edgeFunctionUrl("process-relatorio-retorno");
 
 export async function listarRelatoriosRetorno(): Promise<RelatorioRetorno[]> {
   const { data, error } = await supabase

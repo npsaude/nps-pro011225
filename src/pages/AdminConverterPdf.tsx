@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -139,7 +140,7 @@ const AdminConverterPdf = () => {
 
       // 2) Chamar a Edge Function process-extrato-pagamento passando o filePath
       const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-extrato-pagamento";
+        edgeFunctionUrl("process-extrato-pagamento");
 
       const response = await fetch(functionUrl, {
         method: "POST",

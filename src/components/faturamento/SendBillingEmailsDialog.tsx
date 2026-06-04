@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -133,7 +134,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         }
 
         const functionUrl =
-          "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
+          edgeFunctionUrl("send-billing-emails");
 
         const response = await fetch(functionUrl, {
           method: "POST",
@@ -239,7 +240,7 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
     try {
       const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
+        edgeFunctionUrl("send-billing-emails");
 
       const response = await fetch(functionUrl, {
         method: "POST",
