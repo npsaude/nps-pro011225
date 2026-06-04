@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+// html2canvas e jsPDF são carregados sob demanda (import dinâmico) dentro de
+// gerarPdfGuiaHonorarios para não pesar o chunk inicial desta página.
 import { GlobalWorkerOptions } from "pdfjs-dist";
 
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -1720,6 +1720,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       console.error("[PDF] HTML da guia não disponível");
       return null;
     }
+
+    // Carrega as libs pesadas de PDF apenas quando o usuário gera o PDF.
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
 
     // Criar container temporário com estilos corrigidos para PDF
     const tempContainer = document.createElement("div");
