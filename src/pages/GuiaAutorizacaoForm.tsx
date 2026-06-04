@@ -30,6 +30,10 @@ import {
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchGuiaAutorizacao,
+  saveGuiaAutorizacao,
+} from "@/services/guia-autorizacao-service";
 import { showError, showSuccess } from "@/utils/toast";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -536,13 +540,9 @@ const GuiaAutorizacaoFormPage: React.FC = () => {
     if (!id) return;
     void (async () => {
       setLoadingData(true);
-      const { data, error } = await supabase
-        .from("faturamentos")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await fetchGuiaAutorizacao(id);
 
-      if (error || !data) {
+      if (!data) {
         showError("Não foi possível carregar a guia.");
         navigate("/admin/guia-autorizacao");
         return;
@@ -644,12 +644,7 @@ const GuiaAutorizacaoFormPage: React.FC = () => {
       status_pagamento: values.status_pagamento,
     };
 
-    let error;
-    if (isEdit) {
-      ({ error } = await supabase.from("faturamentos").update(payload).eq("id", id));
-    } else {
-      ({ error } = await supabase.from("faturamentos").insert(payload));
-    }
+    const { error } = await saveGuiaAutorizacao(payload, isEdit ? id : undefined);
 
     setSaving(false);
 
