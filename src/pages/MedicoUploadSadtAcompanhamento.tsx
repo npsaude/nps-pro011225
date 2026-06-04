@@ -15,6 +15,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { showError, showSuccess } from "@/utils/toast";
 import { compressFiles } from "@/utils/image-compression";
+import {
+  sanitizeFileName,
+  expandFilesToUploadItems,
+} from "@/features/medico/faturamento/lib/file-upload";
+import { processSadtAcompanhamento } from "@/features/medico/faturamento/services/edge-functions";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 type ViewState = "upload" | "processing" | "duplicate" | "not_owner" | "success";
@@ -27,18 +32,6 @@ interface GuiaExistente {
   valor_total_geral: string | number | null;
   created_at: string;
 }
-
-const isPdfFile = (file: File) =>
-  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-
-const sanitizeFileName = (name: string) =>
-  name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-
-type UploadItem = {
-  data: Blob;
-  contentType: string;
-  suggestedName: string;
-};
 
 const MedicoUploadSadtAcompanhamento: React.FC = () => {
   const navigate = useNavigate();
@@ -59,77 +52,6 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
   const uploadedPathsRef = useRef<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> => {
-    const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
-    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url"))
-      .default as string;
-
-    GlobalWorkerOptions.workerSrc = workerUrl;
-
-    const data = await pdfFile.arrayBuffer();
-    const loadingTask = getDocument({ data });
-    const pdf = await loadingTask.promise;
-
-    const baseName = sanitizeFileName(
-      pdfFile.name.replace(/\.pdf$/i, "") || "documento",
-    );
-
-    const items: UploadItem[] = [];
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 2 });
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) continue;
-
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-
-      await (page.render({ canvasContext: ctx, viewport, canvas } as any)
-        .promise as Promise<void>);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => {
-          if (!b) {
-            reject(new Error("Falha ao converter página do PDF em imagem."));
-            return;
-          }
-          resolve(b);
-        }, "image/png");
-      });
-
-      items.push({
-        data: blob,
-        contentType: "image/png",
-        suggestedName: `${baseName}_p${pageNum}.png`,
-      });
-    }
-
-    return items;
-  };
-
-  const expandFilesToUploadItems = async (inputFiles: File[]) => {
-    const items: UploadItem[] = [];
-
-    for (const file of inputFiles) {
-      if (isPdfFile(file)) {
-        const pdfItems = await pdfToPngUploadItems(file);
-        items.push(...pdfItems);
-        continue;
-      }
-
-      items.push({
-        data: file,
-        contentType: file.type || "application/octet-stream",
-        suggestedName: file.name,
-      });
-    }
-
-    return items;
-  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
@@ -213,33 +135,12 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
         uploadedPathsRef.current = uploadedFilePaths;
       }
 
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-sadt-acompanhamento";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-          forceInsert,
-          forceOwnership,
-        }),
+      const responseJson: any = await processSadtAcompanhamento({
+        userId,
+        files: uploadedFilePaths.map((path) => ({ path })),
+        forceInsert,
+        forceOwnership,
       });
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // ignore
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ??
-          "Arquivos enviados, mas houve erro ao processar a SADT.";
-        throw new Error(errorMessage);
-      }
 
       // Guia não pertence ao médico — mostrar aviso
       if (responseJson?.not_owner === true) {

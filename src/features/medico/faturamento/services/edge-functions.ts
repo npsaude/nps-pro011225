@@ -28,6 +28,13 @@ export type ProcessGuiaAutorizacaoBody = ProcessGuiaSolicitacaoBody & {
 
 export type ProcessDescricaoCirurgicaBody = ProcessGuiaSolicitacaoBody;
 
+export type ProcessSadtAcompanhamentoBody = {
+  userId: string;
+  files: ProcessFileRef[];
+  forceInsert?: boolean;
+  forceOwnership?: boolean;
+};
+
 /**
  * Tenta extrair a mensagem específica (`{ error }`) do corpo da resposta de
  * erro de uma Edge Function. Retorna undefined se o corpo não for um JSON com
@@ -91,4 +98,16 @@ export const processDescricaoCirurgica = (body: ProcessDescricaoCirurgicaBody) =
     "process-descricao-cirurgica",
     body,
     "Houve erro ao processar a descrição cirúrgica.",
+  );
+
+/**
+ * Processa a SADT de acompanhamento. Diferente das demais, a resposta de
+ * sucesso pode conter sinalizações (not_owner, duplicate) que a página inspeciona,
+ * por isso o valor retornado (data) é repassado ao chamador.
+ */
+export const processSadtAcompanhamento = (body: ProcessSadtAcompanhamentoBody) =>
+  invokeProcessFunction(
+    "process-sadt-acompanhamento",
+    body,
+    "Arquivos enviados, mas houve erro ao processar a SADT.",
   );
