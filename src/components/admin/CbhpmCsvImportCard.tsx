@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import { edgeFunctionUrl } from "@/config/supabase";
 import { Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";

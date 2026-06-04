@@ -4,7 +4,6 @@ import {
   Plus,
   Pencil,
   Mail,
-  Phone,
   Building2,
   UserSearch,
 } from "lucide-react";

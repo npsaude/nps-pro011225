@@ -14,7 +14,9 @@
     "src/utils",
     "src/contexts",
     "src/integrations",
-    "src/lib"
+    "src/lib",
+    "src/components",
+    "src/types"
   ],
   "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }

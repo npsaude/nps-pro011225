@@ -77,8 +77,8 @@ const GftList: React.FC<GftListProps> = ({
   const [previewHtmlOpen, setPreviewHtmlOpen] = useState(false);
   const [htmlPreview, setHtmlPreview] = useState("");
   const [clinicas, setClinicas] = useState<Clinica[]>([]);
-  const [carregandoClinicas, setCarregandoClinicas] = useState(true);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [, setCarregandoClinicas] = useState(true);
+  const [uploadingId] = useState<string | null>(null);
 
   React.useEffect(() => {
     async function fetchClinicas() {
