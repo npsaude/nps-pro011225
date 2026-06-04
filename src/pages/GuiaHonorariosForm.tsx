@@ -21,6 +21,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchGuiaHonorarios,
+  fetchGuiaHonorariosPdfField,
+  saveGuiaHonorarios,
+} from "@/services/guia-honorarios-service";
 import { showError, showSuccess } from "@/utils/toast";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -250,13 +255,9 @@ function DocumentosTab({ guiaId }: { guiaId: string }) {
     void (async () => {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("guia_honorarios")
-        .select("pdf_guia_honorario")
-        .eq("id", guiaId)
-        .single();
+      const data = await fetchGuiaHonorariosPdfField(guiaId);
 
-      if (error || !data) {
+      if (!data) {
         setLoading(false);
         return;
       }
@@ -679,13 +680,9 @@ const GuiaHonorariosFormPage: React.FC = () => {
     if (!id) return;
     void (async () => {
       setLoadingData(true);
-      const { data, error } = await supabase
-        .from("guia_honorarios")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await fetchGuiaHonorarios(id);
 
-      if (error || !data) {
+      if (!data) {
         showError("Não foi possível carregar a guia.");
         navigate("/admin/guia-honorarios");
         return;
@@ -859,12 +856,7 @@ const GuiaHonorariosFormPage: React.FC = () => {
       proc_med_extra2_qtd: n(values.proc_med_extra2_qtd),
     };
 
-    let error;
-    if (isEdit) {
-      ({ error } = await supabase.from("guia_honorarios").update(payload).eq("id", id));
-    } else {
-      ({ error } = await supabase.from("guia_honorarios").insert(payload));
-    }
+    const { error } = await saveGuiaHonorarios(payload, isEdit ? id : undefined);
 
     setSaving(false);
 
