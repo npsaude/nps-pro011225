@@ -26,6 +26,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Gate estrito (noImplicitAny + noUnusedLocals + noUnusedParameters)
+      # sobre todo o src. Bloqueante: impede regressão de código morto /
+      # any implícito introduzidos a partir daqui.
+      - name: Typecheck (strict)
+        run: pnpm typecheck:strict
+
       - name: Test
         run: pnpm test:run
 
