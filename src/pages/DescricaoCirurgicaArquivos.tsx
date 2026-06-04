@@ -118,7 +118,7 @@ const DescricaoCirurgicaArquivosPage: React.FC = () => {
                   user_id: desc.user_id,
                   file_path: filePath,
                   created_at:
-                    (obj as any).created_at ??
+                    (obj as { created_at?: string }).created_at ??
                     new Date().toISOString(),
                 };
 

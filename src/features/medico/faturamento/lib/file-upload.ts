@@ -99,7 +99,10 @@ export const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> 
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
 
-    await (page.render({ canvasContext: ctx, viewport, canvas } as any).promise as Promise<void>);
+    await (
+      page.render({ canvasContext: ctx, viewport, canvas } as Parameters<typeof page.render>[0])
+        .promise as Promise<void>
+    );
 
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => {

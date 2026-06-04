@@ -135,12 +135,20 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
         uploadedPathsRef.current = uploadedFilePaths;
       }
 
-      const responseJson: any = await processSadtAcompanhamento({
+      const responseJson = (await processSadtAcompanhamento({
         userId,
         files: uploadedFilePaths.map((path) => ({ path })),
         forceInsert,
         forceOwnership,
-      });
+      })) as {
+        not_owner?: boolean;
+        duplicate?: boolean;
+        profissional_nome_guia?: string | null;
+        profissional_conselho_guia?: string | null;
+        nome_beneficiario?: string | null;
+        numero_guia_prestador?: string | null;
+        guia_existente?: GuiaExistente | null;
+      };
 
       // Guia não pertence ao médico — mostrar aviso
       if (responseJson?.not_owner === true) {

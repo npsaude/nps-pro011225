@@ -112,7 +112,7 @@ const AdminConfiguracoes = () => {
   const navigate = useNavigate();
   const { systemUser } = useSystemUser();
 
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isSuperAdmin = role === "SUPER_ADMIN";
 
   const [token, setToken] = useState("");

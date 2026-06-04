@@ -85,7 +85,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
 
     // Persiste role no localStorage para leituras síncronas (ex.: guards)
     if (typeof window !== "undefined") {
-      const role = String((user as any)?.regra ?? "").trim().toUpperCase();
+      const role = String(user?.regra ?? "").trim().toUpperCase();
       if (role) window.localStorage.setItem("conmedic_role", role);
       else window.localStorage.removeItem("conmedic_role");
     }
@@ -102,7 +102,7 @@ export function SystemUserProvider({ children }: { children: ReactNode }) {
         .eq("user_id", uid)
         .maybeSingle();
 
-      const avatarPath = (avatarRow as any)?.avatar_path ?? null;
+      const avatarPath = (avatarRow as { avatar_path?: string | null })?.avatar_path ?? null;
       if (avatarPath) {
         setSystemUser((prev) =>
           prev ? ({ ...prev, avatar_url: avatarPath } as DbSystemUser) : prev

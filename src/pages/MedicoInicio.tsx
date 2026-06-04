@@ -89,7 +89,8 @@ const MedicoInicio: React.FC = () => {
           .lt("data_pagamento", lastDay),
       ]);
 
-      const valorRecebido = (pagos ?? []).reduce((acc, row: any) => {
+      const valorRecebido = (pagos ?? []).reduce(
+        (acc, row: { valor_total_repasse?: number | string | null; valor_total_liquido?: number | string | null }) => {
         const repasse = Number(row.valor_total_repasse ?? 0);
         const liquido = Number(row.valor_total_liquido ?? 0);
         return acc + (repasse > 0 ? repasse : liquido);

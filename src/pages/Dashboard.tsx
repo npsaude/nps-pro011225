@@ -43,7 +43,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ElementType } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { contarDescricoesCirurgicasPorStatus } from "@/services/descricao-cirurgica-service";
@@ -78,7 +78,7 @@ type TopMetric = {
   title: string;
   value: string;
   helper: string;
-  icon: any;
+  icon: ElementType;
   iconBg: string;
   isGauge?: boolean;
   gaugeValue?: number;
@@ -210,7 +210,7 @@ const Dashboard = () => {
   const [pendingDescricoes, setPendingDescricoes] = useState<number>(0);
   const { systemUser, loading: systemUserLoading } = useSystemUser();
 
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
   const isSuperAdmin = role === "SUPER_ADMIN";
 
@@ -435,7 +435,7 @@ const Dashboard = () => {
 
                         {isGauge ? (
                           <div className="flex flex-1 items-center justify-center py-3">
-                            <GlosaGauge value={(metric as any).gaugeValue ?? 0} />
+                            <GlosaGauge value={(metric as TopMetric).gaugeValue ?? 0} />
                           </div>
                         ) : (
                           <p className={`mt-4 text-center text-3xl font-bold ${noData ? "text-slate-500" : "text-white"}`}>
@@ -563,8 +563,8 @@ const Dashboard = () => {
                                       {index + 1}º
                                     </span>
                                     <Avatar className="h-7 w-7">
-                                      {(doctor as any).avatar ? (
-                                        <AvatarImage src={(doctor as any).avatar} alt={doctor.name} />
+                                      {(doctor as { avatar?: string; specialty?: string }).avatar ? (
+                                        <AvatarImage src={(doctor as { avatar?: string; specialty?: string }).avatar} alt={doctor.name} />
                                       ) : null}
                                       <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
                                     </Avatar>
@@ -572,9 +572,9 @@ const Dashboard = () => {
                                       <span className="text-xs font-medium text-slate-900 dark:text-slate-50">
                                         {doctor.name}
                                       </span>
-                                      {(doctor as any).specialty && (
+                                      {(doctor as { avatar?: string; specialty?: string }).specialty && (
                                         <span className="text-[11px] text-slate-400">
-                                          {(doctor as any).specialty}
+                                          {(doctor as { avatar?: string; specialty?: string }).specialty}
                                         </span>
                                       )}
                                     </div>

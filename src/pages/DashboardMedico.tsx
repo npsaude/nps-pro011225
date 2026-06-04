@@ -79,13 +79,13 @@ const DashboardMedico: React.FC = () => {
   const [totalAReceber, setTotalAReceber] = useState<string>("—");
 
   const saudacao = useMemo(() => {
-    const nome = (systemUser as any)?.nome ? String((systemUser as any).nome) : "";
+    const nome = systemUser?.nome ? String(systemUser.nome) : "";
     const firstName = nome ? getFirstName(nome) : "";
     return firstName ? `Olá, Dr. ${firstName}.` : "Olá, Doutor(a).";
   }, [systemUser]);
 
   const avatarInitials = useMemo(() => {
-    const nome = (systemUser as any)?.nome ? String((systemUser as any).nome) : "";
+    const nome = systemUser?.nome ? String(systemUser.nome) : "";
     return nome ? getInitials(nome) : "";
   }, [systemUser]);
 

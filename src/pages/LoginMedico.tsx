@@ -115,7 +115,7 @@ const LoginMedico = () => {
       showSuccess("Login realizado com sucesso.");
       navigate("/medico/dashboard");
     } catch (err) {
-      const code = (err as any)?.code as string | undefined;
+      const code = (err as { code?: string })?.code as string | undefined;
       if (code === SUBSCRIPTION_EXPIRED_CODE) {
         setSubscriptionExpiredOpen(true);
         return;
@@ -175,7 +175,7 @@ const LoginMedico = () => {
       showSuccess("Login rápido (médico) realizado com sucesso.");
       navigate("/medico/dashboard");
     } catch (err) {
-      const code = (err as any)?.code as string | undefined;
+      const code = (err as { code?: string })?.code as string | undefined;
       if (code === SUBSCRIPTION_EXPIRED_CODE) {
         setSubscriptionExpiredOpen(true);
         return;

@@ -59,7 +59,8 @@ async function fetchPlanFeatures(): Promise<PlanFeatures> {
 
   if (error || !data) return ALL_FALSE;
 
-  const raw = (data as any)?.subscription_plans?.features;
+  const raw = (data as { subscription_plans?: { features?: unknown } | null })
+    ?.subscription_plans?.features;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return ALL_FALSE;
 
   return { ...ALL_FALSE, ...raw } as PlanFeatures;

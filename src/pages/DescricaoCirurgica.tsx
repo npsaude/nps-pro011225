@@ -256,7 +256,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
       const data = await buscarDescricaoCirurgicaPorId(item.id);
 
       const procedimentos =
-        (data.procedimentos as any[])?.map((p) => ({
+        data.procedimentos?.map((p) => ({
           procedimento_id: (p.procedimento_id ?? "") as string,
           descricao_procedimento: (p.descricao_procedimento ?? "") as string,
           codigo_procedimento: (p.codigo_procedimento ?? "") as string,
@@ -274,7 +274,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
         ];
 
       const equipe =
-        (data.equipe as any[])?.map((e) => ({
+        data.equipe?.map((e) => ({
           nome_profissional: (e.nome_profissional ?? "") as string,
           funcao: (e.funcao ?? "") as string,
           conselho: (e.conselho ?? "") as string,
@@ -291,7 +291,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
         ];
 
       const materiais =
-        (data.materiais as any[])?.map((m) => ({
+        data.materiais?.map((m) => ({
           material_id: (m.material_id ?? "") as string,
           nome_material: (m.nome_material ?? "") as string,
           descricao_material: (m.descricao_material ?? "") as string,

@@ -148,7 +148,7 @@ const AdminConverterPdf = () => {
         body: JSON.stringify({ filePath: path }),
       });
 
-      const json = (await response.json()) as any;
+      const json = (await response.json()) as { error?: string; csv?: string };
 
       if (!response.ok || json?.error) {
         const msg =

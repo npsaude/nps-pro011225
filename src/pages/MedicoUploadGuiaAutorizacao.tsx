@@ -26,6 +26,16 @@ import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 type ViewState = "choice" | "upload" | "processing" | "success";
 type TipoCirurgia = "ELETIVA" | "EMERGENCIAL" | null;
 
+type DadosExtraidos = {
+  faturamento?: {
+    nome_paciente?: string;
+    operadora_nome?: string;
+    numero_guia_operadora?: string;
+    hospital_solicitado?: string;
+  };
+  procedimentos?: unknown[];
+};
+
 const MedicoUploadGuiaAutorizacao: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,7 +45,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [view, setView] = useState<ViewState>("choice");
   const [medicoNome, setMedicoNome] = useState<string>("");
-  const [dadosExtraidos, setDadosExtraidos] = useState<any>(null);
+  const [dadosExtraidos, setDadosExtraidos] = useState<DadosExtraidos | null>(null);
   const [tipoCirurgia, setTipoCirurgia] = useState<TipoCirurgia>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -204,12 +214,12 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
       }
 
       // Chamar a Edge Function (via cliente tipado: anexa o JWT do usuário)
-      const responseJson: any = await processGuiaAutorizacao({
+      const responseJson = (await processGuiaAutorizacao({
         userId,
         faturamentoId,
         files: uploadedFilePaths.map((path) => ({ path })),
         tipoCirurgia,
-      });
+      })) as { dados_extraidos?: DadosExtraidos };
 
       // Atualizar o tipo_cirurgia no faturamento (caso a edge function não faça)
       await supabase
@@ -648,10 +658,10 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
                             {dadosExtraidos.faturamento.hospital_solicitado}
                           </p>
                         )}
-                        {dadosExtraidos.procedimentos?.length > 0 && (
+                        {(dadosExtraidos.procedimentos?.length ?? 0) > 0 && (
                           <p>
                             <span className="text-[#F5F5F5]">Procedimentos:</span>{" "}
-                            {dadosExtraidos.procedimentos.length} encontrado(s)
+                            {dadosExtraidos.procedimentos?.length} encontrado(s)
                           </p>
                         )}
                         <p>

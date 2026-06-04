@@ -145,7 +145,7 @@ const AdminRetorno: React.FC = () => {
       const res = await importarRelatorioRetorno({
         file: importFile,
         userId: authUser.id,
-        expectedMedicoNome: (systemUser as any)?.nome ?? "",
+        expectedMedicoNome: systemUser?.nome ?? "",
         expectedMedicoEmail: authUser.email ?? "",
       });
 
@@ -416,7 +416,7 @@ const AdminRetorno: React.FC = () => {
               Envie o PDF do extrato de pagamento. A IA vai identificar o formato
               da clínica e extrair médico, paciente, procedimentos, valores e
               glosas. A importação só é concluída se o médico identificado for{" "}
-              <strong>{(systemUser as any)?.nome || "o usuário logado"}</strong>.
+              <strong>{systemUser?.nome || "o usuário logado"}</strong>.
             </DialogDescription>
           </DialogHeader>
 

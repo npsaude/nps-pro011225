@@ -53,7 +53,7 @@ const PAGE_SIZE = 10;
 const GuiaHonorariosPage: React.FC = () => {
   const navigate = useNavigate();
   const { systemUser, loading: userLoading } = useSystemUser();
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isSuperAdmin = role === "SUPER_ADMIN";
 
   const [guias, setGuias] = useState<GuiaRow[]>([]);
