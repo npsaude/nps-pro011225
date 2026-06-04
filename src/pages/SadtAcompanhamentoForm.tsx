@@ -23,6 +23,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchSadtAcompanhamento,
+  fetchSadtAcompanhamentoDocs,
+  saveSadtAcompanhamento,
+} from "@/services/sadt-service";
 import { showError, showSuccess } from "@/utils/toast";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
@@ -212,13 +217,9 @@ function DocumentosTab({ sadtId }: { sadtId: string }) {
     void (async () => {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("sadt_acompanhamento")
-        .select("url_documentos")
-        .eq("id", sadtId)
-        .single();
+      const data = await fetchSadtAcompanhamentoDocs(sadtId);
 
-      if (error || !data) {
+      if (!data) {
         setLoading(false);
         return;
       }
@@ -375,13 +376,9 @@ const SadtAcompanhamentoFormPage: React.FC = () => {
     if (!id) return;
     void (async () => {
       setLoadingData(true);
-      const { data, error } = await supabase
-        .from("sadt_acompanhamento")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await fetchSadtAcompanhamento(id);
 
-      if (error || !data) {
+      if (!data) {
         showError("Não foi possível carregar a SADT.");
         navigate("/admin/sadt-acompanhamento");
         return;
@@ -517,12 +514,7 @@ const SadtAcompanhamentoFormPage: React.FC = () => {
       profissional_cbo: values.profissional_cbo || null,
     };
 
-    let error;
-    if (isEdit) {
-      ({ error } = await supabase.from("sadt_acompanhamento").update(payload).eq("id", id));
-    } else {
-      ({ error } = await supabase.from("sadt_acompanhamento").insert(payload));
-    }
+    const { error } = await saveSadtAcompanhamento(payload, isEdit ? id : undefined);
 
     setSaving(false);
 

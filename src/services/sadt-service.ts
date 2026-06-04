@@ -241,3 +241,54 @@ export async function enviarSadt(
     sadtId,
   };
 }
+
+// ── Formulário admin de SADT de acompanhamento (tabela sadt_acompanhamento) ──
+
+// Acesso flexível à linha, preservando o uso não-tipado que vinha da página.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SadtAcompanhamentoRow = Record<string, any>;
+
+/** Carrega uma SADT de acompanhamento por id. Retorna null se não encontrada. */
+export async function fetchSadtAcompanhamento(
+  id: string,
+): Promise<SadtAcompanhamentoRow | null> {
+  const { data, error } = await supabase
+    .from("sadt_acompanhamento")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as SadtAcompanhamentoRow;
+}
+
+/** Carrega apenas o campo url_documentos (anexos) de uma SADT. */
+export async function fetchSadtAcompanhamentoDocs(
+  id: string,
+): Promise<SadtAcompanhamentoRow | null> {
+  const { data, error } = await supabase
+    .from("sadt_acompanhamento")
+    .select("url_documentos")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as SadtAcompanhamentoRow;
+}
+
+/** Insere uma nova SADT ou atualiza a existente (quando `id` é informado). */
+export async function saveSadtAcompanhamento(
+  payload: Record<string, unknown>,
+  id?: string,
+): Promise<{ error: { message: string } | null }> {
+  if (id) {
+    const { error } = await supabase
+      .from("sadt_acompanhamento")
+      .update(payload)
+      .eq("id", id);
+    return { error };
+  }
+
+  const { error } = await supabase.from("sadt_acompanhamento").insert(payload);
+  return { error };
+}
