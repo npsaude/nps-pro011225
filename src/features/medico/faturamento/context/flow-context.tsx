@@ -11,12 +11,19 @@ import type { FaturamentoView } from "../lib/flow-steps";
  * O valor é montado na página MedicoUploadDescricaoCirurgica e cresce de forma
  * incremental conforme novas etapas passam a consumir o contexto.
  */
+export type TipoCirurgia = "ELETIVA" | "EMERGENCIAL";
+
 export type FaturamentoFlowValue = {
   view: FaturamentoView;
   goTo: (next: FaturamentoView) => void;
   fileInputRefSolicitacao: React.MutableRefObject<HTMLInputElement | null>;
   fileInputRefGuia: React.MutableRefObject<HTMLInputElement | null>;
   fileInputRefDescricao: React.MutableRefObject<HTMLInputElement | null>;
+  isUploading: boolean;
+  tipoCirurgia: TipoCirurgia | null;
+  setTipoCirurgia: React.Dispatch<React.SetStateAction<TipoCirurgia | null>>;
+  onEnviarGuiaAutorizacao: () => void;
+  onPularGuiaAutorizacao: () => void;
 };
 
 const FaturamentoFlowContext = createContext<FaturamentoFlowValue | null>(null);
