@@ -22,6 +22,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchGuiaSolicitacao,
+  saveGuiaSolicitacao,
+} from "@/services/guia-solicitacao-service";
 import { showError, showSuccess } from "@/utils/toast";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -323,13 +327,9 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
     if (!id) return;
     void (async () => {
       setLoadingData(true);
-      const { data, error } = await supabase
-        .from("guia_solicitacao")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await fetchGuiaSolicitacao(id);
 
-      if (error || !data) {
+      if (!data) {
         showError("Não foi possível carregar a guia.");
         navigate("/admin/guia-solicitacao");
         return;
@@ -415,12 +415,7 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
       observacao: values.observacao || null,
     };
 
-    let error;
-    if (isEdit) {
-      ({ error } = await supabase.from("guia_solicitacao").update(payload).eq("id", id));
-    } else {
-      ({ error } = await supabase.from("guia_solicitacao").insert(payload));
-    }
+    const { error } = await saveGuiaSolicitacao(payload, isEdit ? id : undefined);
 
     setSaving(false);
 
