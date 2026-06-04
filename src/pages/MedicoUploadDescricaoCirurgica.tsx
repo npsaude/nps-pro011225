@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useReducer } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -136,7 +136,13 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Inicia direto na tela de seleção do hospital — a antiga tela "start"
   // (botão "Iniciar Agora") foi removida; o checkbox de consistência foi
   // movido para a primeira etapa (seleção de hospital/clínica).
-  const [view, setView] = useState<ViewState>("hospital");
+  // Transições de tela centralizadas via useReducer: goTo(next) define a tela
+  // atual. Guards por evento serão introduzidos junto da decomposição em
+  // componentes de step (Fase 4), que receberão o dispatcher goTo.
+  const [view, goTo] = useReducer(
+    (_current: ViewState, next: ViewState) => next,
+    "hospital",
+  );
   const fileInputRefGuia = useRef<HTMLInputElement | null>(null);
   const fileInputRefSolicitacao = useRef<HTMLInputElement | null>(null);
   const fileInputRefDescricao = useRef<HTMLInputElement | null>(null);
@@ -372,10 +378,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       if (initialView === "email_faturamento") {
         // Mostrar o diálogo de email diretamente
-        setView("start");
+        goTo("start");
         setShowEmailDialog(true);
       } else {
-        setView(initialView as ViewState);
+        goTo(initialView as ViewState);
       }
     };
 
@@ -732,7 +738,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
-        setView("pergunta_guia_autorizacao");
+        goTo("pergunta_guia_autorizacao");
       }
       setFilesSolicitacao([]);
       showSuccess("Guia de solicitação processada com sucesso!");
@@ -754,7 +760,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       return;
     }
 
-    setView("upload_guia");
+    goTo("upload_guia");
     setTimeout(() => fileInputRefGuia.current?.click(), 100);
   };
 
@@ -802,7 +808,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
-        setView("upload_descricao");
+        goTo("upload_descricao");
       }
     } catch (err) {
       const message =
@@ -1083,7 +1089,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
-        setView("upload_descricao");
+        goTo("upload_descricao");
       }
       setFilesGuia([]);
       showSuccess("Guia de autorização processada com sucesso!");
@@ -1320,7 +1326,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         } else if (initialFaturamentoId) {
           setPendingNavigation(() => () => navigate("/medico/faturamentos"));
         } else {
-          setPendingNavigation(() => () => setView("pergunta_honorarios"));
+          setPendingNavigation(() => () => goTo("pergunta_honorarios"));
         }
         setShowConsistencyTable(true);
         setFilesDescricao([]);
@@ -1337,7 +1343,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       } else if (initialFaturamentoId) {
         navigate("/medico/faturamentos");
       } else {
-        setView("pergunta_honorarios");
+        goTo("pergunta_honorarios");
       }
       setFilesDescricao([]);
       showSuccess("Descrição cirúrgica processada com sucesso!");
@@ -1367,7 +1373,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     } else if (initialFaturamentoId) {
       navigate("/medico/faturamentos");
     } else {
-      setView("pergunta_honorarios");
+      goTo("pergunta_honorarios");
     }
   };
 
@@ -1379,7 +1385,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     if (initialFaturamentoId) {
       navigate("/medico/faturamentos");
     } else {
-      setView("pergunta_honorarios");
+      goTo("pergunta_honorarios");
     }
   };
 
@@ -1427,7 +1433,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       setPdfBlobUrl(null);
     }
 
-    setView("gerando_honorarios");
+    goTo("gerando_honorarios");
 
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -1448,12 +1454,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       if (modeloError) {
         console.error("Erro ao buscar modelo:", modeloError);
-        setView("sem_modelo");
+        goTo("sem_modelo");
         return;
       }
 
       if (!modeloData || !modeloData.html_documento) {
-        setView("sem_modelo");
+        goTo("sem_modelo");
         return;
       }
 
@@ -1485,7 +1491,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       if (fatError || !fatData) {
         showError("Erro ao carregar dados do faturamento.");
-        setView("pergunta_honorarios");
+        goTo("pergunta_honorarios");
         return;
       }
 
@@ -1679,7 +1685,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       if (guiaError || !guiaCreated) {
         console.error("Erro ao criar guia de honorários:", guiaError);
         showError("Erro ao salvar a guia de honorários.");
-        setView("pergunta_honorarios");
+        goTo("pergunta_honorarios");
         return;
       }
 
@@ -1696,12 +1702,12 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
         // Fluxo de retomada: após gerar, volta para a lista
         navigate("/medico/faturamentos");
       } else {
-        setView("preview_honorarios");
+        goTo("preview_honorarios");
       }
     } catch (err) {
       console.error("Erro ao gerar guia de honorários:", err);
       showError("Erro ao gerar a guia de honorários.");
-      setView("pergunta_honorarios");
+      goTo("pergunta_honorarios");
     }
   };
 
@@ -2028,7 +2034,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   // Função para finalizar o faturamento (mudar status para ATIVO)
   const finalizarFaturamento = async () => {
     if (!faturamentoId) {
-      setView("success");
+      goTo("success");
       return;
     }
 
@@ -2046,10 +2052,10 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       }
 
       showSuccess("Faturamento concluído com sucesso!");
-      setView("success");
+      goTo("success");
     } catch (err) {
       console.error("Erro ao finalizar:", err);
-      setView("success");
+      goTo("success");
     }
   };
 
@@ -2062,7 +2068,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     setFilesSolicitacao([]);
     setFilesDescricao([]);
     setStep(1);
-    setView("hospital");
+    goTo("hospital");
     setSelectedHospitalId(undefined);
     setSelectedHospitalName("");
     setHospitalStepView("selector");
@@ -2138,7 +2144,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   const handleIniciarFluxo = () => {
-    setView("hospital");
+    goTo("hospital");
     setHospitalStepView("selector");
     setClinicaStepView("selector");
     void carregarFavoritosDoMedico();
@@ -2217,7 +2223,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       });
 
       if (!ensuredId) return;
-      setView("pergunta_solicitacao");
+      goTo("pergunta_solicitacao");
     })();
   };
 
@@ -2325,36 +2331,36 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     ? () => navigate("/medico/dashboard")
                     : view === "pergunta_solicitacao"
                       ? () => {
-                          setView("hospital");
+                          goTo("hospital");
                           setStep(1);
                         }
                       : view === "upload_solicitacao"
                         ? () => {
-                            setView("pergunta_solicitacao");
+                            goTo("pergunta_solicitacao");
                           }
                         : view === "pergunta_guia_autorizacao"
                           ? () => {
-                              setView("pergunta_solicitacao");
+                              goTo("pergunta_solicitacao");
                             }
                           : view === "upload_guia"
                             ? () => {
-                                setView("pergunta_guia_autorizacao");
+                                goTo("pergunta_guia_autorizacao");
                               }
                             : view === "upload_descricao"
                               ? () => {
-                                  setView("upload_guia");
+                                  goTo("upload_guia");
                                 }
                               : view === "pergunta_honorarios"
                                 ? () => {
-                                    setView("upload_descricao");
+                                    goTo("upload_descricao");
                                   }
                                 : view === "sem_modelo"
                                   ? () => {
-                                      setView("pergunta_honorarios");
+                                      goTo("pergunta_honorarios");
                                     }
                                   : view === "preview_honorarios"
                                     ? () => {
-                                        setView("pergunta_honorarios");
+                                        goTo("pergunta_honorarios");
                                       }
                                     : () => navigate("/medico/dashboard")
                 }
@@ -2735,7 +2741,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
                     onClick={() => {
-                      setView("upload_solicitacao");
+                      goTo("upload_solicitacao");
                       setTimeout(() => fileInputRefSolicitacao.current?.click(), 100);
                     }}
                   >
@@ -2745,7 +2751,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="outline"
                     className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => setView("pergunta_guia_autorizacao")}
+                    onClick={() => goTo("pergunta_guia_autorizacao")}
                   >
                     Não, pular esta etapa
                   </Button>
@@ -2996,7 +3002,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="ghost"
                     className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => setView("pergunta_solicitacao")}
+                    onClick={() => goTo("pergunta_solicitacao")}
                     disabled={isUploading}
                   >
                     Voltar
@@ -3133,7 +3139,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="ghost"
                     className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => setView("pergunta_guia_autorizacao")}
+                    onClick={() => goTo("pergunta_guia_autorizacao")}
                     disabled={isUploading}
                   >
                     Voltar
@@ -3267,7 +3273,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="ghost"
                     className="mt-3 text-xs text-[#9CA3AF] hover:bg-[#D4A017]/5 hover:text-[#D4A017]"
-                    onClick={() => setView(autorizacaoEnviada ? "upload_guia" : "pergunta_guia_autorizacao")}
+                    onClick={() => goTo(autorizacaoEnviada ? "upload_guia" : "pergunta_guia_autorizacao")}
                     disabled={isUploading}
                   >
                     Voltar
@@ -3341,7 +3347,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                     type="button"
                     variant="outline"
                     className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => setView("pergunta_honorarios")}
+                    onClick={() => goTo("pergunta_honorarios")}
                   >
                     Voltar
                   </Button>
@@ -3417,7 +3423,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
                   type="button"
                   variant="outline"
                   className="h-11 rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                  onClick={() => setView("pergunta_honorarios")}
+                  onClick={() => goTo("pergunta_honorarios")}
                 >
                   Voltar
                 </Button>
@@ -3510,7 +3516,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
             onVoltar={() => {
               setShowConsistencyTable(false);
               setPendingNavigation(null);
-              setView("upload_descricao");
+              goTo("upload_descricao");
             }}
             onContinue={() => {
               void (async () => {
