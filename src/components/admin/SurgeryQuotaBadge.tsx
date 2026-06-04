@@ -79,7 +79,9 @@ export default function SurgeryQuotaBadge() {
 
       if (cancelled) return;
 
-      const description = (enrollment as any)?.subscription_plans?.description ?? null;
+      const description =
+        (enrollment as { subscription_plans?: { description?: string | null } | null })
+          ?.subscription_plans?.description ?? null;
       const limit = extractLimit(description);
 
       quotaCache = { used, limit };

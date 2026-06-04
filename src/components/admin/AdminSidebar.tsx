@@ -662,7 +662,7 @@ const AdminSidebar = ({
   const { systemUser, loading: systemUserLoading } = useSystemUser();
   const { hasFeature, isLoading: featuresLoading } = usePlanFeatures();
 
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
   const isSuperAdmin = role === "SUPER_ADMIN";
 

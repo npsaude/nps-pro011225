@@ -94,7 +94,7 @@ export default function SubscriptionEnrollmentForm({
       user_name: values.user_name.trim(),
       user_email: values.user_email.trim(),
       user_phone: values.user_phone?.trim() || null,
-      status: values.status.trim() as any,
+      status: values.status.trim() as SubscriptionEnrollmentInput["status"],
       payment_method: values.payment_method?.trim() || null,
 
       asaas_customer_id: values.preencher_ids_asaas

@@ -35,16 +35,35 @@ type CurrentEnrollment = {
   } | null;
 };
 
+type EnrollmentPlan = {
+  id: string;
+  name: string;
+  code: string;
+  price_cents: number;
+  features?: unknown;
+};
+
+/** Linha bruta de enrollment vinda do Supabase (plan pode vir como objeto ou array). */
+type EnrollmentRow = {
+  id: string;
+  plan_id: string;
+  status?: string | null;
+  user_email: string;
+  asaas_subscription_id?: string | null;
+  current_period_end?: string | null;
+  plan?: EnrollmentPlan | EnrollmentPlan[] | null;
+};
+
 function normalizeEmail(email: string) {
   return String(email ?? "").trim().toLowerCase();
 }
 
-function pickBestEnrollment(rows: any[], userEmail: string) {
+function pickBestEnrollment(rows: EnrollmentRow[], userEmail: string) {
   const mine = (rows ?? []).filter(
     (r) => normalizeEmail(r?.user_email) === normalizeEmail(userEmail),
   );
 
-  let best: any | null = null;
+  let best: EnrollmentRow | null = null;
   let bestEndMs = -Infinity;
 
   for (const r of mine) {
@@ -80,8 +99,8 @@ function toFeaturesList(raw: unknown): string[] {
     }
   } else if (Array.isArray(raw)) {
     arr = raw;
-  } else if (raw && typeof raw === "object" && Array.isArray((raw as any).items)) {
-    arr = (raw as any).items;
+  } else if (raw && typeof raw === "object" && Array.isArray((raw as { items?: unknown }).items)) {
+    arr = (raw as { items: unknown[] }).items;
   }
 
   if (!arr.length) return [];
@@ -165,7 +184,7 @@ export default function UserSubscriptionPanel() {
           return;
         }
 
-        const best = pickBestEnrollment((rows ?? []) as any[], userEmail);
+        const best = pickBestEnrollment((rows ?? []) as EnrollmentRow[], userEmail);
 
         if (best) {
           const rawPlan = best.plan;
@@ -210,7 +229,8 @@ export default function UserSubscriptionPanel() {
 
       setEnrollment((prev) => (prev ? { ...prev, status: "CANCELED" } : prev));
 
-      const updated = (result as any)?.enrollment as any | undefined;
+      const updated = (result as { enrollment?: { id?: string; status?: string | null } })
+        ?.enrollment;
       if (updated?.id) {
         setEnrollment((prev) =>
           prev ? { ...prev, status: updated.status ?? "CANCELED" } : prev,

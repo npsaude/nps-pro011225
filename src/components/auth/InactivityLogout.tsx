@@ -135,7 +135,7 @@ export default function InactivityLogout(props: { timeoutMinutes?: number }) {
     return () => {
       mounted = false;
       authListener.subscription.unsubscribe();
-      events.forEach((evt) => window.removeEventListener(evt, touch as any));
+      events.forEach((evt) => window.removeEventListener(evt, touch));
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVisibility);
       clearTimer();

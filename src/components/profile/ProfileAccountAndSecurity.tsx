@@ -35,15 +35,15 @@ export default function ProfileAccountAndSecurity() {
     if (!systemUser) return;
     setNome(systemUser.nome ?? "");
     setCelular(systemUser.celular ?? "");
-    setCrm((systemUser as any)?.crm ?? "");
-    setEmpresa((systemUser as any)?.empresa_clinica_base ?? "");
+    setCrm(systemUser?.crm ?? "");
+    setEmpresa(systemUser?.empresa_clinica_base ?? "");
   }, [systemUser]);
 
   useEffect(() => {
     const load = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) return;
-      setLastSignInAt((data.user as any)?.last_sign_in_at ?? null);
+      setLastSignInAt(data.user?.last_sign_in_at ?? null);
     };
     void load();
   }, []);

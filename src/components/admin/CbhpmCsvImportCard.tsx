@@ -275,7 +275,7 @@ export default function CbhpmCsvImportCard() {
           },
         );
 
-        let json: any = null;
+        let json: { error?: string } | null = null;
         try {
           json = await resp.json();
         } catch {

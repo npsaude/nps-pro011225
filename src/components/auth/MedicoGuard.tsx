@@ -18,7 +18,7 @@ export default function MedicoGuard({ children, redirectTo = "/login" }: Props) 
   const navigate = useNavigate();
   const { systemUser, loading } = useSystemUser();
 
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isAllowed = role === "MEDICO" || role === "ADMIN" || role === "SUPER_ADMIN";
 
   useEffect(() => {

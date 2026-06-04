@@ -217,7 +217,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
         body: JSON.stringify({ userId, faturamentoId, files: uploadedPaths.map((path) => ({ path })) }),
       });
 
-      let json: any = null;
+      let json: { error?: string; revisao_procedimentos?: ProcedimentoRevisao[] } | null = null;
       try { json = await response.json(); } catch { /* ignore */ }
       if (!response.ok || json?.error) throw new Error(json?.error ?? "Erro ao re-analisar a imagem.");
 

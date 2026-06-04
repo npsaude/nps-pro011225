@@ -57,7 +57,7 @@ export default function ProfileHeaderCard({ planLabel }: Props) {
     let cancelled = false;
 
     const load = async () => {
-      const path = (systemUser as any)?.avatar_url as string | null | undefined;
+      const path = systemUser?.avatar_url as string | null | undefined;
       if (!path) {
         setAvatarSignedUrl(null);
         return;

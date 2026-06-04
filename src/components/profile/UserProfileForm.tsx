@@ -37,7 +37,7 @@ export default function UserProfileForm() {
   const [cropOpen, setCropOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const avatarPath = (systemUser as any)?.avatar_url as string | null | undefined;
+  const avatarPath = systemUser?.avatar_url as string | null | undefined;
 
   const displayName = useMemo(() => {
     return systemUser?.nome?.trim() || systemUser?.email?.trim() || "Usuário";

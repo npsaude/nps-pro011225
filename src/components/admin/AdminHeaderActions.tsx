@@ -42,7 +42,7 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isMedico = role === "MEDICO";
   const isSuperAdmin = role === "SUPER_ADMIN";
 
@@ -65,7 +65,7 @@ export default function AdminHeaderActions(props: { notificationsCount?: number 
     let cancelled = false;
 
     const load = async () => {
-      const path = (systemUser as any)?.avatar_url as string | null | undefined;
+      const path = systemUser?.avatar_url as string | null | undefined;
       if (!path) {
         setAvatarUrl(null);
         return;
