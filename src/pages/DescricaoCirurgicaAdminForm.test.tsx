@@ -31,5 +31,11 @@ describe("DescricaoCirurgicaAdminForm (render)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Nova Descrição Cirúrgica")).toBeInTheDocument();
+    // Âncoras: campo regular, os dois Selects (Sexo/Status) e o textarea da descrição.
+    expect(screen.getByText("Prontuário")).toBeInTheDocument();
+    expect(screen.getByText("Sexo")).toBeInTheDocument();
+    expect(screen.getByText("Status")).toBeInTheDocument();
+    expect(screen.getByText("Texto da Descrição")).toBeInTheDocument();
+    expect(screen.getByText("Salvar Descrição")).toBeInTheDocument();
   });
 });
