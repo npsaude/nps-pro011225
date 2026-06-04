@@ -75,6 +75,11 @@ import {
   type AnalyzingStep,
 } from "@/features/medico/faturamento/components/AnalyzingOverlay";
 import { SuccessStep } from "@/features/medico/faturamento/components/SuccessStep";
+import { SolicitacaoQuestionStep } from "@/features/medico/faturamento/components/SolicitacaoQuestionStep";
+import {
+  FaturamentoFlowProvider,
+  type FaturamentoFlowValue,
+} from "@/features/medico/faturamento/context/flow-context";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -2267,7 +2272,16 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     }
   };
 
+  const flowValue: FaturamentoFlowValue = {
+    view,
+    goTo,
+    fileInputRefSolicitacao,
+    fileInputRefGuia,
+    fileInputRefDescricao,
+  };
+
   return (
+    <FaturamentoFlowProvider value={flowValue}>
     <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 lg:pb-0 text-[#F5F5F5]">
       {/* Fundo premium */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
@@ -2680,43 +2694,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
           )}
 
           {/* TELA 2.5 - PERGUNTA GUIA DE SOLICITAÇÃO */}
-          {view === "pergunta_solicitacao" && (
-            <div className="mt-2 flex w-full max-w-md flex-col items-center">
-              <div className="w-full rounded-2xl bg-black/70 backdrop-blur-xl px-6 py-8 shadow-[0_0_40px_rgba(212,160,23,0.12)] border border-[#D4A017]/20 text-center">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD700] to-[#D4A017] text-black shadow-[0_0_30px_rgba(212,160,23,0.35)]">
-                  <FileCheck className="h-8 w-8" />
-                </div>
-
-                <h2 className="text-lg font-semibold text-[#F5F5F5] sm:text-xl mb-2">
-                  Guia de Solicitação
-                </h2>
-                <p className="text-xs text-[#9CA3AF] sm:text-sm mb-8">
-                  Deseja enviar a Guia de Solicitação agora? Esta etapa é opcional.
-                </p>
-
-                <div className="flex flex-col gap-3">
-                  <Button
-                    type="button"
-                    className="h-11 w-full rounded-lg bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.4)] hover:shadow-[0_0_30px_rgba(212,160,23,0.6)] transition-shadow"
-                    onClick={() => {
-                      goTo("upload_solicitacao");
-                      setTimeout(() => fileInputRefSolicitacao.current?.click(), 100);
-                    }}
-                  >
-                    Sim, enviar guia
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-lg border-[#D4A017]/25 bg-black/40 text-[#F5F5F5] hover:bg-[#D4A017]/10"
-                    onClick={() => goTo("pergunta_guia_autorizacao")}
-                  >
-                    Não, pular esta etapa
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {view === "pergunta_solicitacao" && <SolicitacaoQuestionStep />}
 
           {/* TELA 2.55 - PERGUNTA GUIA DE AUTORIZAÇÃO + TIPO DE CIRURGIA */}
           {view === "pergunta_guia_autorizacao" && (
@@ -3488,6 +3466,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
 
       <MedicoFloatingNav />
     </div>
+    </FaturamentoFlowProvider>
   );
 };
 
