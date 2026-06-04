@@ -12,7 +12,9 @@
     "src/services",
     "src/hooks",
     "src/utils",
-    "src/contexts"
+    "src/contexts",
+    "src/integrations",
+    "src/lib"
   ],
   "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }
