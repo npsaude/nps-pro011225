@@ -24,6 +24,18 @@ export async function fetchGuiaSolicitacao(
   return data as GuiaSolicitacaoRow;
 }
 
+/** Lê os paths de documentos (coluna `url_documentos`) de uma guia. */
+export async function fetchGuiaSolicitacaoDocPaths(id: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("guia_solicitacao")
+    .select("url_documentos")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return [];
+  return Array.isArray(data.url_documentos) ? (data.url_documentos as string[]) : [];
+}
+
 /**
  * Insere uma nova guia ou atualiza a existente (quando `id` é informado).
  * Retorna o erro do Supabase (ou null em sucesso), preservando o tratamento

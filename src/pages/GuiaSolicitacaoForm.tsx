@@ -1,29 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import {
-  FileText,
-  User,
-  Building2,
-  CalendarRange,
-  Stethoscope,
-  FolderOpen,
-  ImageIcon,
-  FileIcon,
-  ExternalLink,
-  Loader2,
-} from "lucide-react";
+import { FileText, User, Building2, CalendarRange, Stethoscope } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminFormLayout from "@/features/admin/forms/AdminFormLayout";
 import FormLoadingScreen from "@/features/admin/forms/FormLoadingScreen";
 import AdminFormTabs from "@/features/admin/forms/AdminFormTabs";
 import ConfiguredSection from "@/features/admin/forms/ConfiguredSection";
+import AttachmentsPanel from "@/features/admin/forms/AttachmentsPanel";
 import type { FieldConfig } from "@/features/admin/forms/field-config";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchGuiaSolicitacao,
+  fetchGuiaSolicitacaoDocPaths,
   saveGuiaSolicitacao,
 } from "@/services/guia-solicitacao-service";
+import { createSignedDocItems } from "@/services/storage-docs-service";
 import { showError, showSuccess } from "@/utils/toast";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -59,13 +51,6 @@ type FormValues = {
   observacao: string;
 };
 
-type DocItem = {
-  path: string;
-  signedUrl: string | null;
-  fileName: string;
-  isImage: boolean;
-};
-
 const defaultValues: FormValues = {
   registro_ans: "",
   numero_guia_prestador: "",
@@ -97,8 +82,6 @@ const defaultValues: FormValues = {
   valor_total_faturamento: "",
   observacao: "",
 };
-
-const BUCKET = "NPS-pro";
 
 // ── Config das seções de campos ───────────────────────────────────────────────
 const SECTIONS: {
@@ -172,166 +155,6 @@ const SECTIONS: {
     ],
   },
 ];
-
-// ── Componente de Documentos ──────────────────────────────────────────────────
-function DocumentosTab({ guiaId }: { guiaId: string }) {
-  const [docs, setDocs] = useState<DocItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lightbox, setLightbox] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("guia_solicitacao")
-        .select("url_documentos")
-        .eq("id", guiaId)
-        .single();
-
-      if (error || !data) {
-        setLoading(false);
-        return;
-      }
-
-      const paths: string[] = Array.isArray(data.url_documentos)
-        ? (data.url_documentos as string[])
-        : [];
-
-      if (paths.length === 0) {
-        setLoading(false);
-        setDocs([]);
-        return;
-      }
-
-      const items = await Promise.all(
-        paths.map(async (path) => {
-          const { data: signed } = await supabase.storage
-            .from(BUCKET)
-            .createSignedUrl(path, 60 * 60);
-
-          const fileName = path.split("/").pop() ?? path;
-          const isImage = /\.(png|jpe?g|gif|webp)$/i.test(path);
-
-          return {
-            path,
-            signedUrl: signed?.signedUrl ?? null,
-            fileName,
-            isImage,
-          };
-        })
-      );
-
-      setDocs(items);
-      setLoading(false);
-    })();
-  }, [guiaId]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-slate-400">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span className="text-sm">Carregando documentos...</span>
-      </div>
-    );
-  }
-
-  if (docs.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
-        <FolderOpen className="mb-3 h-10 w-10 text-slate-300" />
-        <p className="text-sm font-medium text-slate-500">Nenhum documento enviado</p>
-        <p className="mt-1 text-xs text-slate-400">
-          Os arquivos enviados via upload aparecerão aqui.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {docs.map((doc) => (
-          <div
-            key={doc.path}
-            className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md"
-          >
-            {/* Preview */}
-            <div className="flex h-40 items-center justify-center overflow-hidden bg-slate-50">
-              {doc.isImage && doc.signedUrl ? (
-                <img
-                  src={doc.signedUrl}
-                  alt={doc.fileName}
-                  className="h-full w-full object-cover transition group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-slate-300">
-                  <FileIcon className="h-12 w-12" />
-                  <span className="text-[11px] text-slate-400">Documento</span>
-                </div>
-              )}
-            </div>
-
-            {/* Info + ações */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                {doc.isImage ? (
-                  <ImageIcon className="h-4 w-4 flex-shrink-0 text-blue-400" />
-                ) : (
-                  <FileIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
-                )}
-                <span className="truncate text-xs text-slate-600" title={doc.fileName}>
-                  {doc.fileName}
-                </span>
-              </div>
-              {doc.signedUrl && (
-                <a
-                  href={doc.signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Abrir em nova aba"
-                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              )}
-            </div>
-
-            {/* Clique para ampliar imagem */}
-            {doc.isImage && doc.signedUrl && (
-              <button
-                onClick={() => setLightbox(doc.signedUrl)}
-                className="absolute inset-0 h-40 w-full cursor-zoom-in"
-                aria-label="Ampliar imagem"
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Lightbox simples */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          onClick={() => setLightbox(null)}
-        >
-          <img
-            src={lightbox}
-            alt="Visualização"
-            className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-    </>
-  );
-}
 
 // ── Página principal ──────────────────────────────────────────────────────────
 const GuiaSolicitacaoFormPage: React.FC = () => {
@@ -448,6 +271,11 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
     }
   };
 
+  const loadDocs = useCallback(
+    async () => createSignedDocItems(await fetchGuiaSolicitacaoDocPaths(id!)),
+    [id],
+  );
+
   if (loadingData) {
     return <FormLoadingScreen />;
   }
@@ -472,7 +300,7 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
         onSubmit={handleSubmit(onSubmit)}
         saving={saving}
         onCancel={() => navigate("/admin/guia-solicitacao")}
-        documentos={id ? <DocumentosTab guiaId={id} /> : undefined}
+        documentos={<AttachmentsPanel loadDocs={loadDocs} />}
       >
         {SECTIONS.map((section) => (
           <ConfiguredSection
