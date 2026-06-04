@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowLeft } from "lucide-react";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { accentTokens, type FormAccent } from "./accent";
+import { FormAccentProvider } from "./FormAccentContext";
 
 /**
  * Shell de página dos formulários administrativos de guia: fundo em
@@ -32,6 +33,7 @@ export default function AdminFormLayout({
   const tokens = accentTokens(accent);
 
   return (
+    <FormAccentProvider accent={accent}>
     <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900">
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         {sidebar}
@@ -62,5 +64,6 @@ export default function AdminFormLayout({
         </div>
       </div>
     </div>
+    </FormAccentProvider>
   );
 }

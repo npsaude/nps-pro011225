@@ -28,5 +28,9 @@ describe("GuiaSolicitacaoForm (render)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Nova Guia de Solicitação")).toBeInTheDocument();
+    // Âncora de regressão dos campos dirigidos por config.
+    expect(screen.getByText("Registro ANS")).toBeInTheDocument();
+    expect(screen.getByText("Observações")).toBeInTheDocument();
+    expect(screen.getByText("Salvar Guia")).toBeInTheDocument();
   });
 });
