@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/integrations/supabase/auth-header";
 import { showError, showSuccess } from "@/utils/toast";
 
 export interface ProcedimentoRevisao {
@@ -211,7 +212,7 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
 
       const response = await fetch(FUNCTION_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({ userId, faturamentoId, files: uploadedPaths.map((path) => ({ path })) }),
       });
 

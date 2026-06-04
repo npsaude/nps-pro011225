@@ -30,6 +30,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { showError, showSuccess } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/integrations/supabase/auth-header";
 
 type ParsedRow = string[];
 
@@ -142,9 +143,7 @@ const AdminConverterPdf = () => {
 
       const response = await fetch(functionUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await authHeaders(),
         body: JSON.stringify({ filePath: path }),
       });
 
