@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
+import { GlobalWorkerOptions } from "pdfjs-dist";
 
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
@@ -32,6 +32,12 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { compressFiles, isHeicFile } from "@/utils/image-compression";
+import {
+  type UploadItem,
+  isUnsupportedRawFormat,
+  sanitizeFileName,
+  expandFilesToUploadItems,
+} from "@/features/medico/faturamento/lib/file-upload";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -99,86 +105,10 @@ interface ItemFaturamento {
   quantidade?: number;
 }
 
-type UploadItem = {
-  data: Blob;
-  contentType: string;
-  suggestedName: string;
-};
-
-const isPdfFile = (file: File) =>
-  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-
-const isUnsupportedRawFormat = (file: File) => {
-  const rawExtensions = [".dng", ".cr2", ".cr3", ".nef", ".arw", ".orf", ".rw2", ".raf", ".raw"];
-  const name = file.name.toLowerCase();
-  return rawExtensions.some((ext) => name.endsWith(ext));
-};
-
-const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-
-const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> => {
-  const data = await pdfFile.arrayBuffer();
-  const loadingTask = getDocument({ data });
-  const pdf = await loadingTask.promise;
-
-  const baseName = sanitizeFileName(
-    pdfFile.name.replace(/\.pdf$/i, "") || "documento",
-  );
-
-  const items: UploadItem[] = [];
-
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 2 });
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) continue;
-
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-
-    await (page.render({ canvasContext: ctx, viewport, canvas } as any).promise as Promise<void>);
-
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((b) => {
-        if (!b) {
-          reject(new Error("Falha ao converter página do PDF em imagem."));
-          return;
-        }
-        resolve(b);
-      }, "image/png");
-    });
-
-    items.push({
-      data: blob,
-      contentType: "image/png",
-      suggestedName: `${baseName}_p${pageNum}.png`,
-    });
-  }
-
-  return items;
-};
-
-const expandFilesToUploadItems = async (files: File[]): Promise<UploadItem[]> => {
-  const items: UploadItem[] = [];
-
-  for (const file of files) {
-    if (isPdfFile(file)) {
-      const pdfItems = await pdfToPngUploadItems(file);
-      items.push(...pdfItems);
-      continue;
-    }
-
-    items.push({
-      data: file,
-      contentType: file.type || "application/octet-stream",
-      suggestedName: file.name,
-    });
-  }
-
-  return items;
-};
+// As funções utilitárias de upload (isPdfFile, isUnsupportedRawFormat,
+// sanitizeFileName, pdfToPngUploadItems, expandFilesToUploadItems e o tipo
+// UploadItem) foram extraídas para o módulo compartilhado
+// "@/features/medico/faturamento/lib/file-upload".
 
 const MedicoUploadDescricaoCirurgica: React.FC = () => {
   const navigate = useNavigate();
