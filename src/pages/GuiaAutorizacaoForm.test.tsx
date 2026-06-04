@@ -26,5 +26,10 @@ describe("GuiaAutorizacaoForm (render)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Nova Guia de Autorização")).toBeInTheDocument();
+    // Âncoras de regressão: campo regular, bloco de auxiliares e Select de status.
+    expect(screen.getByText("Nº Autorização")).toBeInTheDocument();
+    expect(screen.getByText("Anestesista")).toBeInTheDocument();
+    expect(screen.getByText("Status de Pagamento")).toBeInTheDocument();
+    expect(screen.getByText("Salvar Guia")).toBeInTheDocument();
   });
 });

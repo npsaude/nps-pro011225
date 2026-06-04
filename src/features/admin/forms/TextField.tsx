@@ -3,16 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import FormField from "./FormField";
 import type { FieldConfig } from "./field-config";
 import { useAccentTokens } from "./FormAccentContext";
-
-/**
- * Classe base do input, sem as classes de foco que dependem do accent.
- * Extraída verbatim do `inputCls` duplicado nas páginas.
- */
-const INPUT_BASE =
-  "h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-1 w-full";
-
-const TEXTAREA_BASE =
-  "resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-1";
+import { INPUT_BASE, TEXTAREA_BASE } from "./field-styles";
 
 /**
  * Campo regular (Label + input/textarea registrado via react-hook-form),

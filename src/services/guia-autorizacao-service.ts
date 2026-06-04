@@ -24,6 +24,20 @@ export async function fetchGuiaAutorizacao(
   return data as GuiaAutorizacaoRow;
 }
 
+/** Lê os paths de documentos (coluna `url_guia_autorizacao`) por id. */
+export async function fetchGuiaAutorizacaoDocPaths(id: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("faturamentos")
+    .select("url_guia_autorizacao")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return [];
+  return Array.isArray(data.url_guia_autorizacao)
+    ? (data.url_guia_autorizacao as string[])
+    : [];
+}
+
 /** Insere um novo registro ou atualiza o existente (quando `id` é informado). */
 export async function saveGuiaAutorizacao(
   payload: Record<string, unknown>,
