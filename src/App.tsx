@@ -33,7 +33,6 @@ const AdminConverterPdf = lazy(() => import("./pages/AdminConverterPdf"));
 const DescricaoCirurgicaPage = lazy(() => import("./pages/DescricaoCirurgica"));
 const MedicoUploadDescricaoCirurgica = lazy(() => import("./pages/MedicoUploadDescricaoCirurgica"));
 const MedicoUploadGuiaAutorizacao = lazy(() => import("./pages/MedicoUploadGuiaAutorizacao"));
-const MedicoDescricoesCirurgicas = lazy(() => import("./pages/MedicoDescricoesCirurgicas"));
 const MedicoFaturamentos = lazy(() => import("./pages/MedicoFaturamentos"));
 const DescricaoCirurgicaArquivosPage = lazy(() => import("./pages/DescricaoCirurgicaArquivos"));
 const HospitaisCadastro = lazy(() => import("./pages/HospitaisCadastro"));

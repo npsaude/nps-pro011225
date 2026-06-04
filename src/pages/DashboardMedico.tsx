@@ -5,23 +5,6 @@ import { ArrowLeft, Upload, FileText, ClipboardList } from "lucide-react";
 import RevenueChart from "../components/dashboard/RevenueChart";
 import HospitalRankingChart from "../components/dashboard/HospitalRankingChart";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { useSystemUser } from "@/hooks/use-system-user";
@@ -59,12 +42,6 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
-function toDateOrNull(value: string | null): Date | null {
-  if (!value) return null;
-  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 function buildRangeStart(period: Period): Date {
   const count = period === "mes" ? 3 : period === "trimestre" ? 6 : 12;
   const now = new Date();
@@ -100,13 +77,6 @@ const DashboardMedico: React.FC = () => {
   const [faturado, setFaturado] = useState<string>("—");
   const [recebido, setRecebido] = useState<string>("—");
   const [totalAReceber, setTotalAReceber] = useState<string>("—");
-
-  const [hospitalModalOpen, setHospitalModalOpen] = useState(false);
-  const [hospitaisMedico, setHospitaisMedico] = useState<
-    { id: string; nome_fantasia: string }[]
-  >([]);
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>("");
-  const [loadingHospitais, setLoadingHospitais] = useState(false);
 
   const saudacao = useMemo(() => {
     const nome = (systemUser as any)?.nome ? String((systemUser as any).nome) : "";
@@ -186,8 +156,6 @@ const DashboardMedico: React.FC = () => {
         if (v > 0) total += v;
       }
 
-      // Recebido: ainda não implementada a etapa de conciliação — sempre 0
-      const received = 0;
 
       // Total a Receber = valor faturado (conciliação pendente)
       const toReceive = total;
@@ -211,135 +179,12 @@ const DashboardMedico: React.FC = () => {
     };
   }, [period]);
 
-  const carregarHospitaisDoMedico = async () => {
-    setLoadingHospitais(true);
-    try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-
-      if (authError || !authData?.user) {
-        showError("Faça login para enviar a descrição cirúrgica.");
-        navigate("/login-medico");
-        return;
-      }
-
-      const email = authData.user.email;
-      if (!email) {
-        showError(
-          "Não foi possível identificar seu e-mail. Tente novamente ou contate o suporte.",
-        );
-        return;
-      }
-
-      const { data: medico, error: medicoError } = await supabase
-        .from("medicos")
-        .select("hospitais_ids")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (medicoError) {
-        throw new Error(
-          medicoError.message ||
-            "Não foi possível carregar os hospitais vinculados ao seu cadastro.",
-        );
-      }
-
-      const hospitaisIds: string[] = (medico?.hospitais_ids as string[]) ?? [];
-
-      if (!hospitaisIds.length) {
-        setHospitaisMedico([]);
-        return;
-      }
-
-      const { data: hospitaisData, error: hospitaisError } = await supabase
-        .from("hospitais")
-        .select("id, nome_fantasia")
-        .in("id", hospitaisIds)
-        .order("nome_fantasia", { ascending: true });
-
-      if (hospitaisError) {
-        throw new Error(
-          hospitaisError.message ||
-            "Não foi possível carregar a lista de hospitais.",
-        );
-      }
-
-      setHospitaisMedico(
-        (hospitaisData ?? []) as { id: string; nome_fantasia: string }[],
-      );
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível carregar os hospitais vinculados ao seu cadastro.";
-      showError(message);
-    } finally {
-      setLoadingHospitais(false);
-    }
-  };
-
-  const handleAbrirModalHospitais = () => {
-    setHospitalModalOpen(true);
-    void carregarHospitaisDoMedico();
-  };
-
-  const handleContinuarEnvio = () => {
-    if (!selectedHospitalId) {
-      showError("Selecione um hospital para continuar.");
-      return;
-    }
-
-    navigate(`/medico/faturamentos/enviar?hospitalId=${selectedHospitalId}`);
-    setHospitalModalOpen(false);
-  };
-
   const handleChangePeriod = (value: Period) => {
     setPeriod(value);
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 lg:pb-0 text-[#F5F5F5]">
-      <Dialog open={hospitalModalOpen} onOpenChange={setHospitalModalOpen}>
-        <DialogContent className="bg-[#0b0b0b] border border-[#D4A017]/20 text-[#F5F5F5]">
-          <DialogHeader>
-            <DialogTitle>Selecione o hospital</DialogTitle>
-            <DialogDescription className="text-[#9CA3AF]">
-              Escolha o hospital para o qual você deseja enviar a descrição cirúrgica.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2">
-            <Label>Hospital</Label>
-            <Select value={selectedHospitalId} onValueChange={setSelectedHospitalId}>
-              <SelectTrigger>
-                <SelectValue placeholder={loadingHospitais ? "Carregando..." : "Selecione"} />
-              </SelectTrigger>
-              <SelectContent>
-                {hospitaisMedico.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    {h.nome_fantasia}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              disabled={
-                loadingHospitais ||
-                hospitaisMedico.length === 0 ||
-                !selectedHospitalId
-              }
-              onClick={handleContinuarEnvio}
-              className="bg-gradient-to-r from-[#FFD700] via-[#D4A017] to-[#B8860B] text-black font-semibold shadow-[0_0_20px_rgba(212,160,23,0.35)] hover:shadow-[0_0_30px_rgba(212,160,23,0.55)] transition-shadow"
-            >
-              Continuar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Fundo premium */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />

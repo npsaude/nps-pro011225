@@ -5,25 +5,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": [
-    "src/vite-env.d.ts",
-    "src/types",
-    "src/features",
-    "src/services",
-    "src/hooks",
-    "src/utils",
-    "src/contexts",
-    "src/integrations",
-    "src/lib",
-    "src/components",
-    "src/pages",
-    "src/config",
-    "src/constants",
-    "src/db"
-  ],
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "src/pages/DashboardMedico.tsx"
-  ]
+  "include": ["src"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }
