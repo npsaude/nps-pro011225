@@ -66,22 +66,16 @@ import {
 import { useBillingQuota } from "@/hooks/use-billing-quota";
 import { listarFavoritos } from "@/services/clinicas-service";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
+import {
+  type FaturamentoView,
+  TOTAL_STEPS,
+  getCurrentStep,
+} from "@/features/medico/faturamento/lib/flow-steps";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-type ViewState = 
-  | "start" 
-  | "hospital" 
-  | "pergunta_solicitacao"
-  | "upload_solicitacao"
-  | "pergunta_guia_autorizacao"
-  | "upload_guia" 
-  | "upload_descricao" 
-  | "pergunta_honorarios"
-  | "gerando_honorarios"
-  | "preview_honorarios"
-  | "sem_modelo"
-  | "success";
+// O tipo de estado da tela e o modelo de passos vivem no módulo de fluxo.
+type ViewState = FaturamentoView;
 
 interface FaturamentoData {
   paciente_nome?: string;
@@ -2060,25 +2054,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   const saudacao = medicoNome ? `Olá, Dr. ${medicoNome}.` : "Olá, médico.";
-  const totalSteps = 6;
-  const currentStep =
-    view === "start"
-      ? 1
-      : view === "hospital"
-        ? 1
-        : view === "pergunta_solicitacao"
-          ? 2
-          : view === "upload_solicitacao"
-            ? 3
-            : view === "pergunta_guia_autorizacao"
-              ? 3
-              : view === "upload_guia"
-                ? 3
-                : view === "upload_descricao"
-                  ? 4
-                  : view === "pergunta_honorarios" || view === "gerando_honorarios" || view === "preview_honorarios" || view === "sem_modelo"
-                    ? 5
-                    : 6;
+  const totalSteps = TOTAL_STEPS;
+  const currentStep = getCurrentStep(view);
 
   const handleNovaDescricao = () => {
     setFilesGuia([]);
