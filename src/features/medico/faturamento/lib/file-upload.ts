@@ -10,7 +10,6 @@
  * que o worker já foi registrado.
  */
 
-import { getDocument } from "pdfjs-dist";
 import { isHeicFile } from "@/utils/image-compression";
 
 // ---------------------------------------------------------------------------
@@ -55,13 +54,30 @@ export const sanitizeFileName = (name: string): string =>
 // PDF → PNG conversion
 // ---------------------------------------------------------------------------
 
+// Garante (uma única vez) que o worker do pdfjs esteja configurado. O pdfjs e
+// o worker são carregados sob demanda, evitando que importar utilitários leves
+// deste módulo (sanitizeFileName, classifyUploadFiles) puxe o pdfjs para o chunk.
+let pdfWorkerConfigured = false;
+const ensurePdfWorker = async () => {
+  const { GlobalWorkerOptions } = await import("pdfjs-dist");
+  if (!pdfWorkerConfigured) {
+    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url"))
+      .default as string;
+    GlobalWorkerOptions.workerSrc = workerUrl;
+    pdfWorkerConfigured = true;
+  }
+};
+
 /**
  * Converte cada página de um PDF em um UploadItem de imagem PNG,
  * renderizando via canvas em escala 2× para maior nitidez.
  *
- * Requer que GlobalWorkerOptions.workerSrc já esteja configurado pela aplicação.
+ * O pdfjs e seu worker são carregados/configurados sob demanda internamente.
  */
 export const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> => {
+  const { getDocument } = await import("pdfjs-dist");
+  await ensurePdfWorker();
+
   const data = await pdfFile.arrayBuffer();
   const loadingTask = getDocument({ data });
   const pdf = await loadingTask.promise;

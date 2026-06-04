@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useReducer } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 // html2canvas e jsPDF são carregados sob demanda (import dinâmico) dentro de
-// gerarPdfGuiaHonorarios para não pesar o chunk inicial desta página.
-import { GlobalWorkerOptions } from "pdfjs-dist";
-
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+// gerarPdfGuiaHonorarios. O pdfjs e seu worker são configurados sob demanda
+// pelo módulo lib/file-upload (não há mais setup estático aqui).
 import { ArrowLeft, Scissors } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,8 +62,6 @@ import {
   FaturamentoFlowProvider,
   type FaturamentoFlowValue,
 } from "@/features/medico/faturamento/context/flow-context";
-
-GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 // O tipo de estado da tela e o modelo de passos vivem no módulo de fluxo.
 type ViewState = FaturamentoView;
