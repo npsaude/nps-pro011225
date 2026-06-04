@@ -4,7 +4,7 @@
  * (emerald). As classes abaixo foram extraídas verbatim das páginas para
  * preservar exatamente a aparência atual.
  */
-export type FormAccent = "blue" | "violet" | "emerald";
+export type FormAccent = "blue" | "violet" | "emerald" | "teal";
 
 export interface AccentTokens {
   /** Badge do ícone no header da página (ex.: bg-blue-100 text-blue-700) */
@@ -45,6 +45,14 @@ const ACCENTS: Record<FormAccent, AccentTokens> = {
     docPanelBadge: "bg-emerald-600",
     docIcon: "text-emerald-400",
     docHover: "hover:bg-emerald-50 hover:text-emerald-600",
+  },
+  teal: {
+    titleBadge: "bg-teal-100 text-teal-700",
+    inputFocus: "focus:border-teal-500 focus:ring-teal-500",
+    submitButton: "bg-teal-600 hover:bg-teal-700",
+    docPanelBadge: "bg-teal-600",
+    docIcon: "text-teal-400",
+    docHover: "hover:bg-teal-50 hover:text-teal-600",
   },
 };
 

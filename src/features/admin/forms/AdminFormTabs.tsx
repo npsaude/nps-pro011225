@@ -22,6 +22,9 @@ export default function AdminFormTabs({
   onCancel,
   documentos,
   children,
+  dadosLabel = "Dados da Guia",
+  createLabel = "Salvar Guia",
+  editLabel = "Salvar Alterações",
 }: {
   isEdit: boolean;
   dadosIcon: React.ElementType;
@@ -31,6 +34,9 @@ export default function AdminFormTabs({
   onCancel: () => void;
   documentos?: React.ReactNode;
   children: React.ReactNode;
+  dadosLabel?: string;
+  createLabel?: string;
+  editLabel?: string;
 }) {
   const tokens = useAccentTokens();
 
@@ -54,7 +60,7 @@ export default function AdminFormTabs({
           className={`gap-2 rounded-full ${tokens.submitButton} px-6 text-white`}
         >
           <Save className="h-4 w-4" />
-          {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Salvar Guia"}
+          {saving ? "Salvando..." : isEdit ? editLabel : createLabel}
         </Button>
       </div>
     </form>
@@ -72,7 +78,7 @@ export default function AdminFormTabs({
           className="rounded-full px-5 text-sm text-slate-500 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
         >
           <DadosIcon className="mr-2 h-4 w-4" />
-          Dados da Guia
+          {dadosLabel}
         </TabsTrigger>
         <TabsTrigger
           value="documentos"

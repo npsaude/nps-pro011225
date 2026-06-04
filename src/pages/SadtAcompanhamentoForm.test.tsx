@@ -26,5 +26,9 @@ describe("SadtAcompanhamentoForm (render)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Nova SADT")).toBeInTheDocument();
+    // Âncoras de regressão dos campos dirigidos por config.
+    expect(screen.getByText("Registro ANS")).toBeInTheDocument();
+    expect(screen.getByText("Indicação Clínica")).toBeInTheDocument();
+    expect(screen.getByText("Salvar SADT")).toBeInTheDocument();
   });
 });

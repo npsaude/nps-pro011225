@@ -276,6 +276,13 @@ export async function fetchSadtAcompanhamentoDocs(
   return data as SadtAcompanhamentoRow;
 }
 
+/** Lê e normaliza os paths de documentos (coluna `url_documentos`) de uma SADT. */
+export async function fetchSadtAcompanhamentoDocPaths(id: string): Promise<string[]> {
+  const data = await fetchSadtAcompanhamentoDocs(id);
+  if (!data) return [];
+  return Array.isArray(data.url_documentos) ? (data.url_documentos as string[]) : [];
+}
+
 /** Insere uma nova SADT ou atualiza a existente (quando `id` é informado). */
 export async function saveSadtAcompanhamento(
   payload: Record<string, unknown>,
