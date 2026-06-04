@@ -101,7 +101,7 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
       const bucketName = "NPS-pro";
 
       // Reutilizar paths já enviados se for reenvio forçado (duplicata confirmada)
-      let uploadedFilePaths: string[] = forceInsert
+      const uploadedFilePaths: string[] = forceInsert
         ? uploadedPathsRef.current
         : [];
 

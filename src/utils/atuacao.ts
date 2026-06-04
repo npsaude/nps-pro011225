@@ -92,9 +92,9 @@ export function reconhecerAtuacao(params: {
 
       const patterns: Array<{ atuacao: Atuacao; re: RegExp }> = [
         { atuacao: "CIRURGIAO", re: new RegExp(`(cirurgi[aã]o|cirurgiao)[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
-        { atuacao: "PRIMEIRO_AUXILIAR", re: new RegExp(`(1\s*o|1º|primeiro)\s*auxiliar[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
-        { atuacao: "SEGUNDO_AUXILIAR", re: new RegExp(`(2\s*o|2º|segundo)\s*auxiliar[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
-        { atuacao: "TERCEIRO_AUXILIAR", re: new RegExp(`(3\s*o|3º|terceiro)\s*auxiliar[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
+        { atuacao: "PRIMEIRO_AUXILIAR", re: new RegExp(`(1s*o|1º|primeiro)s*auxiliar[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
+        { atuacao: "SEGUNDO_AUXILIAR", re: new RegExp(`(2s*o|2º|segundo)s*auxiliar[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
+        { atuacao: "TERCEIRO_AUXILIAR", re: new RegExp(`(3s*o|3º|terceiro)s*auxiliar[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
         { atuacao: "ANESTESISTA", re: new RegExp(`anestesista[^\n]{0,120}${f}[^\n]{0,120}${crmUser}`) },
       ];
 

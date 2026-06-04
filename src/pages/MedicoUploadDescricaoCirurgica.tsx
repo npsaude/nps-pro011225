@@ -1705,7 +1705,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // Forçar reflow
-      tempContainer.offsetHeight;
+      void tempContainer.offsetHeight;
       
       console.log("[PDF] Capturando com html2canvas...");
       

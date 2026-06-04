@@ -201,7 +201,7 @@ const AdminConverterPdf = () => {
     }
 
     const escapeCsv = (value: string) => {
-      const needQuotes = /[\",;\n]/.test(value);
+      const needQuotes = /[",;\n]/.test(value);
       const normalized = value.replace(/"/g, '""');
       return needQuotes ? `"${normalized}"` : normalized;
     };

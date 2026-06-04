@@ -38,7 +38,8 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # Lint é informativo por enquanto: há erros pré-existentes (principalmente
-      # nas edge functions Deno). Não bloqueia o CI até serem zerados.
-      - name: Lint (informativo)
-        run: pnpm lint || true
+      # Lint bloqueante: zero erros. O débito de `no-explicit-any` (~214) é
+      # rebaixado a warning no eslint.config.js e tratado por etapas; as edge
+      # functions Deno ficam fora do escopo do lint do frontend.
+      - name: Lint
+        run: pnpm lint
