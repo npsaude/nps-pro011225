@@ -9,7 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchModeloDescricaoCirurgica,
+  createSignedModeloImageUrl,
+  uploadModeloImage,
+  saveModeloDescricaoCirurgica,
+} from "@/services/modelos-descricao-cirurgica-service";
 import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
@@ -59,14 +64,12 @@ export default function AdminModelosDescricaoCirurgicaForm() {
   useEffect(() => {
     if (!isEditing || !id) return;
     const load = async () => {
-      const { data, error } = await supabase
-        .from("modelos_descricao_cirurgica").select("*").eq("id", id).single();
-      if (error || !data) {
+      const row = await fetchModeloDescricaoCirurgica(id);
+      if (!row) {
         showError("Modelo não encontrado.");
         navigate("/admin/modelos-descricao-cirurgica");
         return;
       }
-      const row = data as any;
       setForm({
         nome: row.nome ?? "",
         descricao: row.descricao ?? "",
@@ -76,12 +79,12 @@ export default function AdminModelosDescricaoCirurgicaForm() {
         ativo: row.ativo ?? true,
       });
       if (row.imagem_descricao_path) {
-        const { data: signed } = await supabase.storage.from("NPS-pro").createSignedUrl(row.imagem_descricao_path, 3600);
-        setImgDescricao({ file: null, previewUrl: null, existingPath: row.imagem_descricao_path, signedUrl: signed?.signedUrl ?? null });
+        const signedUrl = await createSignedModeloImageUrl(row.imagem_descricao_path);
+        setImgDescricao({ file: null, previewUrl: null, existingPath: row.imagem_descricao_path, signedUrl });
       }
       if (row.imagem_destaque_path) {
-        const { data: signed } = await supabase.storage.from("NPS-pro").createSignedUrl(row.imagem_destaque_path, 3600);
-        setImgDestaque({ file: null, previewUrl: null, existingPath: row.imagem_destaque_path, signedUrl: signed?.signedUrl ?? null });
+        const signedUrl = await createSignedModeloImageUrl(row.imagem_destaque_path);
+        setImgDestaque({ file: null, previewUrl: null, existingPath: row.imagem_destaque_path, signedUrl });
       }
       setLoading(false);
     };
@@ -98,11 +101,7 @@ export default function AdminModelosDescricaoCirurgicaForm() {
 
   const uploadImage = async (img: ImageState, folder: string): Promise<string | null> => {
     if (img.file) {
-      const ext = img.file.name.split(".").pop() ?? "png";
-      const path = `modelos_descricao_cirurgica/${folder}/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("NPS-pro").upload(path, img.file, { cacheControl: "3600", upsert: false, contentType: img.file.type });
-      if (error) throw new Error(`Erro ao fazer upload: ${error.message}`);
-      return path;
+      return uploadModeloImage(img.file, folder);
     }
     return img.existingPath ?? null;
   };
@@ -127,15 +126,9 @@ export default function AdminModelosDescricaoCirurgicaForm() {
         imagem_destaque_path: destaquePath,
         updated_at: new Date().toISOString(),
       };
-      if (isEditing && id) {
-        const { error } = await supabase.from("modelos_descricao_cirurgica").update(payload).eq("id", id);
-        if (error) throw error;
-        showSuccess("Modelo atualizado com sucesso!");
-      } else {
-        const { error } = await supabase.from("modelos_descricao_cirurgica").insert(payload);
-        if (error) throw error;
-        showSuccess("Modelo cadastrado com sucesso!");
-      }
+      const { error } = await saveModeloDescricaoCirurgica(payload, isEditing && id ? id : undefined);
+      if (error) throw error;
+      showSuccess(isEditing ? "Modelo atualizado com sucesso!" : "Modelo cadastrado com sucesso!");
       navigate("/admin/modelos-descricao-cirurgica");
     } catch (err) {
       showError(err instanceof Error ? err.message : "Erro ao salvar modelo.");
