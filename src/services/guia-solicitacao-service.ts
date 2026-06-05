@@ -1,9 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-// Linha da tabela guia_solicitacao. Mantém o acesso flexível (como o retorno
-// não-tipado do Supabase usado antes na página) para preservar o comportamento.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GuiaSolicitacaoRow = Record<string, any> & { id: string };
+/** Linha da tabela `guia_solicitacao` (tipo gerado do schema). */
+export type GuiaSolicitacaoRow = Tables<"guia_solicitacao">;
 
 /**
  * Camada de dados da Guia de Solicitação. Centraliza o acesso à tabela

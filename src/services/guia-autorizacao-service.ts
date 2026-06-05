@@ -1,9 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-// Linha editada pela Guia de Autorização (tabela `faturamentos`). Acesso
-// flexível para preservar o comportamento não-tipado usado antes na página.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GuiaAutorizacaoRow = Record<string, any> & { id: string };
+/** Linha editada pela Guia de Autorização (tabela `faturamentos`). */
+export type GuiaAutorizacaoRow = Tables<"faturamentos">;
 
 /**
  * Camada de dados da Guia de Autorização. Centraliza o acesso à tabela

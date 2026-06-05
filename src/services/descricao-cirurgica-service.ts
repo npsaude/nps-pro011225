@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import type {
   DbDescricaoCirurgica,
   DbDescricaoCirurgicaStatus,
@@ -520,8 +521,8 @@ export async function listarArquivosDescricaoCirurgica(
 // Funções "cruas" usadas pela página de formulário admin, distintas das
 // funções acima que aplicam transformações (criar/atualizar completa).
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DescricaoCirurgicaRow = Record<string, any>;
+// Linha da tabela `descricoes_cirurgicas` (tipo gerado do schema).
+export type DescricaoCirurgicaRow = Tables<"descricoes_cirurgicas">;
 
 /** Carrega a descrição cirúrgica completa (select *) por id. */
 export async function fetchDescricaoCirurgicaRow(

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 // Camada de dados do formulário admin de Modelos de Descrição Cirúrgica.
 // Centraliza o acesso à tabela `modelos_descricao_cirurgica` e ao storage,
@@ -7,8 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 const BUCKET = "NPS-pro";
 const TABLE = "modelos_descricao_cirurgica";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ModeloDescricaoCirurgicaRow = Record<string, any>;
+// Linha da tabela `modelos_descricao_cirurgica` (tipo gerado do schema).
+export type ModeloDescricaoCirurgicaRow = Tables<"modelos_descricao_cirurgica">;
 
 /** Carrega um modelo por id. Retorna null se não encontrado. */
 export async function fetchModeloDescricaoCirurgica(

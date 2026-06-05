@@ -9,7 +9,7 @@ export default tseslint.config(
     // Fora do escopo do lint do frontend:
     // - supabase/functions: edge functions Deno (outro runtime/tipos).
     // - tailwind.config.ts / fix-file.js: tooling/scripts avulsos.
-    ignores: ["dist", "supabase/functions/**", "tailwind.config.ts", "fix-file.js"],
+    ignores: ["dist", "supabase/functions/**", "src/integrations/supabase/types.ts", "tailwind.config.ts", "fix-file.js"],
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

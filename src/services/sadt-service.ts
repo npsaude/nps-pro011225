@@ -1,5 +1,6 @@
 import type { SadtResumo } from "@/components/sadt/types";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export type SadtStatus = "AGUARDANDO_APROVACAO";
 
@@ -251,9 +252,8 @@ export async function enviarSadt(
 
 // ── Formulário admin de SADT de acompanhamento (tabela sadt_acompanhamento) ──
 
-// Acesso flexível à linha, preservando o uso não-tipado que vinha da página.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SadtAcompanhamentoRow = Record<string, any>;
+// Linha da tabela `sadt_acompanhamento` (tipo gerado do schema).
+export type SadtAcompanhamentoRow = Tables<"sadt_acompanhamento">;
 
 /** Carrega uma SADT de acompanhamento por id. Retorna null se não encontrada. */
 export async function fetchSadtAcompanhamento(

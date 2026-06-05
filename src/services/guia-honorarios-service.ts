@@ -1,9 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-// Linha da tabela guia_honorarios. Acesso flexível para preservar o
-// comportamento não-tipado usado antes na página.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GuiaHonorariosRow = Record<string, any>;
+/** Linha da tabela `guia_honorarios` (tipo gerado do schema). */
+export type GuiaHonorariosRow = Tables<"guia_honorarios">;
 
 /**
  * Camada de dados da Guia de Honorários (tabela `guia_honorarios`).
