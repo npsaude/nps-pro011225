@@ -58,8 +58,9 @@ export async function fetchBillingQuota(): Promise<BillingQuotaData> {
     .limit(1)
     .maybeSingle();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const description = (enrollment as any)?.subscription_plans?.description ?? null;
+  const description =
+    (enrollment as { subscription_plans?: { description?: string | null } | null })
+      ?.subscription_plans?.description ?? null;
   const limit = extractLimit(description);
 
   const isOverLimit = limit !== null && used >= limit;

@@ -25,10 +25,8 @@ export async function fetchSubscriptionStatus(): Promise<SubscriptionStatus> {
   if (error) return EMPTY_STATUS;
 
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: normalizeStatus((data as any)?.status),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cancelado: (data as any)?.cancelado ?? null,
+    status: normalizeStatus((data as { status?: unknown })?.status),
+    cancelado: (data as { cancelado?: boolean | null })?.cancelado ?? null,
   };
 }
 

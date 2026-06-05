@@ -565,8 +565,7 @@ export async function fetchDescricaoDocPaths(descricaoId: string): Promise<strin
     .eq("descricao_id", descricaoId);
 
   let paths: string[] = (arquivos ?? []).map(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (a: any) => a.file_path as string,
+    (a: { file_path: string | null }) => a.file_path as string,
   );
 
   if (paths.length === 0) {
