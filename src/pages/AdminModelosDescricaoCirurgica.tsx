@@ -99,55 +99,56 @@ export default function AdminModelosDescricaoCirurgica() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar section="cadastro" cadastroSubsection="modelos-descricao" />
+    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900">
+      <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
+        <AdminSidebar section="cadastro" cadastroSubsection="modelos-descricao" />
 
-      <div className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Scissors className="h-5 w-5" />
+        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl">
+          <header className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                <Scissors className="h-4 w-4" />
+              </span>
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+                  Modelos de Descrição Cirúrgica
+                </h1>
+                <p className="text-xs text-slate-400 sm:text-sm">
+                  Exemplos visuais para auxiliar a IA na extração de procedimentos
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground">
-                Modelos de Descrição Cirúrgica
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Exemplos visuais para auxiliar a IA na extração de procedimentos
-              </p>
+            <div className="flex items-center gap-3">
+              <AdminHeaderActions />
+              <Button
+                onClick={() => navigate("/admin/modelos-descricao-cirurgica/novo")}
+                className="gap-2 rounded-full bg-violet-600 px-5 text-white hover:bg-violet-700"
+              >
+                <Plus className="h-4 w-4" />
+                Novo Modelo
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <AdminHeaderActions />
-            <Button
-              onClick={() => navigate("/admin/modelos-descricao-cirurgica/novo")}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Novo Modelo
-            </Button>
-          </div>
-        </div>
+          </header>
 
-        <div className="flex-1 p-6">
+          <main className="flex-1">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
             </div>
           ) : modelos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-                <Scissors className="h-8 w-8 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-20 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                <Scissors className="h-8 w-8 text-slate-300" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-lg font-semibold text-slate-700">
                 Nenhum modelo cadastrado
               </h3>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              <p className="mt-1 max-w-sm text-sm text-slate-400">
                 Cadastre modelos de descrição cirúrgica para ajudar a IA a identificar
                 os campos de procedimentos em diferentes formatos de documentos.
               </p>
               <Button
-                className="mt-6 gap-2"
+                className="mt-6 gap-2 rounded-full bg-violet-600 px-5 text-white hover:bg-violet-700"
                 onClick={() => navigate("/admin/modelos-descricao-cirurgica/novo")}
               >
                 <Plus className="h-4 w-4" />
@@ -159,21 +160,21 @@ export default function AdminModelosDescricaoCirurgica() {
               {modelos.map((modelo) => (
                 <div
                   key={modelo.id}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md"
                 >
                   {/* Preview das imagens */}
-                  <div className="relative flex h-40 items-center justify-center overflow-hidden bg-muted">
+                  <div className="relative flex h-40 items-center justify-center overflow-hidden bg-slate-50">
                     {modelo.imagem_descricao_path ? (
                       <ImagePreview path={modelo.imagem_descricao_path} alt="Descrição cirúrgica" />
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Scissors className="h-10 w-10 opacity-30" />
+                      <div className="flex flex-col items-center gap-2 text-slate-300">
+                        <Scissors className="h-10 w-10 opacity-40" />
                         <span className="text-xs">Sem imagem</span>
                       </div>
                     )}
                     {/* Badge destaque */}
                     {modelo.imagem_destaque_path && (
-                      <div className="absolute bottom-2 right-2 rounded-lg border border-border bg-background/90 px-2 py-1 text-[10px] font-medium text-foreground backdrop-blur-sm">
+                      <div className="absolute bottom-2 right-2 rounded-lg border border-slate-200 bg-white/90 px-2 py-1 text-[10px] font-medium text-slate-600 backdrop-blur-sm">
                         + destaque
                       </div>
                     )}
@@ -187,30 +188,30 @@ export default function AdminModelosDescricaoCirurgica() {
 
                   {/* Conteúdo */}
                   <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h3 className="font-semibold text-foreground leading-tight">
+                    <h3 className="font-semibold leading-tight text-slate-800">
                       {modelo.nome}
                     </h3>
                     {modelo.descricao && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="line-clamp-2 text-xs text-slate-500">
                         {modelo.descricao}
                       </p>
                     )}
                     {modelo.instrucao_ia && (
-                      <p className="rounded-lg bg-primary/5 px-2 py-1.5 text-[11px] text-primary line-clamp-2">
+                      <p className="line-clamp-2 rounded-lg bg-violet-50 px-2 py-1.5 text-[11px] text-violet-700">
                         IA: {modelo.instrucao_ia}
                       </p>
                     )}
-                    <p className="mt-auto text-[11px] text-muted-foreground">
+                    <p className="mt-auto text-[11px] text-slate-400">
                       Criado em {formatDate(modelo.created_at)}
                     </p>
                   </div>
 
                   {/* Ações */}
-                  <div className="flex items-center gap-1 border-t border-border px-3 py-2">
+                  <div className="flex items-center gap-1 border-t border-slate-100 px-3 py-2">
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 gap-1.5 text-xs"
+                      className="h-8 gap-1.5 text-xs text-slate-600"
                       onClick={() =>
                         navigate(`/admin/modelos-descricao-cirurgica/editar/${modelo.id}`)
                       }
@@ -221,7 +222,7 @@ export default function AdminModelosDescricaoCirurgica() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 gap-1.5 text-xs"
+                      className="h-8 gap-1.5 text-xs text-slate-600"
                       disabled={togglingId === modelo.id}
                       onClick={() => handleToggleAtivo(modelo)}
                     >
@@ -235,7 +236,7 @@ export default function AdminModelosDescricaoCirurgica() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="ml-auto h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
+                      className="ml-auto h-8 gap-1.5 text-xs text-rose-600 hover:text-rose-700"
                       disabled={deletingId === modelo.id}
                       onClick={() => handleDelete(modelo.id)}
                     >
@@ -247,6 +248,7 @@ export default function AdminModelosDescricaoCirurgica() {
               ))}
             </div>
           )}
+          </main>
         </div>
       </div>
     </div>
