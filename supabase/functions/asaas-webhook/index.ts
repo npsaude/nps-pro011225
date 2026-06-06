@@ -880,7 +880,32 @@ serve(async (req) => {
     if (!enrollment) {
       const processError = `Enrollment não encontrado para subscription_id=${subscriptionId ?? "null"} customer_id=${customerId ?? "null"} externalReference=${externalReference ?? "null"} após ${maxRetries} tentativas.`;
       await markEvent({ processed: false, processError });
-      return jsonResponse({ error: processError }, 404);
+
+      // IMPORTANT: acknowledge with HTTP 200, NOT 404.
+      //
+      // Asaas treats any non-2xx response (and 404 in particular) as a failed
+      // delivery and applies a penalty ("Penalização aplicada"). Enough
+      // penalties cause Asaas to INTERRUPT the entire webhook queue, which
+      // then blocks delivery of every subsequent event — including legitimate
+      // PAYMENT_CONFIRMED webhooks for brand-new paying customers, so their
+      // auth user / access email would never be created.
+      //
+      // A missing enrollment after the internal retries above is a
+      // non-retryable business condition (e.g. the enrollment was deleted, or
+      // it belongs to an orphaned/old subscription that still exists in Asaas).
+      // Re-delivering the same event will never make it match, so we record
+      // the event with the error for diagnostics and acknowledge receipt.
+      console.warn("[asaas-webhook] Enrollment not found — acknowledging to avoid Asaas penalty", {
+        eventName,
+        providerEventId,
+        subscriptionId,
+        customerId,
+        externalReference,
+      });
+      return jsonResponse(
+        { ok: true, ignored: true, reason: "enrollment_not_found", detail: processError },
+        200,
+      );
     }
 
     // If the enrollment already has a different asaas_subscription_id and the
