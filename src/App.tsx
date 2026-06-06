@@ -68,8 +68,8 @@ const AdminRetorno = lazy(() => import("./pages/AdminRetorno"));
 const queryClient = new QueryClient();
 
 const PageFallback = () => (
-  <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)]">
-    <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#D4A017]/30 border-t-[#D4A017]" />
   </div>
 );
 
@@ -78,7 +78,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true }}>
         <SystemUserProvider>
         <AuthUrlRouter />
         <InactivityLogout timeoutMinutes={60} />
