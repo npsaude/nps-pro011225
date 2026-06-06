@@ -79,7 +79,7 @@ const MedicosList = () => {
         const { data: usuariosMedico, error } = await supabase
           .from("usuarios_sistema")
           .select("*")
-          .eq("regra", "MEDICO")
+          .ilike("regra", "medico")
           .eq("ativo", true)
           .order("nome", { ascending: true });
 
