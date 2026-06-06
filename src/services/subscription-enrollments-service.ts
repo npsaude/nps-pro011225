@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { DbSubscriptionEnrollment } from "@/db/schema";
 
-export interface SubscriptionEnrollment extends DbSubscriptionEnrollment {}
+export type SubscriptionEnrollment = DbSubscriptionEnrollment;
 
 export type SubscriptionEnrollmentInput = Pick<
   SubscriptionEnrollment,

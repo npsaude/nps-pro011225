@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { edgeFunctionUrl } from "@/config/supabase";
 
 export interface RelatorioRetorno {
   id: string;
@@ -20,7 +21,7 @@ export interface RelatorioRetorno {
   total_desconto: number | null;
   total_imposto: number | null;
   total_liquido: number | null;
-  raw_extracao: any;
+  raw_extracao: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -56,7 +57,7 @@ export interface ItemRelatorioRetorno {
 
 const BUCKET = "NPS-pro";
 const PROCESS_FN_URL =
-  "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-relatorio-retorno";
+  edgeFunctionUrl("process-relatorio-retorno");
 
 export async function listarRelatoriosRetorno(): Promise<RelatorioRetorno[]> {
   const { data, error } = await supabase
@@ -114,8 +115,12 @@ export async function listarTodosItensRetorno(): Promise<
 
   if (error) throw error;
 
-  return ((data ?? []) as any[]).map((row) => {
-    const rel = row.relatorios_retorno ?? {};
+  return (
+    (data ?? []) as Array<
+      ItemRelatorioRetorno & { relatorios_retorno?: Record<string, unknown> | null }
+    >
+  ).map((row) => {
+    const rel = (row.relatorios_retorno ?? {}) as Record<string, unknown>;
     return {
       ...(row as ItemRelatorioRetorno),
       relatorio_origem: rel.origem ?? null,
@@ -195,7 +200,13 @@ export async function importarRelatorioRetorno(params: {
     }),
   });
 
-  let json: any = null;
+  let json: {
+    error?: string;
+    relatorio_id?: string;
+    total_itens?: number;
+    medico_relatorio?: string | null;
+    medico_esperado?: string | null;
+  } | null = null;
   try {
     json = await resp.json();
   } catch {

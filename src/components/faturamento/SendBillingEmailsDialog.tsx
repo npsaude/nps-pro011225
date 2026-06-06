@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/integrations/supabase/auth-header";
 import { ATUACAO_LABEL, reconhecerAtuacao, type Atuacao } from "@/utils/atuacao";
 
 interface SendBillingEmailsDialogProps {
@@ -132,13 +134,11 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
         }
 
         const functionUrl =
-          "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
+          edgeFunctionUrl("send-billing-emails");
 
         const response = await fetch(functionUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: await authHeaders(),
           body: JSON.stringify({
             faturamentoId,
             userEmail,
@@ -240,13 +240,11 @@ export const SendBillingEmailsDialog: React.FC<SendBillingEmailsDialogProps> = (
 
     try {
       const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/send-billing-emails";
+        edgeFunctionUrl("send-billing-emails");
 
       const response = await fetch(functionUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await authHeaders(),
         body: JSON.stringify({
           faturamentoId,
           userEmail,

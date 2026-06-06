@@ -1,16 +1,12 @@
 import {
-  Bell,
   Search,
   Users,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import MedicosList from "@/components/medicos/MedicosList";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 
 const MedicosCadastro = () => {
-  const navigate = useNavigate();
-
   return (
     <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">

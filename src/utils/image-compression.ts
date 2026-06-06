@@ -1,5 +1,7 @@
-import imageCompression from 'browser-image-compression';
-import heic2any from 'heic2any';
+// As libs pesadas (browser-image-compression e heic2any, que embute o libheif)
+// são carregadas sob demanda via import() dinâmico, apenas quando uma imagem é
+// efetivamente comprimida ou um HEIC é convertido. Assim, importar utilitários
+// leves como isHeicFile não puxa esses módulos para o bundle.
 
 /**
  * Detect if a file is HEIC/HEIF format (by extension or MIME type).
@@ -20,6 +22,7 @@ export async function convertHeicToJpeg(file: File): Promise<File> {
 
   try {
     console.log(`[HEIC] Converting ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) to JPEG...`);
+    const { default: heic2any } = await import('heic2any');
     const result = await heic2any({
       blob: file,
       toType: 'image/jpeg',
@@ -70,6 +73,7 @@ export async function compressImageIfNeeded(file: File): Promise<File> {
 
   try {
     // browser-image-compression returns a Blob, so we recreate the File to keep name/type
+    const { default: imageCompression } = await import('browser-image-compression');
     const compressedBlob = await imageCompression(processedFile, options);
     
     // Create new file with original name (but change extension to .jpg if it was another format and got converted)

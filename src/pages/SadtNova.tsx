@@ -19,7 +19,7 @@ import { showSuccess } from "@/utils/toast";
 const SadtNova: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleNewSadt = (values: SadtFormValues) => {
+  const handleNewSadt = (_values: SadtFormValues) => {
     // Futuramente, integrar com API/Banco de dados.
     showSuccess("SADT cadastrada com sucesso.");
   };

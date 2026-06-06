@@ -39,10 +39,15 @@ export interface HospitalDocumentoEspecifico {
 // ATENÇÃO: o nome do bucket precisa bater exatamente com o do Supabase (NPS-pro)
 const BUCKET_NAME = "NPS-pro";
 
+// Hospitais e clínicas vivem na mesma tabela `clinicas`, distinguidos por
+// `tipo_unidade`. Não existe tabela `hospitais` (modelo foi unificado).
+const TIPO_HOSPITAL = "HOSPITAL";
+
 export async function listarHospitais(): Promise<Hospital[]> {
   const { data, error } = await supabase
-    .from("hospitais")
+    .from("clinicas")
     .select("*")
+    .eq("tipo_unidade", TIPO_HOSPITAL)
     .order("razao_social", { ascending: true });
 
   if (error) {
@@ -56,8 +61,8 @@ export async function listarHospitais(): Promise<Hospital[]> {
 
 export async function criarHospital(payload: HospitalInput): Promise<Hospital> {
   const { data, error } = await supabase
-    .from("hospitais")
-    .insert(payload)
+    .from("clinicas")
+    .insert({ ...payload, tipo_unidade: TIPO_HOSPITAL })
     .select("*")
     .single();
 
@@ -75,7 +80,7 @@ export async function atualizarHospital(
   payload: Partial<HospitalInput>,
 ): Promise<Hospital> {
   const { data, error } = await supabase
-    .from("hospitais")
+    .from("clinicas")
     .update({
       ...payload,
       updated_at: new Date().toISOString(),

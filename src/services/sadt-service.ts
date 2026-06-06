@@ -1,5 +1,6 @@
 import type { SadtResumo } from "@/components/sadt/types";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export type SadtStatus = "AGUARDANDO_APROVACAO";
 
@@ -99,7 +100,14 @@ async function extrairDadosSadtComGpt(
     }),
   });
 
-  const data = (await response.json()) as any;
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
+  };
   const content: string | undefined =
     data?.choices?.[0]?.message?.content ?? undefined;
 
@@ -240,4 +248,61 @@ export async function enviarSadt(
     status: "AGUARDANDO_APROVACAO",
     sadtId,
   };
+}
+
+// ── Formulário admin de SADT de acompanhamento (tabela sadt_acompanhamento) ──
+
+// Linha da tabela `sadt_acompanhamento` (tipo gerado do schema).
+export type SadtAcompanhamentoRow = Tables<"sadt_acompanhamento">;
+
+/** Carrega uma SADT de acompanhamento por id. Retorna null se não encontrada. */
+export async function fetchSadtAcompanhamento(
+  id: string,
+): Promise<SadtAcompanhamentoRow | null> {
+  const { data, error } = await supabase
+    .from("sadt_acompanhamento")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as SadtAcompanhamentoRow;
+}
+
+/** Carrega apenas o campo url_documentos (anexos) de uma SADT. */
+export async function fetchSadtAcompanhamentoDocs(
+  id: string,
+): Promise<SadtAcompanhamentoRow | null> {
+  const { data, error } = await supabase
+    .from("sadt_acompanhamento")
+    .select("url_documentos")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as SadtAcompanhamentoRow;
+}
+
+/** Lê e normaliza os paths de documentos (coluna `url_documentos`) de uma SADT. */
+export async function fetchSadtAcompanhamentoDocPaths(id: string): Promise<string[]> {
+  const data = await fetchSadtAcompanhamentoDocs(id);
+  if (!data) return [];
+  return Array.isArray(data.url_documentos) ? (data.url_documentos as string[]) : [];
+}
+
+/** Insere uma nova SADT ou atualiza a existente (quando `id` é informado). */
+export async function saveSadtAcompanhamento(
+  payload: Record<string, unknown>,
+  id?: string,
+): Promise<{ error: { message: string } | null }> {
+  if (id) {
+    const { error } = await supabase
+      .from("sadt_acompanhamento")
+      .update(payload)
+      .eq("id", id);
+    return { error };
+  }
+
+  const { error } = await supabase.from("sadt_acompanhamento").insert(payload);
+  return { error };
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -7,30 +7,34 @@ import {
   FileText,
   X,
   CheckCircle2,
-  FileCheck,
   Loader2,
-  AlertCircle,
   Calendar,
   Zap,
   ArrowRight,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { Button } from "@/components/ui/button";
 import { compressFiles } from "@/utils/image-compression";
+import { sanitizeFileName } from "@/features/medico/faturamento/lib/file-upload";
+import { processGuiaAutorizacao } from "@/features/medico/faturamento/services/edge-functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  showError,
-  showSuccess,
-  showLoading,
-  dismissToast,
-} from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 type ViewState = "choice" | "upload" | "processing" | "success";
 type TipoCirurgia = "ELETIVA" | "EMERGENCIAL" | null;
+
+type DadosExtraidos = {
+  faturamento?: {
+    nome_paciente?: string;
+    operadora_nome?: string;
+    numero_guia_operadora?: string;
+    hospital_solicitado?: string;
+  };
+  procedimentos?: unknown[];
+};
 
 const MedicoUploadGuiaAutorizacao: React.FC = () => {
   const navigate = useNavigate();
@@ -41,9 +45,8 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [view, setView] = useState<ViewState>("choice");
   const [medicoNome, setMedicoNome] = useState<string>("");
-  const [dadosExtraidos, setDadosExtraidos] = useState<any>(null);
+  const [dadosExtraidos, setDadosExtraidos] = useState<DadosExtraidos | null>(null);
   const [tipoCirurgia, setTipoCirurgia] = useState<TipoCirurgia>(null);
-  const [skipGuia, setSkipGuia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Carrega o nome do médico logado para exibir na saudação
@@ -190,7 +193,7 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
 
       // Upload das imagens para o bucket
       for (const file of files) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const safeName = sanitizeFileName(file.name);
         const timestamp = Date.now();
         const filePath = `guia_autorizacao_cirurgia/${userId}/${timestamp}-${safeName}`;
 
@@ -210,36 +213,13 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      // Chamar a Edge Function para processar as imagens
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-autorizacao";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-          tipoCirurgia, // Enviar o tipo de cirurgia para a edge function
-        }),
-      });
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // se não veio JSON, seguimos só com o status HTTP
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ??
-          "Arquivos enviados, mas houve erro ao processar a guia de autorização.";
-        throw new Error(errorMessage);
-      }
+      // Chamar a Edge Function (via cliente tipado: anexa o JWT do usuário)
+      const responseJson = (await processGuiaAutorizacao({
+        userId,
+        faturamentoId,
+        files: uploadedFilePaths.map((path) => ({ path })),
+        tipoCirurgia,
+      })) as { dados_extraidos?: DadosExtraidos };
 
       // Atualizar o tipo_cirurgia no faturamento (caso a edge function não faça)
       await supabase
@@ -678,10 +658,10 @@ const MedicoUploadGuiaAutorizacao: React.FC = () => {
                             {dadosExtraidos.faturamento.hospital_solicitado}
                           </p>
                         )}
-                        {dadosExtraidos.procedimentos?.length > 0 && (
+                        {(dadosExtraidos.procedimentos?.length ?? 0) > 0 && (
                           <p>
                             <span className="text-[#F5F5F5]">Procedimentos:</span>{" "}
-                            {dadosExtraidos.procedimentos.length} encontrado(s)
+                            {dadosExtraidos.procedimentos?.length} encontrado(s)
                           </p>
                         )}
                         <p>

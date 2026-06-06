@@ -1,6 +1,40 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { DbAppSettings } from "@/db/schema";
 
+/**
+ * Linha bruta da tabela `app_settings`. As colunas podem chegar tanto em
+ * camelCase quanto em snake_case dependendo da origem, então ambas as
+ * variantes são opcionais aqui e normalizadas em `mapToAppSettings`.
+ */
+interface AppSettingsRawRow {
+  id: string;
+  openaiApiToken?: string | null;
+  openai_api_token?: string | null;
+  openaiModel?: string | null;
+  openai_model?: string | null;
+  asaasToken?: string | null;
+  asaas_token?: string | null;
+  videoYoutube?: string | null;
+  video_youtube?: string | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  updatedAt?: string | null;
+  updated_at?: string | null;
+}
+
+/** Normaliza a linha bruta (camelCase/snake_case) para o tipo da aplicação. */
+function mapToAppSettings(row: AppSettingsRawRow): DbAppSettings {
+  return {
+    id: row.id,
+    openaiApiToken: row.openaiApiToken ?? row.openai_api_token ?? null,
+    openaiModel: row.openaiModel ?? row.openai_model ?? "gpt-4",
+    asaasToken: row.asaasToken ?? row.asaas_token ?? null,
+    videoYoutube: row.videoYoutube ?? row.video_youtube ?? null,
+    createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updatedAt ?? row.updated_at ?? new Date().toISOString(),
+  };
+}
+
 export async function carregarAppSettings(): Promise<DbAppSettings | null> {
   const { data, error } = await supabase
     .from("app_settings")
@@ -18,26 +52,7 @@ export async function carregarAppSettings(): Promise<DbAppSettings | null> {
   // Adapta nomes de colunas caso estejam em snake_case no banco
   if (!data) return null;
 
-  const mapped: DbAppSettings = {
-    id: (data as any).id,
-    openaiApiToken:
-      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-    openaiModel:
-      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-    videoYoutube:
-      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-    createdAt:
-      (data as any).createdAt ??
-      (data as any).created_at ??
-      new Date().toISOString(),
-    updatedAt:
-      (data as any).updatedAt ??
-      (data as any).updated_at ??
-      new Date().toISOString(),
-  };
-
-  return mapped;
+  return mapToAppSettings(data as AppSettingsRawRow);
 }
 
 export async function salvarTokenOpenAI(
@@ -65,26 +80,7 @@ export async function salvarTokenOpenAI(
       );
     }
 
-    const mapped: DbAppSettings = {
-      id: (data as any).id,
-      openaiApiToken:
-        (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-      openaiModel:
-        (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-      asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-      videoYoutube:
-        (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-      createdAt:
-        (data as any).createdAt ??
-        (data as any).created_at ??
-        new Date().toISOString(),
-      updatedAt:
-        (data as any).updatedAt ??
-        (data as any).updated_at ??
-        new Date().toISOString(),
-    };
-
-    return mapped;
+    return mapToAppSettings(data as AppSettingsRawRow);
   }
 
   // Se não existir, cria um novo registro
@@ -104,26 +100,7 @@ export async function salvarTokenOpenAI(
     );
   }
 
-  const mapped: DbAppSettings = {
-    id: (data as any).id,
-    openaiApiToken:
-      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-    openaiModel:
-      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-    videoYoutube:
-      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-    createdAt:
-      (data as any).createdAt ??
-      (data as any).created_at ??
-      new Date().toISOString(),
-    updatedAt:
-      (data as any).updatedAt ??
-      (data as any).updated_at ??
-      new Date().toISOString(),
-  };
-
-  return mapped;
+  return mapToAppSettings(data as AppSettingsRawRow);
 }
 
 export async function salvarModeloOpenAI(
@@ -150,26 +127,7 @@ export async function salvarModeloOpenAI(
       );
     }
 
-    const mapped: DbAppSettings = {
-      id: (data as any).id,
-      openaiApiToken:
-        (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-      openaiModel:
-        (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-      asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-      videoYoutube:
-        (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-      createdAt:
-        (data as any).createdAt ??
-        (data as any).created_at ??
-        new Date().toISOString(),
-      updatedAt:
-        (data as any).updatedAt ??
-        (data as any).updated_at ??
-        new Date().toISOString(),
-    };
-
-    return mapped;
+    return mapToAppSettings(data as AppSettingsRawRow);
   }
 
   // Se não existir, cria um novo registro
@@ -188,26 +146,7 @@ export async function salvarModeloOpenAI(
     );
   }
 
-  const mapped: DbAppSettings = {
-    id: (data as any).id,
-    openaiApiToken:
-      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-    openaiModel:
-      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-    videoYoutube:
-      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-    createdAt:
-      (data as any).createdAt ??
-      (data as any).created_at ??
-      new Date().toISOString(),
-    updatedAt:
-      (data as any).updatedAt ??
-      (data as any).updated_at ??
-      new Date().toISOString(),
-  };
-
-  return mapped;
+  return mapToAppSettings(data as AppSettingsRawRow);
 }
 
 export async function salvarTokenAsaas(
@@ -232,26 +171,7 @@ export async function salvarTokenAsaas(
       );
     }
 
-    const mapped: DbAppSettings = {
-      id: (data as any).id,
-      openaiApiToken:
-        (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-      openaiModel:
-        (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-      asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-      videoYoutube:
-        (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-      createdAt:
-        (data as any).createdAt ??
-        (data as any).created_at ??
-        new Date().toISOString(),
-      updatedAt:
-        (data as any).updatedAt ??
-        (data as any).updated_at ??
-        new Date().toISOString(),
-    };
-
-    return mapped;
+    return mapToAppSettings(data as AppSettingsRawRow);
   }
 
   const { data, error } = await supabase
@@ -268,24 +188,5 @@ export async function salvarTokenAsaas(
     );
   }
 
-  const mapped: DbAppSettings = {
-    id: (data as any).id,
-    openaiApiToken:
-      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
-    openaiModel:
-      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
-    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
-    videoYoutube:
-      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
-    createdAt:
-      (data as any).createdAt ??
-      (data as any).created_at ??
-      new Date().toISOString(),
-    updatedAt:
-      (data as any).updatedAt ??
-      (data as any).updated_at ??
-      new Date().toISOString(),
-  };
-
-  return mapped;
+  return mapToAppSettings(data as AppSettingsRawRow);
 }

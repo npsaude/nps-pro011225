@@ -18,13 +18,14 @@ export async function reenviarAcessoAssinante(
     throw new Error(error.message || "Não foi possível reenviar o acesso.");
   }
 
-  if ((data as any)?.error) {
-    throw new Error((data as any).error);
+  const result = data as { error?: string; enrollment?: SubscriptionEnrollment };
+  if (result?.error) {
+    throw new Error(result.error);
   }
 
-  if (!(data as any)?.enrollment) {
+  if (!result?.enrollment) {
     throw new Error("Resposta inválida ao reenviar acesso.");
   }
 
-  return (data as any).enrollment as SubscriptionEnrollment;
+  return result.enrollment;
 }

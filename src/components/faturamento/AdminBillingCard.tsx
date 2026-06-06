@@ -1,5 +1,4 @@
-import React from "react";
-import { CalendarDays, Clock3, Hospital, User2, Stethoscope, Users, FileText, FileCheck, DollarSign, Trash2 } from "lucide-react";
+import { CalendarDays, Clock3, Hospital, Stethoscope, Users, FileText, FileCheck, DollarSign, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,

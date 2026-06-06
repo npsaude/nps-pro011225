@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -14,23 +14,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { showError, showSuccess } from "@/utils/toast";
 import { compressFiles } from "@/utils/image-compression";
+import {
+  sanitizeFileName,
+  expandFilesToUploadItems,
+} from "@/features/medico/faturamento/lib/file-upload";
+import { processGuiaSolicitacao } from "@/features/medico/faturamento/services/edge-functions";
 
 type ViewState = "upload" | "processing" | "success";
 
 type LocationState = {
   faturamentoId?: string;
-};
-
-const isPdfFile = (file: File) =>
-  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-
-const sanitizeFileName = (name: string) =>
-  name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-
-type UploadItem = {
-  data: Blob;
-  contentType: string;
-  suggestedName: string;
 };
 
 const MedicoUploadGuiaSolicitacao: React.FC = () => {
@@ -50,77 +43,6 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
       navigate("/medico/faturamentos/enviar");
     }
   }, [faturamentoId, navigate]);
-
-  const pdfToPngUploadItems = async (pdfFile: File): Promise<UploadItem[]> => {
-    const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
-    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url"))
-      .default as string;
-
-    GlobalWorkerOptions.workerSrc = workerUrl;
-
-    const data = await pdfFile.arrayBuffer();
-    const loadingTask = getDocument({ data });
-    const pdf = await loadingTask.promise;
-
-    const baseName = sanitizeFileName(
-      pdfFile.name.replace(/\.pdf$/i, "") || "documento",
-    );
-
-    const items: UploadItem[] = [];
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 2 });
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) continue;
-
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-
-      await (page.render({ canvasContext: ctx, viewport, canvas } as any)
-        .promise as Promise<void>);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => {
-          if (!b) {
-            reject(new Error("Falha ao converter página do PDF em imagem."));
-            return;
-          }
-          resolve(b);
-        }, "image/png");
-      });
-
-      items.push({
-        data: blob,
-        contentType: "image/png",
-        suggestedName: `${baseName}_p${pageNum}.png`,
-      });
-    }
-
-    return items;
-  };
-
-  const expandFilesToUploadItems = async (inputFiles: File[]) => {
-    const items: UploadItem[] = [];
-
-    for (const file of inputFiles) {
-      if (isPdfFile(file)) {
-        const pdfItems = await pdfToPngUploadItems(file);
-        items.push(...pdfItems);
-        continue;
-      }
-
-      items.push({
-        data: file,
-        contentType: file.type || "application/octet-stream",
-        suggestedName: file.name,
-      });
-    }
-
-    return items;
-  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
@@ -205,34 +127,11 @@ const MedicoUploadGuiaSolicitacao: React.FC = () => {
         uploadedFilePaths.push(filePath);
       }
 
-      const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-guia-solicitacao";
-
-      const response = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          faturamentoId,
-          files: uploadedFilePaths.map((path) => ({ path })),
-        }),
+      await processGuiaSolicitacao({
+        userId,
+        faturamentoId,
+        files: uploadedFilePaths.map((path) => ({ path })),
       });
-
-      let responseJson: any = null;
-      try {
-        responseJson = await response.json();
-      } catch {
-        // ignore
-      }
-
-      if (!response.ok || responseJson?.error) {
-        const errorMessage =
-          responseJson?.error ??
-          "Arquivos enviados, mas houve erro ao processar a guia de solicitação.";
-        throw new Error(errorMessage);
-      }
 
       showSuccess("Guia de solicitação processada com sucesso!");
       setFiles([]);

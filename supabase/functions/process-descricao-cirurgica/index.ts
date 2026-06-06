@@ -8,6 +8,7 @@ import {
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
 import { openaiChatWithImages, extractJson } from "../_shared/openai-chat.ts";
+import { getAuthenticatedUserId, resolveEffectiveUserId } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,7 +98,10 @@ serve(async (req) => {
     });
   }
 
-  const { userId, faturamentoId, files } = body;
+  const { faturamentoId, files } = body;
+  // Segurança (F-2): deriva o userId do JWT verificado em vez de confiar no body.
+  const authUserId = await getAuthenticatedUserId(req);
+  const userId = resolveEffectiveUserId(authUserId, body.userId ?? null, "process-descricao-cirurgica");
 
   console.log("[process-descricao-cirurgica] userId:", userId);
   console.log("[process-descricao-cirurgica] faturamentoId:", faturamentoId);

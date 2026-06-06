@@ -11,9 +11,10 @@ export async function cancelarAssinatura(
     throw new Error(error.message || "Não foi possível cancelar a assinatura.");
   }
 
-  if ((data as any)?.error) {
-    throw new Error((data as any).error);
+  const result = data as { error?: string; enrollment?: unknown };
+  if (result?.error) {
+    throw new Error(result.error);
   }
 
-  return data as any;
+  return result;
 }

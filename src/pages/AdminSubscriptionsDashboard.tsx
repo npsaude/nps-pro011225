@@ -123,8 +123,15 @@ function getPlanCycleLabel(plan: ReturnType<typeof pickPlan>) {
   return norm(plan?.billing_interval) === "year" ? "Anual" : "Mensal";
 }
 
-function renderPieValueLabel(props: any) {
-  const { cx, cy, midAngle, innerRadius, outerRadius, value } = props;
+function renderPieValueLabel(props: {
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  value?: number;
+}) {
+  const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value } = props;
   if (!value || value <= 0) return null;
 
   const RADIAN = Math.PI / 180;

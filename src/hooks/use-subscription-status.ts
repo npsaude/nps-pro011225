@@ -1,60 +1,45 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-type State = {
-  loading: boolean;
+export type SubscriptionStatus = {
   status: string | null;
   cancelado: boolean | null;
 };
+
+const EMPTY_STATUS: SubscriptionStatus = { status: null, cancelado: null };
 
 function normalizeStatus(status: unknown) {
   const s = String(status ?? "").trim().toUpperCase();
   return s || null;
 }
 
-export function useSubscriptionStatus() {
-  const [state, setState] = useState<State>({
-    loading: true,
-    status: null,
-    cancelado: null,
+/** Busca o status da assinatura via edge function `check-subscription`. */
+export async function fetchSubscriptionStatus(): Promise<SubscriptionStatus> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData?.user) return EMPTY_STATUS;
+
+  const { data, error } = await supabase.functions.invoke("check-subscription", {
+    body: {},
   });
 
-  useEffect(() => {
-    let cancelled = false;
+  if (error) return EMPTY_STATUS;
 
-    const load = async () => {
-      setState({ loading: true, status: null, cancelado: null });
+  return {
+    status: normalizeStatus((data as { status?: unknown })?.status),
+    cancelado: (data as { cancelado?: boolean | null })?.cancelado ?? null,
+  };
+}
 
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user) {
-        if (!cancelled) setState({ loading: false, status: null, cancelado: null });
-        return;
-      }
+export function useSubscriptionStatus() {
+  const { data, isFetching } = useQuery({
+    queryKey: ["subscription-status"],
+    queryFn: fetchSubscriptionStatus,
+    staleTime: 1000 * 60 * 2,
+  });
 
-      const { data, error } = await supabase.functions.invoke("check-subscription", {
-        body: {},
-      });
-
-      if (cancelled) return;
-
-      if (error) {
-        setState({ loading: false, status: null, cancelado: null });
-        return;
-      }
-
-      setState({
-        loading: false,
-        status: normalizeStatus((data as any)?.status),
-        cancelado: (data as any)?.cancelado ?? null,
-      });
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return state;
+  return {
+    loading: isFetching,
+    status: data?.status ?? null,
+    cancelado: data?.cancelado ?? null,
+  };
 }

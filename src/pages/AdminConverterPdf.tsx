@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -30,6 +31,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { showError, showSuccess } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/integrations/supabase/auth-header";
 
 type ParsedRow = string[];
 
@@ -138,17 +140,15 @@ const AdminConverterPdf = () => {
 
       // 2) Chamar a Edge Function process-extrato-pagamento passando o filePath
       const functionUrl =
-        "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-extrato-pagamento";
+        edgeFunctionUrl("process-extrato-pagamento");
 
       const response = await fetch(functionUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await authHeaders(),
         body: JSON.stringify({ filePath: path }),
       });
 
-      const json = (await response.json()) as any;
+      const json = (await response.json()) as { error?: string; csv?: string };
 
       if (!response.ok || json?.error) {
         const msg =
@@ -201,7 +201,7 @@ const AdminConverterPdf = () => {
     }
 
     const escapeCsv = (value: string) => {
-      const needQuotes = /[\",;\n]/.test(value);
+      const needQuotes = /[",;\n]/.test(value);
       const normalized = value.replace(/"/g, '""');
       return needQuotes ? `"${normalized}"` : normalized;
     };

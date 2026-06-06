@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import type {
   DbDescricaoCirurgica,
   DbDescricaoCirurgicaStatus,
@@ -514,4 +515,88 @@ export async function listarArquivosDescricaoCirurgica(
   }
 
   return (data ?? []) as DescricaoCirurgicaArquivo[];
+}
+
+// ── Formulário admin (acesso direto à linha descricoes_cirurgicas) ───────────
+// Funções "cruas" usadas pela página de formulário admin, distintas das
+// funções acima que aplicam transformações (criar/atualizar completa).
+
+// Linha da tabela `descricoes_cirurgicas` (tipo gerado do schema).
+export type DescricaoCirurgicaRow = Tables<"descricoes_cirurgicas">;
+
+/** Carrega a descrição cirúrgica completa (select *) por id. */
+export async function fetchDescricaoCirurgicaRow(
+  id: string,
+): Promise<DescricaoCirurgicaRow | null> {
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as DescricaoCirurgicaRow;
+}
+
+/** Carrega apenas o campo storage_folder de uma descrição cirúrgica. */
+export async function fetchDescricaoStorageFolder(
+  id: string,
+): Promise<DescricaoCirurgicaRow | null> {
+  const { data, error } = await supabase
+    .from("descricoes_cirurgicas")
+    .select("storage_folder")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as DescricaoCirurgicaRow;
+}
+
+/**
+ * Resolve os paths de documentos de uma descrição cirúrgica: primeiro pela
+ * tabela `descricoes_cirurgicas_arquivos`; se vazio, faz fallback listando o
+ * `storage_folder` da descrição no bucket. Normaliza a lógica que estava na
+ * página de formulário admin.
+ */
+export async function fetchDescricaoDocPaths(descricaoId: string): Promise<string[]> {
+  const { data: arquivos } = await supabase
+    .from("descricoes_cirurgicas_arquivos")
+    .select("file_path")
+    .eq("descricao_id", descricaoId);
+
+  let paths: string[] = (arquivos ?? []).map(
+    (a: { file_path: string | null }) => a.file_path as string,
+  );
+
+  if (paths.length === 0) {
+    const desc = await fetchDescricaoStorageFolder(descricaoId);
+    if (desc?.storage_folder) {
+      const { data: listData } = await supabase.storage
+        .from("NPS-pro")
+        .list(desc.storage_folder, { limit: 100 });
+
+      paths = (listData ?? [])
+        .filter((obj) => obj.name !== ".emptyFolderPlaceholder")
+        .map((obj) => `${desc.storage_folder}/${obj.name}`);
+    }
+  }
+
+  return paths;
+}
+
+/** Insere/atualiza (quando `id` é informado) a descrição cirúrgica (admin). */
+export async function salvarDescricaoCirurgicaAdmin(
+  payload: Record<string, unknown>,
+  id?: string,
+): Promise<{ error: { message: string } | null }> {
+  if (id) {
+    const { error } = await supabase
+      .from("descricoes_cirurgicas")
+      .update(payload)
+      .eq("id", id);
+    return { error };
+  }
+
+  const { error } = await supabase.from("descricoes_cirurgicas").insert(payload);
+  return { error };
 }

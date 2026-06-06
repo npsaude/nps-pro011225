@@ -205,7 +205,8 @@ export default function ConsistencyResultsTable({
 
       if (error) return;
 
-      const nextMap = (data ?? []).reduce<ProcedureNamesByCode>((acc, row: any) => {
+      const nextMap = (data ?? []).reduce<ProcedureNamesByCode>(
+        (acc, row: { codigo?: string | number | null; descricao?: string | null }) => {
         if (row?.codigo) {
           acc[String(row.codigo)] = String(row.descricao ?? "");
         }

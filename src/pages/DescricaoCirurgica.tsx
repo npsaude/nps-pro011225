@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Bell, Search, FileSignature, Plus } from "lucide-react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { Bell, Search, FileSignature } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,13 +19,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Select as UiSelect,
-  SelectTrigger as UiSelectTrigger,
-  SelectContent as UiSelectContent,
-  SelectItem as UiSelectItem,
-  SelectValue as UiSelectValue,
-} from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
 import {
   criarDescricaoCirurgica,
@@ -199,27 +190,10 @@ const DescricaoCirurgicaPage: React.FC = () => {
   });
 
   const {
-    register,
     handleSubmit,
-    control,
     reset,
     formState: { isSubmitting },
   } = form;
-
-  const procedimentosArray = useFieldArray({
-    control,
-    name: "procedimentos",
-  });
-
-  const equipeArray = useFieldArray({
-    control,
-    name: "equipe",
-  });
-
-  const materiaisArray = useFieldArray({
-    control,
-    name: "materiais",
-  });
 
   const onSubmit = async (data: DescricaoCirurgicaFormData) => {
     setSalvando(true);
@@ -282,7 +256,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
       const data = await buscarDescricaoCirurgicaPorId(item.id);
 
       const procedimentos =
-        (data.procedimentos as any[])?.map((p) => ({
+        data.procedimentos?.map((p) => ({
           procedimento_id: (p.procedimento_id ?? "") as string,
           descricao_procedimento: (p.descricao_procedimento ?? "") as string,
           codigo_procedimento: (p.codigo_procedimento ?? "") as string,
@@ -300,7 +274,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
         ];
 
       const equipe =
-        (data.equipe as any[])?.map((e) => ({
+        data.equipe?.map((e) => ({
           nome_profissional: (e.nome_profissional ?? "") as string,
           funcao: (e.funcao ?? "") as string,
           conselho: (e.conselho ?? "") as string,
@@ -317,7 +291,7 @@ const DescricaoCirurgicaPage: React.FC = () => {
         ];
 
       const materiais =
-        (data.materiais as any[])?.map((m) => ({
+        data.materiais?.map((m) => ({
           material_id: (m.material_id ?? "") as string,
           nome_material: (m.nome_material ?? "") as string,
           descricao_material: (m.descricao_material ?? "") as string,

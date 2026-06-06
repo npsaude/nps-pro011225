@@ -1,27 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import {
-  ArrowLeft,
-  FileText,
-  User,
-  Building2,
-  CalendarRange,
-  Stethoscope,
-  Save,
-  FolderOpen,
-  ImageIcon,
-  FileIcon,
-  ExternalLink,
-  Loader2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { FileText, User, Building2, CalendarRange, Stethoscope } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
+import AdminFormLayout from "@/features/admin/forms/AdminFormLayout";
+import FormLoadingScreen from "@/features/admin/forms/FormLoadingScreen";
+import AdminFormTabs from "@/features/admin/forms/AdminFormTabs";
+import ConfiguredSection from "@/features/admin/forms/ConfiguredSection";
+import AttachmentsPanel from "@/features/admin/forms/AttachmentsPanel";
+import type { FieldConfig } from "@/features/admin/forms/field-config";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchGuiaSolicitacao,
+  fetchGuiaSolicitacaoDocPaths,
+  saveGuiaSolicitacao,
+} from "@/services/guia-solicitacao-service";
+import { createSignedDocItems } from "@/services/storage-docs-service";
 import { showError, showSuccess } from "@/utils/toast";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -57,13 +51,6 @@ type FormValues = {
   observacao: string;
 };
 
-type DocItem = {
-  path: string;
-  signedUrl: string | null;
-  fileName: string;
-  isImage: boolean;
-};
-
 const defaultValues: FormValues = {
   registro_ans: "",
   numero_guia_prestador: "",
@@ -96,217 +83,78 @@ const defaultValues: FormValues = {
   observacao: "",
 };
 
-const BUCKET = "NPS-pro";
-
-// ── Seção visual ──────────────────────────────────────────────────────────────
-function Section({
-  icon: Icon,
-  color,
-  title,
-  children,
-}: {
+// ── Config das seções de campos ───────────────────────────────────────────────
+const SECTIONS: {
   icon: React.ElementType;
   color: string;
   title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-2">
-        <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-white ${color}`}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
-  span,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-  span?: "full" | "2";
-}) {
-  return (
-    <div className={span === "full" ? "sm:col-span-2 lg:col-span-3" : span === "2" ? "sm:col-span-2" : ""}>
-      <Label className="mb-1 block text-xs font-medium text-slate-500">
-        {label}
-        {required && <span className="ml-0.5 text-rose-500">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
-const inputCls =
-  "h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full";
-
-// ── Componente de Documentos ──────────────────────────────────────────────────
-function DocumentosTab({ guiaId }: { guiaId: string }) {
-  const [docs, setDocs] = useState<DocItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lightbox, setLightbox] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("guia_solicitacao")
-        .select("url_documentos")
-        .eq("id", guiaId)
-        .single();
-
-      if (error || !data) {
-        setLoading(false);
-        return;
-      }
-
-      const paths: string[] = Array.isArray(data.url_documentos)
-        ? (data.url_documentos as string[])
-        : [];
-
-      if (paths.length === 0) {
-        setLoading(false);
-        setDocs([]);
-        return;
-      }
-
-      const items = await Promise.all(
-        paths.map(async (path) => {
-          const { data: signed } = await supabase.storage
-            .from(BUCKET)
-            .createSignedUrl(path, 60 * 60);
-
-          const fileName = path.split("/").pop() ?? path;
-          const isImage = /\.(png|jpe?g|gif|webp)$/i.test(path);
-
-          return {
-            path,
-            signedUrl: signed?.signedUrl ?? null,
-            fileName,
-            isImage,
-          };
-        })
-      );
-
-      setDocs(items);
-      setLoading(false);
-    })();
-  }, [guiaId]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-slate-400">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span className="text-sm">Carregando documentos...</span>
-      </div>
-    );
-  }
-
-  if (docs.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
-        <FolderOpen className="mb-3 h-10 w-10 text-slate-300" />
-        <p className="text-sm font-medium text-slate-500">Nenhum documento enviado</p>
-        <p className="mt-1 text-xs text-slate-400">
-          Os arquivos enviados via upload aparecerão aqui.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {docs.map((doc) => (
-          <div
-            key={doc.path}
-            className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md"
-          >
-            {/* Preview */}
-            <div className="flex h-40 items-center justify-center overflow-hidden bg-slate-50">
-              {doc.isImage && doc.signedUrl ? (
-                <img
-                  src={doc.signedUrl}
-                  alt={doc.fileName}
-                  className="h-full w-full object-cover transition group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-slate-300">
-                  <FileIcon className="h-12 w-12" />
-                  <span className="text-[11px] text-slate-400">Documento</span>
-                </div>
-              )}
-            </div>
-
-            {/* Info + ações */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                {doc.isImage ? (
-                  <ImageIcon className="h-4 w-4 flex-shrink-0 text-blue-400" />
-                ) : (
-                  <FileIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
-                )}
-                <span className="truncate text-xs text-slate-600" title={doc.fileName}>
-                  {doc.fileName}
-                </span>
-              </div>
-              {doc.signedUrl && (
-                <a
-                  href={doc.signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Abrir em nova aba"
-                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              )}
-            </div>
-
-            {/* Clique para ampliar imagem */}
-            {doc.isImage && doc.signedUrl && (
-              <button
-                onClick={() => setLightbox(doc.signedUrl)}
-                className="absolute inset-0 h-40 w-full cursor-zoom-in"
-                aria-label="Ampliar imagem"
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Lightbox simples */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          onClick={() => setLightbox(null)}
-        >
-          <img
-            src={lightbox}
-            alt="Visualização"
-            className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-    </>
-  );
-}
+  fields: FieldConfig<FormValues>[];
+}[] = [
+  {
+    icon: FileText,
+    color: "bg-blue-600",
+    title: "Identificação da Guia",
+    fields: [
+      { name: "registro_ans", label: "Registro ANS", placeholder: "000000" },
+      { name: "numero_guia_prestador", label: "Nº Guia Prestador", placeholder: "Ex: 12345" },
+      { name: "numero_guia_solicitacao", label: "Nº Guia Solicitação", placeholder: "Ex: 67890" },
+      { name: "numero_guia_operadora", label: "Nº Guia Operadora", placeholder: "Ex: 99999" },
+      { name: "senha", label: "Senha", placeholder: "Senha de autorização" },
+      { name: "data_emissao", label: "Data de Emissão", type: "date" },
+    ],
+  },
+  {
+    icon: User,
+    color: "bg-violet-600",
+    title: "Beneficiário",
+    fields: [
+      { name: "numero_carteira", label: "Nº Carteira", placeholder: "Número da carteirinha" },
+      { name: "nome_beneficiario", label: "Nome do Beneficiário", placeholder: "Nome completo", span: "2" },
+      { name: "nome_social", label: "Nome Social", placeholder: "Nome social (se houver)", span: "2" },
+      { name: "atendimento_rn", label: "Atendimento RN", placeholder: "S / N" },
+    ],
+  },
+  {
+    icon: Building2,
+    color: "bg-emerald-600",
+    title: "Contratado e Executante",
+    fields: [
+      { name: "contratado_codigo_operadora", label: "Cód. Operadora (Contratado)", placeholder: "Código" },
+      { name: "contratado_nome", label: "Nome do Contratado", placeholder: "Nome da instituição", span: "2" },
+      { name: "contratado_cnes", label: "CNES (Contratado)", placeholder: "CNES" },
+      { name: "executante_codigo_operadora", label: "Cód. Operadora (Executante)", placeholder: "Código" },
+      { name: "executante_nome", label: "Nome do Executante", placeholder: "Nome" },
+      { name: "executante_cnes", label: "CNES (Executante)", placeholder: "CNES" },
+    ],
+  },
+  {
+    icon: Stethoscope,
+    color: "bg-sky-600",
+    title: "Profissional Executante",
+    fields: [
+      { name: "profissional_seq_ref", label: "Seq. Ref.", placeholder: "Seq." },
+      { name: "profissional_grau_participacao", label: "Grau de Participação", placeholder: "Ex: 01" },
+      { name: "profissional_cpf", label: "CPF", placeholder: "000.000.000-00" },
+      { name: "profissional_nome", label: "Nome do Profissional", placeholder: "Nome completo", span: "2" },
+      { name: "profissional_conselho_codigo", label: "Conselho", placeholder: "CRM / CRO..." },
+      { name: "profissional_numero_conselho", label: "Nº Conselho", placeholder: "Número" },
+      { name: "profissional_uf", label: "UF", placeholder: "SP", maxLength: 2 },
+      { name: "profissional_cbo", label: "CBO", placeholder: "Código CBO" },
+    ],
+  },
+  {
+    icon: CalendarRange,
+    color: "bg-amber-500",
+    title: "Valores e Período",
+    fields: [
+      { name: "data_inicio_faturamento", label: "Início do Faturamento", type: "date" },
+      { name: "data_fim_faturamento", label: "Fim do Faturamento", type: "date" },
+      { name: "valor_total_honorarios", label: "Valor Total Honorários (R$)", type: "number", step: "0.01", min: "0", placeholder: "0,00" },
+      { name: "valor_total_faturamento", label: "Valor Total Faturamento (R$)", type: "number", step: "0.01", min: "0", placeholder: "0,00" },
+      { name: "observacao", label: "Observações", span: "full", multiline: true, rows: 3, placeholder: "Observações adicionais sobre a guia..." },
+    ],
+  },
+];
 
 // ── Página principal ──────────────────────────────────────────────────────────
 const GuiaSolicitacaoFormPage: React.FC = () => {
@@ -323,13 +171,9 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
     if (!id) return;
     void (async () => {
       setLoadingData(true);
-      const { data, error } = await supabase
-        .from("guia_solicitacao")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const data = await fetchGuiaSolicitacao(id);
 
-      if (error || !data) {
+      if (!data) {
         showError("Não foi possível carregar a guia.");
         navigate("/admin/guia-solicitacao");
         return;
@@ -415,12 +259,7 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
       observacao: values.observacao || null,
     };
 
-    let error;
-    if (isEdit) {
-      ({ error } = await supabase.from("guia_solicitacao").update(payload).eq("id", id));
-    } else {
-      ({ error } = await supabase.from("guia_solicitacao").insert(payload));
-    }
+    const { error } = await saveGuiaSolicitacao(payload, isEdit ? id : undefined);
 
     setSaving(false);
 
@@ -432,267 +271,50 @@ const GuiaSolicitacaoFormPage: React.FC = () => {
     }
   };
 
+  const loadDocs = useCallback(
+    async () => createSignedDocItems(await fetchGuiaSolicitacaoDocPaths(id!)),
+    [id],
+  );
+
   if (loadingData) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        Carregando dados da guia...
-      </div>
-    );
+    return <FormLoadingScreen />;
   }
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900">
-      <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
-        <AdminSidebar section="guia-solicitacao" />
-
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 lg:p-4 lg:shadow-[0_18px_60px_rgba(15,23,42,0.10)] lg:backdrop-blur-xl">
-          {/* Header */}
-          <header className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate("/admin/guia-solicitacao")}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <div>
-                <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-900 sm:text-2xl">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-                    <FileText className="h-4 w-4" />
-                  </span>
-                  {isEdit ? "Editar Guia" : "Nova Guia de Solicitação"}
-                </h1>
-                <p className="text-xs text-slate-400 sm:text-sm">
-                  {isEdit
-                    ? "Atualize os dados da guia de solicitação."
-                    : "Preencha os dados para cadastrar uma nova guia de solicitação."}
-                </p>
-              </div>
-            </div>
-            <AdminHeaderActions notificationsCount={0} />
-          </header>
-
-          {/* Abas — só mostra se for edição */}
-          {isEdit ? (
-            <Tabs defaultValue="dados" className="flex flex-col gap-4">
-              <TabsList className="w-fit rounded-full bg-slate-100 p-1">
-                <TabsTrigger
-                  value="dados"
-                  className="rounded-full px-5 text-sm text-slate-500 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Dados da Guia
-                </TabsTrigger>
-                <TabsTrigger
-                  value="documentos"
-                  className="rounded-full px-5 text-sm text-slate-500 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
-                >
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Documentos
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Aba: Dados */}
-              <TabsContent value="dados" className="mt-0">
-                <FormFields
-                  register={register}
-                  handleSubmit={handleSubmit}
-                  onSubmit={onSubmit}
-                  saving={saving}
-                  isEdit={isEdit}
-                  onCancel={() => navigate("/admin/guia-solicitacao")}
-                />
-              </TabsContent>
-
-              {/* Aba: Documentos */}
-              <TabsContent value="documentos" className="mt-0">
-                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white">
-                      <FolderOpen className="h-4 w-4" />
-                    </span>
-                    <h2 className="text-sm font-semibold text-slate-700">
-                      Documentos enviados
-                    </h2>
-                  </div>
-                  <DocumentosTab guiaId={id!} />
-                </div>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            /* Nova guia: sem abas */
-            <FormFields
-              register={register}
-              handleSubmit={handleSubmit}
-              onSubmit={onSubmit}
-              saving={saving}
-              isEdit={isEdit}
-              onCancel={() => navigate("/admin/guia-solicitacao")}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+    <AdminFormLayout
+      sidebar={<AdminSidebar section="guia-solicitacao" />}
+      accent="blue"
+      icon={FileText}
+      title={isEdit ? "Editar Guia" : "Nova Guia de Solicitação"}
+      subtitle={
+        isEdit
+          ? "Atualize os dados da guia de solicitação."
+          : "Preencha os dados para cadastrar uma nova guia de solicitação."
+      }
+      onBack={() => navigate("/admin/guia-solicitacao")}
+    >
+      <AdminFormTabs
+        isEdit={isEdit}
+        dadosIcon={FileText}
+        formId="guia-form"
+        onSubmit={handleSubmit(onSubmit)}
+        saving={saving}
+        onCancel={() => navigate("/admin/guia-solicitacao")}
+        documentos={<AttachmentsPanel loadDocs={loadDocs} />}
+      >
+        {SECTIONS.map((section) => (
+          <ConfiguredSection
+            key={section.title}
+            icon={section.icon}
+            color={section.color}
+            title={section.title}
+            fields={section.fields}
+            register={register}
+          />
+        ))}
+      </AdminFormTabs>
+    </AdminFormLayout>
   );
 };
-
-// ── Formulário extraído para reutilização ─────────────────────────────────────
-function FormFields({
-  register,
-  handleSubmit,
-  onSubmit,
-  saving,
-  isEdit,
-  onCancel,
-}: {
-  register: ReturnType<typeof useForm<FormValues>>["register"];
-  handleSubmit: ReturnType<typeof useForm<FormValues>>["handleSubmit"];
-  onSubmit: (v: FormValues) => Promise<void>;
-  saving: boolean;
-  isEdit: boolean;
-  onCancel: () => void;
-}) {
-  return (
-    <form
-      id="guia-form"
-      onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-4 pb-6"
-    >
-      {/* 1. Identificação */}
-      <Section icon={FileText} color="bg-blue-600" title="Identificação da Guia">
-        <Field label="Registro ANS">
-          <input {...register("registro_ans")} className={inputCls} placeholder="000000" />
-        </Field>
-        <Field label="Nº Guia Prestador">
-          <input {...register("numero_guia_prestador")} className={inputCls} placeholder="Ex: 12345" />
-        </Field>
-        <Field label="Nº Guia Solicitação">
-          <input {...register("numero_guia_solicitacao")} className={inputCls} placeholder="Ex: 67890" />
-        </Field>
-        <Field label="Nº Guia Operadora">
-          <input {...register("numero_guia_operadora")} className={inputCls} placeholder="Ex: 99999" />
-        </Field>
-        <Field label="Senha">
-          <input {...register("senha")} className={inputCls} placeholder="Senha de autorização" />
-        </Field>
-        <Field label="Data de Emissão">
-          <input type="date" {...register("data_emissao")} className={inputCls} />
-        </Field>
-      </Section>
-
-      {/* 2. Beneficiário */}
-      <Section icon={User} color="bg-violet-600" title="Beneficiário">
-        <Field label="Nº Carteira">
-          <input {...register("numero_carteira")} className={inputCls} placeholder="Número da carteirinha" />
-        </Field>
-        <Field label="Nome do Beneficiário" span="2">
-          <input {...register("nome_beneficiario")} className={inputCls} placeholder="Nome completo" />
-        </Field>
-        <Field label="Nome Social" span="2">
-          <input {...register("nome_social")} className={inputCls} placeholder="Nome social (se houver)" />
-        </Field>
-        <Field label="Atendimento RN">
-          <input {...register("atendimento_rn")} className={inputCls} placeholder="S / N" />
-        </Field>
-      </Section>
-
-      {/* 3. Contratado / Executante */}
-      <Section icon={Building2} color="bg-emerald-600" title="Contratado e Executante">
-        <Field label="Cód. Operadora (Contratado)">
-          <input {...register("contratado_codigo_operadora")} className={inputCls} placeholder="Código" />
-        </Field>
-        <Field label="Nome do Contratado" span="2">
-          <input {...register("contratado_nome")} className={inputCls} placeholder="Nome da instituição" />
-        </Field>
-        <Field label="CNES (Contratado)">
-          <input {...register("contratado_cnes")} className={inputCls} placeholder="CNES" />
-        </Field>
-        <Field label="Cód. Operadora (Executante)">
-          <input {...register("executante_codigo_operadora")} className={inputCls} placeholder="Código" />
-        </Field>
-        <Field label="Nome do Executante">
-          <input {...register("executante_nome")} className={inputCls} placeholder="Nome" />
-        </Field>
-        <Field label="CNES (Executante)">
-          <input {...register("executante_cnes")} className={inputCls} placeholder="CNES" />
-        </Field>
-      </Section>
-
-      {/* 4. Profissional */}
-      <Section icon={Stethoscope} color="bg-sky-600" title="Profissional Executante">
-        <Field label="Seq. Ref.">
-          <input {...register("profissional_seq_ref")} className={inputCls} placeholder="Seq." />
-        </Field>
-        <Field label="Grau de Participação">
-          <input {...register("profissional_grau_participacao")} className={inputCls} placeholder="Ex: 01" />
-        </Field>
-        <Field label="CPF">
-          <input {...register("profissional_cpf")} className={inputCls} placeholder="000.000.000-00" />
-        </Field>
-        <Field label="Nome do Profissional" span="2">
-          <input {...register("profissional_nome")} className={inputCls} placeholder="Nome completo" />
-        </Field>
-        <Field label="Conselho">
-          <input {...register("profissional_conselho_codigo")} className={inputCls} placeholder="CRM / CRO..." />
-        </Field>
-        <Field label="Nº Conselho">
-          <input {...register("profissional_numero_conselho")} className={inputCls} placeholder="Número" />
-        </Field>
-        <Field label="UF">
-          <input {...register("profissional_uf")} className={inputCls} placeholder="SP" maxLength={2} />
-        </Field>
-        <Field label="CBO">
-          <input {...register("profissional_cbo")} className={inputCls} placeholder="Código CBO" />
-        </Field>
-      </Section>
-
-      {/* 5. Faturamento */}
-      <Section icon={CalendarRange} color="bg-amber-500" title="Valores e Período">
-        <Field label="Início do Faturamento">
-          <input type="date" {...register("data_inicio_faturamento")} className={inputCls} />
-        </Field>
-        <Field label="Fim do Faturamento">
-          <input type="date" {...register("data_fim_faturamento")} className={inputCls} />
-        </Field>
-        <Field label="Valor Total Honorários (R$)">
-          <input type="number" step="0.01" min="0" {...register("valor_total_honorarios")} className={inputCls} placeholder="0,00" />
-        </Field>
-        <Field label="Valor Total Faturamento (R$)">
-          <input type="number" step="0.01" min="0" {...register("valor_total_faturamento")} className={inputCls} placeholder="0,00" />
-        </Field>
-        <Field label="Observações" span="full">
-          <Textarea
-            {...register("observacao")}
-            rows={3}
-            placeholder="Observações adicionais sobre a guia..."
-            className="resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </Field>
-      </Section>
-
-      {/* Rodapé */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={saving}
-          className="rounded-full border-slate-300 bg-white px-6 text-slate-700 hover:bg-slate-50"
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          disabled={saving}
-          className="gap-2 rounded-full bg-blue-600 px-6 text-white hover:bg-blue-700"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Salvar Guia"}
-        </Button>
-      </div>
-    </form>
-  );
-}
 
 export default GuiaSolicitacaoFormPage;

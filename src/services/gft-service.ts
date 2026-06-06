@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Clinica } from "./clinicas-service";
 
 export interface GuiaFaturamentoHonorarios {
   id: string;

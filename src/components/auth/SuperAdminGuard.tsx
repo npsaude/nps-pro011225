@@ -15,7 +15,7 @@ export default function SuperAdminGuard({
   const navigate = useNavigate();
   const { systemUser, loading } = useSystemUser();
 
-  const role = String((systemUser as any)?.regra ?? "").trim().toUpperCase();
+  const role = String(systemUser?.regra ?? "").trim().toUpperCase();
   const isSuperAdmin = role === "SUPER_ADMIN";
 
   useEffect(() => {

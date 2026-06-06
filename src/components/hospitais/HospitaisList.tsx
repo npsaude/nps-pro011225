@@ -171,25 +171,6 @@ const HospitaisList = () => {
     }
   };
 
-  const openDocsDialog = async (hospital: Hospital) => {
-    setSelectedHospital(hospital);
-    setDocsLoading(true);
-    setDocNome("");
-    setDocFile(null);
-    try {
-      const docs = await listarDocumentosEspecificos(hospital.id);
-      setDocumentos(docs);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Não foi possível carregar os documentos específicos.";
-      showError(message);
-    } finally {
-      setDocsLoading(false);
-    }
-  };
-
   const handleDocFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {

@@ -1,0 +1,70 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+/** Linha da tabela `guia_honorarios` (tipo gerado do schema). */
+export type GuiaHonorariosRow = Tables<"guia_honorarios">;
+
+/**
+ * Camada de dados da Guia de Honorários (tabela `guia_honorarios`).
+ */
+
+/** Carrega a guia completa por id. Retorna null se não encontrada. */
+export async function fetchGuiaHonorarios(
+  id: string,
+): Promise<GuiaHonorariosRow | null> {
+  const { data, error } = await supabase
+    .from("guia_honorarios")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as GuiaHonorariosRow;
+}
+
+/**
+ * Carrega apenas o campo pdf_guia_honorario (usado para listar/abrir os
+ * documentos anexados). Retorna a linha (com o campo) ou null.
+ */
+export async function fetchGuiaHonorariosPdfField(
+  id: string,
+): Promise<GuiaHonorariosRow | null> {
+  const { data, error } = await supabase
+    .from("guia_honorarios")
+    .select("pdf_guia_honorario")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return data as GuiaHonorariosRow;
+}
+
+/**
+ * Lê os paths de documentos da guia (campo `pdf_guia_honorario`, que pode ser
+ * uma string única ou um array) e normaliza para uma lista de paths.
+ */
+export async function fetchGuiaHonorariosDocPaths(id: string): Promise<string[]> {
+  const data = await fetchGuiaHonorariosPdfField(id);
+  if (!data) return [];
+
+  const rawPdf = data.pdf_guia_honorario;
+  if (!rawPdf) return [];
+  return Array.isArray(rawPdf) ? (rawPdf as string[]) : [rawPdf as string];
+}
+
+/** Insere uma nova guia ou atualiza a existente (quando `id` é informado). */
+export async function saveGuiaHonorarios(
+  payload: Record<string, unknown>,
+  id?: string,
+): Promise<{ error: { message: string } | null }> {
+  if (id) {
+    const { error } = await supabase
+      .from("guia_honorarios")
+      .update(payload)
+      .eq("id", id);
+    return { error };
+  }
+
+  const { error } = await supabase.from("guia_honorarios").insert(payload);
+  return { error };
+}

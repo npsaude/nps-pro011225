@@ -81,5 +81,5 @@ export async function getUserAvatarPath(userId: string): Promise<string | null> 
 
   if (error) throw error;
 
-  return (data as any)?.avatar_path ?? null;
+  return (data as { avatar_path?: string | null })?.avatar_path ?? null;
 }

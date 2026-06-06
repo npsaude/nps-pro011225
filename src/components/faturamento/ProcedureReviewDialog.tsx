@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { edgeFunctionUrl } from "@/config/supabase";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { authHeaders } from "@/integrations/supabase/auth-header";
 import { showError, showSuccess } from "@/utils/toast";
 
 export interface ProcedimentoRevisao {
@@ -52,7 +54,7 @@ interface Correction {
 type GlobalMode = null | "manual" | "camera";
 
 const FUNCTION_URL =
-  "https://pokyribuibmbeorrcsgk.supabase.co/functions/v1/process-descricao-cirurgica";
+  edgeFunctionUrl("process-descricao-cirurgica");
 
 const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
   open,
@@ -211,11 +213,11 @@ const ProcedureReviewDialog: React.FC<ProcedureReviewDialogProps> = ({
 
       const response = await fetch(FUNCTION_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({ userId, faturamentoId, files: uploadedPaths.map((path) => ({ path })) }),
       });
 
-      let json: any = null;
+      let json: { error?: string; revisao_procedimentos?: ProcedimentoRevisao[] } | null = null;
       try { json = await response.json(); } catch { /* ignore */ }
       if (!response.ok || json?.error) throw new Error(json?.error ?? "Erro ao re-analisar a imagem.");
 
