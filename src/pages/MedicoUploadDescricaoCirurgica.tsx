@@ -2527,7 +2527,7 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 lg:pb-0 text-[#F5F5F5]">
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0b] pb-32 text-[#F5F5F5]">
       {/* Fundo premium */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,23,0.10)_0,#0b0b0b_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-[#121212]/80" />
