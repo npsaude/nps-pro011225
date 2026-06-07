@@ -42,6 +42,8 @@ export interface DbAppSettings {
   openaiModel: string | null;
   asaasToken: string | null;
   videoYoutube: string | null;
+  /** Quando false, o sistema não valida o nome/CRM de quem está adicionando guias e descrições cirúrgicas. */
+  validarNomeMedico: boolean;
   createdAt: string;
   updatedAt: string;
 }

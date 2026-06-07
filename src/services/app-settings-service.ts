@@ -27,6 +27,10 @@ export async function carregarAppSettings(): Promise<DbAppSettings | null> {
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+    validarNomeMedico:
+      (data as any).validarNomeMedico ??
+      (data as any).validar_nome_medico ??
+      true,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
@@ -113,6 +117,10 @@ export async function salvarTokenOpenAI(
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+    validarNomeMedico:
+      (data as any).validarNomeMedico ??
+      (data as any).validar_nome_medico ??
+      true,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
@@ -197,6 +205,10 @@ export async function salvarModeloOpenAI(
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+    validarNomeMedico:
+      (data as any).validarNomeMedico ??
+      (data as any).validar_nome_medico ??
+      true,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
@@ -277,6 +289,10 @@ export async function salvarTokenAsaas(
     asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
     videoYoutube:
       (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+    validarNomeMedico:
+      (data as any).validarNomeMedico ??
+      (data as any).validar_nome_medico ??
+      true,
     createdAt:
       (data as any).createdAt ??
       (data as any).created_at ??
@@ -288,4 +304,67 @@ export async function salvarTokenAsaas(
   };
 
   return mapped;
+}
+
+export async function salvarValidarNomeMedico(
+  validar: boolean,
+): Promise<DbAppSettings> {
+  const existente = await carregarAppSettings();
+
+  if (existente) {
+    const { error } = await supabase
+      .from("app_settings")
+      .update({
+        validar_nome_medico: validar,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existente.id);
+
+    if (error) {
+      throw new Error(
+        error.message ||
+          "Não foi possível salvar a configuração de validação do nome do médico.",
+      );
+    }
+
+    return { ...existente, validarNomeMedico: validar };
+  }
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .insert({
+      validar_nome_medico: validar,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Não foi possível criar o registro de configurações com a validação do nome do médico.",
+    );
+  }
+
+  return {
+    id: (data as any).id,
+    openaiApiToken:
+      (data as any).openaiApiToken ?? (data as any).openai_api_token ?? null,
+    openaiModel:
+      (data as any).openaiModel ?? (data as any).openai_model ?? "gpt-4",
+    asaasToken: (data as any).asaasToken ?? (data as any).asaas_token ?? null,
+    videoYoutube:
+      (data as any).videoYoutube ?? (data as any).video_youtube ?? null,
+    validarNomeMedico:
+      (data as any).validarNomeMedico ??
+      (data as any).validar_nome_medico ??
+      true,
+    createdAt:
+      (data as any).createdAt ??
+      (data as any).created_at ??
+      new Date().toISOString(),
+    updatedAt:
+      (data as any).updatedAt ??
+      (data as any).updated_at ??
+      new Date().toISOString(),
+  };
 }
