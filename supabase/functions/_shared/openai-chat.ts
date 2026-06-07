@@ -171,6 +171,13 @@ export async function openaiChatWithImages(params: {
     body.response_format = { type: "json_object" };
   }
 
+  // Para modelos de reasoning (gpt-5.x, o-series, codex): definir esforço
+  // baixo é o suficiente para extração estruturada e evita consumir todo
+  // o orçamento de tokens em "thinking".
+  if (noTemperature) {
+    body.reasoning_effort = "low";
+  }
+
   console.log(
     `[openai-chat] modelo: ${model} | json_format: ${supportsJsonFormat} | max_completion_tokens: ${useMaxCompletionTokens} | no_temperature: ${noTemperature} | imagens: ${imageBase64List.length}`
   );
