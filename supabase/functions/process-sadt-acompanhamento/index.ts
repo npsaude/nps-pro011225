@@ -135,7 +135,7 @@ serve(async (req) => {
   // 1) Buscar token e modelo da OpenAI em app_settings
   const { data: settings, error: settingsError } = await supabase
     .from("app_settings")
-    .select("openai_api_token, openai_model")
+    .select("openai_api_token, openai_model, validar_nome_medico")
     .limit(1)
     .maybeSingle();
 
@@ -159,6 +159,11 @@ serve(async (req) => {
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
   const openaiModel =
     (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
+  // Quando false, o sistema não valida o nome/CRM do médico que está adicionando a guia.
+  const validarNomeMedico =
+    (settings as any)?.validar_nome_medico ??
+    (settings as any)?.validarNomeMedico ??
+    true;
 
   if (!openaiToken) {
     console.error("[process-sadt-acompanhamento] Token da OpenAI não configurado.");
@@ -443,7 +448,8 @@ Retorne no formato:
   const forceOwnership = (body as any).forceOwnership === true;
 
   // Verificar se o médico participa da guia (por CRM ou nome)
-  if (!forceOwnership && !forceInsert) {
+  // Pulamos a verificação quando a validação do nome do médico está desativada nas configurações.
+  if (validarNomeMedico && !forceOwnership && !forceInsert) {
     const normalizeStr = (s: string) =>
       s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 

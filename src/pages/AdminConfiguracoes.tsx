@@ -9,12 +9,14 @@ import {
   Zap,
   ChevronRight,
   Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -40,6 +42,7 @@ import {
   salvarTokenOpenAI,
   salvarModeloOpenAI,
   salvarTokenAsaas,
+  salvarValidarNomeMedico,
 } from "@/services/app-settings-service";
 import { showError, showSuccess } from "@/utils/toast";
 import AdminSidebar from "@/components/admin/AdminSidebar";
@@ -124,6 +127,10 @@ const AdminConfiguracoes = () => {
   const [salvandoAsaas, setSalvandoAsaas] = useState(false);
   const [criandoDemo, setCriandoDemo] = useState(false);
 
+  // Quando true, o sistema NÃO valida o nome do médico ao adicionar guias/descrições.
+  const [naoValidarNomeMedico, setNaoValidarNomeMedico] = useState(false);
+  const [salvandoValidacao, setSalvandoValidacao] = useState(false);
+
   const [purgeEmail, setPurgeEmail] = useState("");
   const [purgeConfirmEmail, setPurgeConfirmEmail] = useState("");
   const [purgingUser, setPurgingUser] = useState(false);
@@ -137,6 +144,7 @@ const AdminConfiguracoes = () => {
         if (settings?.openaiApiToken) setToken(settings.openaiApiToken);
         if (settings?.openaiModel) setOpenaiModel(settings.openaiModel);
         if (settings?.asaasToken) setAsaasToken(settings.asaasToken);
+        setNaoValidarNomeMedico(settings?.validarNomeMedico === false);
       } catch (err) {
         showError(
           err instanceof Error ? err.message : "Não foi possível carregar as configurações.",
@@ -214,6 +222,30 @@ const AdminConfiguracoes = () => {
     }
   };
 
+  const handleToggleValidacaoNomeMedico = async (naoValidar: boolean) => {
+    const anterior = naoValidarNomeMedico;
+    setNaoValidarNomeMedico(naoValidar);
+    setSalvandoValidacao(true);
+    try {
+      // naoValidar === true  => validarNomeMedico = false
+      await salvarValidarNomeMedico(!naoValidar);
+      showSuccess(
+        naoValidar
+          ? "Validação do nome do médico desativada."
+          : "Validação do nome do médico ativada.",
+      );
+    } catch (err) {
+      setNaoValidarNomeMedico(anterior);
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar a configuração de validação.",
+      );
+    } finally {
+      setSalvandoValidacao(false);
+    }
+  };
+
   const canPurge =
     isSuperAdmin &&
     purgeEmail.trim().length > 3 &&
@@ -265,6 +297,45 @@ const AdminConfiguracoes = () => {
 
           <main className="flex-1 overflow-y-auto">
             <div className="flex flex-col gap-8">
+              {/* ── Seção: Validações ──────────────────────────────────── */}
+              <section>
+                <SectionHeader
+                  icon={<ShieldCheck className="h-5 w-5" />}
+                  title="Validações"
+                  description="Controle as verificações automáticas aplicadas no envio de guias e descrições cirúrgicas."
+                />
+
+                <ConfigCard>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400">
+                        <ShieldCheck className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">
+                          Não validar nome do médico
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+                          Quando ativado, o sistema não valida quem está adicionando
+                          guias SADT, guia de solicitação, guia de autorização e
+                          descrição cirúrgica. O envio não será bloqueado mesmo que o
+                          nome/CRM do médico logado seja diferente do que consta no
+                          documento.
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={naoValidarNomeMedico}
+                      onCheckedChange={(checked) =>
+                        void handleToggleValidacaoNomeMedico(checked)
+                      }
+                      disabled={carregando || salvandoValidacao}
+                      aria-label="Não validar nome do médico"
+                    />
+                  </div>
+                </ConfigCard>
+              </section>
+
               {/* ── Seção: Zona de perigo (super admin) ───────────────── */}
               <section>
                 <SectionHeader
