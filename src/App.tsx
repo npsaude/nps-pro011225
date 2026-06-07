@@ -57,6 +57,7 @@ import AdminEmailTemplates from "./pages/AdminEmailTemplates";
 import AdminEmailTemplateForm from "./pages/AdminEmailTemplateForm";
 import SadtAcompanhamentoPage from "./pages/SadtAcompanhamento";
 import SadtAcompanhamentoFormPage from "./pages/SadtAcompanhamentoForm";
+import SadtAcompanhamentoLote from "./pages/SadtAcompanhamentoLote";
 import MedicoUploadSadtAcompanhamento from "./pages/MedicoUploadSadtAcompanhamento";
 import AdminRetorno from "./pages/AdminRetorno";
 
@@ -211,8 +212,10 @@ const App = () => (
           {/* Acompanhamento de SADT */}
           <Route path="/admin/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
           <Route path="/admin/sadt-acompanhamento/nova" element={<SadtAcompanhamentoFormPage />} />
+          <Route path="/admin/sadt-acompanhamento/lote" element={<SadtAcompanhamentoLote />} />
           <Route path="/admin/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
           <Route path="/medico/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
+          <Route path="/medico/sadt-acompanhamento/lote" element={<SadtAcompanhamentoLote />} />
           <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
           <Route path="/medico/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
           {/* Alias amigável para o fluxo de acompanhamento (usado pelo menu flutuante do médico) */}

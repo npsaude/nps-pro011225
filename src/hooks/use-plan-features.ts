@@ -69,7 +69,13 @@ export function usePlanFeatures() {
   const { data: features, isLoading } = useQuery({
     queryKey: ["plan-features"],
     queryFn: fetchPlanFeatures,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    // Permissões/recursos do plano precisam refletir rapidamente quando um
+    // admin altera o plano. Mantemos um cache curto e revalidamos ao montar e
+    // ao focar a aba, evitando que o usuário continue vendo itens bloqueados
+    // (ou liberados) por minutos após a mudança do plano.
+    staleTime: 1000 * 30, // 30 segundos
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const hasFeature = (key: PlanFeatureKey): boolean => {
