@@ -58,7 +58,7 @@ import AdminEmailTemplateForm from "./pages/AdminEmailTemplateForm";
 import SadtAcompanhamentoPage from "./pages/SadtAcompanhamento";
 import SadtAcompanhamentoFormPage from "./pages/SadtAcompanhamentoForm";
 import SadtAcompanhamentoLote from "./pages/SadtAcompanhamentoLote";
-import MedicoUploadSadtAcompanhamento from "./pages/MedicoUploadSadtAcompanhamento";
+import MedicoUploadSadtAcompanhamentoLote from "./pages/MedicoUploadSadtAcompanhamentoLote";
 import AdminRetorno from "./pages/AdminRetorno";
 
 const queryClient = new QueryClient();
@@ -215,11 +215,11 @@ const App = () => (
           <Route path="/admin/sadt-acompanhamento/lote" element={<SadtAcompanhamentoLote />} />
           <Route path="/admin/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
           <Route path="/medico/sadt-acompanhamento" element={<SadtAcompanhamentoPage />} />
-          <Route path="/medico/sadt-acompanhamento/lote" element={<SadtAcompanhamentoLote />} />
-          <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
+          <Route path="/medico/sadt-acompanhamento/lote" element={<MedicoUploadSadtAcompanhamentoLote />} />
+          <Route path="/medico/sadt-acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamentoLote />} />
           <Route path="/medico/sadt-acompanhamento/editar/:id" element={<SadtAcompanhamentoFormPage />} />
           {/* Alias amigável para o fluxo de acompanhamento (usado pelo menu flutuante do médico) */}
-          <Route path="/medico/acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamento />} />
+          <Route path="/medico/acompanhamento/enviar" element={<MedicoUploadSadtAcompanhamentoLote />} />
 
           <Route path="/admin/descricao-cirurgica" element={<DescricaoCirurgicaAdminPage />} />
           <Route path="/admin/descricao-cirurgica/nova" element={<DescricaoCirurgicaAdminFormPage />} />
