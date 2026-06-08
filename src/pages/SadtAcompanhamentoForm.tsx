@@ -24,7 +24,6 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 type FormValues = {
@@ -544,7 +543,7 @@ const SadtAcompanhamentoFormPage: React.FC = () => {
   }
 
   return (
-    <div className={`relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900 ${isMedicoRoute ? "pb-32" : ""}`}>
+    <div className="relative flex min-h-screen w-full bg-[radial-gradient(circle_at_0%_0%,#E6EEF7_0,#F5F7F9_55%),radial-gradient(circle_at_100%_100%,#D9DEE3_0,#F5F7F9_60%)] text-slate-900">
 
       <div className="flex min-h-screen w-full max-w-7xl flex-1 gap-0 px-3 py-4 sm:px-4 lg:mx-auto lg:gap-4">
         <AdminSidebar section="sadt-acompanhamento" />
@@ -633,8 +632,6 @@ const SadtAcompanhamentoFormPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {isMedicoRoute && <MedicoFloatingNav />}
     </div>
   );
 };
