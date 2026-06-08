@@ -7,7 +7,6 @@ import {
   Clock,
   AlertTriangle,
   XCircle,
-  TrendingUp,
   Wallet,
   ChevronLeft,
   ChevronRight,
@@ -49,7 +48,7 @@ import { showError } from "@/utils/toast";
 
 const PAGE_SIZE = 8;
 
-type FiltroStatus = ConciliacaoStatus | "todos";
+type FiltroStatus = ConciliacaoStatus | "todos" | "sem_guia";
 
 const AdminConciliacao: React.FC = () => {
   const [rows, setRows] = useState<ConciliacaoRow[]>([]);
@@ -80,12 +79,26 @@ const AdminConciliacao: React.FC = () => {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return rows.filter((r) => {
-      if (filtro !== "todos" && r.status !== filtro) return false;
+      // "Sem guia" mostra só os repasses não vinculados; os demais filtros
+      // trabalham apenas com as guias (exclui os repasses sem guia).
+      if (filtro === "sem_guia") {
+        if (!r.semGuia) return false;
+      } else if (r.semGuia) {
+        return false;
+      } else if (filtro !== "todos" && r.status !== filtro) {
+        return false;
+      }
       if (!q) return true;
       return [r.paciente, r.numeroGuia, r.convenio, r.origemRepasse, r.motivoGlosa]
         .some((v) => v?.toLowerCase().includes(q));
     });
   }, [rows, search, filtro]);
+
+  const guiasRows = useMemo(() => rows.filter((r) => !r.semGuia), [rows]);
+  const totalPagas =
+    (resumo?.totalPagoIntegral ?? 0) + (resumo?.totalPagoParcial ?? 0);
+  const taxaPagas =
+    resumo && resumo.totalGuias > 0 ? totalPagas / resumo.totalGuias : 0;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -107,7 +120,7 @@ const AdminConciliacao: React.FC = () => {
   const barData = useMemo(() => {
     if (!resumo) return [];
     return [
-      { name: "Esperado", valor: resumo.valorEsperado, fill: "#6366f1" },
+      { name: "Apresentado", valor: resumo.valorApresentado, fill: "#6366f1" },
       { name: "Recebido", valor: resumo.valorRecebido, fill: "#10b981" },
       { name: "Glosa", valor: resumo.valorGlosa, fill: "#f43f5e" },
       { name: "Em aberto", valor: resumo.valorEmAberto, fill: "#f59e0b" },
@@ -165,27 +178,27 @@ const AdminConciliacao: React.FC = () => {
             {/* ── KPIs ───────────────────────────────────────── */}
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <KpiCard
-                icon={<TrendingUp className="h-4 w-4" />}
-                label="Conciliação"
-                value={`${Math.round((resumo?.taxaConciliacao ?? 0) * 100)}%`}
-                sub={`${resumo?.totalConciliadas ?? 0}/${resumo?.totalGuias ?? 0} guias`}
-                gradient="from-indigo-500 to-violet-500"
-                progress={resumo?.taxaConciliacao ?? 0}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                label="Guias pagas"
+                value={`${totalPagas} de ${resumo?.totalGuias ?? 0}`}
+                sub={`${Math.round(taxaPagas * 100)}% das guias receberam repasse`}
+                gradient="from-emerald-500 to-teal-500"
+                progress={taxaPagas}
                 loading={loading}
               />
               <KpiCard
                 icon={<Wallet className="h-4 w-4" />}
                 label="Recebido"
                 value={formatBRL(resumo?.valorRecebido ?? 0)}
-                sub={`de ${formatBRL(resumo?.valorEsperado ?? 0)} esperado`}
-                gradient="from-emerald-500 to-teal-500"
+                sub={`de ${formatBRL(resumo?.valorApresentado ?? 0)} apresentado`}
+                gradient="from-indigo-500 to-violet-500"
                 loading={loading}
               />
               <KpiCard
                 icon={<Clock className="h-4 w-4" />}
                 label="Em aberto"
-                value={String(resumo?.totalAbertas ?? 0)}
-                sub={formatBRL(resumo?.valorEmAberto ?? 0)}
+                value={`${resumo?.totalAbertas ?? 0} guia(s)`}
+                sub={`${formatBRL(resumo?.valorEmAberto ?? 0)} a receber`}
                 gradient="from-amber-500 to-orange-500"
                 loading={loading}
               />
@@ -193,7 +206,11 @@ const AdminConciliacao: React.FC = () => {
                 icon={<ArrowDownRight className="h-4 w-4" />}
                 label="Glosa"
                 value={formatBRL(resumo?.valorGlosa ?? 0)}
-                sub={`taxa ${(((resumo?.taxaGlosa ?? 0) * 100) || 0).toFixed(1)}% · ${resumo?.totalComGlosa ?? 0} guia(s)`}
+                sub={
+                  (resumo?.totalComGlosa ?? 0) > 0
+                    ? `${resumo?.totalComGlosa} lançamento(s) · taxa ${(((resumo?.taxaGlosa ?? 0) * 100) || 0).toFixed(1)}%`
+                    : "nenhuma glosa registrada"
+                }
                 gradient="from-rose-500 to-pink-500"
                 loading={loading}
               />
@@ -259,8 +276,8 @@ const AdminConciliacao: React.FC = () => {
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm lg:col-span-3">
-                <h3 className="mb-1 text-[13px] font-semibold text-slate-800">Valores conciliados</h3>
-                <p className="mb-2 text-[11px] text-slate-400">Esperado × recebido × glosa × em aberto</p>
+                <h3 className="mb-1 text-[13px] font-semibold text-slate-800">Resumo financeiro</h3>
+                <p className="mb-2 text-[11px] text-slate-400">Apresentado → recebido, com glosa e o que falta receber</p>
                 <div className="h-[180px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={barData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
@@ -291,7 +308,7 @@ const AdminConciliacao: React.FC = () => {
             {/* ── Filter chips ───────────────────────────────── */}
             <section className="flex flex-wrap items-center gap-2">
               <FilterChip active={filtro === "todos"} onClick={() => setFiltro("todos")}>
-                Todas <span className="ml-1 opacity-60">{rows.filter((r) => !r.semGuia).length}</span>
+                Todas as guias <span className="ml-1 opacity-60">{guiasRows.length}</span>
               </FilterChip>
               {(Object.keys(STATUS_META) as ConciliacaoStatus[]).map((s) => (
                 <FilterChip
@@ -302,20 +319,37 @@ const AdminConciliacao: React.FC = () => {
                 >
                   {STATUS_META[s].label}
                   <span className="ml-1 opacity-60">
-                    {rows.filter((r) => r.status === s && !r.semGuia).length}
+                    {guiasRows.filter((r) => r.status === s).length}
                   </span>
                 </FilterChip>
               ))}
               {resumo && resumo.totalSemGuia > 0 && (
-                <span className="ml-auto flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] text-slate-500 ring-1 ring-slate-200">
+                <FilterChip
+                  active={filtro === "sem_guia"}
+                  onClick={() => setFiltro("sem_guia")}
+                  className="ml-auto"
+                >
                   <Unlink className="h-3 w-3" />
-                  {resumo.totalSemGuia} repasse(s) sem guia
-                </span>
+                  Repasses sem guia
+                  <span className="ml-1 opacity-60">{resumo.totalSemGuia}</span>
+                </FilterChip>
               )}
             </section>
 
             {/* ── Table ──────────────────────────────────────── */}
             <section className="rounded-2xl border border-slate-100 bg-white shadow-sm">
+              <div className="flex flex-col gap-1 border-b border-slate-100 px-4 py-3">
+                <h3 className="text-[13px] font-semibold text-slate-800">
+                  {filtro === "sem_guia"
+                    ? "Repasses recebidos sem guia vinculada"
+                    : "Guias e seus repasses"}
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {filtro === "sem_guia"
+                    ? "Pagamentos do repasse que não casaram com nenhuma guia de acompanhamento."
+                    : "Valor = apresentado no repasse (ou esperado da guia, quando ainda em aberto). Recebimento = recebido ÷ valor. Clique numa linha para ver o detalhe."}
+                </p>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -323,7 +357,7 @@ const AdminConciliacao: React.FC = () => {
                       <th className="px-4 py-3 text-left font-medium">Situação</th>
                       <th className="px-3 py-3 text-left font-medium">Guia / Paciente</th>
                       <th className="px-3 py-3 text-left font-medium">Convênio</th>
-                      <th className="px-3 py-3 text-right font-medium">Esperado</th>
+                      <th className="px-3 py-3 text-right font-medium">Valor</th>
                       <th className="px-3 py-3 text-right font-medium">Recebido</th>
                       <th className="px-3 py-3 text-right font-medium">Glosa</th>
                       <th className="px-3 py-3 text-left font-medium">Recebimento</th>
@@ -372,7 +406,11 @@ const AdminConciliacao: React.FC = () => {
                           </td>
                           <td className="px-3 py-3 text-slate-600">{r.convenio || "—"}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-slate-600">
-                            {r.valorEsperado != null ? formatBRL(r.valorEsperado) : "—"}
+                            {r.valorApresentado != null
+                              ? formatBRL(r.valorApresentado)
+                              : r.valorEsperado != null
+                                ? formatBRL(r.valorEsperado)
+                                : "—"}
                           </td>
                           <td className="px-3 py-3 text-right font-semibold tabular-nums text-emerald-600">
                             {formatBRL(r.valorLiquido)}
@@ -556,11 +594,13 @@ function FilterChip({
   active,
   onClick,
   dot,
+  className,
   children,
 }: {
   active: boolean;
   onClick: () => void;
   dot?: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -570,7 +610,7 @@ function FilterChip({
         active
           ? "bg-slate-900 text-white shadow-sm"
           : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-      }`}
+      } ${className ?? ""}`}
     >
       {dot && <span className="h-2 w-2 rounded-full" style={{ background: dot }} />}
       {children}

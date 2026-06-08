@@ -340,12 +340,14 @@ function calcularResumo(rows: ConciliacaoRow[]): ConciliacaoResumo {
 
   for (const r of rows) {
     resumo.valorRecebido += r.valorLiquido;
-    resumo.valorGlosa += r.valorGlosa;
+    // Só soma glosa "real" (acima do limiar), para o valor e a contagem
+    // nunca se contradizerem no painel.
+    resumo.valorGlosa += r.temGlosa ? r.valorGlosa : 0;
     resumo.valorApresentado += r.valorApresentado ?? 0;
+    if (r.temGlosa) resumo.totalComGlosa += 1;
     if (!r.semGuia) {
       resumo.valorEsperado += r.valorEsperado ?? 0;
       if (r.matched) resumo.totalConciliadas += 1;
-      if (r.temGlosa) resumo.totalComGlosa += 1;
       switch (r.status) {
         case "aberto":
           resumo.totalAbertas += 1;
