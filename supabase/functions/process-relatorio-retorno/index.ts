@@ -174,7 +174,7 @@ serve(async (req) => {
   // 2) Buscar token e modelo da OpenAI
   const { data: settings, error: settingsError } = await supabase
     .from("app_settings")
-    .select("openai_api_token, openai_model")
+    .select("openai_api_token, openai_model, validar_nome_medico")
     .limit(1)
     .maybeSingle();
 
@@ -190,6 +190,12 @@ serve(async (req) => {
     (settings as any)?.openai_api_token ?? (settings as any)?.openaiApiToken;
   const openaiModel =
     (settings as any)?.openai_model ?? (settings as any)?.openaiModel ?? "gpt-4o";
+  // Quando false, o sistema não valida se o médico do relatório corresponde
+  // ao usuário logado (mesma flag usada no fluxo de SADT em /admin/configuracoes).
+  const validarNomeMedico =
+    (settings as any)?.validar_nome_medico ??
+    (settings as any)?.validarNomeMedico ??
+    true;
 
   if (!openaiToken) {
     return new Response(
@@ -509,7 +515,11 @@ LEMBRETE FINAL — antes de finalizar a resposta:
   // 9) Validar médico do relatório vs usuário logado
   const medicoRelatorio = String(cab?.medico_nome ?? "").trim();
 
-  if (nomeEsperado) {
+  if (!validarNomeMedico) {
+    console.warn(
+      "[process-relatorio-retorno] Validação do nome do médico desativada (validar_nome_medico=false) — pulando verificação.",
+    );
+  } else if (nomeEsperado) {
     if (!medicoRelatorio) {
       return new Response(
         JSON.stringify({
