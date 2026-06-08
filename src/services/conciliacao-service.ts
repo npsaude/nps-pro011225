@@ -196,17 +196,14 @@ function classificar(
   return ref > EPS ? "aberto" : "pago_integral";
 }
 
-function encontrarGrupo(guia: SadtGuia, grupos: RepasseGrupo[]): {
+function encontrarGrupo(
+  guideKeys: string[],
+  nameKey: string,
+  grupos: RepasseGrupo[],
+): {
   grupo: RepasseGrupo | null;
   matchType: "guia" | "nome" | null;
 } {
-  const guideKeys = [
-    normNum(guia.numero_guia_prestador),
-    normNum(guia.numero_guia_sadt),
-    normNum(guia.numero_guia_operadora),
-  ].filter(Boolean);
-  const nameKey = normName(guia.nome_beneficiario);
-
   // 1ª passada: casa por número de guia
   for (const g of grupos) {
     if (g.consumido) continue;
@@ -231,20 +228,97 @@ export interface ConciliacaoData {
   resumo: ConciliacaoResumo;
 }
 
-export async function carregarConciliacao(): Promise<ConciliacaoData> {
-  const [guias, itensRepasse] = await Promise.all([
-    listarGuiasAcompanhamento(),
+/** Modo de conciliação: contra guias de acompanhamento ou contra faturamentos. */
+export type ConciliacaoModo = "atendimento" | "faturamento";
+
+/**
+ * Entidade "esperada" (lado esquerdo do encontro de contas), normalizada para
+ * que o mesmo motor sirva tanto para guias de acompanhamento quanto para
+ * faturamentos.
+ */
+interface EntidadeConciliacao {
+  id: string;
+  numeroGuia: string | null;
+  guideKeys: string[];
+  paciente: string | null;
+  convenio: string | null;
+  valorEsperado: number | null;
+}
+
+export interface FaturamentoRow {
+  id: string;
+  numero_guia_honorarios: string | null;
+  numero_autorizacao: string | null;
+  numero_guia_internacao: string | null;
+  paciente_nome: string | null;
+  paciente_convenio: string | null;
+  valor_total_faturado: number | null;
+}
+
+export async function listarFaturamentos(): Promise<FaturamentoRow[]> {
+  const { data, error } = await supabase
+    .from("faturamentos")
+    .select(
+      "id, numero_guia_honorarios, numero_autorizacao, numero_guia_internacao, paciente_nome, paciente_convenio, valor_total_faturado",
+    )
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as FaturamentoRow[];
+}
+
+async function listarEntidadesAtendimento(): Promise<EntidadeConciliacao[]> {
+  const guias = await listarGuiasAcompanhamento();
+  return guias.map((g) => ({
+    id: g.id,
+    numeroGuia:
+      g.numero_guia_prestador || g.numero_guia_sadt || g.numero_guia_operadora || null,
+    guideKeys: [
+      normNum(g.numero_guia_prestador),
+      normNum(g.numero_guia_sadt),
+      normNum(g.numero_guia_operadora),
+    ].filter(Boolean),
+    paciente: g.nome_beneficiario,
+    convenio: null,
+    valorEsperado: g.valor_total_geral != null ? toNum(g.valor_total_geral) : null,
+  }));
+}
+
+async function listarEntidadesFaturamento(): Promise<EntidadeConciliacao[]> {
+  const fats = await listarFaturamentos();
+  return fats.map((f) => ({
+    id: f.id,
+    numeroGuia:
+      f.numero_guia_honorarios || f.numero_autorizacao || f.numero_guia_internacao || null,
+    guideKeys: [
+      normNum(f.numero_guia_honorarios),
+      normNum(f.numero_autorizacao),
+      normNum(f.numero_guia_internacao),
+    ].filter(Boolean),
+    paciente: f.paciente_nome,
+    convenio: f.paciente_convenio,
+    valorEsperado: f.valor_total_faturado != null ? toNum(f.valor_total_faturado) : null,
+  }));
+}
+
+export async function carregarConciliacao(
+  modo: ConciliacaoModo = "atendimento",
+): Promise<ConciliacaoData> {
+  const [entidades, itensRepasse] = await Promise.all([
+    modo === "faturamento"
+      ? listarEntidadesFaturamento()
+      : listarEntidadesAtendimento(),
     listarTodosItensRetorno(),
   ]);
 
   const grupos = agruparRepasse(itensRepasse);
   const rows: ConciliacaoRow[] = [];
 
-  for (const guia of guias) {
-    const { grupo, matchType } = encontrarGrupo(guia, grupos);
+  for (const ent of entidades) {
+    const nameKey = normName(ent.paciente);
+    const { grupo, matchType } = encontrarGrupo(ent.guideKeys, nameKey, grupos);
     if (grupo) grupo.consumido = true;
 
-    const esperado = guia.valor_total_geral != null ? toNum(guia.valor_total_geral) : null;
+    const esperado = ent.valorEsperado;
     const apresentado = grupo ? grupo.apresentado : null;
     const glosa = grupo ? grupo.glosa : 0;
     const liquido = grupo ? grupo.liquido : 0;
@@ -255,17 +329,12 @@ export async function carregarConciliacao(): Promise<ConciliacaoData> {
     const percentualRecebido = ref > EPS ? Math.min(1, liquido / ref) : matched ? 1 : 0;
 
     rows.push({
-      key: `guia:${guia.id}`,
-      guiaId: guia.id,
+      key: `${modo}:${ent.id}`,
+      guiaId: ent.id,
       repasseId: grupo?.repasseId ?? null,
-      numeroGuia:
-        guia.numero_guia_prestador ||
-        guia.numero_guia_sadt ||
-        guia.numero_guia_operadora ||
-        grupo?.numeroGuia ||
-        null,
-      paciente: guia.nome_beneficiario || grupo?.paciente || null,
-      convenio: grupo?.convenio ?? null,
+      numeroGuia: ent.numeroGuia || grupo?.numeroGuia || null,
+      paciente: ent.paciente || grupo?.paciente || null,
+      convenio: ent.convenio ?? grupo?.convenio ?? null,
       competencia: grupo?.competencia ?? null,
       origemRepasse: grupo?.origem ?? null,
       dataPagamento: grupo?.dataPagamento ?? null,

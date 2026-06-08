@@ -14,6 +14,8 @@ import {
   Unlink,
   ArrowDownRight,
   Sparkles,
+  Activity,
+  LineChart,
 } from "lucide-react";
 import {
   PieChart,
@@ -39,6 +41,7 @@ import {
 import {
   carregarConciliacao,
   STATUS_META,
+  type ConciliacaoModo,
   type ConciliacaoRow,
   type ConciliacaoResumo,
   type ConciliacaoStatus,
@@ -51,6 +54,7 @@ const PAGE_SIZE = 8;
 type FiltroStatus = ConciliacaoStatus | "todos" | "sem_guia";
 
 const AdminConciliacao: React.FC = () => {
+  const [modo, setModo] = useState<ConciliacaoModo>("atendimento");
   const [rows, setRows] = useState<ConciliacaoRow[]>([]);
   const [resumo, setResumo] = useState<ConciliacaoResumo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,10 +63,14 @@ const AdminConciliacao: React.FC = () => {
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<ConciliacaoRow | null>(null);
 
+  const isFaturamento = modo === "faturamento";
+  const entidadeLabel = isFaturamento ? "faturamento" : "guia";
+  const entidadeLabelPlural = isFaturamento ? "faturamentos" : "guias";
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { rows: r, resumo: res } = await carregarConciliacao();
+      const { rows: r, resumo: res } = await carregarConciliacao(modo);
       setRows(r);
       setResumo(res);
     } catch (err) {
@@ -70,11 +78,19 @@ const AdminConciliacao: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [modo]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const changeModo = (m: ConciliacaoModo) => {
+    if (m === modo) return;
+    setModo(m);
+    setFiltro("todos");
+    setSearch("");
+    setPage(1);
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -147,7 +163,9 @@ const AdminConciliacao: React.FC = () => {
                   </span>
                 </h1>
                 <p className="mt-0.5 text-[13px] text-slate-500">
-                  Cruzamento entre as guias de acompanhamento e os relatórios de repasse.
+                  {isFaturamento
+                    ? "Cruzamento entre os faturamentos e os relatórios de repasse."
+                    : "Cruzamento entre as guias de acompanhamento e os relatórios de repasse."}
                 </p>
               </div>
             </div>
@@ -175,13 +193,31 @@ const AdminConciliacao: React.FC = () => {
           </header>
 
           <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white/90 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            {/* ── Seletor de sessão (Atendimento / Faturamento) ── */}
+            <section className="flex items-center gap-1 self-start rounded-2xl bg-slate-100 p-1 ring-1 ring-slate-200/70">
+              <SessionTab
+                active={!isFaturamento}
+                onClick={() => changeModo("atendimento")}
+                icon={<Activity className="h-4 w-4" />}
+                title="Atendimento"
+                subtitle="Guias × repasse"
+              />
+              <SessionTab
+                active={isFaturamento}
+                onClick={() => changeModo("faturamento")}
+                icon={<LineChart className="h-4 w-4" />}
+                title="Faturamento"
+                subtitle="Faturamento × repasse"
+              />
+            </section>
+
             {/* ── KPIs ───────────────────────────────────────── */}
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <KpiCard
                 icon={<CheckCircle2 className="h-4 w-4" />}
-                label="Guias pagas"
+                label={isFaturamento ? "Faturamentos pagos" : "Guias pagas"}
                 value={`${totalPagas} de ${resumo?.totalGuias ?? 0}`}
-                sub={`${Math.round(taxaPagas * 100)}% das guias receberam repasse`}
+                sub={`${Math.round(taxaPagas * 100)}% ${isFaturamento ? "dos faturamentos receberam" : "das guias receberam"} repasse`}
                 gradient="from-emerald-500 to-teal-500"
                 progress={taxaPagas}
                 loading={loading}
@@ -197,7 +233,7 @@ const AdminConciliacao: React.FC = () => {
               <KpiCard
                 icon={<Clock className="h-4 w-4" />}
                 label="Em aberto"
-                value={`${resumo?.totalAbertas ?? 0} guia(s)`}
+                value={`${resumo?.totalAbertas ?? 0} ${entidadeLabel}(s)`}
                 sub={`${formatBRL(resumo?.valorEmAberto ?? 0)} a receber`}
                 gradient="from-amber-500 to-orange-500"
                 loading={loading}
@@ -219,7 +255,9 @@ const AdminConciliacao: React.FC = () => {
             {/* ── Charts ─────────────────────────────────────── */}
             <section className="grid grid-cols-1 gap-3 lg:grid-cols-5">
               <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm lg:col-span-2">
-                <h3 className="mb-1 text-[13px] font-semibold text-slate-800">Distribuição das guias</h3>
+                <h3 className="mb-1 text-[13px] font-semibold text-slate-800">
+                  Distribuição {isFaturamento ? "dos faturamentos" : "das guias"}
+                </h3>
                 <p className="mb-2 text-[11px] text-slate-400">Por situação de pagamento</p>
                 <div className="flex items-center gap-2">
                   <div className="relative h-[170px] w-[170px] shrink-0">
@@ -246,7 +284,7 @@ const AdminConciliacao: React.FC = () => {
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-2xl font-bold text-slate-900">{resumo?.totalGuias ?? 0}</span>
-                      <span className="text-[10px] uppercase tracking-wide text-slate-400">guias</span>
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400">{entidadeLabelPlural}</span>
                     </div>
                   </div>
                   <div className="flex flex-1 flex-col gap-1.5">
@@ -308,7 +346,8 @@ const AdminConciliacao: React.FC = () => {
             {/* ── Filter chips ───────────────────────────────── */}
             <section className="flex flex-wrap items-center gap-2">
               <FilterChip active={filtro === "todos"} onClick={() => setFiltro("todos")}>
-                Todas as guias <span className="ml-1 opacity-60">{guiasRows.length}</span>
+                {isFaturamento ? "Todos os faturamentos" : "Todas as guias"}{" "}
+                <span className="ml-1 opacity-60">{guiasRows.length}</span>
               </FilterChip>
               {(Object.keys(STATUS_META) as ConciliacaoStatus[]).map((s) => (
                 <FilterChip
@@ -341,13 +380,15 @@ const AdminConciliacao: React.FC = () => {
               <div className="flex flex-col gap-1 border-b border-slate-100 px-4 py-3">
                 <h3 className="text-[13px] font-semibold text-slate-800">
                   {filtro === "sem_guia"
-                    ? "Repasses recebidos sem guia vinculada"
-                    : "Guias e seus repasses"}
+                    ? "Repasses recebidos sem vínculo"
+                    : isFaturamento
+                      ? "Faturamentos e seus repasses"
+                      : "Guias e seus repasses"}
                 </h3>
                 <p className="text-[11px] text-slate-400">
                   {filtro === "sem_guia"
-                    ? "Pagamentos do repasse que não casaram com nenhuma guia de acompanhamento."
-                    : "Valor = apresentado no repasse (ou esperado da guia, quando ainda em aberto). Recebimento = recebido ÷ valor. Clique numa linha para ver o detalhe."}
+                    ? `Pagamentos do repasse que não casaram com nenhum ${entidadeLabel} de acompanhamento.`
+                    : `Valor = apresentado no repasse (ou esperado do ${entidadeLabel}, quando ainda em aberto). Recebimento = recebido ÷ valor. Clique numa linha para ver o detalhe.`}
                 </p>
               </div>
               <div className="overflow-x-auto">
@@ -355,7 +396,9 @@ const AdminConciliacao: React.FC = () => {
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] uppercase tracking-wider text-slate-400">
                       <th className="px-4 py-3 text-left font-medium">Situação</th>
-                      <th className="px-3 py-3 text-left font-medium">Guia / Paciente</th>
+                      <th className="px-3 py-3 text-left font-medium">
+                        {isFaturamento ? "Faturamento / Paciente" : "Guia / Paciente"}
+                      </th>
                       <th className="px-3 py-3 text-left font-medium">Convênio</th>
                       <th className="px-3 py-3 text-right font-medium">Valor</th>
                       <th className="px-3 py-3 text-right font-medium">Recebido</th>
@@ -375,7 +418,7 @@ const AdminConciliacao: React.FC = () => {
                     ) : paginated.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">
-                          Nenhuma guia encontrada para o filtro atual.
+                          {`Nenhum registro encontrado para o filtro atual.`}
                         </td>
                       </tr>
                     ) : (
@@ -399,8 +442,10 @@ const AdminConciliacao: React.FC = () => {
                                 {r.paciente || "—"}
                               </span>
                               <span className="text-[11px] text-slate-400">
-                                {r.numeroGuia ? `Guia ${r.numeroGuia}` : "Sem nº de guia"}
-                                {r.semGuia && " · repasse sem guia"}
+                                {r.numeroGuia
+                                  ? `${isFaturamento ? "Nº" : "Guia"} ${r.numeroGuia}`
+                                  : "Sem nº"}
+                                {r.semGuia && " · repasse sem vínculo"}
                               </span>
                             </div>
                           </td>
@@ -469,16 +514,16 @@ const AdminConciliacao: React.FC = () => {
             </DialogTitle>
             <DialogDescription>
               {detail?.matchType
-                ? `Conciliada por ${detail.matchType === "guia" ? "número de guia" : "nome do paciente"}.`
+                ? `Conciliado por ${detail.matchType === "guia" ? "número de guia/autorização" : "nome do paciente"}.`
                 : detail?.semGuia
-                  ? "Repasse sem guia de acompanhamento correspondente."
-                  : "Guia ainda sem repasse correspondente."}
+                  ? `Repasse sem ${entidadeLabel} correspondente.`
+                  : `${isFaturamento ? "Faturamento" : "Guia"} ainda sem repasse correspondente.`}
             </DialogDescription>
           </DialogHeader>
           {detail && (
             <div className="grid gap-2.5 text-sm">
               <DetailRow label="Paciente" value={detail.paciente} />
-              <DetailRow label="Nº da guia" value={detail.numeroGuia} />
+              <DetailRow label={isFaturamento ? "Nº guia/autorização" : "Nº da guia"} value={detail.numeroGuia} />
               <DetailRow label="Convênio" value={detail.convenio} />
               <DetailRow label="Origem do repasse" value={detail.origemRepasse} />
               <DetailRow label="Competência" value={detail.competencia} />
@@ -587,6 +632,45 @@ function ProgressBar({ value, status }: { value: number; status: ConciliacaoStat
         {Math.round(value * 100)}%
       </span>
     </div>
+  );
+}
+
+function SessionTab({
+  active,
+  onClick,
+  icon,
+  title,
+  subtitle,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2.5 rounded-xl px-4 py-2 text-left transition ${
+        active
+          ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+          : "text-slate-500 hover:text-slate-700"
+      }`}
+    >
+      <span
+        className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+          active
+            ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-sm"
+            : "bg-slate-200/70 text-slate-500"
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="flex flex-col leading-tight">
+        <span className="text-[13px] font-semibold">{title}</span>
+        <span className="text-[10px] uppercase tracking-wide text-slate-400">{subtitle}</span>
+      </span>
+    </button>
   );
 }
 
