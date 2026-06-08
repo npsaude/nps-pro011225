@@ -21,6 +21,7 @@ import {
   Scissors,
   Mail,
   Activity,
+  Scale,
 } from "lucide-react";
 import { logout } from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
@@ -44,7 +45,8 @@ interface AdminSidebarProps {
     | "assinaturas"
     | "financas"
     | "modelos-email"
-    | "relatorio-repasse";
+    | "relatorio-repasse"
+    | "conciliacao";
   cadastroSubsection?: "clinicas" | "hospitais" | "medicos" | "gft" | "modelos-descricao";
   documentosSubsection?:
     | "guia-solicitacao"
@@ -263,6 +265,19 @@ function SuperAdminMenu({
         </span>
       </button>
 
+      {/* Conciliação */}
+      <button
+        className={currentSection === "conciliacao" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/conciliacao")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "conciliacao" ? iconWrapperActive : iconWrapperInactive}>
+            <Scale className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Conciliação</span>
+        </span>
+      </button>
+
       {/* Documentos */}
       <div className={blockContainer}>
         <div className="flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
@@ -447,6 +462,19 @@ function DefaultMenu({
             <FileText className="h-4 w-4" />
           </span>
           <span className="font-medium">Relatório de Repasse</span>
+        </span>
+      </button>
+
+      {/* Conciliação */}
+      <button
+        className={currentSection === "conciliacao" ? activeMain : inactiveMain}
+        onClick={() => navigate("/admin/conciliacao")}
+      >
+        <span className="flex items-center gap-3">
+          <span className={currentSection === "conciliacao" ? iconWrapperActive : iconWrapperInactive}>
+            <Scale className="h-4 w-4" />
+          </span>
+          <span className="font-medium">Conciliação</span>
         </span>
       </button>
 
@@ -694,6 +722,7 @@ const AdminSidebar = ({
     if (path.startsWith("/admin/sadt-acompanhamento")) return "sadt-acompanhamento";
     if (path.startsWith("/medico/sadt-acompanhamento")) return "sadt-acompanhamento";
     if (path.startsWith("/admin/retorno")) return "relatorio-repasse";
+    if (path.startsWith("/admin/conciliacao")) return "conciliacao";
     if (path.startsWith("/admin/guia-solicitacao")) return "documentos";
     if (path.startsWith("/admin/guia-autorizacao")) return "documentos";
     if (path.startsWith("/admin/guia-honorarios")) return "documentos";

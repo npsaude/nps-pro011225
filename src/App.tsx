@@ -59,6 +59,7 @@ import SadtAcompanhamentoPage from "./pages/SadtAcompanhamento";
 import SadtAcompanhamentoFormPage from "./pages/SadtAcompanhamentoForm";
 import SadtAcompanhamentoLote from "./pages/SadtAcompanhamentoLote";
 import AdminRetorno from "./pages/AdminRetorno";
+import AdminConciliacao from "./pages/AdminConciliacao";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
           <Route path="/admin/faturamento" element={<AdminFaturamento />} />
           <Route path="/admin/financas" element={<AdminFinancas />} />
           <Route path="/admin/retorno" element={<AdminRetorno />} />
+          <Route path="/admin/conciliacao" element={<AdminConciliacao />} />
 
           <Route path="/descricao-cirurgica" element={<DescricaoCirurgicaPage />} />
           <Route
