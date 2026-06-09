@@ -278,7 +278,7 @@ serve(async (req) => {
   // 5) Prompt — extração estruturada robusta para múltiplos formatos
   const prompt = `
 Você é um assistente especializado em RELATÓRIOS DE RETORNO / EXTRATOS DE PAGAMENTO de honorários médicos no Brasil.
-Os relatórios podem vir de várias fontes (cada clínica/operadora tem seu próprio layout). Exemplos comuns:
+Cada clínica, hospital, cooperativa ou operadora usa um LAYOUT DIFERENTE (as colunas, os nomes e a ordem variam). Identifique os dados INDEPENDENTEMENTE do layout. Exemplos comuns (NÃO se limite a eles):
 
 - UNIMED (Extrato de Pagamento de Cooperado) — geralmente lista atendimentos por paciente, com colunas de valor apresentado, glosa, líquido, e totalizadores no rodapé.
 - MAX CLINICAS (Extrato de Repasse) — agrupa por médico/competência, com data, procedimento, valor bruto, descontos e líquido. Tipicamente tem várias páginas com DEZENAS ou CENTENAS de consultas/procedimentos, uma por linha.
@@ -309,6 +309,63 @@ REGRAS GERAIS:
    - "competencia": ex "OUT/2023" ou "Nov 25" (use o texto do PDF).
    - "data_pagamento": data de pagamento principal do relatório, se houver.
    - Totalizadores: copie os totais finais do relatório quando existirem.
+
+COMO RECONHECER CADA CAMPO — os relatórios usam RÓTULOS DIFERENTES para a mesma informação.
+Mapeie QUALQUER rótulo equivalente (sinônimo) para o campo padronizado abaixo:
+
+Cabeçalho:
+- origem: emissor (nome curto). Ex.: "UNIMED", "MAXCLINICAS", nome da clínica no topo.
+- clinica_hospital: quem está pagando. Rótulos: Prestador, Estabelecimento, Hospital, Clínica, Cooperativa, Razão Social, Empresa.
+- medico_nome: médico a quem o relatório se refere. Rótulos: Cooperado, Profissional, Credenciado, Médico, Prestador, Beneficiário do repasse.
+- medico_crm: CRM, Conselho, Registro, CRM/UF.
+- medico_especialidade: Especialidade.
+- medico_funcao: Função, Cargo.
+- competencia: Competência, Referência, Mês Referência, Período. Ex.: "OUT/2023", "Nov 25".
+- data_pagamento: Data de Pagamento, Data de Crédito, Pago em, Data do Repasse, Quitação.
+- periodo_inicio / periodo_fim: "Período de ... a ...", De / Até.
+- total_bruto: Total Bruto, Total Apresentado, Total Produção, Total Faturado, Valor Bruto.
+- total_glosa: Total Glosa, Total Glosado.
+- total_desconto: Total Descontos, Deduções, Taxas.
+- total_imposto: Impostos, Retenções, IR, IRRF, ISS, INSS.
+- total_liquido: Total Líquido, Valor a Receber, Total Repasse, Líquido a Pagar, Valor Pago.
+
+Itens (uma linha por paciente/procedimento):
+- paciente_nome: Paciente, Beneficiário, Usuário, Cliente, Nome.
+- paciente_carteira: Carteira, Carteirinha, Matrícula, Código do Beneficiário, Nº Beneficiário.
+- numero_guia: ⚠️ IMPORTANTE para a conciliação. Rótulos: Guia, Nº Guia, Guia TISS, Guia Prestador, Guia SADT, Autorização, Nº Autorização, Senha. Procure ATIVAMENTE — quase sempre existe, mesmo em coluna estreita.
+- numero_conta: Conta, Nº Conta, Atendimento, Nº Atendimento, Lote, Protocolo.
+- data_atendimento: Data Atendimento, Data de Execução, Data do Procedimento, Atendimento em.
+- data_realizacao: Realização, Executado em, Data Realização.
+- data_pagamento (do item): "Pago em" na própria linha.
+- convenio: Convênio, Operadora, Plano de Saúde, Fonte Pagadora.
+- plano: Plano, Produto.
+- hospital_local: Local, Hospital, Unidade, Estabelecimento de Atendimento.
+- codigo_procedimento: Código, Cód. Proc., TUSS, CBHPM, AMB, Código TISS.
+- descricao_procedimento: Descrição, Procedimento, Serviço, Exame.
+- funcao_profissional: papel do médico. Rótulos: Função, Participação, Grau de Participação. Valores: Cirurgião, 1º Auxiliar, 2º Auxiliar, Anestesista, Instrumentador.
+- quantidade: Qtd, Qtde, Quant., Nº Procedimentos.
+- valor_base: referência/tabela ANTES de ajustes. Rótulos: Valor Base, Base de Cálculo, Valor Tabela, Valor Referência, Valor Unitário, Prévia.
+- valor_apresentado: cobrado/produzido. Rótulos: Apresentado, Cobrado, Produção, Faturado, Valor Bruto, Solicitado, Honorário.
+- valor_glosa: parte NEGADA pela fonte. Rótulos: Glosa, Glosado, Valor Glosado.
+- motivo_glosa: Motivo Glosa, Justificativa, Código de Glosa, Descrição Glosa.
+- valor_desconto: deduções administrativas. Rótulos: Desconto, Dedução, Taxa Administrativa, Taxa.
+- valor_imposto: tributos retidos. Rótulos: Imposto, IR, IRRF, ISS, INSS, Retenção.
+- valor_liquido: valor EFETIVAMENTE pago. Rótulos: Líquido, Valor Líquido, Valor Pago, Valor a Receber, Repasse, Valor Repassado, Recebido.
+- observacoes: Obs, Observação, Nota.
+
+SEMÂNTICA DOS VALORES (use para desambiguar colunas quando os rótulos forem vagos):
+- valor_apresentado = o que foi cobrado/produzido (antes de glosa/desconto/imposto).
+- valor_glosa = parte recusada (NÃO paga) pela fonte.
+- valor_desconto = deduções (taxas administrativas etc.).
+- valor_imposto = tributos retidos (IR, ISS, INSS...).
+- valor_liquido = o que de fato foi pago.
+- Relação aproximada: valor_liquido ≈ valor_apresentado − valor_glosa − valor_desconto − valor_imposto. Use-a para decidir qual coluna é qual.
+- Se houver apenas DUAS colunas de valor (ex.: "Valor" e "Pago"), trate a 1ª como valor_apresentado e a 2ª como valor_liquido.
+- Valores entre parênteses ou com sinal negativo representam reduções (glosa/desconto): registre como POSITIVO no campo correspondente.
+
+LAYOUTS AGRUPADOS:
+- Quando houver um cabeçalho de grupo (paciente/guia) seguido de várias linhas de procedimento, REPITA os dados do grupo (paciente, guia, convênio, datas...) em CADA item daquele grupo.
+- NÃO gere item para linhas de TOTAL/SUBTOTAL/"Total do paciente"/rodapé — use esses números apenas nos totalizadores do cabeçalho.
 
 FORMATO DE SAÍDA (JSON):
 
@@ -361,9 +418,11 @@ FORMATO DE SAÍDA (JSON):
 RETORNE APENAS O JSON, sem markdown e sem comentários.
 
 LEMBRETE FINAL — antes de finalizar a resposta:
-1. Confira se você incluiu TODOS os itens/linhas do PDF, de TODAS as páginas.
-2. NUNCA pare em 3, 5 ou 10 itens "para resumir". Se o PDF tem 80 itens, retorne 80.
-3. Não pule pacientes, não pule procedimentos, não pule páginas.
+1. Incluiu TODOS os itens/linhas do PDF, de TODAS as páginas? NUNCA pare "para resumir" — se o PDF tem 80 itens, retorne 80.
+2. Mapeou os RÓTULOS diferentes (sinônimos) para os campos corretos, mesmo em layout desconhecido?
+3. Preencheu numero_guia sempre que existir uma coluna Guia/Autorização/Senha?
+4. Os valores seguem a relação líquido ≈ apresentado − glosa − desconto − imposto?
+5. Não pulou pacientes, procedimentos ou páginas, e não criou itens para linhas de total/subtotal.
 `;
 
   // 6) Chamar Responses API com input_file
