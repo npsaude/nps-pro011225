@@ -9,9 +9,7 @@ const corsHeaders = {
 
 const ASAAS_BASE_URL = "https://api-sandbox.asaas.com/v3";
 
-// Páginas de retorno do checkout Asaas no domínio de produção.
-// (Antes apontavam para https://app-conmedic.vercel.app, um deploy antigo que
-//  não existe mais e resultava em 404 após o pagamento.)
+// Paginas de retorno do checkout Asaas no dominio de producao.
 const CHECKOUT_RETURN_URL = "https://conmedic.com.br/boas-vindas";
 
 function saoPauloTomorrowISO() {
@@ -60,10 +58,26 @@ function jsonErr(body: unknown, status: number) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response("ok", { status: 200, headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabase = serviceRoleKey ? createClient(supabaseUrl, serviceRoleKey) : null;
+
+  // Registra erros do Asaas no banco para diagnostico (best-effort).
+  async function logDebug(phase: string, status: number, errBody: unknown) {
+    if (!supabase) return;
+    try {
+      await supabase.from("asaas_webhook_events").insert({
+        event: "checkout_debug",
+        process_error: `${phase} (${status})`,
+        payload: { phase, status, error: errBody, callback_url: CHECKOUT_RETURN_URL },
+        received_at: new Date().toISOString(),
+      });
+    } catch (_e) {
+      // ignore
+    }
   }
 
   try {
@@ -76,23 +90,18 @@ serve(async (req) => {
     const phone = String(body.phone ?? "");
     const crm = String(body.crm ?? "");
     const state = String(body.state ?? "");
-    const cpf_cnpj = String(body.cpf_cnpj ?? "").replace(/\D/g, "");
+    const cpf_cnpj = String(body.cpf_cnpj ?? "").replace(/[^0-9]/g, "");
 
     if (!plan_id || !name || !email || !phone || !crm || !state || !cpf_cnpj) {
-      return jsonErr({ error: "Campos obrigatórios ausentes." }, 400);
+      return jsonErr({ error: "Campos obrigatorios ausentes." }, 400);
     }
 
     console.log("[public-checkout-start] start", { plan_id, billing_period });
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (!supabase) {
       console.error("[public-checkout-start] missing supabase env");
-      return jsonErr({ error: "Configuração do Supabase incompleta (env vars ausentes)." }, 500);
+      return jsonErr({ error: "Configuracao do Supabase incompleta (env vars ausentes)." }, 500);
     }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: settings, error: settingsError } = await supabase
       .from("app_settings")
@@ -104,7 +113,7 @@ serve(async (req) => {
 
     const asaasToken = settings?.asaas_token;
     if (!asaasToken) {
-      return jsonErr({ error: "Asaas token não configurado em app_settings." }, 500);
+      return jsonErr({ error: "Asaas token nao configurado em app_settings." }, 500);
     }
 
     const { data: plan, error: planError } = await supabase
@@ -115,12 +124,12 @@ serve(async (req) => {
       .maybeSingle();
 
     if (planError) throw planError;
-    if (!plan) return jsonErr({ error: "Plano inválido ou inativo." }, 400);
+    if (!plan) return jsonErr({ error: "Plano invalido ou inativo." }, 400);
 
     const selectedPrice = selectedPlanPrice(plan, billing_period);
     if (selectedPrice <= 0) {
       console.error("[public-checkout-start] invalid plan price", { plan_id, billing_period, plan });
-      return jsonErr({ error: "O valor do plano selecionado é inválido." }, 400);
+      return jsonErr({ error: "O valor do plano selecionado e invalido." }, 400);
     }
 
     const asaasCycle = asaasCycleForBillingPeriod(billing_period);
@@ -173,6 +182,7 @@ serve(async (req) => {
     if (!findCustomerRes.ok) {
       const { json, text } = await readJsonSafe(findCustomerRes);
       console.error("[public-checkout-start] asaas find customer failed", { status: findCustomerRes.status, json, text });
+      await logDebug("find_customer", findCustomerRes.status, json ?? text);
       return jsonErr({ error: "Asaas: erro ao consultar customer." }, 502);
     }
 
@@ -193,13 +203,14 @@ serve(async (req) => {
       if (!createCustomerRes.ok) {
         const { json, text } = await readJsonSafe(createCustomerRes);
         console.error("[public-checkout-start] asaas create customer failed", { status: createCustomerRes.status, json, text });
+        await logDebug("create_customer", createCustomerRes.status, json ?? text);
         return jsonErr({ error: "Asaas: erro ao criar customer." }, 502);
       }
 
       const createdCustomer = await createCustomerRes.json();
       if (!createdCustomer?.id) {
         console.error("[public-checkout-start] asaas create customer missing id", { createdCustomer });
-        return jsonErr({ error: "Asaas: resposta inválida ao criar customer." }, 502);
+        return jsonErr({ error: "Asaas: resposta invalida ao criar customer." }, 502);
       }
       asaas_customer_id = String(createdCustomer.id);
     } else {
@@ -215,9 +226,8 @@ serve(async (req) => {
 
     const nextDueDate = saoPauloTomorrowISO();
 
-    const createSubscriptionRes = await asaasFetch("/subscriptions", asaasToken, {
-      method: "POST",
-      body: JSON.stringify({
+    const subscriptionBody = (withCallback: boolean) => {
+      const base: Record<string, unknown> = {
         customer: asaas_customer_id,
         billingType: "CREDIT_CARD",
         value: selectedPrice,
@@ -225,22 +235,45 @@ serve(async (req) => {
         nextDueDate,
         description: planDescription,
         externalReference: lead_id,
-        callback: {
+      };
+      if (withCallback) {
+        base.callback = {
           successUrl: CHECKOUT_RETURN_URL,
           cancelUrl: CHECKOUT_RETURN_URL,
           expiredUrl: CHECKOUT_RETURN_URL,
           autoRedirect: true,
-        },
-      }),
+        };
+      }
+      return base;
+    };
+
+    // 1a tentativa: com callback (redirect pos-pagamento).
+    let createSubscriptionRes = await asaasFetch("/subscriptions", asaasToken, {
+      method: "POST",
+      body: JSON.stringify(subscriptionBody(true)),
     });
 
+    // Se falhar, registra o erro e tenta de novo SEM callback, para nao
+    // bloquear o pagamento enquanto investigamos o motivo da recusa.
     if (!createSubscriptionRes.ok) {
-      const { json, text } = await readJsonSafe(createSubscriptionRes);
-      console.error("[public-checkout-start] asaas create subscription failed", { status: createSubscriptionRes.status, json, text });
-      return jsonErr(
-        { error: "Asaas: erro ao criar assinatura.", asaas_status: createSubscriptionRes.status, asaas_error: json ?? text },
-        502,
-      );
+      const first = await readJsonSafe(createSubscriptionRes);
+      console.error("[public-checkout-start] subscription with callback failed", { status: createSubscriptionRes.status, body: first.json ?? first.text });
+      await logDebug("create_subscription_with_callback", createSubscriptionRes.status, first.json ?? first.text);
+
+      createSubscriptionRes = await asaasFetch("/subscriptions", asaasToken, {
+        method: "POST",
+        body: JSON.stringify(subscriptionBody(false)),
+      });
+
+      if (!createSubscriptionRes.ok) {
+        const second = await readJsonSafe(createSubscriptionRes);
+        console.error("[public-checkout-start] subscription without callback failed", { status: createSubscriptionRes.status, body: second.json ?? second.text });
+        await logDebug("create_subscription_without_callback", createSubscriptionRes.status, second.json ?? second.text);
+        return jsonErr(
+          { error: "Asaas: erro ao criar assinatura.", asaas_status: createSubscriptionRes.status, asaas_error: second.json ?? second.text },
+          502,
+        );
+      }
     }
 
     const subscription = await createSubscriptionRes.json();
@@ -284,6 +317,7 @@ serve(async (req) => {
     if (!paymentsRes.ok) {
       const { json, text } = await readJsonSafe(paymentsRes);
       console.error("[public-checkout-start] asaas list payments failed", { status: paymentsRes.status, json, text });
+      await logDebug("list_payments", paymentsRes.status, json ?? text);
       return jsonErr({ error: "Asaas: erro ao buscar pagamento inicial." }, 502);
     }
 
@@ -293,7 +327,7 @@ serve(async (req) => {
 
     if (!redirect_url) {
       console.error("[public-checkout-start] missing invoiceUrl", { paymentsJson });
-      return jsonErr({ error: "Não foi possível obter invoiceUrl do primeiro pagamento." }, 500);
+      return jsonErr({ error: "Nao foi possivel obter invoiceUrl do primeiro pagamento." }, 500);
     }
 
     console.log("[public-checkout-start] subscription created", {
@@ -321,7 +355,7 @@ serve(async (req) => {
         message = String(error);
       }
     } catch (e) {
-      message = "Erro fatal na serialização do erro: " + String(e);
+      message = "Erro fatal na serializacao do erro: " + String(e);
     }
     return new Response(
       JSON.stringify({ error: message }),
