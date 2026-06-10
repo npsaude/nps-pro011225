@@ -44,6 +44,18 @@ export async function carregarAppSettings(): Promise<DbAppSettings | null> {
   return mapped;
 }
 
+/**
+ * Carrega APENAS a URL do vídeo do YouTube exibido nas telas de login,
+ * via RPC pública (security definer) que não expõe os tokens/segredos.
+ * Usada nas telas de login (anônimo), enquanto app_settings fica restrito
+ * a super admin.
+ */
+export async function carregarVideoLogin(): Promise<string | null> {
+  const { data, error } = await supabase.rpc("get_login_video");
+  if (error) return null;
+  return (data as string | null) ?? null;
+}
+
 export async function salvarTokenOpenAI(
   token: string,
 ): Promise<DbAppSettings> {

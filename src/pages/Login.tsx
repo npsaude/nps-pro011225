@@ -9,7 +9,7 @@ import { loginAny, sendPasswordReset } from "@/services/auth-service";
 import SubscriptionExpiredDialog from "@/components/auth/SubscriptionExpiredDialog";
 import { SUBSCRIPTION_EXPIRED_CODE } from "@/services/subscription-validity-service";
 import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
-import { carregarAppSettings } from "@/services/app-settings-service";
+import { carregarVideoLogin } from "@/services/app-settings-service";
 
 const FALLBACK_YOUTUBE_VIDEO_ID = "5w1NdK6GtEE";
 
@@ -52,9 +52,9 @@ const Login = () => {
     let alive = true;
     const load = async () => {
       try {
-        const settings = await carregarAppSettings();
+        const video = await carregarVideoLogin();
         if (!alive) return;
-        setYoutubeSetting(settings?.videoYoutube ?? null);
+        setYoutubeSetting(video);
       } catch {
         if (!alive) return;
         setYoutubeSetting(null);
