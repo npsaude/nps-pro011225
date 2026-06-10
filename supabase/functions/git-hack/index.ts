@@ -1,9 +1,9 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-
-serve(async (req) => {
-  const cmd = new Deno.Command("git", {
-    args: ["checkout", "src/pages/MedicoUploadDescricaoCirurgica.tsx", "src/pages/MedicoUploadGuiaAutorizacao.tsx", "src/pages/MedicoUploadGuiaSolicitacao.tsx"],
-  });
-  const output = await cmd.output();
-  return new Response(new TextDecoder().decode(output.stdout));
-});
+// Função desativada: era um resquício de desenvolvimento que executava
+// comandos git no runtime e estava exposta sem autenticação. Mantida apenas
+// como stub para responder 410 a qualquer chamada remanescente.
+Deno.serve(() =>
+  new Response(
+    JSON.stringify({ error: "Gone: esta função foi desativada." }),
+    { status: 410, headers: { "Content-Type": "application/json" } },
+  ),
+);
