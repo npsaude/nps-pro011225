@@ -52,7 +52,8 @@ import {
   markResultsAsIgnored,
   type CheckResult,
 } from "@/utils/consistencyCheck";
-import { useBillingQuota } from "@/hooks/use-billing-quota";
+import { useCreditBalance } from "@/hooks/use-credit-balance";
+import { CREDITS_PER_FATURAMENTO } from "@/utils/credits";
 import { listarFavoritos } from "@/services/clinicas-service";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
 
@@ -189,8 +190,8 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     initialView?: ViewState | "email_faturamento";
   };
 
-  // Quota de faturamentos mensais
-  const billingQuota = useBillingQuota();
+  // Saldo de créditos do pacote contratado (faturamento = 10 créditos)
+  const creditBalance = useCreditBalance();
 
   // Arquivos da Guia de Autorização
   const [filesGuia, setFilesGuia] = useState<File[]>([]);
@@ -680,6 +681,18 @@ const MedicoUploadDescricaoCirurgica: React.FC = () => {
     const medicoId = authData.user.id;
 
     if (!faturamentoId) {
+      // Bloqueia a criação de um novo faturamento quando não há créditos
+      // suficientes no pacote contratado (faturamento = 10 créditos).
+      if (
+        creditBalance.remaining !== null &&
+        creditBalance.remaining < CREDITS_PER_FATURAMENTO
+      ) {
+        showError(
+          "Créditos insuficientes para criar um novo faturamento. Aguarde a renovação do seu pacote ou adquira mais créditos.",
+        );
+        return null;
+      }
+
       const { data, error } = await supabase
         .from("faturamentos")
         .insert({

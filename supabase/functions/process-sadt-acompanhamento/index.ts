@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { logOpenAIUsage } from "../_shared/openai-usage-logger.ts";
 import { imageUrlsToBase64 } from "../_shared/image-to-base64.ts";
 import { openaiChatWithImages, extractJson } from "../_shared/openai-chat.ts";
+import { getCreditBalance, CREDITS_PER_ACOMPANHAMENTO } from "../_shared/credits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -129,6 +130,38 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
+    );
+  }
+
+  // 0) Controle de créditos do pacote: bloqueia novos acompanhamentos quando
+  // o saldo do período acabou. Fail-open quando não há limite definido.
+  try {
+    const balance = await getCreditBalance(supabase, userId);
+    if (
+      balance.remaining !== null &&
+      balance.remaining < CREDITS_PER_ACOMPANHAMENTO
+    ) {
+      console.warn(
+        "[process-sadt-acompanhamento] Créditos insuficientes:",
+        balance,
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Créditos insuficientes para enviar um novo acompanhamento. Aguarde a renovação do seu pacote ou adquira mais créditos.",
+          code: "NO_CREDITS",
+        }),
+        {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+  } catch (creditErr) {
+    // Não bloqueia o fluxo por falha no cálculo de créditos.
+    console.error(
+      "[process-sadt-acompanhamento] Falha ao verificar créditos (seguindo sem bloquear):",
+      creditErr,
     );
   }
 
