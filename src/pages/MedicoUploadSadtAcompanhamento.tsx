@@ -16,6 +16,8 @@ import { MEDICO_LOGO_URL } from "@/constants/medico-brand";
 import { showError, showSuccess } from "@/utils/toast";
 import { compressFiles } from "@/utils/image-compression";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
+import { useCreditBalance } from "@/hooks/use-credit-balance";
+import { CREDITS_PER_ACOMPANHAMENTO } from "@/utils/credits";
 
 type ViewState = "upload" | "processing" | "duplicate" | "not_owner" | "success";
 
@@ -42,6 +44,8 @@ type UploadItem = {
 
 const MedicoUploadSadtAcompanhamento: React.FC = () => {
   const navigate = useNavigate();
+
+  const creditBalance = useCreditBalance();
 
   const [files, setFiles] = useState<File[]>([]);
   const [view, setView] = useState<ViewState>("upload");
@@ -163,6 +167,17 @@ const MedicoUploadSadtAcompanhamento: React.FC = () => {
 
   // Faz upload dos arquivos para o storage e chama a edge function
   const processarEnvio = async (forceInsert = false, forceOwnership = false) => {
+    // Bloqueia novo acompanhamento sem créditos (acompanhamento = 2 créditos).
+    if (
+      creditBalance.remaining !== null &&
+      creditBalance.remaining < CREDITS_PER_ACOMPANHAMENTO
+    ) {
+      showError(
+        "Créditos insuficientes para enviar um novo acompanhamento. Aguarde a renovação do seu pacote ou adquira mais créditos.",
+      );
+      return;
+    }
+
     setIsUploading(true);
     setView("processing");
 

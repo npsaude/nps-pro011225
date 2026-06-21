@@ -41,6 +41,8 @@ import {
   uploadSadtItems,
   type GuiaExistente,
 } from "@/utils/sadt-acompanhamento-upload";
+import { useCreditBalance } from "@/hooks/use-credit-balance";
+import { CREDITS_PER_ACOMPANHAMENTO } from "@/utils/credits";
 
 type GuiaStatus =
   | "pending"
@@ -110,6 +112,8 @@ const SadtAcompanhamentoLote: React.FC = () => {
   const listPath = isMedicoRoute
     ? "/medico/sadt-acompanhamento"
     : "/admin/sadt-acompanhamento";
+
+  const creditBalance = useCreditBalance();
 
   const [items, setItems] = useState<GuiaItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -281,6 +285,19 @@ const SadtAcompanhamentoLote: React.FC = () => {
 
   const handleProcessBatch = async () => {
     if (items.length === 0 || isProcessing) return;
+
+    // Bloqueia o lote quando não há créditos para ao menos um acompanhamento
+    // (cada acompanhamento = 2 créditos). As guias além do saldo também são
+    // recusadas individualmente pela edge function.
+    if (
+      creditBalance.remaining !== null &&
+      creditBalance.remaining < CREDITS_PER_ACOMPANHAMENTO
+    ) {
+      showError(
+        "Créditos insuficientes para enviar acompanhamentos. Aguarde a renovação do seu pacote ou adquira mais créditos.",
+      );
+      return;
+    }
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {

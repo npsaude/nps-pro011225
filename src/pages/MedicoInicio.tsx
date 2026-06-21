@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User2, Scissors, TrendingUp, FileText, Activity, Wallet } from "lucide-react";
+import { User2, Coins, TrendingUp, FileText, Activity, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import MedicoHeader from "@/components/medico/MedicoHeader";
 import MedicoFloatingNav from "@/components/medico/MedicoFloatingNav";
-import { useBillingQuota } from "@/hooks/use-billing-quota";
+import { useCreditBalance } from "@/hooks/use-credit-balance";
 
 type DashboardStats = {
   loading: boolean;
@@ -20,7 +20,7 @@ const MedicoInicio: React.FC = () => {
   const navigate = useNavigate();
   const [medicoNome, setMedicoNome] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const billingQuota = useBillingQuota();
+  const creditBalance = useCreditBalance();
   const [stats, setStats] = useState<DashboardStats>({
     loading: true,
     faturamentosMes: 0,
@@ -152,41 +152,46 @@ const MedicoInicio: React.FC = () => {
             </span>
           </div>
 
-          {/* Quota de faturamentos do mês */}
-          {!billingQuota.loading && billingQuota.limit !== null && (
-            <div className={`mb-3 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
-              billingQuota.isOverLimit
+          {/* Créditos do pacote contratado */}
+          {!creditBalance.loading && creditBalance.total !== null && creditBalance.remaining !== null && (
+            <div className={`mb-3 rounded-2xl border px-4 py-3 ${
+              creditBalance.isOver
                 ? "border-rose-500/40 bg-[#2a0a0a]"
-                : billingQuota.isNearLimit
+                : creditBalance.isNear
                   ? "border-amber-500/40 bg-amber-950/20"
                   : "border-[#D4A017]/20 bg-black/50"
             }`}>
-              <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border ${
-                  billingQuota.isOverLimit
-                    ? "border-rose-500/30 bg-rose-500/15 text-rose-400"
-                    : billingQuota.isNearLimit
-                      ? "border-amber-500/30 bg-amber-500/15 text-amber-400"
-                      : "border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]"
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border ${
+                    creditBalance.isOver
+                      ? "border-rose-500/30 bg-rose-500/15 text-rose-400"
+                      : creditBalance.isNear
+                        ? "border-amber-500/30 bg-amber-500/15 text-amber-400"
+                        : "border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]"
+                  }`}>
+                    <Coins className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-[#F5F5F5]">Créditos do plano</p>
+                    <p className="text-[11px] text-[#9CA3AF]">
+                      {Math.max(0, creditBalance.remaining)} de {creditBalance.total} créditos restantes
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-sm font-bold flex-shrink-0 ${
+                  creditBalance.isOver ? "text-rose-400" : creditBalance.isNear ? "text-amber-400" : "text-[#D4A017]"
                 }`}>
-                  <Scissors className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[#F5F5F5]">Faturamentos do mês</p>
-                  <p className="text-[11px] text-[#9CA3AF]">
-                    {billingQuota.used} de {billingQuota.limit} do seu plano
-                  </p>
-                </div>
+                  {Math.max(0, creditBalance.remaining)}/{creditBalance.total}
+                </span>
               </div>
-              <span className={`text-sm font-bold flex-shrink-0 ${
-                billingQuota.isOverLimit ? "text-rose-400" : billingQuota.isNearLimit ? "text-amber-400" : "text-[#D4A017]"
-              }`}>
-                {billingQuota.used}/{billingQuota.limit}
-              </span>
+              <p className="mt-2 text-[10px] leading-tight text-[#9CA3AF]">
+                Faturamento = 10 créditos · Acompanhamento = 2 créditos
+              </p>
             </div>
           )}
 
-          {/* Acompanhamentos do mês (espelha visual do card de faturamentos) */}
+          {/* Acompanhamentos do mês (espelha visual do card de créditos) */}
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D4A017]/20 bg-black/50 px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-[#D4A017]/20 bg-[#D4A017]/10 text-[#D4A017]">
@@ -202,8 +207,8 @@ const MedicoInicio: React.FC = () => {
             </span>
           </div>
 
-          {/* Upgrade banner se limite excedido */}
-          {!billingQuota.loading && billingQuota.isOverLimit && (
+          {/* Upgrade banner quando os créditos acabaram */}
+          {!creditBalance.loading && creditBalance.isOver && (
             <a
               href="https://site.conmedic.com.br"
               target="_blank"
@@ -219,7 +224,7 @@ const MedicoInicio: React.FC = () => {
                     Fazer Upgrade do Plano
                   </span>
                   <span className="text-[11px] text-black/80">
-                    Limite mensal atingido.
+                    Seus créditos acabaram.
                   </span>
                 </div>
               </div>
