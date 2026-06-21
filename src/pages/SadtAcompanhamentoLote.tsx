@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeaderActions from "@/components/admin/AdminHeaderActions";
 import { supabase } from "@/integrations/supabase/client";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { compressFiles } from "@/utils/image-compression";
 import {
   callProcessSadt,
@@ -322,6 +322,12 @@ const SadtAcompanhamentoLote: React.FC = () => {
     setCurrentId(null);
     setIsProcessing(false);
     setFinished(true);
+
+    // Na área do médico, ao concluir o envio das guias, volta para o início.
+    if (isMedicoRoute) {
+      showSuccess("Envio concluído.");
+      navigate("/medico/dashboard");
+    }
   };
 
   const counts = useMemo(() => {
