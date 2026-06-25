@@ -1,8 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR" translate="no">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      A interface é toda em português. Declarar o idioma correto e desativar a
+      tradução automática evita que o Chrome (em navegadores configurados em
+      outro idioma) reescreva os nós de texto da DOM. Quando o tradutor troca
+      esses nós, o React quebra ao atualizá-los com erros do tipo
+      "NotFoundError: Failed to execute 'insertBefore' on 'Node'", deixando a
+      tela preta — especialmente em telas com muito texto dinâmico, como o
+      envio de guias em lote.
+    -->
+    <meta name="google" content="notranslate" />
     <title>CONMEDIC</title>
     <link
       rel="icon"
